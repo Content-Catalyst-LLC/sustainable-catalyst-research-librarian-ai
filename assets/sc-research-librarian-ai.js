@@ -81,7 +81,7 @@
       lines.push('');
       lines.push('## Grounding Sources');
       (note.sources || []).forEach(function (source) {
-        lines.push('- [' + source.title + '](' + source.url + ') — ' + source.summary);
+        lines.push('- [' + source.title + '](' + source.url + ') — ' + source.summary + (source.retrieval_mode ? ' [' + source.retrieval_mode + ', score ' + source.score + ']' : ''));
       });
     }
     if ((note.handoffs || []).length) {
@@ -126,7 +126,7 @@
     }
     if (sources.length) {
       html += '<div class="sc-rl-ai__source-list"><b>Grounding sources</b>' + sources.map(function (source) {
-        return '<a href="' + escapeHtml(source.url || '#') + '">' + escapeHtml(source.title || '') + '</a>';
+        return '<a href="' + escapeHtml(source.url || '#') + '">' + escapeHtml(source.title || '') + (source.semantic_score ? ' · sem ' + escapeHtml(source.semantic_score) : '') + '</a>';
       }).join('') + '</div>';
     }
     if (handoffs.length) {
@@ -170,7 +170,7 @@
       }
       setStatus('Routing…', 'loading');
       submit.disabled = true;
-      answer.innerHTML = '<p class="sc-rl-ai__loading">Checking Sustainable Catalyst routes, platform modules, Workbench handoffs, and Decision Studio workflows</p>';
+      answer.innerHTML = '<p class="sc-rl-ai__loading">Checking Sustainable Catalyst routes, source records, semantic matches, Workbench handoffs, and Decision Studio workflows</p>';
 
       fetch(endpoint, {
         method: 'POST',

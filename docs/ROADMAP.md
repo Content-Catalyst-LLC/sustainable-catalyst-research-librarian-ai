@@ -15,3 +15,22 @@
 ## Architecture direction
 
 The Research Librarian should become the source-aware retrieval and routing infrastructure for Sustainable Catalyst. Gemini or OpenAI can assist synthesis, but route selection should remain grounded in an indexed source layer.
+
+
+## Completed in v3.3.0
+
+- Gemini embedding settings
+- Generate Gemini Embeddings admin action
+- Hybrid semantic + keyword retrieval
+- Retrieval status and query endpoints
+- Retrieval-status shortcode
+
+## Candidate next builds
+
+- v3.4.0 — Route Confidence, Evaluation Tests, and Failure Logs
+- v3.5.0 — Workbench / Decision Studio Handoff Payloads
+
+
+## v3.3.1
+
+Gemini embedding diagnostics, request format fix, single-record embedding test, and clearer admin failure reporting.

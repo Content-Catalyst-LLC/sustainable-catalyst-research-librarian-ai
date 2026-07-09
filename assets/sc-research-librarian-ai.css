@@ -1,6 +1,7 @@
 .sc-rl-ai,
 .sc-rl-product,
-.sc-rl-routes {
+.sc-rl-routes,
+.sc-rl-index-summary {
   --sc-red: #ff0000;
   --sc-black: #000000;
   --sc-cream: #f7f1e7;
@@ -15,7 +16,8 @@
 
 .sc-rl-ai *,
 .sc-rl-product *,
-.sc-rl-routes * { box-sizing: border-box; }
+.sc-rl-routes *,
+.sc-rl-index-summary * { box-sizing: border-box; }
 
 .sc-rl-ai__shell {
   display: grid;
@@ -281,4 +283,16 @@
 }
 @media (max-width: 640px) {
   .sc-rl-index-summary__grid { grid-template-columns: 1fr; }
+}
+
+
+/* v3.3.0 Gemini retrieval additions */
+.sc-rl-retrieval-status .sc-rl-index-summary__grid span {
+  font-size: clamp(1rem, 2vw, 1.35rem);
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.sc-rl-ai__source-list a {
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }

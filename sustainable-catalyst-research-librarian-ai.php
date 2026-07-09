@@ -2,11 +2,11 @@
 /**
  * Plugin Name: Sustainable Catalyst Research Librarian
  * Plugin URI: https://sustainablecatalyst.com/platform/research-librarian/
- * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, admin crawl dashboard, grounded route notes, confidence scoring, Decision Studio and Workbench handoffs, AI-assisted answers, deterministic fallback, and exports.
- * Version: 3.2.0
+ * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, admin crawl dashboard, grounded route notes, confidence scoring, Decision Studio and Workbench handoffs, AI-assisted answers, deterministic fallback, and exports.
+ * Version: 3.3.1
  * Author: Content Catalyst LLC / Tariq Ahmad
  * Author URI: https://sustainablecatalyst.com/
- * License: GPL-2.0-or-later
+ * License: MIT
  * Text Domain: sustainable-catalyst-research-librarian-ai
  */
 
@@ -17,8 +17,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Sustainable_Catalyst_Research_Librarian_AI {
     const OPTION_NAME    = 'sc_rl_ai_options';
     const INDEX_OPTION   = 'sc_rl_ai_knowledge_index';
+    const EMBED_OPTION   = 'sc_rl_ai_embedding_status';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const VERSION        = '3.2.0';
+    const VERSION        = '3.3.1';
 
     private static $instance = null;
 
@@ -53,6 +54,13 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
             'openai_vector_store_id'  => '',
             'gemini_api_key'          => '',
             'gemini_model'            => 'gemini-2.5-flash',
+            'embeddings_provider'     => 'disabled',
+            'gemini_embedding_model'  => 'gemini-embedding-001',
+            'embedding_source_limit'  => 250,
+            'embedding_output_dimensionality' => 0,
+            'embedding_retry_limit'   => 3,
+            'semantic_weight'         => '0.65',
+            'keyword_weight'          => '0.35',
             'max_file_search_results' => 6,
             'max_output_tokens'       => 900,
             'temperature'             => '0.2',
@@ -130,6 +138,9 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         if ( 'index' === $mode || 'index-summary' === $mode ) {
             return $this->render_index_summary( $atts );
         }
+        if ( 'retrieval' === $mode || 'retrieval-status' === $mode ) {
+            return $this->render_retrieval_status( $atts );
+        }
         return $this->render_assistant( $atts );
     }
 
@@ -139,12 +150,13 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         <section class="sc-rl-product" data-sc-rl-product="landing">
             <p class="sc-rl-product__eyebrow">Sustainable Catalyst Platform</p>
             <h2><?php echo esc_html( $atts['title'] ); ?></h2>
-            <p class="sc-rl-product__lede">The Research Librarian is the source-aware routing and knowledge-index layer for Sustainable Catalyst. It helps visitors move from a question to the right library, module, demo, repository, Workbench tool, or Decision Studio workflow while showing route evidence, confidence, source status, and next handoff.</p>
+            <p class="sc-rl-product__lede">The Research Librarian is the source-aware routing, indexing, and retrieval layer for Sustainable Catalyst. It helps visitors move from a question to the right library, module, demo, repository, Workbench tool, or Decision Studio workflow while showing route evidence, semantic matches, confidence, source status, and next handoff.</p>
             <div class="sc-rl-product__grid">
                 <article><span>Route</span><strong>Find the right starting point</strong><p>Choose between Knowledge Library, Platform, Demos, Workbench, Decision Studio, modules, methodology, support, and feature suggestions.</p></article>
                 <article><span>Connect</span><strong>Explain platform fit</strong><p>Show how Canvas, Data, Analytics R, Global Impact, Narrative Risk, Finance, Grit, Workbench, and Decision Studio connect.</p></article>
                 <article><span>Ground</span><strong>Show sources and confidence</strong><p>Turn a question into a structured route note with source records, confidence, reason codes, handoffs, and boundaries.</p></article>
-                <article><span>Index</span><strong>Maintain source coverage</strong><p>Use the knowledge indexer to track pages, modules, stale records, missing summaries, duplicate URLs, failed crawl items, and exportable index JSON.</p></article>
+                <article><span>Retrieve</span><strong>Use hybrid retrieval</strong><p>Combine deterministic route rules, keyword scoring, source records, and optional Gemini embeddings for semantic source matching.</p></article>
+                <article><span>Index</span><strong>Maintain source coverage</strong><p>Use the knowledge indexer to track pages, modules, stale records, missing summaries, duplicate URLs, failed crawl items, embeddings, and exportable index JSON.</p></article>
             </div>
             <div class="sc-rl-product__actions">
                 <a href="/platform/research-librarian/#assistant">Ask the Research Librarian →</a>
@@ -195,6 +207,27 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                 <article><span><?php echo esc_html( absint( $summary['metadata_warnings'] ) ); ?></span><strong>Metadata warnings</strong></article>
             </div>
             <p class="sc-rl-index-summary__meta">Last indexed: <?php echo esc_html( isset( $index['last_indexed_utc'] ) ? $index['last_indexed_utc'] : 'seed only' ); ?></p>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+
+
+    private function render_retrieval_status( $atts ) {
+        $status = $this->retrieval_status();
+        ob_start();
+        ?>
+        <section class="sc-rl-index-summary sc-rl-retrieval-status" data-sc-rl-product="retrieval-status">
+            <p class="sc-rl-routes__eyebrow">Gemini Retrieval Backend</p>
+            <h2><?php echo esc_html( $atts['title'] ); ?></h2>
+            <p>Hybrid retrieval combines route rules, keyword matching, indexed source metadata, and optional Gemini embeddings. Embeddings are generated server-side and used only to improve Sustainable Catalyst source matching.</p>
+            <div class="sc-rl-index-summary__grid">
+                <article><span><?php echo esc_html( $status['enabled'] ? 'Enabled' : 'Disabled' ); ?></span><strong><?php esc_html_e( 'Semantic retrieval', 'sustainable-catalyst-research-librarian-ai' ); ?></strong></article>
+                <article><span><?php echo esc_html( $status['embedding_model'] ); ?></span><strong><?php esc_html_e( 'Embedding model', 'sustainable-catalyst-research-librarian-ai' ); ?></strong></article>
+                <article><span><?php echo esc_html( $status['embedded_records'] ); ?></span><strong><?php esc_html_e( 'Embedded records', 'sustainable-catalyst-research-librarian-ai' ); ?></strong></article>
+                <article><span><?php echo esc_html( $status['index_records'] ); ?></span><strong><?php esc_html_e( 'Index records', 'sustainable-catalyst-research-librarian-ai' ); ?></strong></article>
+            </div>
+            <p class="sc-rl-index-summary__meta">Last embedding run: <?php echo esc_html( $status['last_embedding_utc'] ? $status['last_embedding_utc'] : 'not yet generated' ); ?></p>
         </section>
         <?php
         return ob_get_clean();
@@ -316,6 +349,37 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'permission_callback' => array( $this, 'can_manage_options' ),
         ) );
 
+
+        register_rest_route( self::REST_NAMESPACE, '/retrieval/status', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'handle_retrieval_status_request' ),
+            'permission_callback' => '__return_true',
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/retrieval/diagnostics', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'handle_retrieval_diagnostics_request' ),
+            'permission_callback' => array( $this, 'can_manage_options' ),
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/retrieval/test-embedding', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array( $this, 'handle_embedding_test_request' ),
+            'permission_callback' => array( $this, 'can_manage_options' ),
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/retrieval/query', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array( $this, 'handle_retrieval_query_request' ),
+            'permission_callback' => '__return_true',
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/index/embed', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array( $this, 'handle_index_embed_request' ),
+            'permission_callback' => array( $this, 'can_manage_options' ),
+        ) );
+
         register_rest_route( self::REST_NAMESPACE, '/health', array(
             'methods'             => WP_REST_Server::READABLE,
             'callback'            => array( $this, 'handle_health_request' ),
@@ -332,6 +396,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'routes'   => count( $this->routes() ),
             'sources'  => count( $this->source_records() ),
             'index'    => $this->knowledge_index_summary( $this->knowledge_index_records() ),
+            'retrieval' => $this->retrieval_status(),
         ), 200 );
     }
 
@@ -388,6 +453,54 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
 
     public function handle_index_export_request() {
         return new WP_REST_Response( $this->knowledge_index(), 200 );
+    }
+
+
+    public function handle_retrieval_status_request() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'retrieval' => $this->retrieval_status() ), 200 );
+    }
+
+    public function handle_retrieval_diagnostics_request() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'diagnostics' => $this->embedding_diagnostics() ), 200 );
+    }
+
+    public function handle_embedding_test_request( WP_REST_Request $request ) {
+        $nonce = $request->get_header( 'x_wp_nonce' );
+        if ( ! $nonce || ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
+            return new WP_Error( 'sc_rl_ai_bad_nonce', __( 'Security check failed. Refresh the page and try again.', 'sustainable-catalyst-research-librarian-ai' ), array( 'status' => 403 ) );
+        }
+        $result = $this->test_single_embedding();
+        if ( is_wp_error( $result ) ) {
+            return $result;
+        }
+        return new WP_REST_Response( $result, 200 );
+    }
+
+    public function handle_retrieval_query_request( WP_REST_Request $request ) {
+        $nonce = $request->get_header( 'x_wp_nonce' );
+        if ( ! $nonce || ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
+            return new WP_Error( 'sc_rl_ai_bad_nonce', __( 'Security check failed. Refresh the page and try again.', 'sustainable-catalyst-research-librarian-ai' ), array( 'status' => 403 ) );
+        }
+        $params = $request->get_json_params();
+        $query = isset( $params['query'] ) ? sanitize_textarea_field( wp_unslash( $params['query'] ) ) : '';
+        if ( '' === trim( $query ) ) {
+            return new WP_Error( 'sc_rl_ai_empty_query', __( 'Please enter a retrieval query.', 'sustainable-catalyst-research-librarian-ai' ), array( 'status' => 400 ) );
+        }
+        $route = $this->match_route( strtolower( $query ) );
+        $matches = $this->match_sources( $query, $route );
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'query' => $query, 'route' => $route, 'matches' => $matches, 'retrieval' => $this->retrieval_status() ), 200 );
+    }
+
+    public function handle_index_embed_request( WP_REST_Request $request ) {
+        $nonce = $request->get_header( 'x_wp_nonce' );
+        if ( ! $nonce || ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
+            return new WP_Error( 'sc_rl_ai_bad_nonce', __( 'Security check failed. Refresh the page and try again.', 'sustainable-catalyst-research-librarian-ai' ), array( 'status' => 403 ) );
+        }
+        $result = $this->generate_index_embeddings();
+        if ( is_wp_error( $result ) ) {
+            return $result;
+        }
+        return new WP_REST_Response( $result, 200 );
     }
 
     public function handle_grounded_route_request( WP_REST_Request $request ) {
@@ -552,7 +665,29 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         foreach ( $routes as $route ) {
             $route_lines[] = '- ' . $route['title'] . ': ' . $route['url'] . ' — ' . $route['description'];
         }
-        return ( $admin ? $admin : self::default_system_instructions() ) . "\n\nCurrent route map:\n" . implode( "\n", $route_lines );
+        $source_lines = array();
+        if ( ! empty( $grounding['sources'] ) && is_array( $grounding['sources'] ) ) {
+            foreach ( $grounding['sources'] as $source ) {
+                $source_lines[] = '- ' . $source['title'] . ': ' . $source['url'] . ' — ' . $source['summary'] . ( isset( $source['score'] ) ? ' [score ' . $source['score'] . ']' : '' );
+            }
+        }
+        $handoff_lines = array();
+        if ( ! empty( $grounding['handoffs'] ) && is_array( $grounding['handoffs'] ) ) {
+            foreach ( $grounding['handoffs'] as $handoff ) {
+                $handoff_lines[] = '- ' . $handoff['label'] . ': ' . $handoff['url'] . ' — ' . $handoff['reason'];
+            }
+        }
+        $instructions = ( $admin ? $admin : self::default_system_instructions() ) . "\n\nCurrent route map:\n" . implode( "\n", $route_lines );
+        if ( ! empty( $source_lines ) ) {
+            $instructions .= "\n\nMatched Sustainable Catalyst source records for this query:\n" . implode( "\n", $source_lines );
+        }
+        if ( ! empty( $handoff_lines ) ) {
+            $instructions .= "\n\nSuggested handoffs:\n" . implode( "\n", $handoff_lines );
+        }
+        if ( ! empty( $grounding['confidence']['level'] ) ) {
+            $instructions .= "\n\nRoute confidence: " . $grounding['confidence']['level'] . " — " . $grounding['confidence']['explanation'];
+        }
+        return $instructions;
     }
 
     private function call_openai( $question, $options, $grounding = array() ) {
@@ -753,31 +888,53 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
     }
 
     private function match_sources( $question, $route ) {
+        $options = $this->get_options();
+        $records = $this->knowledge_index_records();
         $terms = $this->normalize_terms( $question . ' ' . $route['title'] . ' ' . $route['category'] );
+        $query_embedding = null;
+        $semantic_enabled = $this->semantic_retrieval_enabled( $options );
+        if ( $semantic_enabled ) {
+            $embedding_result = $this->get_query_embedding( $question, $options );
+            if ( ! is_wp_error( $embedding_result ) && is_array( $embedding_result ) ) {
+                $query_embedding = $embedding_result;
+            }
+        }
         $scored = array();
-        foreach ( $this->knowledge_index_records() as $record ) {
-            $haystack = strtolower( ( $record['title'] ?? '' ) . ' ' . ( $record['type'] ?? '' ) . ' ' . ( $record['summary'] ?? '' ) . ' ' . implode( ' ', isset( $record['topics'] ) && is_array( $record['topics'] ) ? $record['topics'] : array() ) . ' ' . ( $record['route_id'] ?? '' ) );
-            $score = 0;
-            if ( isset( $record['route_id'] ) && $record['route_id'] === $route['id'] ) {
-                $score += 12;
+        foreach ( $records as $record ) {
+            $keyword_score = $this->keyword_source_score( $record, $route, $terms );
+            $semantic_score = 0.0;
+            if ( is_array( $query_embedding ) && ! empty( $record['embedding'] ) && is_array( $record['embedding'] ) ) {
+                $semantic_score = $this->cosine_similarity( $query_embedding, $record['embedding'] );
             }
-            foreach ( $terms as $term ) {
-                if ( false !== strpos( $haystack, $term ) ) {
-                    $score += 2;
-                }
-            }
-            if ( ! empty( $record['priority'] ) ) {
-                $score += (int) $record['priority'];
-            }
-            if ( $score > 0 ) {
-                $record['score'] = $score;
+            $priority = ! empty( $record['priority'] ) ? (int) $record['priority'] : 0;
+            $keyword_weight = isset( $options['keyword_weight'] ) && is_numeric( $options['keyword_weight'] ) ? (float) $options['keyword_weight'] : 0.35;
+            $semantic_weight = isset( $options['semantic_weight'] ) && is_numeric( $options['semantic_weight'] ) ? (float) $options['semantic_weight'] : 0.65;
+            $hybrid_score = ( $keyword_score * $keyword_weight ) + ( $semantic_score * 100 * $semantic_weight ) + $priority;
+            if ( $keyword_score > 0 || $semantic_score > 0.08 || ( isset( $record['route_id'] ) && $record['route_id'] === $route['id'] ) ) {
+                $record['keyword_score'] = round( $keyword_score, 3 );
+                $record['semantic_score'] = round( $semantic_score, 4 );
+                $record['score'] = round( $hybrid_score, 3 );
+                $record['retrieval_mode'] = is_array( $query_embedding ) && ! empty( $record['embedding'] ) ? 'hybrid-gemini-embedding' : 'keyword-source';
                 $scored[] = $record;
             }
         }
         usort( $scored, function( $a, $b ) { return $b['score'] <=> $a['score']; } );
-        $options = $this->get_options();
         $limit = max( 3, min( 8, absint( isset( $options['source_result_limit'] ) ? $options['source_result_limit'] : 5 ) ) );
         return array_slice( $scored, 0, $limit );
+    }
+
+    private function keyword_source_score( $record, $route, $terms ) {
+        $haystack = strtolower( ( $record['title'] ?? '' ) . ' ' . ( $record['type'] ?? '' ) . ' ' . ( $record['summary'] ?? '' ) . ' ' . implode( ' ', isset( $record['topics'] ) && is_array( $record['topics'] ) ? $record['topics'] : array() ) . ' ' . ( $record['route_id'] ?? '' ) );
+        $score = 0;
+        if ( isset( $record['route_id'] ) && $record['route_id'] === $route['id'] ) {
+            $score += 12;
+        }
+        foreach ( $terms as $term ) {
+            if ( false !== strpos( $haystack, $term ) ) {
+                $score += 2;
+            }
+        }
+        return $score;
     }
 
     private function reason_codes( $question, $route, $sources ) {
@@ -815,7 +972,11 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         } elseif ( $score >= 45 ) {
             $level = 'medium';
         }
-        $explanation = 'Matched ' . count( $sources ) . ' source record(s) and ' . $keyword_hits . ' route keyword signal(s).';
+        $semantic_hits = 0;
+        foreach ( $sources as $source ) {
+            if ( ! empty( $source['semantic_score'] ) && (float) $source['semantic_score'] > 0.1 ) { $semantic_hits++; }
+        }
+        $explanation = 'Matched ' . count( $sources ) . ' source record(s), ' . $keyword_hits . ' route keyword signal(s), and ' . $semantic_hits . ' semantic source signal(s).';
         if ( 'platform' === $route['id'] && $keyword_hits < 1 ) {
             $level = 'low';
             $explanation = 'The question is broad or ambiguous, so the platform overview is the safest starting route.';
@@ -861,6 +1022,350 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         );
     }
 
+
+
+    private function semantic_retrieval_enabled( $options = null ) {
+        $options = $options ? $options : $this->get_options();
+        return ( ! empty( $options['gemini_api_key'] ) && 'gemini' === sanitize_key( $options['embeddings_provider'] ?? 'disabled' ) && ! empty( $options['gemini_embedding_model'] ) );
+    }
+
+    private function retrieval_status() {
+        $options = $this->get_options();
+        $records = $this->knowledge_index_records();
+        $embedded = 0;
+        $dimensions = 0;
+        foreach ( $records as $record ) {
+            if ( ! empty( $record['embedding'] ) && is_array( $record['embedding'] ) ) {
+                $embedded++;
+                if ( 0 === $dimensions ) { $dimensions = count( $record['embedding'] ); }
+            }
+        }
+        $status = get_option( self::EMBED_OPTION, array() );
+        return array(
+            'enabled' => $this->semantic_retrieval_enabled( $options ),
+            'provider' => sanitize_key( $options['embeddings_provider'] ?? 'disabled' ),
+            'embedding_model' => sanitize_text_field( $options['gemini_embedding_model'] ?? 'gemini-embedding-001' ),
+            'embedding_output_dimensionality' => absint( $options['embedding_output_dimensionality'] ?? 0 ),
+            'index_records' => count( $records ),
+            'embedded_records' => $embedded,
+            'embedding_dimensions' => $dimensions,
+            'semantic_weight' => isset( $options['semantic_weight'] ) ? (string) $options['semantic_weight'] : '0.65',
+            'keyword_weight' => isset( $options['keyword_weight'] ) ? (string) $options['keyword_weight'] : '0.35',
+            'last_embedding_utc' => isset( $status['last_embedding_utc'] ) ? $status['last_embedding_utc'] : '',
+            'last_error' => isset( $status['last_error'] ) ? $status['last_error'] : '',
+            'last_error_code' => isset( $status['last_error_code'] ) ? $status['last_error_code'] : '',
+            'last_http_status' => isset( $status['last_http_status'] ) ? absint( $status['last_http_status'] ) : 0,
+            'first_failure_title' => isset( $status['first_failure_title'] ) ? $status['first_failure_title'] : '',
+            'failure_sample_count' => isset( $status['failure_sample'] ) && is_array( $status['failure_sample'] ) ? count( $status['failure_sample'] ) : 0,
+        );
+    }
+
+    private function embedding_diagnostics() {
+        $options = $this->get_options();
+        $status = get_option( self::EMBED_OPTION, array() );
+        $records = $this->knowledge_index_records();
+        $diagnostics = array(
+            'enabled' => $this->semantic_retrieval_enabled( $options ),
+            'provider' => sanitize_key( $options['embeddings_provider'] ?? 'disabled' ),
+            'model_setting' => sanitize_text_field( $options['gemini_embedding_model'] ?? 'gemini-embedding-001' ),
+            'request_model' => $this->gemini_model_resource_name( sanitize_text_field( $options['gemini_embedding_model'] ?? 'gemini-embedding-001' ) ),
+            'endpoint_model' => $this->gemini_model_endpoint_name( sanitize_text_field( $options['gemini_embedding_model'] ?? 'gemini-embedding-001' ) ),
+            'uses_header_key' => true,
+            'api_key_present' => ! empty( $options['gemini_api_key'] ),
+            'index_records' => count( $records ),
+            'last_embedding_utc' => isset( $status['last_embedding_utc'] ) ? $status['last_embedding_utc'] : '',
+            'last_error' => isset( $status['last_error'] ) ? $status['last_error'] : '',
+            'last_error_code' => isset( $status['last_error_code'] ) ? $status['last_error_code'] : '',
+            'last_http_status' => isset( $status['last_http_status'] ) ? absint( $status['last_http_status'] ) : 0,
+            'first_failure_id' => isset( $status['first_failure_id'] ) ? $status['first_failure_id'] : '',
+            'first_failure_title' => isset( $status['first_failure_title'] ) ? $status['first_failure_title'] : '',
+            'failure_sample' => isset( $status['failure_sample'] ) && is_array( $status['failure_sample'] ) ? $status['failure_sample'] : array(),
+            'raw_response_excerpt' => isset( $status['raw_response_excerpt'] ) ? $status['raw_response_excerpt'] : '',
+            'recommended_next_step' => $this->embedding_recommended_next_step( $status ),
+        );
+        return $diagnostics;
+    }
+
+    private function embedding_recommended_next_step( $status ) {
+        $code = isset( $status['last_error_code'] ) ? (string) $status['last_error_code'] : '';
+        $http = isset( $status['last_http_status'] ) ? absint( $status['last_http_status'] ) : 0;
+        $message = strtolower( isset( $status['last_error'] ) ? (string) $status['last_error'] : '' );
+        if ( 401 === $http || 403 === $http || false !== strpos( $message, 'api key' ) || false !== strpos( $message, 'permission' ) ) {
+            return 'Check the Gemini API key and any Google AI Studio key restrictions. The key must be allowed to call the Gemini API from this server.';
+        }
+        if ( 404 === $http || false !== strpos( $message, 'not found' ) || false !== strpos( $message, 'model' ) ) {
+            return 'Check the embedding model name. Use gemini-embedding-001 unless Google has changed access for your account.';
+        }
+        if ( 429 === $http || false !== strpos( $message, 'quota' ) || false !== strpos( $message, 'rate' ) ) {
+            return 'Quota or rate limit may be blocking embeddings. Lower the embedding source limit to 1 or 5, wait, then try again.';
+        }
+        if ( 0 === $http && ! empty( $code ) ) {
+            return 'The WordPress server may not be reaching Google. Check outbound HTTPS requests, firewall, DNS, or hosting restrictions.';
+        }
+        if ( ! empty( $status['last_error'] ) ) {
+            return 'Run Test Single Gemini Embedding and review the first error shown below.';
+        }
+        return 'No embedding error is currently stored. Run Test Single Gemini Embedding or Generate Gemini Embeddings.';
+    }
+
+    private function get_query_embedding( $text, $options = null ) {
+        $options = $options ? $options : $this->get_options();
+        if ( ! $this->semantic_retrieval_enabled( $options ) ) {
+            return new WP_Error( 'sc_rl_ai_embeddings_disabled', __( 'Gemini embeddings are not configured.', 'sustainable-catalyst-research-librarian-ai' ) );
+        }
+        $cache_key = 'sc_rl_qemb_' . md5( sanitize_textarea_field( $text ) . '|' . ( $options['gemini_embedding_model'] ?? '' ) );
+        $cached = get_transient( $cache_key );
+        if ( is_array( $cached ) ) { return $cached; }
+        $embedding = $this->call_gemini_embedding( $text, $options, 'RETRIEVAL_QUERY' );
+        if ( is_wp_error( $embedding ) ) { return $embedding; }
+        set_transient( $cache_key, $embedding, HOUR_IN_SECONDS );
+        return $embedding;
+    }
+
+    private function call_gemini_embedding( $text, $options = null, $task_type = 'RETRIEVAL_DOCUMENT', $title = '' ) {
+        $options = $options ? $options : $this->get_options();
+        $api_key = trim( $options['gemini_api_key'] ?? '' );
+        $model_setting = sanitize_text_field( $options['gemini_embedding_model'] ?? 'gemini-embedding-001' );
+        if ( '' === $api_key || '' === $model_setting ) {
+            return new WP_Error( 'sc_rl_ai_missing_gemini_embedding_config', __( 'Gemini embedding configuration is missing.', 'sustainable-catalyst-research-librarian-ai' ), array( 'http_status' => 0 ) );
+        }
+        $text = wp_strip_all_tags( (string) $text );
+        $text = trim( preg_replace( '/\s+/', ' ', $text ) );
+        $text = mb_substr( $text, 0, 7000 );
+        if ( '' === $text ) {
+            return new WP_Error( 'sc_rl_ai_empty_embedding_input', __( 'The embedding input text is empty.', 'sustainable-catalyst-research-librarian-ai' ), array( 'http_status' => 0 ) );
+        }
+        $endpoint_model = $this->gemini_model_endpoint_name( $model_setting );
+        $request_model = $this->gemini_model_resource_name( $model_setting );
+        $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . rawurlencode( $endpoint_model ) . ':embedContent';
+        $task_type = in_array( $task_type, array( 'RETRIEVAL_DOCUMENT', 'RETRIEVAL_QUERY', 'SEMANTIC_SIMILARITY' ), true ) ? $task_type : 'RETRIEVAL_DOCUMENT';
+        $config = array(
+            'taskType' => $task_type,
+            'autoTruncate' => true,
+        );
+        if ( 'RETRIEVAL_DOCUMENT' === $task_type && '' !== trim( $title ) ) {
+            $config['title'] = mb_substr( sanitize_text_field( $title ), 0, 500 );
+        }
+        $dimensionality = absint( $options['embedding_output_dimensionality'] ?? 0 );
+        if ( $dimensionality > 0 ) {
+            $config['outputDimensionality'] = max( 1, min( 3072, $dimensionality ) );
+        }
+        $body = array(
+            'model' => $request_model,
+            'content' => array( 'parts' => array( array( 'text' => $text ) ) ),
+            'embedContentConfig' => $config,
+        );
+        $response = wp_remote_post( $url, array(
+            'headers' => array(
+                'Content-Type' => 'application/json',
+                'x-goog-api-key' => $api_key,
+            ),
+            'body' => wp_json_encode( $body ),
+            'timeout' => 30,
+        ) );
+        if ( is_wp_error( $response ) ) {
+            $response->add_data( array( 'http_status' => 0, 'endpoint_model' => $endpoint_model, 'request_model' => $request_model ), 'sc_rl_ai_gemini_embedding_transport' );
+            return $response;
+        }
+        $code = wp_remote_retrieve_response_code( $response );
+        $raw = wp_remote_retrieve_body( $response );
+        $data = json_decode( $raw, true );
+        if ( $code < 200 || $code >= 300 ) {
+            $message = isset( $data['error']['message'] ) ? $data['error']['message'] : 'Gemini embedding request failed.';
+            $error_code = isset( $data['error']['status'] ) ? $data['error']['status'] : 'HTTP_' . $code;
+            return new WP_Error( 'sc_rl_ai_gemini_embedding_error', sanitize_text_field( $message ), array(
+                'http_status' => $code,
+                'gemini_error_code' => sanitize_text_field( $error_code ),
+                'endpoint_model' => $endpoint_model,
+                'request_model' => $request_model,
+                'raw_response_excerpt' => mb_substr( wp_strip_all_tags( (string) $raw ), 0, 900 ),
+            ) );
+        }
+        $values = $this->extract_gemini_embedding_values( $data );
+        if ( empty( $values ) ) {
+            return new WP_Error( 'sc_rl_ai_empty_embedding', __( 'Gemini did not return an embedding vector.', 'sustainable-catalyst-research-librarian-ai' ), array(
+                'http_status' => $code,
+                'endpoint_model' => $endpoint_model,
+                'request_model' => $request_model,
+                'raw_response_excerpt' => mb_substr( wp_strip_all_tags( (string) $raw ), 0, 900 ),
+            ) );
+        }
+        return array_map( 'floatval', $values );
+    }
+
+    private function gemini_model_endpoint_name( $model ) {
+        $model = trim( sanitize_text_field( (string) $model ) );
+        $model = preg_replace( '#^models/#', '', $model );
+        return '' === $model ? 'gemini-embedding-001' : $model;
+    }
+
+    private function gemini_model_resource_name( $model ) {
+        return 'models/' . $this->gemini_model_endpoint_name( $model );
+    }
+
+    private function extract_gemini_embedding_values( $data ) {
+        if ( isset( $data['embedding']['values'] ) && is_array( $data['embedding']['values'] ) ) {
+            return $data['embedding']['values'];
+        }
+        if ( isset( $data['embeddings'][0]['values'] ) && is_array( $data['embeddings'][0]['values'] ) ) {
+            return $data['embeddings'][0]['values'];
+        }
+        if ( isset( $data['embeddings'][0]['embedding']['values'] ) && is_array( $data['embeddings'][0]['embedding']['values'] ) ) {
+            return $data['embeddings'][0]['embedding']['values'];
+        }
+        if ( isset( $data['embedding']['value'] ) && is_array( $data['embedding']['value'] ) ) {
+            return $data['embedding']['value'];
+        }
+        return array();
+    }
+
+    private function wp_error_diagnostics( WP_Error $error ) {
+        $all_data = $error->get_all_error_data();
+        $data = is_array( $all_data ) && ! empty( $all_data ) ? end( $all_data ) : $error->get_error_data();
+        $data = is_array( $data ) ? $data : array();
+        return array(
+            'message' => $error->get_error_message(),
+            'code' => $error->get_error_code(),
+            'http_status' => isset( $data['http_status'] ) ? absint( $data['http_status'] ) : 0,
+            'gemini_error_code' => isset( $data['gemini_error_code'] ) ? sanitize_text_field( $data['gemini_error_code'] ) : '',
+            'endpoint_model' => isset( $data['endpoint_model'] ) ? sanitize_text_field( $data['endpoint_model'] ) : '',
+            'request_model' => isset( $data['request_model'] ) ? sanitize_text_field( $data['request_model'] ) : '',
+            'raw_response_excerpt' => isset( $data['raw_response_excerpt'] ) ? sanitize_textarea_field( $data['raw_response_excerpt'] ) : '',
+        );
+    }
+
+    private function generate_index_embeddings() {
+        $options = $this->get_options();
+        if ( ! $this->semantic_retrieval_enabled( $options ) ) {
+            update_option( self::EMBED_OPTION, array( 'last_error' => 'Gemini embeddings are not enabled or API key is missing.', 'last_error_code' => 'embeddings_not_configured', 'last_http_status' => 0, 'last_embedding_utc' => gmdate( 'c' ) ), false );
+            return new WP_Error( 'sc_rl_ai_embeddings_not_configured', __( 'Set Embeddings Provider to Gemini and save a Gemini API key before generating embeddings.', 'sustainable-catalyst-research-librarian-ai' ), array( 'status' => 400 ) );
+        }
+        $index = $this->knowledge_index();
+        $records = isset( $index['records'] ) && is_array( $index['records'] ) ? $index['records'] : $this->knowledge_index_records();
+        $limit = max( 1, min( 1000, absint( $options['embedding_source_limit'] ?? 250 ) ) );
+        $retry_limit = max( 1, min( 25, absint( $options['embedding_retry_limit'] ?? 3 ) ) );
+        $embedded = 0;
+        $attempted = 0;
+        $failed = array();
+        $first_error = null;
+        foreach ( $records as $i => $record ) {
+            if ( $attempted >= $limit ) { break; }
+            $text = $this->embedding_text_for_record( $record );
+            $title = isset( $record['title'] ) ? $record['title'] : '';
+            $attempted++;
+            $embedding = $this->call_gemini_embedding( $text, $options, 'RETRIEVAL_DOCUMENT', $title );
+            if ( is_wp_error( $embedding ) ) {
+                $diag = $this->wp_error_diagnostics( $embedding );
+                if ( null === $first_error ) { $first_error = $diag; }
+                $failed[] = array(
+                    'id' => $record['id'] ?? '',
+                    'title' => $title,
+                    'error' => $diag['message'],
+                    'error_code' => $diag['code'],
+                    'http_status' => $diag['http_status'],
+                    'gemini_error_code' => $diag['gemini_error_code'],
+                );
+                if ( count( $failed ) >= $retry_limit && 0 === $embedded ) { break; }
+                continue;
+            }
+            $records[ $i ]['embedding'] = $embedding;
+            $records[ $i ]['embedding_model'] = sanitize_text_field( $options['gemini_embedding_model'] ?? 'gemini-embedding-001' );
+            $records[ $i ]['embedding_updated_utc'] = gmdate( 'c' );
+            $embedded++;
+        }
+        $index['records'] = $records;
+        $index['summary'] = $this->knowledge_index_summary( $records );
+        $index['last_embedding_utc'] = gmdate( 'c' );
+        $index['embedding_model'] = sanitize_text_field( $options['gemini_embedding_model'] ?? 'gemini-embedding-001' );
+        $index['embedding_failures'] = array_slice( $failed, 0, 50 );
+        update_option( self::INDEX_OPTION, $index, false );
+
+        $last_error = '';
+        if ( ! empty( $failed ) && 0 === $embedded ) {
+            $last_error = 'All attempted records failed to embed. First error: ' . ( $first_error['message'] ?? 'unknown error' );
+        } elseif ( ! empty( $failed ) ) {
+            $last_error = 'Some records failed to embed. First error: ' . ( $first_error['message'] ?? 'unknown error' );
+        }
+        $status = array(
+            'last_embedding_utc' => gmdate( 'c' ),
+            'attempted_records' => $attempted,
+            'embedded_records' => $embedded,
+            'failed_records' => count( $failed ),
+            'last_error' => sanitize_text_field( $last_error ),
+            'last_error_code' => $first_error['code'] ?? '',
+            'last_http_status' => $first_error['http_status'] ?? 0,
+            'gemini_error_code' => $first_error['gemini_error_code'] ?? '',
+            'first_failure_id' => $failed[0]['id'] ?? '',
+            'first_failure_title' => $failed[0]['title'] ?? '',
+            'failure_sample' => array_slice( $failed, 0, 5 ),
+            'raw_response_excerpt' => $first_error['raw_response_excerpt'] ?? '',
+        );
+        update_option( self::EMBED_OPTION, $status, false );
+        return array( 'version' => self::VERSION, 'attempted_records' => $attempted, 'embedded_records' => $embedded, 'failed_records' => count( $failed ), 'failure_sample' => array_slice( $failed, 0, 5 ), 'summary' => $this->knowledge_index_summary( $records ), 'retrieval' => $this->retrieval_status(), 'diagnostics' => $this->embedding_diagnostics() );
+    }
+
+    private function test_single_embedding() {
+        $options = $this->get_options();
+        if ( ! $this->semantic_retrieval_enabled( $options ) ) {
+            update_option( self::EMBED_OPTION, array( 'last_error' => 'Gemini embeddings are not enabled or API key is missing.', 'last_error_code' => 'embeddings_not_configured', 'last_http_status' => 0, 'last_embedding_utc' => gmdate( 'c' ) ), false );
+            return new WP_Error( 'sc_rl_ai_embeddings_not_configured', __( 'Set Embeddings Provider to Gemini and save a Gemini API key before testing embeddings.', 'sustainable-catalyst-research-librarian-ai' ), array( 'status' => 400 ) );
+        }
+        $records = $this->knowledge_index_records();
+        $record = ! empty( $records ) ? $records[0] : array( 'id' => 'diagnostic', 'title' => 'Research Librarian Diagnostic', 'summary' => 'Diagnostic embedding test for Sustainable Catalyst Research Librarian.', 'topics' => array( 'diagnostic', 'embedding' ), 'route_id' => 'platform', 'url' => '/platform/research-librarian/' );
+        $text = $this->embedding_text_for_record( $record );
+        $embedding = $this->call_gemini_embedding( $text, $options, 'RETRIEVAL_DOCUMENT', $record['title'] ?? 'Diagnostic' );
+        if ( is_wp_error( $embedding ) ) {
+            $diag = $this->wp_error_diagnostics( $embedding );
+            $status = array(
+                'last_embedding_utc' => gmdate( 'c' ),
+                'attempted_records' => 1,
+                'embedded_records' => 0,
+                'failed_records' => 1,
+                'last_error' => sanitize_text_field( 'Single embedding test failed: ' . $diag['message'] ),
+                'last_error_code' => $diag['code'],
+                'last_http_status' => $diag['http_status'],
+                'gemini_error_code' => $diag['gemini_error_code'],
+                'first_failure_id' => $record['id'] ?? '',
+                'first_failure_title' => $record['title'] ?? '',
+                'failure_sample' => array( array( 'id' => $record['id'] ?? '', 'title' => $record['title'] ?? '', 'error' => $diag['message'], 'error_code' => $diag['code'], 'http_status' => $diag['http_status'], 'gemini_error_code' => $diag['gemini_error_code'] ) ),
+                'raw_response_excerpt' => $diag['raw_response_excerpt'],
+            );
+            update_option( self::EMBED_OPTION, $status, false );
+            return new WP_Error( $diag['code'], $diag['message'], array( 'status' => 400, 'diagnostics' => $this->embedding_diagnostics() ) );
+        }
+        $status = array(
+            'last_embedding_utc' => gmdate( 'c' ),
+            'attempted_records' => 1,
+            'embedded_records' => 1,
+            'failed_records' => 0,
+            'last_error' => '',
+            'last_error_code' => '',
+            'last_http_status' => 200,
+            'first_failure_id' => '',
+            'first_failure_title' => '',
+            'failure_sample' => array(),
+            'raw_response_excerpt' => '',
+        );
+        update_option( self::EMBED_OPTION, $status, false );
+        return array( 'version' => self::VERSION, 'ok' => true, 'record_id' => $record['id'] ?? '', 'record_title' => $record['title'] ?? '', 'embedding_dimensions' => count( $embedding ), 'retrieval' => $this->retrieval_status(), 'diagnostics' => $this->embedding_diagnostics() );
+    }
+
+    private function embedding_text_for_record( $record ) {
+        $topics = isset( $record['topics'] ) && is_array( $record['topics'] ) ? implode( ', ', $record['topics'] ) : '';
+        return trim( ( $record['title'] ?? '' ) . "\n" . ( $record['type'] ?? '' ) . "\n" . ( $record['summary'] ?? '' ) . "\nTopics: " . $topics . "\nRoute: " . ( $record['route_id'] ?? '' ) . "\nURL: " . ( $record['url'] ?? '' ) );
+    }
+
+    private function cosine_similarity( $a, $b ) {
+        if ( ! is_array( $a ) || ! is_array( $b ) || empty( $a ) || empty( $b ) ) { return 0.0; }
+        $n = min( count( $a ), count( $b ) );
+        $dot = 0.0; $na = 0.0; $nb = 0.0;
+        for ( $i = 0; $i < $n; $i++ ) {
+            $av = (float) $a[ $i ]; $bv = (float) $b[ $i ];
+            $dot += $av * $bv; $na += $av * $av; $nb += $bv * $bv;
+        }
+        if ( $na <= 0 || $nb <= 0 ) { return 0.0; }
+        return max( 0.0, min( 1.0, $dot / ( sqrt( $na ) * sqrt( $nb ) ) ) );
+    }
 
     public static function build_default_index() {
         $now = gmdate( 'c' );
@@ -1065,7 +1570,12 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         $failed = 0;
         $index = get_option( self::INDEX_OPTION, array() );
         if ( isset( $index['failed'] ) && is_array( $index['failed'] ) ) { $failed = count( $index['failed'] ); }
+        $embedded = 0;
+        foreach ( $records as $record ) {
+            if ( ! empty( $record['embedding'] ) && is_array( $record['embedding'] ) ) { $embedded++; }
+        }
         $summary['failed_records'] = $failed;
+        $summary['embedded_records'] = $embedded;
         return $summary;
     }
 
@@ -1078,8 +1588,31 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             $this->rebuild_knowledge_index();
             return 'rebuilt';
         }
+        if ( 'embed' === $action ) {
+            $result = $this->generate_index_embeddings();
+            if ( is_wp_error( $result ) ) {
+                set_transient( 'sc_rl_ai_admin_notice', $result->get_error_message(), 60 );
+                return 'embedding-error';
+            }
+            if ( isset( $result['embedded_records'] ) && 0 === absint( $result['embedded_records'] ) ) {
+                $diagnostics = isset( $result['diagnostics']['last_error'] ) ? $result['diagnostics']['last_error'] : 'No records embedded. Review diagnostics below.';
+                set_transient( 'sc_rl_ai_admin_notice', $diagnostics, 60 );
+                return 'embedding-error';
+            }
+            return 'embedded';
+        }
+        if ( 'test_embedding' === $action ) {
+            $result = $this->test_single_embedding();
+            if ( is_wp_error( $result ) ) {
+                set_transient( 'sc_rl_ai_admin_notice', 'Single embedding test failed: ' . $result->get_error_message(), 60 );
+                return 'embedding-error';
+            }
+            set_transient( 'sc_rl_ai_admin_success_notice', 'Single embedding test passed. Dimensions: ' . absint( $result['embedding_dimensions'] ?? 0 ), 60 );
+            return 'test-embedding-ok';
+        }
         if ( 'reset' === $action ) {
             update_option( self::INDEX_OPTION, self::build_default_index(), false );
+            update_option( self::EMBED_OPTION, array(), false );
             return 'reset';
         }
         return '';
@@ -1283,6 +1816,13 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'provider' => __( 'AI Provider', 'sustainable-catalyst-research-librarian-ai' ),
             'gemini_api_key' => __( 'Gemini API Key', 'sustainable-catalyst-research-librarian-ai' ),
             'gemini_model' => __( 'Gemini Model', 'sustainable-catalyst-research-librarian-ai' ),
+            'embeddings_provider' => __( 'Embeddings Provider', 'sustainable-catalyst-research-librarian-ai' ),
+            'gemini_embedding_model' => __( 'Gemini Embedding Model', 'sustainable-catalyst-research-librarian-ai' ),
+            'embedding_source_limit' => __( 'Embedding Source Limit', 'sustainable-catalyst-research-librarian-ai' ),
+            'embedding_output_dimensionality' => __( 'Embedding Output Dimensionality', 'sustainable-catalyst-research-librarian-ai' ),
+            'embedding_retry_limit' => __( 'Embedding Failure Stop Limit', 'sustainable-catalyst-research-librarian-ai' ),
+            'semantic_weight' => __( 'Semantic Weight', 'sustainable-catalyst-research-librarian-ai' ),
+            'keyword_weight' => __( 'Keyword Weight', 'sustainable-catalyst-research-librarian-ai' ),
             'openai_api_key' => __( 'OpenAI API Key', 'sustainable-catalyst-research-librarian-ai' ),
             'openai_model' => __( 'OpenAI Model', 'sustainable-catalyst-research-librarian-ai' ),
             'openai_vector_store_id' => __( 'OpenAI Vector Store ID', 'sustainable-catalyst-research-librarian-ai' ),
@@ -1311,6 +1851,13 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'provider'                => $provider,
             'gemini_api_key'          => $this->sanitize_secret_field( $input, 'gemini_api_key', $old['gemini_api_key'] ),
             'gemini_model'            => isset( $input['gemini_model'] ) ? sanitize_text_field( wp_unslash( $input['gemini_model'] ) ) : self::defaults()['gemini_model'],
+            'embeddings_provider'     => ( isset( $input['embeddings_provider'] ) && 'gemini' === sanitize_key( wp_unslash( $input['embeddings_provider'] ) ) ) ? 'gemini' : 'disabled',
+            'gemini_embedding_model'  => isset( $input['gemini_embedding_model'] ) ? sanitize_text_field( wp_unslash( $input['gemini_embedding_model'] ) ) : self::defaults()['gemini_embedding_model'],
+            'embedding_source_limit'  => max( 1, min( 1000, absint( isset( $input['embedding_source_limit'] ) ? $input['embedding_source_limit'] : self::defaults()['embedding_source_limit'] ) ) ),
+            'embedding_output_dimensionality' => max( 0, min( 3072, absint( isset( $input['embedding_output_dimensionality'] ) ? $input['embedding_output_dimensionality'] : self::defaults()['embedding_output_dimensionality'] ) ) ),
+            'embedding_retry_limit'   => max( 1, min( 25, absint( isset( $input['embedding_retry_limit'] ) ? $input['embedding_retry_limit'] : self::defaults()['embedding_retry_limit'] ) ) ),
+            'semantic_weight'         => isset( $input['semantic_weight'] ) && is_numeric( $input['semantic_weight'] ) ? (string) max( 0, min( 1, (float) $input['semantic_weight'] ) ) : self::defaults()['semantic_weight'],
+            'keyword_weight'          => isset( $input['keyword_weight'] ) && is_numeric( $input['keyword_weight'] ) ? (string) max( 0, min( 1, (float) $input['keyword_weight'] ) ) : self::defaults()['keyword_weight'],
             'openai_api_key'          => $this->sanitize_secret_field( $input, 'openai_api_key', $old['openai_api_key'] ),
             'openai_model'            => isset( $input['openai_model'] ) ? sanitize_text_field( wp_unslash( $input['openai_model'] ) ) : self::defaults()['openai_model'],
             'openai_vector_store_id'  => isset( $input['openai_vector_store_id'] ) ? sanitize_text_field( wp_unslash( $input['openai_vector_store_id'] ) ) : '',
@@ -1337,8 +1884,8 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
     }
 
     public function settings_section_intro() {
-        echo '<p>' . esc_html__( 'The Research Librarian is site-scoped routing infrastructure. It can run entirely in deterministic fallback mode, or use Gemini/OpenAI server-side for richer route explanations. API keys are not exposed to JavaScript.', 'sustainable-catalyst-research-librarian-ai' ) . '</p>';
-        echo '<p><code>[sustainable_catalyst_research_librarian_ai]</code> <code>[sc_research_librarian mode="landing"]</code> <code>[sc_research_librarian mode="route-map"]</code> <code>[sc_research_librarian mode="index-summary"]</code></p>';
+        echo '<p>' . esc_html__( 'The Research Librarian is site-scoped routing infrastructure. It can run entirely in deterministic fallback mode, use Gemini/OpenAI server-side for richer route explanations, and use optional Gemini embeddings for semantic retrieval over the Sustainable Catalyst knowledge index. API keys are not exposed to JavaScript.', 'sustainable-catalyst-research-librarian-ai' ) . '</p>';
+        echo '<p><code>[sustainable_catalyst_research_librarian_ai]</code> <code>[sc_research_librarian mode="landing"]</code> <code>[sc_research_librarian mode="route-map"]</code> <code>[sc_research_librarian mode="index-summary"]</code> <code>[sc_research_librarian mode="retrieval-status"]</code></p>';
     }
 
     public function render_field( $args ) {
@@ -1352,6 +1899,14 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                     echo '<option value="' . esc_attr( $value ) . '" ' . selected( $options['provider'], $value, false ) . '>' . esc_html( $label ) . '</option>';
                 }
                 echo '</select>';
+                break;
+            case 'embeddings_provider':
+                echo '<select name="' . esc_attr( $name ) . '">';
+                foreach ( array( 'disabled' => 'Disabled / keyword-only retrieval', 'gemini' => 'Gemini embeddings' ) as $value => $label ) {
+                    echo '<option value="' . esc_attr( $value ) . '" ' . selected( $options['embeddings_provider'], $value, false ) . '>' . esc_html( $label ) . '</option>';
+                }
+                echo '</select>';
+                echo '<p class="description">' . esc_html__( 'When enabled, embeddings are generated server-side for indexed Sustainable Catalyst records and used for hybrid semantic retrieval.', 'sustainable-catalyst-research-librarian-ai' ) . '</p>';
                 break;
             case 'gemini_api_key':
             case 'openai_api_key':
@@ -1368,10 +1923,17 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             case 'source_result_limit':
             case 'index_max_posts':
             case 'stale_after_days':
+            case 'embedding_source_limit':
+            case 'embedding_output_dimensionality':
+            case 'embedding_retry_limit':
                 echo '<input type="number" class="small-text" name="' . esc_attr( $name ) . '" value="' . esc_attr( $options[ $field ] ) . '" />';
+                if ( 'embedding_output_dimensionality' === $field ) { echo '<p class="description">' . esc_html__( 'Use 0 for the model default. Set only if you want reduced dimensions.', 'sustainable-catalyst-research-librarian-ai' ) . '</p>'; }
+                if ( 'embedding_retry_limit' === $field ) { echo '<p class="description">' . esc_html__( 'Stops early after this many consecutive failures when no records embed, so diagnostics return quickly.', 'sustainable-catalyst-research-librarian-ai' ) . '</p>'; }
                 break;
             case 'temperature':
-                echo '<input type="number" step="0.1" min="0" max="1" class="small-text" name="' . esc_attr( $name ) . '" value="' . esc_attr( $options[ $field ] ) . '" />';
+            case 'semantic_weight':
+            case 'keyword_weight':
+                echo '<input type="number" step="0.05" min="0" max="1" class="small-text" name="' . esc_attr( $name ) . '" value="' . esc_attr( $options[ $field ] ) . '" />';
                 break;
             default:
                 echo '<input type="text" class="regular-text" name="' . esc_attr( $name ) . '" value="' . esc_attr( $options[ $field ] ) . '" />';
@@ -1389,30 +1951,60 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         $index = $this->knowledge_index();
         $records = $this->knowledge_index_records();
         $summary = $this->knowledge_index_summary( $records );
+        $retrieval = $this->retrieval_status();
+        $embedding_notice = get_transient( 'sc_rl_ai_admin_notice' );
+        if ( $embedding_notice ) { delete_transient( 'sc_rl_ai_admin_notice' ); }
+        $embedding_success_notice = get_transient( 'sc_rl_ai_admin_success_notice' );
+        if ( $embedding_success_notice ) { delete_transient( 'sc_rl_ai_admin_success_notice' ); }
+        $diagnostics = $this->embedding_diagnostics();
         ?>
         <div class="wrap">
             <h1><?php esc_html_e( 'Sustainable Catalyst Research Librarian', 'sustainable-catalyst-research-librarian-ai' ); ?></h1>
             <p><?php esc_html_e( 'Routing and retrieval infrastructure for Sustainable Catalyst. It helps visitors choose the right library, module, demo, repository, Workbench tool, or Decision Studio workflow.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
             <p><strong><?php esc_html_e( 'Status:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <?php echo esc_html( 'disabled' === $provider ? 'Deterministic fallback only' : 'AI provider configured: ' . $provider ); ?> · <strong><?php esc_html_e( 'Version:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <?php echo esc_html( self::VERSION ); ?></p>
-            <?php if ( $notice ) : ?>
-                <div class="notice notice-success is-dismissible"><p><?php echo esc_html( 'rebuilt' === $notice ? 'Knowledge index rebuilt.' : 'Knowledge index reset to seed records.' ); ?></p></div>
+            <?php if ( $notice && 'embedding-error' !== $notice ) : ?>
+                <div class="notice notice-success is-dismissible"><p><?php echo esc_html( 'rebuilt' === $notice ? 'Knowledge index rebuilt.' : ( 'embedded' === $notice ? 'Gemini embeddings generated for indexed records.' : ( 'test-embedding-ok' === $notice ? 'Single Gemini embedding test passed.' : 'Knowledge index reset to seed records.' ) ) ); ?></p></div>
+            <?php endif; ?>
+            <?php if ( $embedding_success_notice ) : ?>
+                <div class="notice notice-success is-dismissible"><p><?php echo esc_html( $embedding_success_notice ); ?></p></div>
+            <?php endif; ?>
+            <?php if ( $embedding_notice ) : ?>
+                <div class="notice notice-error is-dismissible"><p><?php echo esc_html( $embedding_notice ); ?></p></div>
             <?php endif; ?>
 
             <h2><?php esc_html_e( 'Knowledge Indexer and Crawl Dashboard', 'sustainable-catalyst-research-librarian-ai' ); ?></h2>
             <p><?php esc_html_e( 'The indexer combines curated source records with recently published WordPress pages/posts. It tracks source coverage, metadata gaps, stale records, duplicate URLs, and route groups for grounded routing.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
-            <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0;max-width:1100px;">
+            <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:16px 0;max-width:1100px;">
                 <div class="postbox" style="padding:14px;"><strong style="font-size:22px;display:block;"><?php echo esc_html( $summary['total_records'] ); ?></strong><span><?php esc_html_e( 'Indexed records', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
                 <div class="postbox" style="padding:14px;"><strong style="font-size:22px;display:block;"><?php echo esc_html( $summary['route_count'] ); ?></strong><span><?php esc_html_e( 'Route groups', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
                 <div class="postbox" style="padding:14px;"><strong style="font-size:22px;display:block;"><?php echo esc_html( $summary['metadata_warnings'] ); ?></strong><span><?php esc_html_e( 'Metadata warnings', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
                 <div class="postbox" style="padding:14px;"><strong style="font-size:22px;display:block;"><?php echo esc_html( $summary['stale_records'] ); ?></strong><span><?php esc_html_e( 'Stale records', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                <div class="postbox" style="padding:14px;"><strong style="font-size:22px;display:block;"><?php echo esc_html( $retrieval['embedded_records'] ); ?></strong><span><?php esc_html_e( 'Embedded records', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
             </div>
-            <p><strong><?php esc_html_e( 'Last indexed:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <?php echo esc_html( isset( $index['last_indexed_utc'] ) ? $index['last_indexed_utc'] : 'seed only' ); ?> · <strong><?php esc_html_e( 'Mode:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <?php echo esc_html( isset( $index['crawl_mode'] ) ? $index['crawl_mode'] : 'unknown' ); ?></p>
+            <p><strong><?php esc_html_e( 'Last indexed:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <?php echo esc_html( isset( $index['last_indexed_utc'] ) ? $index['last_indexed_utc'] : 'seed only' ); ?> · <strong><?php esc_html_e( 'Mode:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <?php echo esc_html( isset( $index['crawl_mode'] ) ? $index['crawl_mode'] : 'unknown' ); ?> · <strong><?php esc_html_e( 'Retrieval:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <?php echo esc_html( $retrieval['enabled'] ? 'Gemini hybrid semantic retrieval enabled' : 'Keyword/source retrieval only' ); ?> · <strong><?php esc_html_e( 'Last embedding run:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <?php echo esc_html( $retrieval['last_embedding_utc'] ? $retrieval['last_embedding_utc'] : 'not generated' ); ?></p>
             <form method="post" style="display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 22px;">
                 <?php wp_nonce_field( 'sc_rl_index_action', 'sc_rl_index_nonce' ); ?>
                 <button class="button button-primary" type="submit" name="sc_rl_index_action" value="rebuild"><?php esc_html_e( 'Rebuild Knowledge Index', 'sustainable-catalyst-research-librarian-ai' ); ?></button>
+                <button class="button" type="submit" name="sc_rl_index_action" value="test_embedding"><?php esc_html_e( 'Test Single Gemini Embedding', 'sustainable-catalyst-research-librarian-ai' ); ?></button>
+                <button class="button" type="submit" name="sc_rl_index_action" value="embed"><?php esc_html_e( 'Generate Gemini Embeddings', 'sustainable-catalyst-research-librarian-ai' ); ?></button>
                 <button class="button" type="submit" name="sc_rl_index_action" value="reset"><?php esc_html_e( 'Reset to Seed Index', 'sustainable-catalyst-research-librarian-ai' ); ?></button>
                 <a class="button" href="<?php echo esc_url( rest_url( self::REST_NAMESPACE . '/index/export' ) ); ?>"><?php esc_html_e( 'Export Index JSON', 'sustainable-catalyst-research-librarian-ai' ); ?></a>
+                <a class="button" href="<?php echo esc_url( rest_url( self::REST_NAMESPACE . '/retrieval/diagnostics' ) ); ?>"><?php esc_html_e( 'Embedding Diagnostics JSON', 'sustainable-catalyst-research-librarian-ai' ); ?></a>
             </form>
+
+            <div class="postbox" style="padding:14px;max-width:1100px;margin:12px 0 22px;">
+                <h2 style="margin-top:0;"><?php esc_html_e( 'Gemini Embedding Diagnostics', 'sustainable-catalyst-research-librarian-ai' ); ?></h2>
+                <p><strong><?php esc_html_e( 'Model:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <code><?php echo esc_html( $diagnostics['request_model'] ); ?></code> · <strong><?php esc_html_e( 'HTTP:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <?php echo esc_html( $diagnostics['last_http_status'] ? $diagnostics['last_http_status'] : 'n/a' ); ?> · <strong><?php esc_html_e( 'Last error code:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <code><?php echo esc_html( $diagnostics['last_error_code'] ? $diagnostics['last_error_code'] : 'none' ); ?></code></p>
+                <?php if ( ! empty( $diagnostics['last_error'] ) ) : ?>
+                    <p><strong><?php esc_html_e( 'Last error:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <?php echo esc_html( $diagnostics['last_error'] ); ?></p>
+                    <p><strong><?php esc_html_e( 'Recommended next step:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <?php echo esc_html( $diagnostics['recommended_next_step'] ); ?></p>
+                <?php else : ?>
+                    <p><?php esc_html_e( 'No embedding error is currently stored. Use Test Single Gemini Embedding before a full embedding run if you are diagnosing setup.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
+                <?php endif; ?>
+                <?php if ( ! empty( $diagnostics['raw_response_excerpt'] ) ) : ?>
+                    <details><summary><?php esc_html_e( 'Raw response excerpt', 'sustainable-catalyst-research-librarian-ai' ); ?></summary><pre style="white-space:pre-wrap;max-height:180px;overflow:auto;"><?php echo esc_html( $diagnostics['raw_response_excerpt'] ); ?></pre></details>
+                <?php endif; ?>
+            </div>
 
             <form action="options.php" method="post">
                 <?php settings_fields( 'sc_rl_ai_settings_group' ); do_settings_sections( 'sc-research-librarian-ai' ); submit_button(); ?>
@@ -1420,9 +2012,9 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             <hr />
             <h2><?php esc_html_e( 'Indexed Source Records', 'sustainable-catalyst-research-librarian-ai' ); ?></h2>
             <p><?php esc_html_e( 'Records used for deterministic grounded routing and AI prompt context. Rebuild the index after major page, module, or navigation updates.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
-            <table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Type', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Source', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Route', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Flags', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'URL', 'sustainable-catalyst-research-librarian-ai' ); ?></th></tr></thead><tbody>
+            <table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Type', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Source', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Route', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Flags', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Embedding', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'URL', 'sustainable-catalyst-research-librarian-ai' ); ?></th></tr></thead><tbody>
             <?php foreach ( array_slice( $records, 0, 120 ) as $source ) : ?>
-                <tr><td><?php echo esc_html( $source['type'] ); ?></td><td><?php echo esc_html( $source['title'] ); ?></td><td><code><?php echo esc_html( $source['route_id'] ); ?></code></td><td><?php echo esc_html( empty( $source['metadata_flags'] ) ? 'ok' : implode( ', ', $source['metadata_flags'] ) ); ?></td><td><code><?php echo esc_html( $source['url'] ); ?></code></td></tr>
+                <tr><td><?php echo esc_html( $source['type'] ); ?></td><td><?php echo esc_html( $source['title'] ); ?></td><td><code><?php echo esc_html( $source['route_id'] ); ?></code></td><td><?php echo esc_html( empty( $source['metadata_flags'] ) ? 'ok' : implode( ', ', $source['metadata_flags'] ) ); ?></td><td><?php echo esc_html( ! empty( $source['embedding'] ) && is_array( $source['embedding'] ) ? 'embedded' : 'none' ); ?></td><td><code><?php echo esc_html( $source['url'] ); ?></code></td></tr>
             <?php endforeach; ?>
             </tbody></table>
             <h2><?php esc_html_e( 'Route Map', 'sustainable-catalyst-research-librarian-ai' ); ?></h2>
