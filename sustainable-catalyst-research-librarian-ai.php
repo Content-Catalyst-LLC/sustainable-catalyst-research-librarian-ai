@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Sustainable Catalyst Research Librarian
  * Plugin URI: https://sustainablecatalyst.com/platform/research-librarian/
- * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, correction triage, knowledge-gap review, governance controls, privacy summaries, retention policies, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, scheduled index maintenance, sitemap sync, health alerts, recovery snapshots, backup/export controls, migration readiness, security hardening, endpoint permission review, access-surface audit, and exports.
- * Version: 4.2.0
+ * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, correction triage, knowledge-gap review, governance controls, privacy summaries, retention policies, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, scheduled index maintenance, sitemap sync, health alerts, recovery snapshots, backup/export controls, migration readiness, security hardening, endpoint permission review, access-surface audit, observability checks, operational runbooks, incident-response summaries, and exports.
+ * Version: 4.3.0
  * Author: Content Catalyst LLC / Tariq Ahmad
  * Author URI: https://sustainablecatalyst.com/
  * License: MIT
@@ -23,7 +23,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
     const MAINTENANCE_OPTION = 'sc_rl_ai_maintenance_status';
     const MAINTENANCE_HOOK = 'sc_rl_ai_index_maintenance_event';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const VERSION        = '4.2.0';
+    const VERSION        = '4.3.0';
 
     private static $instance = null;
 
@@ -209,6 +209,11 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         if ( 'security' === $mode || 'security-summary' === $mode || 'access-review' === $mode || 'endpoint-security' === $mode ) {
             if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V420_Security' ) ) {
                 return Sustainable_Catalyst_Research_Librarian_AI_V420_Security::render_public_summary( $atts );
+            }
+        }
+        if ( 'observability' === $mode || 'observability-summary' === $mode || 'operations' === $mode || 'operations-summary' === $mode || 'runbook' === $mode || 'runbook-summary' === $mode ) {
+            if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V430_Observability' ) ) {
+                return Sustainable_Catalyst_Research_Librarian_AI_V430_Observability::render_public_summary( $atts );
             }
         }
         if ( 'recovery' === $mode || 'recovery-summary' === $mode || 'backup-summary' === $mode || 'snapshot-summary' === $mode ) {
@@ -4691,11 +4696,367 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V420_Security {
             array( 'path' => '/security/endpoints', 'access' => 'admin', 'purpose' => 'Admin-only endpoint inventory.' ),
             array( 'path' => '/security/run-audit', 'access' => 'admin', 'purpose' => 'Admin-only security audit action.' ),
             array( 'path' => '/security/export', 'access' => 'admin', 'purpose' => 'Admin-only security export.' ),
+            array( 'path' => '/observability/status', 'access' => 'public', 'purpose' => 'Public-safe operational observability status.' ),
+            array( 'path' => '/observability/events', 'access' => 'admin', 'purpose' => 'Admin-only observability event log.' ),
+            array( 'path' => '/observability/run-checks', 'access' => 'admin', 'purpose' => 'Admin-only observability check action.' ),
+            array( 'path' => '/observability/export', 'access' => 'admin', 'purpose' => 'Admin-only observability export.' ),
+            array( 'path' => '/operations/runbook', 'access' => 'public', 'purpose' => 'Public-safe operational runbook summary.' ),
+            array( 'path' => '/operations/export', 'access' => 'admin', 'purpose' => 'Admin-only operations/runbook export.' ),
             array( 'path' => '/health', 'access' => 'public', 'purpose' => 'Public-safe plugin health summary.' ),
         );
     }
 }
 
+
+/**
+ * v4.3.0 Observability, operational runbooks, and production checks.
+ */
+final class Sustainable_Catalyst_Research_Librarian_AI_V430_Observability {
+    const VERSION = '4.3.0';
+    const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
+    const MAIN_OPTIONS = 'sc_rl_ai_options';
+    const INDEX_OPTION = 'sc_rl_ai_knowledge_index';
+    const EMBED_OPTION = 'sc_rl_ai_embedding_status';
+    const EVAL_OPTION = 'sc_rl_ai_evaluation_status';
+    const HANDOFF_OPTION = 'sc_rl_ai_handoff_status';
+    const SESSION_OPTION = 'sc_rl_ai_session_logs';
+    const FEEDBACK_OPTION = 'sc_rl_ai_feedback_logs';
+    const GOVERNANCE_OPTION = 'sc_rl_ai_governance_status';
+    const MAINTENANCE_OPTION = 'sc_rl_ai_maintenance_status';
+    const RECOVERY_OPTION = 'sc_rl_ai_recovery_snapshots';
+    const SECURITY_OPTION = 'sc_rl_ai_security_audit_status';
+    const OBS_OPTION = 'sc_rl_ai_observability_events';
+
+    public static function init() {
+        add_action( 'rest_api_init', array( __CLASS__, 'register_rest_routes' ) );
+        add_shortcode( 'sc_research_librarian_observability_summary', array( __CLASS__, 'render_public_summary' ) );
+        add_shortcode( 'sc_research_librarian_runbook_summary', array( __CLASS__, 'render_runbook_summary' ) );
+        add_action( 'admin_menu', array( __CLASS__, 'register_admin_page' ) );
+    }
+
+    public static function can_manage_options() {
+        return current_user_can( 'manage_options' );
+    }
+
+    public static function register_rest_routes() {
+        register_rest_route( self::REST_NAMESPACE, '/observability/status', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( __CLASS__, 'handle_status' ),
+            'permission_callback' => '__return_true',
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/observability/events', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( __CLASS__, 'handle_events' ),
+            'permission_callback' => array( __CLASS__, 'can_manage_options' ),
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/observability/run-checks', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array( __CLASS__, 'handle_run_checks' ),
+            'permission_callback' => array( __CLASS__, 'can_manage_options' ),
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/observability/export', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( __CLASS__, 'handle_export' ),
+            'permission_callback' => array( __CLASS__, 'can_manage_options' ),
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/operations/runbook', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( __CLASS__, 'handle_runbook' ),
+            'permission_callback' => '__return_true',
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/operations/export', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( __CLASS__, 'handle_operations_export' ),
+            'permission_callback' => array( __CLASS__, 'can_manage_options' ),
+        ) );
+    }
+
+    public static function register_admin_page() {
+        add_options_page(
+            __( 'Research Librarian Observability', 'sustainable-catalyst-research-librarian-ai' ),
+            __( 'Research Librarian Observability', 'sustainable-catalyst-research-librarian-ai' ),
+            'manage_options',
+            'sc-research-librarian-ai-observability',
+            array( __CLASS__, 'render_admin_page' )
+        );
+    }
+
+    public static function render_public_summary( $atts = array() ) {
+        $atts = shortcode_atts( array( 'title' => 'Research Librarian Observability' ), $atts, 'sc_research_librarian_observability_summary' );
+        wp_enqueue_style( 'sc-research-librarian-ai', plugins_url( 'assets/sc-research-librarian-ai.css', __FILE__ ), array(), self::VERSION );
+        $status = self::public_status();
+        ob_start();
+        ?>
+        <section class="sc-rl-product" data-sc-rl-product="observability">
+            <p class="sc-rl-product__eyebrow">Operations Layer</p>
+            <h2><?php echo esc_html( $atts['title'] ); ?></h2>
+            <p class="sc-rl-product__lede">Operational health, readiness signals, runbook guidance, and admin-safe event review for the Research Librarian infrastructure.</p>
+            <div class="sc-rl-product__grid">
+                <article><span>Operational score</span><strong><?php echo esc_html( absint( $status['operational_score'] ) ); ?>%</strong><p>Aggregate operational-readiness score.</p></article>
+                <article><span>Index records</span><strong><?php echo esc_html( absint( $status['index_records'] ) ); ?></strong><p>Currently indexed source records.</p></article>
+                <article><span>Embedded records</span><strong><?php echo esc_html( absint( $status['embedded_records'] ) ); ?></strong><p>Records with retrieval embeddings.</p></article>
+                <article><span>Warnings</span><strong><?php echo esc_html( absint( $status['warning_count'] ) ); ?></strong><p>Items to review in admin.</p></article>
+            </div>
+            <p class="sc-rl-boundary-note">Public-safe summary only. Full diagnostics, events, and operational exports are admin-only.</p>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+
+    public static function render_runbook_summary( $atts = array() ) {
+        return self::render_public_summary( $atts );
+    }
+
+    public static function render_admin_page() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( esc_html__( 'You do not have permission to access this page.', 'sustainable-catalyst-research-librarian-ai' ) );
+        }
+        $notice = '';
+        if ( isset( $_POST['sc_rl_observability_action'] ) && check_admin_referer( 'sc_rl_observability_action', 'sc_rl_observability_nonce' ) ) {
+            $action = sanitize_key( wp_unslash( $_POST['sc_rl_observability_action'] ) );
+            if ( 'run_checks' === $action ) {
+                $result = self::run_checks( 'manual_admin' );
+                $notice = 'Observability checks completed. Operational score: ' . absint( $result['operational_score'] ) . '%';
+            }
+        }
+        $status = self::status();
+        $runbook = self::runbook();
+        $events = self::events();
+        ?>
+        <div class="wrap">
+            <h1><?php esc_html_e( 'Research Librarian Observability', 'sustainable-catalyst-research-librarian-ai' ); ?></h1>
+            <p><?php esc_html_e( 'Review operational health, retrieval readiness, maintenance status, recovery posture, security warnings, and runbook actions.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
+            <?php if ( $notice ) : ?><div class="notice notice-success is-dismissible"><p><?php echo esc_html( $notice ); ?></p></div><?php endif; ?>
+            <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0;max-width:1100px;">
+                <div class="postbox" style="padding:14px;"><strong style="font-size:22px;display:block;"><?php echo esc_html( absint( $status['operational_score'] ) ); ?>%</strong><span><?php esc_html_e( 'Operational score', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                <div class="postbox" style="padding:14px;"><strong style="font-size:22px;display:block;"><?php echo esc_html( absint( $status['signals']['index_records'] ) ); ?></strong><span><?php esc_html_e( 'Index records', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                <div class="postbox" style="padding:14px;"><strong style="font-size:22px;display:block;"><?php echo esc_html( absint( $status['signals']['embedded_records'] ) ); ?></strong><span><?php esc_html_e( 'Embedded records', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                <div class="postbox" style="padding:14px;"><strong style="font-size:22px;display:block;"><?php echo esc_html( absint( count( $status['warnings'] ) ) ); ?></strong><span><?php esc_html_e( 'Warnings', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+            </div>
+            <form method="post" style="display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 22px;">
+                <?php wp_nonce_field( 'sc_rl_observability_action', 'sc_rl_observability_nonce' ); ?>
+                <button class="button button-primary" type="submit" name="sc_rl_observability_action" value="run_checks"><?php esc_html_e( 'Run Observability Checks', 'sustainable-catalyst-research-librarian-ai' ); ?></button>
+                <a class="button" href="<?php echo esc_url( rest_url( self::REST_NAMESPACE . '/observability/export' ) ); ?>"><?php esc_html_e( 'Export Observability JSON', 'sustainable-catalyst-research-librarian-ai' ); ?></a>
+                <a class="button" href="<?php echo esc_url( rest_url( self::REST_NAMESPACE . '/operations/export' ) ); ?>"><?php esc_html_e( 'Export Operations Runbook', 'sustainable-catalyst-research-librarian-ai' ); ?></a>
+            </form>
+            <h2><?php esc_html_e( 'Runbook', 'sustainable-catalyst-research-librarian-ai' ); ?></h2>
+            <table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Signal', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Check', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Action', 'sustainable-catalyst-research-librarian-ai' ); ?></th></tr></thead><tbody>
+                <?php foreach ( $runbook['steps'] as $step ) : ?>
+                    <tr><td><?php echo esc_html( $step['signal'] ); ?></td><td><?php echo esc_html( $step['check'] ); ?></td><td><?php echo esc_html( $step['action'] ); ?></td></tr>
+                <?php endforeach; ?>
+            </tbody></table>
+            <?php if ( ! empty( $status['warnings'] ) ) : ?>
+                <h2><?php esc_html_e( 'Warnings', 'sustainable-catalyst-research-librarian-ai' ); ?></h2>
+                <ul><?php foreach ( $status['warnings'] as $warning ) : ?><li><?php echo esc_html( $warning ); ?></li><?php endforeach; ?></ul>
+            <?php endif; ?>
+            <h2><?php esc_html_e( 'Recent Observability Events', 'sustainable-catalyst-research-librarian-ai' ); ?></h2>
+            <table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Time', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Reason', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Score', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Warnings', 'sustainable-catalyst-research-librarian-ai' ); ?></th></tr></thead><tbody>
+                <?php foreach ( array_slice( array_reverse( $events ), 0, 10 ) as $event ) : ?>
+                    <tr><td><?php echo esc_html( $event['generated_utc'] ?? '' ); ?></td><td><?php echo esc_html( $event['reason'] ?? '' ); ?></td><td><?php echo esc_html( absint( $event['operational_score'] ?? 0 ) ); ?>%</td><td><?php echo esc_html( absint( $event['warning_count'] ?? 0 ) ); ?></td></tr>
+                <?php endforeach; ?>
+            </tbody></table>
+        </div>
+        <?php
+    }
+
+    public static function handle_status() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'observability' => self::public_status() ), 200 );
+    }
+
+    public static function handle_events() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'events' => self::events() ), 200 );
+    }
+
+    public static function handle_run_checks( WP_REST_Request $request ) {
+        $nonce = $request->get_header( 'x_wp_nonce' );
+        if ( $nonce && ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
+            return new WP_Error( 'sc_rl_ai_bad_nonce', __( 'Security check failed. Refresh the page and try again.', 'sustainable-catalyst-research-librarian-ai' ), array( 'status' => 403 ) );
+        }
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'observability' => self::run_checks( 'manual_rest' ) ), 200 );
+    }
+
+    public static function handle_export() {
+        return new WP_REST_Response( array(
+            'version' => self::VERSION,
+            'generated_utc' => gmdate( 'c' ),
+            'observability' => self::status(),
+            'events' => self::events(),
+            'runbook' => self::runbook(),
+        ), 200 );
+    }
+
+    public static function handle_runbook() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'runbook' => self::public_runbook() ), 200 );
+    }
+
+    public static function handle_operations_export() {
+        return new WP_REST_Response( array(
+            'version' => self::VERSION,
+            'generated_utc' => gmdate( 'c' ),
+            'runbook' => self::runbook(),
+            'status' => self::status(),
+        ), 200 );
+    }
+
+    public static function run_checks( $reason = 'manual' ) {
+        $status = self::status();
+        $event = array(
+            'generated_utc' => gmdate( 'c' ),
+            'reason' => sanitize_text_field( $reason ),
+            'operational_score' => absint( $status['operational_score'] ),
+            'warning_count' => count( $status['warnings'] ),
+            'signals' => $status['signals'],
+            'warnings' => $status['warnings'],
+        );
+        $events = self::events();
+        $events[] = $event;
+        $events = array_slice( $events, -100 );
+        update_option( self::OBS_OPTION, $events, false );
+        return $status + array( 'generated_utc' => $event['generated_utc'], 'reason' => $event['reason'] );
+    }
+
+    public static function public_status() {
+        $status = self::status();
+        return array(
+            'enabled' => true,
+            'operational_score' => $status['operational_score'],
+            'index_records' => $status['signals']['index_records'],
+            'embedded_records' => $status['signals']['embedded_records'],
+            'retrieval_enabled' => $status['signals']['retrieval_enabled'],
+            'maintenance_configured' => $status['signals']['maintenance_configured'],
+            'warning_count' => count( $status['warnings'] ),
+            'public_notes' => array(
+                'Public observability does not expose raw visitor questions, API keys, raw diagnostics, logs, or exports.',
+                'Full observability events and operations exports are administrator-only.',
+            ),
+        );
+    }
+
+    public static function status() {
+        $options = wp_parse_args( get_option( self::MAIN_OPTIONS, array() ), array( 'provider' => 'disabled', 'embeddings_provider' => 'disabled' ) );
+        $index = get_option( self::INDEX_OPTION, array() );
+        $records = isset( $index['records'] ) && is_array( $index['records'] ) ? $index['records'] : array();
+        $embed = get_option( self::EMBED_OPTION, array() );
+        $maintenance = get_option( self::MAINTENANCE_OPTION, array() );
+        $security = get_option( self::SECURITY_OPTION, array() );
+        $recovery = get_option( self::RECOVERY_OPTION, array() );
+        $evaluation = get_option( self::EVAL_OPTION, array() );
+        $handoff = get_option( self::HANDOFF_OPTION, array() );
+        $sessions = get_option( self::SESSION_OPTION, array() );
+        $feedback = get_option( self::FEEDBACK_OPTION, array() );
+        $embedded_records = absint( $embed['embedded_records'] ?? $index['embedded_records'] ?? 0 );
+        $signals = array(
+            'provider' => sanitize_key( $options['provider'] ),
+            'embeddings_provider' => sanitize_key( $options['embeddings_provider'] ),
+            'index_records' => count( $records ),
+            'embedded_records' => $embedded_records,
+            'embedding_dimensions' => absint( $embed['embedding_dimensions'] ?? 0 ),
+            'retrieval_enabled' => 'disabled' !== sanitize_key( $options['embeddings_provider'] ),
+            'maintenance_configured' => '1' === (string) ( $options['maintenance_auto_rebuild_enabled'] ?? '0' ),
+            'maintenance_last_run' => sanitize_text_field( $maintenance['last_run_utc'] ?? $maintenance['last_maintenance_utc'] ?? '' ),
+            'security_audit_present' => ! empty( $security ),
+            'recovery_snapshots' => self::count_payload_records( $recovery, array( 'snapshots' ) ),
+            'evaluation_records' => self::count_payload_records( $evaluation, array( 'results', 'logs', 'suite' ) ),
+            'handoff_records' => self::count_payload_records( $handoff, array( 'logs', 'handoffs' ) ),
+            'saved_sessions' => self::count_payload_records( $sessions, array( 'sessions', 'logs' ) ),
+            'feedback_records' => self::count_payload_records( $feedback, array( 'feedback', 'logs', 'records' ) ),
+        );
+        $checks = array(
+            'knowledge_index_present' => array( 'pass' => $signals['index_records'] > 0, 'detail' => $signals['index_records'] . ' indexed source records.' ),
+            'retrieval_embeddings_present' => array( 'pass' => ! $signals['retrieval_enabled'] || $signals['embedded_records'] > 0, 'detail' => $signals['embedded_records'] . ' embedded records.' ),
+            'security_audit_present' => array( 'pass' => $signals['security_audit_present'], 'detail' => $signals['security_audit_present'] ? 'Security audit status exists.' : 'Run the security audit.' ),
+            'recovery_snapshot_present' => array( 'pass' => $signals['recovery_snapshots'] > 0, 'detail' => $signals['recovery_snapshots'] . ' recovery snapshots.' ),
+            'maintenance_configured' => array( 'pass' => $signals['maintenance_configured'], 'detail' => $signals['maintenance_configured'] ? 'Scheduled maintenance enabled.' : 'Scheduled maintenance not enabled.' ),
+            'evaluation_available' => array( 'pass' => ! empty( $evaluation ), 'detail' => empty( $evaluation ) ? 'No retrieval evaluation status found.' : 'Evaluation status exists.' ),
+            'handoff_layer_available' => array( 'pass' => ! empty( $handoff ) || self::file_exists_in_plugin( 'data/research_librarian_handoff_manifest_v3.5.0.json' ), 'detail' => 'Handoff layer is present.' ),
+            'feedback_loop_available' => array( 'pass' => self::file_exists_in_plugin( 'data/research_librarian_feedback_manifest_v3.7.0.json' ), 'detail' => 'Feedback triage layer is present.' ),
+        );
+        $warnings = array();
+        foreach ( $checks as $id => $check ) {
+            if ( empty( $check['pass'] ) ) {
+                $warnings[] = $check['detail'];
+            }
+        }
+        if ( $signals['retrieval_enabled'] && $signals['embedded_records'] > 0 && $signals['embedded_records'] < $signals['index_records'] ) {
+            $warnings[] = 'Only part of the knowledge index has embeddings. Resume embedding generation when rate limits allow.';
+        }
+        $passes = 0;
+        foreach ( $checks as $check ) { if ( ! empty( $check['pass'] ) ) { $passes++; } }
+        $score = count( $checks ) ? (int) round( ( $passes / count( $checks ) ) * 100 ) : 0;
+        return array(
+            'enabled' => true,
+            'operational_score' => $score,
+            'signals' => $signals,
+            'checks' => $checks,
+            'warnings' => array_values( array_unique( $warnings ) ),
+            'recommended_actions' => self::recommended_actions( $checks, $signals ),
+            'admin_only' => array( 'events', 'raw exports', 'restore operations', 'embedding diagnostics', 'security exports', 'logs' ),
+            'public_safe' => array( 'summary counts', 'readiness percentages', 'public runbook guidance', 'non-secret warning counts' ),
+        );
+    }
+
+    private static function recommended_actions( $checks, $signals ) {
+        $actions = array();
+        if ( empty( $checks['knowledge_index_present']['pass'] ) ) { $actions[] = 'Rebuild the knowledge index.'; }
+        if ( empty( $checks['retrieval_embeddings_present']['pass'] ) ) { $actions[] = 'Run a single embedding test, then generate embeddings in small batches.'; }
+        if ( empty( $checks['security_audit_present']['pass'] ) ) { $actions[] = 'Run Security Audit from the Research Librarian Security page.'; }
+        if ( empty( $checks['recovery_snapshot_present']['pass'] ) ) { $actions[] = 'Create a recovery snapshot before the next major index or plugin change.'; }
+        if ( empty( $checks['maintenance_configured']['pass'] ) ) { $actions[] = 'Enable scheduled index maintenance after the public page is stable.'; }
+        if ( empty( $checks['evaluation_available']['pass'] ) ) { $actions[] = 'Run retrieval evaluation to check expected route quality.'; }
+        if ( $signals['retrieval_enabled'] && $signals['embedded_records'] > 0 && $signals['embedded_records'] < $signals['index_records'] ) { $actions[] = 'Resume embeddings until embedded records match index records.'; }
+        return empty( $actions ) ? array( 'Continue routine checks after plugin upgrades, sitemap changes, and embedding refreshes.' ) : $actions;
+    }
+
+    public static function runbook() {
+        return array(
+            'purpose' => 'Operational runbook for Sustainable Catalyst Research Librarian retrieval infrastructure.',
+            'steps' => array(
+                array( 'signal' => 'Index records', 'check' => 'Index records should be greater than zero.', 'action' => 'Rebuild the knowledge index if records are empty or unexpectedly low.' ),
+                array( 'signal' => 'Embeddings', 'check' => 'Embedded records should match index records when Gemini retrieval is enabled.', 'action' => 'Run single embedding test, then resume embedding batches with rate-limit delay.' ),
+                array( 'signal' => 'Evaluation', 'check' => 'Expected-route tests should pass for Workbench, Decision Studio, Narrative Risk, Global Impact, and Platform routes.', 'action' => 'Run Retrieval Evaluation and review mismatches or low-confidence matches.' ),
+                array( 'signal' => 'Security', 'check' => 'Security score should be reviewed after new endpoints or exports are added.', 'action' => 'Run Security Audit and verify admin-only exports remain protected.' ),
+                array( 'signal' => 'Recovery', 'check' => 'A recent recovery snapshot should exist before rebuilds, migrations, or major plugin upgrades.', 'action' => 'Create Recovery Snapshot before operational changes.' ),
+                array( 'signal' => 'Maintenance', 'check' => 'Scheduled maintenance should be enabled only after the index and sitemap settings are stable.', 'action' => 'Sync schedule, run maintenance manually once, then enable alerts.' ),
+                array( 'signal' => 'Feedback', 'check' => 'Wrong-route and missing-source feedback should be reviewed for content gaps.', 'action' => 'Triage reports into route overrides, page edits, or feature suggestions.' ),
+            ),
+            'incident_notes' => array(
+                'If Gemini keys fail after saving settings, check saved-key fingerprint and key persistence diagnostics.',
+                'If embedded records stop increasing, lower the embedding source limit and increase delay between requests.',
+                'If public routing is weak, run evaluation before changing source weights or route copy.',
+            ),
+        );
+    }
+
+    public static function public_runbook() {
+        $runbook = self::runbook();
+        return array(
+            'purpose' => $runbook['purpose'],
+            'step_count' => count( $runbook['steps'] ),
+            'summary' => array_slice( $runbook['steps'], 0, 4 ),
+            'note' => 'Public runbook summary. Full operational export is admin-only.',
+        );
+    }
+
+    public static function events() {
+        $events = get_option( self::OBS_OPTION, array() );
+        return is_array( $events ) ? $events : array();
+    }
+
+    private static function count_payload_records( $payload, $candidate_keys = array() ) {
+        if ( ! is_array( $payload ) ) { return 0; }
+        foreach ( $candidate_keys as $key ) {
+            if ( isset( $payload[ $key ] ) && is_array( $payload[ $key ] ) ) { return count( $payload[ $key ] ); }
+        }
+        if ( array_keys( $payload ) === range( 0, count( $payload ) - 1 ) ) { return count( $payload ); }
+        return empty( $payload ) ? 0 : 1;
+    }
+
+    private static function file_exists_in_plugin( $relative ) {
+        return file_exists( plugin_dir_path( __FILE__ ) . ltrim( $relative, '/' ) );
+    }
+}
+
+Sustainable_Catalyst_Research_Librarian_AI_V430_Observability::init();
 Sustainable_Catalyst_Research_Librarian_AI_V420_Security::init();
 Sustainable_Catalyst_Research_Librarian_AI_V410_Recovery::init();
 

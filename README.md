@@ -320,3 +320,8 @@ POST /wp-json/sc-research-librarian-ai/v1/recovery/delete
 ```
 
 Embedding vectors are summarized but stripped from snapshots so recovery exports remain manageable. Regenerate embeddings after restore.
+
+
+## v4.3.0 — Observability, Operations Runbook, and Production Checks
+
+Adds an operational readiness layer with public-safe observability summaries, admin-only event logs, runbook exports, and production checks across the knowledge index, Gemini embeddings, evaluation, handoffs, sessions, feedback, governance, maintenance, recovery, and security layers.

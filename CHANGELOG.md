@@ -1,5 +1,16 @@
 # Changelog
 
+## v4.3.0 — Observability, Operations Runbook, and Production Checks
+
+- Added operational readiness score.
+- Added admin Observability page.
+- Added public-safe observability summary shortcode.
+- Added admin-only observability events and export.
+- Added operations runbook status and export endpoints.
+- Added checks across index, embeddings, evaluation, handoffs, sessions, feedback, governance, maintenance, recovery, and security layers.
+- Added `data/research_librarian_observability_manifest_v4.3.0.json`.
+- Added `docs/V430_OBSERVABILITY_OPERATIONS_RUNBOOK.md`.
+
 ## 4.2.0 — Security Hardening, Endpoint Permissions, and Access Review
 
 - Added security posture summary and public-safe security shortcode.

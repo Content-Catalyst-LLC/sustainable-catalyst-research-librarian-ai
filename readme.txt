@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 4.2.0
+Stable tag: 4.3.0
 License: MIT
 
 A site-scoped Research Librarian for Sustainable Catalyst with source-aware routing, route notes, handoff payloads, saved route sessions, admin analytics, a knowledge indexer, and optional Gemini embeddings for hybrid retrieval, and security/access review tooling.
@@ -122,3 +122,7 @@ v4.2.0 adds endpoint security review, admin/public access classification, secret
 
 = 3.9.0 =
 * Adds scheduled index maintenance, sitemap sync, maintenance status/export endpoints, and maintenance-summary shortcode.
+
+
+= 4.3.0 =
+* Added observability status, operational runbook endpoints, admin event logs, and production readiness checks.
