@@ -220,9 +220,9 @@ New shortcode:
 `[sc_research_librarian mode="handoff-summary" title="Research Librarian Handoff Layer"]`
 
 
-## v3.7.0 Feedback and Triage Layer
+## v3.8.0 Feedback and Triage Layer
 
-Research Librarian v3.7.0 adds a human review loop for retrieval quality. Visitors can mark a route as helpful or report an issue. Administrators can review wrong-route reports, missing-source notes, unclear answers, feature gaps, and knowledge gaps from a structured feedback dashboard.
+Research Librarian v3.8.0 adds a human review loop for retrieval quality. Visitors can mark a route as helpful or report an issue. Administrators can review wrong-route reports, missing-source notes, unclear answers, feature gaps, and knowledge gaps from a structured feedback dashboard.
 
 New shortcode:
 
@@ -238,3 +238,8 @@ GET  /wp-json/sc-research-librarian-ai/v1/feedback/summary
 GET  /wp-json/sc-research-librarian-ai/v1/feedback/logs
 GET  /wp-json/sc-research-librarian-ai/v1/feedback/export
 ```
+
+
+## v3.8.0 Governance Layer
+
+Adds governance, privacy, retention, and admin export controls for saved route sessions, feedback, handoffs, evaluation logs, retrieval status, and public-safe summary display.

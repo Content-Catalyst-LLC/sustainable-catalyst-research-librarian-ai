@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Sustainable Catalyst Research Librarian
  * Plugin URI: https://sustainablecatalyst.com/platform/research-librarian/
- * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, source-correction triage, knowledge-gap review, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, and exports.
- * Version: 3.7.0
+ * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, correction triage, knowledge-gap review, governance controls, privacy summaries, retention policies, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, and exports.
+ * Version: 3.8.0
  * Author: Content Catalyst LLC / Tariq Ahmad
  * Author URI: https://sustainablecatalyst.com/
  * License: MIT
@@ -21,7 +21,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
     const EVAL_OPTION    = 'sc_rl_ai_evaluation_status';
     const HANDOFF_OPTION = 'sc_rl_ai_handoff_status';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const VERSION        = '3.7.0';
+    const VERSION        = '3.8.0';
 
     private static $instance = null;
 
@@ -82,6 +82,13 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
             'handoff_log_limit'     => 100,
             'session_log_limit'     => 200,
             'feedback_log_limit'    => 200,
+            'governance_enable_public_summary' => '1',
+            'governance_redact_questions_in_exports' => '0',
+            'governance_session_retention_days' => 90,
+            'governance_feedback_retention_days' => 180,
+            'governance_evaluation_retention_days' => 180,
+            'governance_handoff_retention_days' => 180,
+            'governance_admin_export_requires_manage_options' => '1',
             'system_instructions'     => self::default_system_instructions(),
         );
     }
@@ -169,6 +176,9 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         }
         if ( 'feedback' === $mode || 'feedback-summary' === $mode || 'route-feedback' === $mode || 'triage-summary' === $mode ) {
             return $this->render_feedback_summary( $atts );
+        }
+        if ( 'governance' === $mode || 'governance-summary' === $mode || 'privacy-summary' === $mode || 'retention-summary' === $mode ) {
+            return $this->render_governance_summary( $atts );
         }
         return $this->render_assistant( $atts );
     }
@@ -362,6 +372,27 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                 <article><span><?php echo esc_html( absint( $summary['knowledge_gap_count'] ) ); ?></span><strong>Knowledge gaps</strong></article>
             </div>
             <p class="sc-rl-index-summary__meta">Last feedback: <?php echo esc_html( $summary['last_feedback_utc'] ? $summary['last_feedback_utc'] : 'none' ); ?>.</p>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+
+
+    private function render_governance_summary( $atts ) {
+        $summary = $this->governance_summary();
+        ob_start();
+        ?>
+        <section class="sc-rl-governance-summary" data-sc-rl-product="governance-summary">
+            <p class="sc-rl-routes__eyebrow">Research Librarian Governance</p>
+            <h2><?php echo esc_html( $atts['title'] ); ?></h2>
+            <p>The governance layer summarizes privacy posture, retention policy, export controls, public endpoint boundaries, and operational logs used by the Research Librarian. It is intended to keep routing infrastructure inspectable without exposing API keys or turning route analytics into user surveillance.</p>
+            <div class="sc-rl-index-summary__grid">
+                <article><span><?php echo esc_html( absint( $summary['logs']['sessions'] ) ); ?></span><strong>Saved sessions</strong></article>
+                <article><span><?php echo esc_html( absint( $summary['logs']['feedback'] ) ); ?></span><strong>Feedback records</strong></article>
+                <article><span><?php echo esc_html( absint( $summary['logs']['handoffs'] ) ); ?></span><strong>Handoff records</strong></article>
+                <article><span><?php echo esc_html( $summary['public_summary_enabled'] ? 'on' : 'off' ); ?></span><strong>Public summary</strong></article>
+            </div>
+            <p class="sc-rl-index-summary__meta">Retention targets: sessions <?php echo esc_html( absint( $summary['retention_days']['sessions'] ) ); ?> days, feedback <?php echo esc_html( absint( $summary['retention_days']['feedback'] ) ); ?> days, evaluation <?php echo esc_html( absint( $summary['retention_days']['evaluation'] ) ); ?> days, handoffs <?php echo esc_html( absint( $summary['retention_days']['handoffs'] ) ); ?> days.</p>
         </section>
         <?php
         return ob_get_clean();
@@ -627,6 +658,24 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'permission_callback' => array( $this, 'can_manage_options' ),
         ) );
 
+        register_rest_route( self::REST_NAMESPACE, '/governance/status', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'handle_governance_status_request' ),
+            'permission_callback' => '__return_true',
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/governance/export', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'handle_governance_export_request' ),
+            'permission_callback' => array( $this, 'can_manage_options' ),
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/governance/purge-expired', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array( $this, 'handle_governance_purge_expired_request' ),
+            'permission_callback' => array( $this, 'can_manage_options' ),
+        ) );
+
         register_rest_route( self::REST_NAMESPACE, '/health', array(
             'methods'             => WP_REST_Server::READABLE,
             'callback'            => array( $this, 'handle_health_request' ),
@@ -647,6 +696,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'evaluation' => $this->evaluation_summary(),
             'handoff' => $this->handoff_summary(),
             'feedback' => $this->feedback_summary(),
+            'governance' => $this->governance_summary(),
         ), 200 );
     }
 
@@ -1385,6 +1435,164 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
 
     public function handle_analytics_summary_request() {
         return new WP_REST_Response( array( 'version' => self::VERSION, 'analytics' => $this->session_analytics_summary(), 'retrieval' => $this->retrieval_status(), 'index' => $this->knowledge_index_summary( $this->knowledge_index_records() ) ), 200 );
+    }
+
+
+    public function handle_governance_status_request() {
+        $options = $this->get_options();
+        if ( empty( $options['governance_enable_public_summary'] ) || '1' !== (string) $options['governance_enable_public_summary'] ) {
+            return new WP_REST_Response( array( 'version' => self::VERSION, 'public_summary_enabled' => false ), 200 );
+        }
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'governance' => $this->governance_public_summary() ), 200 );
+    }
+
+    public function handle_governance_export_request() {
+        return new WP_REST_Response( array(
+            'version' => self::VERSION,
+            'governance' => $this->governance_summary(),
+            'options' => $this->governance_option_summary(),
+            'retrieval' => $this->retrieval_status(),
+            'index' => $this->knowledge_index_summary( $this->knowledge_index_records() ),
+            'sessions' => $this->governance_export_logs( $this->session_logs(), 'session' ),
+            'feedback' => $this->governance_export_logs( $this->feedback_logs(), 'feedback' ),
+            'handoffs' => $this->governance_export_logs( $this->handoff_logs(), 'handoff' ),
+            'evaluation' => $this->evaluation_summary(),
+        ), 200 );
+    }
+
+    public function handle_governance_purge_expired_request() {
+        $result = $this->purge_expired_governance_logs();
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'purged' => true, 'result' => $result, 'governance' => $this->governance_summary() ), 200 );
+    }
+
+    private function governance_public_summary() {
+        $summary = $this->governance_summary();
+        return array(
+            'public_summary_enabled' => $summary['public_summary_enabled'],
+            'retention_days' => $summary['retention_days'],
+            'logs' => $summary['logs'],
+            'privacy_posture' => $summary['privacy_posture'],
+            'export_controls' => $summary['export_controls'],
+            'last_purge_utc' => $summary['last_purge_utc'],
+        );
+    }
+
+    private function governance_summary() {
+        $options = $this->get_options();
+        $status = get_option( 'sc_rl_ai_governance_status', array() );
+        return array(
+            'public_summary_enabled' => ! empty( $options['governance_enable_public_summary'] ) && '1' === (string) $options['governance_enable_public_summary'],
+            'redact_questions_in_exports' => ! empty( $options['governance_redact_questions_in_exports'] ) && '1' === (string) $options['governance_redact_questions_in_exports'],
+            'retention_days' => array(
+                'sessions' => max( 1, absint( $options['governance_session_retention_days'] ?? 90 ) ),
+                'feedback' => max( 1, absint( $options['governance_feedback_retention_days'] ?? 180 ) ),
+                'evaluation' => max( 1, absint( $options['governance_evaluation_retention_days'] ?? 180 ) ),
+                'handoffs' => max( 1, absint( $options['governance_handoff_retention_days'] ?? 180 ) ),
+            ),
+            'logs' => array(
+                'sessions' => count( $this->session_logs() ),
+                'feedback' => count( $this->feedback_logs() ),
+                'handoffs' => count( $this->handoff_logs() ),
+                'evaluation_failures' => absint( $this->evaluation_summary()['fail_count'] ?? 0 ),
+            ),
+            'privacy_posture' => array(
+                'api_keys_exposed_publicly' => false,
+                'admin_exports_require_manage_options' => true,
+                'public_endpoints_include_raw_api_keys' => false,
+                'semantic_embeddings_store_numeric_vectors_only' => true,
+                'professional_advice_boundary' => true,
+            ),
+            'export_controls' => array(
+                'index_export_admin_only' => true,
+                'retrieval_diagnostics_admin_only' => true,
+                'session_export_admin_only' => true,
+                'feedback_export_admin_only' => true,
+                'governance_export_admin_only' => true,
+            ),
+            'last_purge_utc' => ! empty( $status['last_purge_utc'] ) ? $status['last_purge_utc'] : '',
+            'last_purge_result' => ! empty( $status['last_purge_result'] ) ? $status['last_purge_result'] : array(),
+        );
+    }
+
+    private function governance_option_summary() {
+        $options = $this->get_options();
+        return array(
+            'provider' => $this->configured_provider( $options ),
+            'embeddings_provider' => sanitize_key( $options['embeddings_provider'] ?? 'disabled' ),
+            'gemini_key_fingerprint' => $this->key_fingerprint( $options['gemini_api_key'] ?? '' ),
+            'openai_key_fingerprint' => $this->key_fingerprint( $options['openai_api_key'] ?? '' ),
+            'semantic_weight' => sanitize_text_field( $options['semantic_weight'] ?? '0.65' ),
+            'keyword_weight' => sanitize_text_field( $options['keyword_weight'] ?? '0.35' ),
+        );
+    }
+
+    private function governance_export_logs( $logs, $kind ) {
+        $options = $this->get_options();
+        $redact = ! empty( $options['governance_redact_questions_in_exports'] ) && '1' === (string) $options['governance_redact_questions_in_exports'];
+        if ( ! is_array( $logs ) ) {
+            return array();
+        }
+        if ( ! $redact ) {
+            return $logs;
+        }
+        $out = array();
+        foreach ( $logs as $log ) {
+            if ( is_array( $log ) ) {
+                if ( isset( $log['question'] ) ) {
+                    $log['question'] = '[redacted by governance export policy]';
+                }
+                if ( isset( $log['note'] ) ) {
+                    $log['note'] = '[redacted by governance export policy]';
+                }
+                if ( isset( $log['route_note']['question'] ) ) {
+                    $log['route_note']['question'] = '[redacted by governance export policy]';
+                }
+            }
+            $out[] = $log;
+        }
+        return $out;
+    }
+
+    private function purge_expired_governance_logs() {
+        $options = $this->get_options();
+        $result = array();
+        $session_days = max( 1, absint( $options['governance_session_retention_days'] ?? 90 ) );
+        $feedback_days = max( 1, absint( $options['governance_feedback_retention_days'] ?? 180 ) );
+        $handoff_days = max( 1, absint( $options['governance_handoff_retention_days'] ?? 180 ) );
+        $sessions = $this->filter_logs_by_retention_days( $this->session_logs(), $session_days );
+        $feedback = $this->filter_logs_by_retention_days( $this->feedback_logs(), $feedback_days );
+        $handoffs = $this->filter_logs_by_retention_days( $this->handoff_logs(), $handoff_days );
+        $result['sessions_kept'] = count( $sessions );
+        $result['feedback_kept'] = count( $feedback );
+        $result['handoffs_kept'] = count( $handoffs );
+        update_option( 'sc_rl_ai_session_log', $sessions, false );
+        update_option( 'sc_rl_ai_feedback_log', $feedback, false );
+        update_option( 'sc_rl_ai_handoff_log', $handoffs, false );
+        update_option( 'sc_rl_ai_governance_status', array( 'last_purge_utc' => gmdate( 'c' ), 'last_purge_result' => $result ), false );
+        return $result;
+    }
+
+    private function filter_logs_by_retention_days( $logs, $days ) {
+        if ( ! is_array( $logs ) || empty( $logs ) ) {
+            return array();
+        }
+        $cutoff = time() - ( absint( $days ) * DAY_IN_SECONDS );
+        $kept = array();
+        foreach ( $logs as $log ) {
+            $created = '';
+            if ( is_array( $log ) ) {
+                $created = $log['created_at_utc'] ?? ( $log['saved_at_utc'] ?? ( $log['timestamp'] ?? '' ) );
+            }
+            if ( ! $created ) {
+                $kept[] = $log;
+                continue;
+            }
+            $ts = strtotime( $created );
+            if ( false === $ts || $ts >= $cutoff ) {
+                $kept[] = $log;
+            }
+        }
+        return $kept;
     }
 
 
@@ -3169,6 +3377,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                 <button class="button" type="submit" name="sc_rl_index_action" value="clear_sessions"><?php esc_html_e( 'Clear Saved Sessions', 'sustainable-catalyst-research-librarian-ai' ); ?></button>
                 <a class="button" href="<?php echo esc_url( rest_url( self::REST_NAMESPACE . '/feedback/export' ) ); ?>"><?php esc_html_e( 'Export Feedback JSON', 'sustainable-catalyst-research-librarian-ai' ); ?></a>
                 <button class="button" type="submit" name="sc_rl_index_action" value="clear_feedback"><?php esc_html_e( 'Clear Feedback Logs', 'sustainable-catalyst-research-librarian-ai' ); ?></button>
+                <a class="button" href="<?php echo esc_url( rest_url( self::REST_NAMESPACE . '/governance/export' ) ); ?>"><?php esc_html_e( 'Export Governance JSON', 'sustainable-catalyst-research-librarian-ai' ); ?></a>
             </form>
 
             <div class="postbox" style="padding:14px;max-width:1100px;margin:12px 0 22px;">
@@ -3258,6 +3467,19 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                 <?php else : ?>
                     <p><?php esc_html_e( 'No sessions have been saved yet. Ask the public assistant a route question and click Save session.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
                 <?php endif; ?>
+            </div>
+
+            <div class="postbox" style="padding:14px;max-width:1100px;margin:12px 0 22px;">
+                <h2 style="margin-top:0;"><?php esc_html_e( 'Governance, Privacy, and Retention', 'sustainable-catalyst-research-librarian-ai' ); ?></h2>
+                <?php $governance = $this->governance_summary(); ?>
+                <p><?php esc_html_e( 'This layer summarizes retention targets, log counts, export boundaries, public summary status, and privacy posture for route sessions, feedback, handoffs, evaluation, and retrieval diagnostics.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
+                <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:12px 0;">
+                    <div class="postbox" style="padding:10px;"><strong style="font-size:20px;display:block;"><?php echo esc_html( absint( $governance['retention_days']['sessions'] ) ); ?></strong><span><?php esc_html_e( 'Session retention days', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                    <div class="postbox" style="padding:10px;"><strong style="font-size:20px;display:block;"><?php echo esc_html( absint( $governance['retention_days']['feedback'] ) ); ?></strong><span><?php esc_html_e( 'Feedback retention days', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                    <div class="postbox" style="padding:10px;"><strong style="font-size:20px;display:block;"><?php echo esc_html( $governance['redact_questions_in_exports'] ? 'on' : 'off' ); ?></strong><span><?php esc_html_e( 'Export redaction', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                    <div class="postbox" style="padding:10px;"><strong style="font-size:20px;display:block;"><?php echo esc_html( $governance['last_purge_utc'] ? $governance['last_purge_utc'] : 'none' ); ?></strong><span><?php esc_html_e( 'Last purge', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                </div>
+                <p><a class="button" href="<?php echo esc_url( rest_url( self::REST_NAMESPACE . '/governance/status' ) ); ?>"><?php esc_html_e( 'View Governance Status JSON', 'sustainable-catalyst-research-librarian-ai' ); ?></a> <a class="button" href="<?php echo esc_url( rest_url( self::REST_NAMESPACE . '/governance/export' ) ); ?>"><?php esc_html_e( 'Export Governance JSON', 'sustainable-catalyst-research-librarian-ai' ); ?></a></p>
             </div>
 
             <form action="options.php" method="post">

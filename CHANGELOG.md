@@ -1,5 +1,16 @@
 # Changelog
 
+## v3.8.0 — Governance, Privacy Controls, and Retention Policies
+
+- Added governance status endpoint.
+- Added admin governance export endpoint.
+- Added purge-expired governance helper.
+- Added governance summary shortcode.
+- Added retention policy defaults for sessions, feedback, evaluation, and handoffs.
+- Added export redaction option for question/note fields.
+- Added public privacy posture summary and admin-only export boundary summary.
+- Updated plugin version metadata to 3.8.0.
+
 ## 3.7.0 — Feedback, Correction Queue, and Knowledge Gap Triage
 
 - Added public feedback actions for helpful routes and route issues.
