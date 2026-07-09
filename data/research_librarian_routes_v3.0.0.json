@@ -1,0 +1,19 @@
+{
+  "version": "3.0.0",
+  "routes": [
+    "decision-studio",
+    "workbench",
+    "knowledge-library",
+    "demos",
+    "canvas",
+    "data",
+    "analytics-r",
+    "impact",
+    "narrative-risk",
+    "finance",
+    "grit",
+    "methodology",
+    "feature-suggestions",
+    "platform"
+  ]
+}

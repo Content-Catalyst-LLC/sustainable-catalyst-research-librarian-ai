@@ -1,63 +1,44 @@
-# Sustainable Catalyst Research Librarian AI
+# Sustainable Catalyst Research Librarian
 
-AI-enabled Research Librarian plugin for Sustainable Catalyst.
+Sustainable Catalyst Research Librarian is the routing layer for the Sustainable Catalyst platform. It helps visitors choose the right library, module, demo, repository, Workbench tool, or Decision Studio workflow.
 
-This WordPress plugin provides a bounded research-routing assistant for Sustainable Catalyst. It helps visitors navigate platform demos, methodology pages, article maps, repositories, knowledge libraries, feature suggestions, and support paths.
+Version 3.0.0 upgrades the plugin from a simple AI Q&A box into product-level routing infrastructure aligned with Workbench and Decision Studio.
 
-## Website
+## What it does
 
-https://sustainablecatalyst.com/
+- Routes questions to the Knowledge Library, Platform, Demos, Workbench, Decision Studio, and Catalyst modules
+- Explains why a route fits and how it connects to the broader platform
+- Supports deterministic fallback routing when no AI provider is configured
+- Supports optional Gemini or OpenAI server-side AI responses
+- Preserves strict professional boundaries and avoids confidential-data collection
+- Generates exportable route notes as Markdown/JSON from the browser
+- Provides shortcode modes for full assistant, compact assistant, landing card, and route map
 
-## Research Librarian Page
-
-https://sustainablecatalyst.com/platform/research-librarian/
-
-## Shortcode
+## Shortcodes
 
 ```text
 [sustainable_catalyst_research_librarian_ai]
+[sc_research_librarian]
+[sc_research_librarian mode="compact"]
+[sc_research_librarian mode="landing" title="Sustainable Catalyst Research Librarian"]
+[sc_research_librarian mode="route-map" title="Research Librarian Route Map"]
 ```
 
-## Core Purpose
-
-The Research Librarian helps visitors:
-
-- identify what they are trying to do
-- choose the right Sustainable Catalyst starting point
-- understand why a route fits
-- move toward relevant demos, repositories, article maps, or feature-suggestion paths
-- stay inside clear boundaries
-
-## Boundaries
-
-The assistant is for navigation, research orientation, and learning support. It does not provide legal, financial, investment, medical, mental health, tax, compliance, assurance, ESG certification, SDG certification, or other regulated professional advice.
-
-## Knowledge Base
-
-Version 2.1.1 includes WordPress admin support for uploading a markdown or text knowledge seed directly from:
+## REST routes
 
 ```text
-Settings → Research Librarian AI → Knowledge Base Upload
+GET  /wp-json/sc-research-librarian-ai/v1/health
+GET  /wp-json/sc-research-librarian-ai/v1/routes
+POST /wp-json/sc-research-librarian-ai/v1/ask
+POST /wp-json/sc-research-librarian-ai/v1/route-note
 ```
 
-The plugin uses the saved OpenAI API key from WordPress settings. The API key should not be committed to GitHub.
+## Scope
 
-## OpenAI Configuration
+The Research Librarian is not a general chatbot. It is site-scoped routing infrastructure for Sustainable Catalyst.
 
-Configure inside WordPress:
+It does not provide legal, financial, medical, tax, engineering, compliance, assurance, ESG/SDG certification, or regulated-information advice.
 
-```text
-Settings → Research Librarian AI
-```
+## Repository
 
-Required fields:
-
-- OpenAI API Key
-- Model
-- Vector Store ID
-
-The vector store ID begins with `vs_`.
-
-## Repository Safety
-
-Do not commit API keys, secrets, `.env` files, logs, or local WordPress backups.
+https://github.com/Content-Catalyst-LLC/sustainable-catalyst-research-librarian-ai
