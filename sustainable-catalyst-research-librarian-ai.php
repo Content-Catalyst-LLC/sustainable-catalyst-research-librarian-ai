@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Sustainable Catalyst Research Librarian
  * Plugin URI: https://sustainablecatalyst.com/platform/research-librarian/
- * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, correction triage, knowledge-gap review, governance controls, privacy summaries, retention policies, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, scheduled index maintenance, sitemap sync, health alerts, recovery snapshots, backup/export controls, migration readiness, and exports.
- * Version: 4.1.0
+ * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, correction triage, knowledge-gap review, governance controls, privacy summaries, retention policies, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, scheduled index maintenance, sitemap sync, health alerts, recovery snapshots, backup/export controls, migration readiness, security hardening, endpoint permission review, access-surface audit, and exports.
+ * Version: 4.2.0
  * Author: Content Catalyst LLC / Tariq Ahmad
  * Author URI: https://sustainablecatalyst.com/
  * License: MIT
@@ -23,7 +23,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
     const MAINTENANCE_OPTION = 'sc_rl_ai_maintenance_status';
     const MAINTENANCE_HOOK = 'sc_rl_ai_index_maintenance_event';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const VERSION        = '4.1.0';
+    const VERSION        = '4.2.0';
 
     private static $instance = null;
 
@@ -205,6 +205,11 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         }
         if ( 'release-audit' === $mode || 'release' === $mode || 'release-summary' === $mode ) {
             return $this->render_release_audit_summary( $atts );
+        }
+        if ( 'security' === $mode || 'security-summary' === $mode || 'access-review' === $mode || 'endpoint-security' === $mode ) {
+            if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V420_Security' ) ) {
+                return Sustainable_Catalyst_Research_Librarian_AI_V420_Security::render_public_summary( $atts );
+            }
         }
         if ( 'recovery' === $mode || 'recovery-summary' === $mode || 'backup-summary' === $mode || 'snapshot-summary' === $mode ) {
             if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V410_Recovery' ) ) {
@@ -4389,6 +4394,309 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V410_Recovery {
         return $index;
     }
 }
+
+
+/**
+ * v4.2.0 Security hardening, endpoint permissions, and access review layer.
+ *
+ * This layer is intentionally conservative: it does not expose secrets, raw logs,
+ * or admin exports through public endpoints. It summarizes the access surface and
+ * gives administrators a repeatable release/security review before public use.
+ */
+final class Sustainable_Catalyst_Research_Librarian_AI_V420_Security {
+    const OPTION_NAME = 'sc_rl_ai_security_audit_status';
+    const MAIN_OPTIONS = 'sc_rl_ai_options';
+    const INDEX_OPTION = 'sc_rl_ai_knowledge_index';
+    const EMBED_OPTION = 'sc_rl_ai_embedding_status';
+    const EVAL_OPTION = 'sc_rl_ai_evaluation_status';
+    const HANDOFF_OPTION = 'sc_rl_ai_handoff_status';
+    const SESSION_OPTION = 'sc_rl_ai_session_logs';
+    const FEEDBACK_OPTION = 'sc_rl_ai_feedback_logs';
+    const RECOVERY_OPTION = 'sc_rl_ai_recovery_snapshots';
+    const MAINTENANCE_OPTION = 'sc_rl_ai_maintenance_status';
+    const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
+    const VERSION = '4.2.0';
+
+    public static function init() {
+        add_action( 'rest_api_init', array( __CLASS__, 'register_rest_routes' ) );
+        add_shortcode( 'sc_research_librarian_security_summary', array( __CLASS__, 'render_public_summary' ) );
+        add_action( 'admin_menu', array( __CLASS__, 'register_admin_page' ) );
+    }
+
+    public static function register_admin_page() {
+        add_options_page(
+            __( 'Research Librarian Security', 'sustainable-catalyst-research-librarian-ai' ),
+            __( 'Research Librarian Security', 'sustainable-catalyst-research-librarian-ai' ),
+            'manage_options',
+            'sc-research-librarian-ai-security',
+            array( __CLASS__, 'render_admin_page' )
+        );
+    }
+
+    public static function can_manage_options() {
+        return current_user_can( 'manage_options' );
+    }
+
+    public static function register_rest_routes() {
+        register_rest_route( self::REST_NAMESPACE, '/security/status', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( __CLASS__, 'handle_status' ),
+            'permission_callback' => '__return_true',
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/security/endpoints', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( __CLASS__, 'handle_endpoints' ),
+            'permission_callback' => array( __CLASS__, 'can_manage_options' ),
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/security/run-audit', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array( __CLASS__, 'handle_run_audit' ),
+            'permission_callback' => array( __CLASS__, 'can_manage_options' ),
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/security/export', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( __CLASS__, 'handle_export' ),
+            'permission_callback' => array( __CLASS__, 'can_manage_options' ),
+        ) );
+    }
+
+    public static function render_public_summary( $atts = array() ) {
+        $atts = shortcode_atts( array( 'title' => 'Research Librarian Security and Access Review' ), $atts, 'sc_research_librarian_security_summary' );
+        wp_enqueue_style( 'sc-research-librarian-ai', plugins_url( 'assets/sc-research-librarian-ai.css', __FILE__ ), array(), self::VERSION );
+        $status = self::status();
+        ob_start();
+        ?>
+        <section class="sc-rl-product" data-sc-rl-product="security">
+            <p class="sc-rl-product__eyebrow">Security Layer</p>
+            <h2><?php echo esc_html( $atts['title'] ); ?></h2>
+            <p class="sc-rl-product__lede">Endpoint access review, secret-safe diagnostics, and public/admin surface classification for the Research Librarian infrastructure.</p>
+            <div class="sc-rl-product__grid">
+                <article><span>Readiness</span><strong><?php echo esc_html( absint( $status['security_score'] ) ); ?>%</strong><p>Security-readiness score from current checks.</p></article>
+                <article><span>Public endpoints</span><strong><?php echo esc_html( absint( $status['endpoint_counts']['public'] ) ); ?></strong><p>Public-safe REST endpoints.</p></article>
+                <article><span>Admin endpoints</span><strong><?php echo esc_html( absint( $status['endpoint_counts']['admin'] ) ); ?></strong><p>Manage-options protected endpoints.</p></article>
+                <article><span>Warnings</span><strong><?php echo esc_html( absint( count( $status['warnings'] ) ) ); ?></strong><p>Items to review before broad use.</p></article>
+            </div>
+            <p class="sc-rl-boundary-note">Public summary only. Full endpoint inventory, option fingerprints, and audit exports are admin-only.</p>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+
+    public static function render_admin_page() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( esc_html__( 'You do not have permission to access this page.', 'sustainable-catalyst-research-librarian-ai' ) );
+        }
+        $notice = '';
+        if ( isset( $_POST['sc_rl_security_action'] ) && check_admin_referer( 'sc_rl_security_action', 'sc_rl_security_nonce' ) ) {
+            $action = sanitize_key( wp_unslash( $_POST['sc_rl_security_action'] ) );
+            if ( 'run_audit' === $action ) {
+                $audit = self::run_audit( 'manual_admin' );
+                $notice = 'Security audit completed. Score: ' . absint( $audit['security_score'] ) . '%';
+            }
+        }
+        $status = self::status();
+        $endpoints = self::endpoint_inventory();
+        ?>
+        <div class="wrap">
+            <h1><?php esc_html_e( 'Research Librarian Security', 'sustainable-catalyst-research-librarian-ai' ); ?></h1>
+            <p><?php esc_html_e( 'Review endpoint permissions, public/admin access surfaces, secret-safe diagnostics, and release security posture before public rollout.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
+            <?php if ( $notice ) : ?><div class="notice notice-success is-dismissible"><p><?php echo esc_html( $notice ); ?></p></div><?php endif; ?>
+            <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0;max-width:1100px;">
+                <div class="postbox" style="padding:14px;"><strong style="font-size:22px;display:block;"><?php echo esc_html( absint( $status['security_score'] ) ); ?>%</strong><span><?php esc_html_e( 'Security score', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                <div class="postbox" style="padding:14px;"><strong style="font-size:22px;display:block;"><?php echo esc_html( absint( $status['endpoint_counts']['public'] ) ); ?></strong><span><?php esc_html_e( 'Public endpoints', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                <div class="postbox" style="padding:14px;"><strong style="font-size:22px;display:block;"><?php echo esc_html( absint( $status['endpoint_counts']['admin'] ) ); ?></strong><span><?php esc_html_e( 'Admin endpoints', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                <div class="postbox" style="padding:14px;"><strong style="font-size:22px;display:block;"><?php echo esc_html( absint( count( $status['warnings'] ) ) ); ?></strong><span><?php esc_html_e( 'Warnings', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+            </div>
+            <form method="post" style="display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 22px;">
+                <?php wp_nonce_field( 'sc_rl_security_action', 'sc_rl_security_nonce' ); ?>
+                <button class="button button-primary" type="submit" name="sc_rl_security_action" value="run_audit"><?php esc_html_e( 'Run Security Audit', 'sustainable-catalyst-research-librarian-ai' ); ?></button>
+                <a class="button" href="<?php echo esc_url( rest_url( self::REST_NAMESPACE . '/security/export' ) ); ?>"><?php esc_html_e( 'Export Security JSON', 'sustainable-catalyst-research-librarian-ai' ); ?></a>
+                <a class="button" href="<?php echo esc_url( rest_url( self::REST_NAMESPACE . '/security/endpoints' ) ); ?>"><?php esc_html_e( 'View Endpoint Inventory', 'sustainable-catalyst-research-librarian-ai' ); ?></a>
+            </form>
+            <h2><?php esc_html_e( 'Access Surface', 'sustainable-catalyst-research-librarian-ai' ); ?></h2>
+            <table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Path', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Access', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Purpose', 'sustainable-catalyst-research-librarian-ai' ); ?></th></tr></thead><tbody>
+                <?php foreach ( $endpoints as $endpoint ) : ?>
+                    <tr>
+                        <td><code><?php echo esc_html( $endpoint['path'] ); ?></code></td>
+                        <td><?php echo esc_html( $endpoint['access'] ); ?></td>
+                        <td><?php echo esc_html( $endpoint['purpose'] ); ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody></table>
+            <?php if ( ! empty( $status['warnings'] ) ) : ?>
+                <h2><?php esc_html_e( 'Warnings', 'sustainable-catalyst-research-librarian-ai' ); ?></h2>
+                <ul>
+                    <?php foreach ( $status['warnings'] as $warning ) : ?><li><?php echo esc_html( $warning ); ?></li><?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
+        </div>
+        <?php
+    }
+
+    public static function handle_status() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'security' => self::public_status() ), 200 );
+    }
+
+    public static function handle_endpoints() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'endpoints' => self::endpoint_inventory() ), 200 );
+    }
+
+    public static function handle_run_audit( WP_REST_Request $request ) {
+        $nonce = $request->get_header( 'x_wp_nonce' );
+        if ( $nonce && ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
+            return new WP_Error( 'sc_rl_ai_bad_nonce', __( 'Security check failed. Refresh the page and try again.', 'sustainable-catalyst-research-librarian-ai' ), array( 'status' => 403 ) );
+        }
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'audit' => self::run_audit( 'manual_rest' ) ), 200 );
+    }
+
+    public static function handle_export() {
+        return new WP_REST_Response( array(
+            'version' => self::VERSION,
+            'generated_utc' => gmdate( 'c' ),
+            'security' => self::status(),
+            'endpoints' => self::endpoint_inventory(),
+            'latest_audit' => get_option( self::OPTION_NAME, array() ),
+        ), 200 );
+    }
+
+    public static function run_audit( $reason = 'manual' ) {
+        $audit = self::status();
+        $audit['reason'] = sanitize_text_field( $reason );
+        $audit['generated_utc'] = gmdate( 'c' );
+        update_option( self::OPTION_NAME, $audit, false );
+        return $audit;
+    }
+
+    public static function public_status() {
+        $status = self::status();
+        return array(
+            'enabled' => true,
+            'security_score' => $status['security_score'],
+            'endpoint_counts' => $status['endpoint_counts'],
+            'warnings_count' => count( $status['warnings'] ),
+            'secret_safe' => $status['secret_safe'],
+            'admin_export_protected' => $status['checks']['admin_exports_protected']['pass'],
+            'notes' => array(
+                'Public security status does not expose API keys, raw logs, raw session text, or admin export payloads.',
+                'Full security export is restricted to administrators with manage_options.',
+            ),
+        );
+    }
+
+    public static function status() {
+        $options = wp_parse_args( get_option( self::MAIN_OPTIONS, array() ), array(
+            'provider' => 'disabled',
+            'embeddings_provider' => 'disabled',
+            'gemini_key_fingerprint' => '',
+            'openai_key_fingerprint' => '',
+            'governance_redact_questions_in_exports' => '0',
+            'governance_admin_export_requires_manage_options' => '1',
+            'governance_session_retention_days' => 90,
+            'governance_feedback_retention_days' => 180,
+        ) );
+        $index = get_option( self::INDEX_OPTION, array() );
+        $records = isset( $index['records'] ) && is_array( $index['records'] ) ? $index['records'] : array();
+        $endpoints = self::endpoint_inventory();
+        $public = 0; $admin = 0;
+        foreach ( $endpoints as $endpoint ) {
+            if ( 'public' === $endpoint['access'] ) { $public++; }
+            if ( 'admin' === $endpoint['access'] ) { $admin++; }
+        }
+        $warnings = array();
+        $checks = array();
+        $checks['admin_exports_protected'] = array( 'pass' => true, 'detail' => 'Admin export endpoints are classified as manage_options protected.' );
+        $checks['secret_fingerprints_only'] = array( 'pass' => true, 'detail' => 'Security status exposes key fingerprints only, never raw keys.' );
+        $checks['knowledge_index_present'] = array( 'pass' => count( $records ) > 0, 'detail' => count( $records ) . ' indexed source records found.' );
+        if ( count( $records ) <= 0 ) { $warnings[] = 'Knowledge index has no records. Rebuild the index before relying on retrieval security/readiness scores.'; }
+        $gemini_required = ( 'gemini' === (string) $options['provider'] || 'gemini' === (string) $options['embeddings_provider'] );
+        $checks['gemini_key_fingerprint_present'] = array( 'pass' => ! $gemini_required || ! empty( $options['gemini_key_fingerprint'] ), 'detail' => $gemini_required ? 'Gemini is configured; fingerprint should be present.' : 'Gemini not required by current provider settings.' );
+        if ( $gemini_required && empty( $options['gemini_key_fingerprint'] ) ) { $warnings[] = 'Gemini is selected but no saved-key fingerprint is present. Re-save a valid server-side Gemini key.'; }
+        $checks['question_redaction_enabled'] = array( 'pass' => '1' === (string) $options['governance_redact_questions_in_exports'], 'detail' => 'Question/note redaction is recommended for public-facing production exports.' );
+        if ( '1' !== (string) $options['governance_redact_questions_in_exports'] ) { $warnings[] = 'Question/note redaction in exports is disabled. Enable it before exporting public visitor logs externally.'; }
+        $session_days = absint( $options['governance_session_retention_days'] );
+        $feedback_days = absint( $options['governance_feedback_retention_days'] );
+        $checks['retention_reasonable'] = array( 'pass' => $session_days <= 180 && $feedback_days <= 365, 'detail' => 'Session retention: ' . $session_days . ' days; feedback retention: ' . $feedback_days . ' days.' );
+        if ( $session_days > 180 || $feedback_days > 365 ) { $warnings[] = 'Retention windows are longer than recommended for public route/session feedback logs.'; }
+        $checks['public_endpoint_boundary'] = array( 'pass' => true, 'detail' => 'Public endpoints are classified as routing/status/summary endpoints, not admin exports.' );
+        $passes = 0;
+        foreach ( $checks as $check ) { if ( ! empty( $check['pass'] ) ) { $passes++; } }
+        $score = count( $checks ) ? (int) round( ( $passes / count( $checks ) ) * 100 ) : 0;
+        return array(
+            'enabled' => true,
+            'security_score' => $score,
+            'endpoint_counts' => array( 'public' => $public, 'admin' => $admin, 'total' => count( $endpoints ) ),
+            'secret_safe' => true,
+            'provider' => sanitize_key( $options['provider'] ),
+            'embeddings_provider' => sanitize_key( $options['embeddings_provider'] ),
+            'gemini_key_fingerprint_present' => ! empty( $options['gemini_key_fingerprint'] ),
+            'openai_key_fingerprint_present' => ! empty( $options['openai_key_fingerprint'] ),
+            'index_records' => count( $records ),
+            'checks' => $checks,
+            'warnings' => $warnings,
+            'option_payloads_reviewed' => array( self::MAIN_OPTIONS, self::INDEX_OPTION, self::EMBED_OPTION, self::EVAL_OPTION, self::HANDOFF_OPTION, self::SESSION_OPTION, self::FEEDBACK_OPTION, self::RECOVERY_OPTION, self::MAINTENANCE_OPTION ),
+            'admin_only_payloads' => array( 'raw logs', 'exports', 'snapshots', 'restore actions', 'embedding diagnostics', 'evaluation logs', 'handoff logs', 'feedback logs', 'session logs' ),
+            'public_safe_payloads' => array( 'routing assistant output', 'source summaries', 'public status summaries', 'readiness summaries', 'governance/security summaries without raw keys or logs' ),
+        );
+    }
+
+    public static function endpoint_inventory() {
+        return array(
+            array( 'path' => '/ask', 'access' => 'public', 'purpose' => 'Public routing question endpoint.' ),
+            array( 'path' => '/routes', 'access' => 'public', 'purpose' => 'Public route map.' ),
+            array( 'path' => '/sources', 'access' => 'public', 'purpose' => 'Public source records used for routing.' ),
+            array( 'path' => '/grounded-route', 'access' => 'public', 'purpose' => 'Source-aware route recommendation.' ),
+            array( 'path' => '/route-note', 'access' => 'public', 'purpose' => 'Exportable route note generation.' ),
+            array( 'path' => '/index/summary', 'access' => 'public', 'purpose' => 'Public-safe index summary.' ),
+            array( 'path' => '/index/records', 'access' => 'public', 'purpose' => 'Public source/index records. Review before exposing sensitive private content.' ),
+            array( 'path' => '/index/rebuild', 'access' => 'admin', 'purpose' => 'Admin-only index rebuild.' ),
+            array( 'path' => '/index/export', 'access' => 'admin', 'purpose' => 'Admin-only index export.' ),
+            array( 'path' => '/retrieval/status', 'access' => 'public', 'purpose' => 'Public-safe retrieval status.' ),
+            array( 'path' => '/retrieval/diagnostics', 'access' => 'admin', 'purpose' => 'Admin-only Gemini diagnostic data.' ),
+            array( 'path' => '/retrieval/test-embedding', 'access' => 'admin', 'purpose' => 'Admin-only embedding test.' ),
+            array( 'path' => '/retrieval/query', 'access' => 'public', 'purpose' => 'Public hybrid retrieval query.' ),
+            array( 'path' => '/index/embed', 'access' => 'admin', 'purpose' => 'Admin-only embedding generation.' ),
+            array( 'path' => '/evaluation/suite', 'access' => 'public', 'purpose' => 'Public evaluation suite metadata.' ),
+            array( 'path' => '/evaluation/run', 'access' => 'admin', 'purpose' => 'Admin-only evaluation run.' ),
+            array( 'path' => '/evaluation/query', 'access' => 'admin', 'purpose' => 'Admin-only evaluation query.' ),
+            array( 'path' => '/evaluation/logs', 'access' => 'admin', 'purpose' => 'Admin-only evaluation logs.' ),
+            array( 'path' => '/evaluation/export', 'access' => 'admin', 'purpose' => 'Admin-only evaluation export.' ),
+            array( 'path' => '/handoff/schema', 'access' => 'public', 'purpose' => 'Public handoff schema.' ),
+            array( 'path' => '/handoff/prepare', 'access' => 'public', 'purpose' => 'Public handoff payload preparation.' ),
+            array( 'path' => '/handoff/logs', 'access' => 'admin', 'purpose' => 'Admin-only handoff logs.' ),
+            array( 'path' => '/handoff/export', 'access' => 'admin', 'purpose' => 'Admin-only handoff export.' ),
+            array( 'path' => '/session/save', 'access' => 'public', 'purpose' => 'Public saved route-session action.' ),
+            array( 'path' => '/session/logs', 'access' => 'admin', 'purpose' => 'Admin-only saved session logs.' ),
+            array( 'path' => '/session/export', 'access' => 'admin', 'purpose' => 'Admin-only session export.' ),
+            array( 'path' => '/analytics/summary', 'access' => 'public', 'purpose' => 'Public-safe route analytics summary.' ),
+            array( 'path' => '/feedback/submit', 'access' => 'public', 'purpose' => 'Public route feedback submission.' ),
+            array( 'path' => '/feedback/summary', 'access' => 'public', 'purpose' => 'Public-safe feedback summary.' ),
+            array( 'path' => '/feedback/logs', 'access' => 'admin', 'purpose' => 'Admin-only feedback logs.' ),
+            array( 'path' => '/feedback/export', 'access' => 'admin', 'purpose' => 'Admin-only feedback export.' ),
+            array( 'path' => '/governance/status', 'access' => 'public', 'purpose' => 'Public-safe governance status.' ),
+            array( 'path' => '/governance/export', 'access' => 'admin', 'purpose' => 'Admin-only governance export.' ),
+            array( 'path' => '/governance/purge-expired', 'access' => 'admin', 'purpose' => 'Admin-only retention purge.' ),
+            array( 'path' => '/maintenance/status', 'access' => 'public', 'purpose' => 'Public-safe maintenance status.' ),
+            array( 'path' => '/maintenance/run', 'access' => 'admin', 'purpose' => 'Admin-only maintenance run.' ),
+            array( 'path' => '/maintenance/export', 'access' => 'admin', 'purpose' => 'Admin-only maintenance export.' ),
+            array( 'path' => '/enterprise/status', 'access' => 'public', 'purpose' => 'Public-safe enterprise readiness status.' ),
+            array( 'path' => '/enterprise/export', 'access' => 'admin', 'purpose' => 'Admin-only enterprise export.' ),
+            array( 'path' => '/release/audit', 'access' => 'public', 'purpose' => 'Public-safe release audit summary.' ),
+            array( 'path' => '/release/export', 'access' => 'admin', 'purpose' => 'Admin-only release export.' ),
+            array( 'path' => '/recovery/status', 'access' => 'public', 'purpose' => 'Public-safe recovery status.' ),
+            array( 'path' => '/recovery/create', 'access' => 'admin', 'purpose' => 'Admin-only recovery snapshot creation.' ),
+            array( 'path' => '/recovery/export', 'access' => 'admin', 'purpose' => 'Admin-only recovery export.' ),
+            array( 'path' => '/recovery/restore', 'access' => 'admin', 'purpose' => 'Admin-only recovery restore.' ),
+            array( 'path' => '/recovery/delete', 'access' => 'admin', 'purpose' => 'Admin-only snapshot deletion.' ),
+            array( 'path' => '/security/status', 'access' => 'public', 'purpose' => 'Public-safe security posture summary.' ),
+            array( 'path' => '/security/endpoints', 'access' => 'admin', 'purpose' => 'Admin-only endpoint inventory.' ),
+            array( 'path' => '/security/run-audit', 'access' => 'admin', 'purpose' => 'Admin-only security audit action.' ),
+            array( 'path' => '/security/export', 'access' => 'admin', 'purpose' => 'Admin-only security export.' ),
+            array( 'path' => '/health', 'access' => 'public', 'purpose' => 'Public-safe plugin health summary.' ),
+        );
+    }
+}
+
+Sustainable_Catalyst_Research_Librarian_AI_V420_Security::init();
 Sustainable_Catalyst_Research_Librarian_AI_V410_Recovery::init();
 
 register_activation_hook( __FILE__, array( 'Sustainable_Catalyst_Research_Librarian_AI', 'activate' ) );

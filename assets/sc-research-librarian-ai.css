@@ -335,3 +335,6 @@
 
 /* v3.9.0 maintenance summary */
 .sc-rl-maintenance-summary .sc-rl-index-summary__grid article { min-height: auto; }
+
+/* v4.2.0 security summary */
+.sc-rl-product[data-sc-rl-product="security"] .sc-rl-product__eyebrow { letter-spacing: .08em; }

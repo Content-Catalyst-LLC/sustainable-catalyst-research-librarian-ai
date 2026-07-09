@@ -3,16 +3,16 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 4.1.0
+Stable tag: 4.2.0
 License: MIT
 
-A site-scoped Research Librarian for Sustainable Catalyst with source-aware routing, route notes, handoff payloads, saved route sessions, admin analytics, a knowledge indexer, and optional Gemini embeddings for hybrid retrieval.
+A site-scoped Research Librarian for Sustainable Catalyst with source-aware routing, route notes, handoff payloads, saved route sessions, admin analytics, a knowledge indexer, and optional Gemini embeddings for hybrid retrieval, and security/access review tooling.
 
 == Description ==
 
 The Research Librarian helps visitors choose the right Sustainable Catalyst route: Knowledge Library, Platform, Demos, Decision Studio, Workbench, Catalyst modules, Methodology, Feature Suggestions, or GitHub repositories.
 
-v3.6.0 adds saved route sessions and admin analytics on top of the Gemini retrieval, evaluation, and Workbench/Decision Studio handoff layers.
+v4.2.0 adds endpoint security review, admin/public access classification, secret-safe diagnostics, and a security-readiness summary on top of the recovery and enterprise-readiness layers.
 
 == Shortcodes ==
 
@@ -26,8 +26,20 @@ v3.6.0 adds saved route sessions and admin analytics on top of the Gemini retrie
 [sc_research_librarian mode="handoff-summary"]
 [sc_research_librarian mode="session-summary"]
 [sc_research_librarian mode="analytics-summary"]
+[sc_research_librarian mode="security-summary"]
+[sc_research_librarian_security_summary]
 
 == Changelog ==
+
+= 4.2.0 =
+* Added security hardening, endpoint permissions, and access review.
+* Added security status/endpoints/run-audit/export REST endpoints.
+* Added security-summary shortcode and admin security dashboard.
+* Added secret-safe diagnostics and endpoint access classification.
+
+= 4.1.0 =
+* Added index snapshots, backup, and recovery readiness.
+
 
 = 3.7.0 =
 - Adds feedback, source-correction queue, and knowledge-gap triage.

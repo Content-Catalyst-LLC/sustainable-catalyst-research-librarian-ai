@@ -1,30 +1,28 @@
 # Sustainable Catalyst Research Librarian AI
 
-Current release: **v4.0.0 — Enterprise Readiness and Release Audit**.
+Current release: **v4.2.0 — Security Hardening, Endpoint Permissions, and Access Review**.
 
-Research Librarian is the source-aware routing, indexing, retrieval, evaluation, handoff, governance, and maintenance layer for Sustainable Catalyst. It helps visitors move from a question to the right Sustainable Catalyst page, module, Workbench tool, Decision Studio workflow, repository, methodology page, or feature suggestion route.
+Research Librarian is the source-aware routing, indexing, retrieval, evaluation, handoff, governance, maintenance, recovery, and security review layer for Sustainable Catalyst. It helps visitors move from a question to the right Sustainable Catalyst page, module, Workbench tool, Decision Studio workflow, repository, methodology page, or feature suggestion route while keeping admin exports, logs, credentials, and operational diagnostics separated from public use.
 
-## v4.0.0 focus
+## v4.2.0 focus
 
-v4.0.0 adds the enterprise-readiness layer: public-safe readiness summaries, release audit snapshots, aggregate infrastructure checks, endpoint inventory, shortcode inventory, manifest inventory, and admin-only deployment exports.
+v4.2.0 adds the security hardening layer: endpoint access classification, admin/public surface review, secret-safe diagnostics, key fingerprint checks, retention warnings, security-readiness scoring, admin endpoint inventory, and security audit exports.
 
-## New v4.0.0 shortcodes
-
-```text
-[sc_research_librarian mode="enterprise-summary" title="Research Librarian Enterprise Readiness"]
-[sc_research_librarian mode="release-audit" title="Research Librarian Release Audit"]
-```
-
-## New v4.0.0 endpoints
+## New v4.2.0 shortcodes
 
 ```text
-GET /wp-json/sc-research-librarian-ai/v1/enterprise/status
-GET /wp-json/sc-research-librarian-ai/v1/enterprise/export
-GET /wp-json/sc-research-librarian-ai/v1/release/audit
-GET /wp-json/sc-research-librarian-ai/v1/release/export
+[sc_research_librarian mode="security-summary" title="Research Librarian Security and Access Review"]
+[sc_research_librarian_security_summary title="Research Librarian Security and Access Review"]
 ```
 
-# Sustainable Catalyst Research Librarian v3.6.0
+## New v4.2.0 endpoints
+
+```text
+GET  /wp-json/sc-research-librarian-ai/v1/security/status
+GET  /wp-json/sc-research-librarian-ai/v1/security/endpoints
+POST /wp-json/sc-research-librarian-ai/v1/security/run-audit
+GET  /wp-json/sc-research-librarian-ai/v1/security/export
+```
 
 **Saved Route Sessions and Admin Analytics**
 

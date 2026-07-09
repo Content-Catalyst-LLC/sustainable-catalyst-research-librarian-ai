@@ -1,5 +1,15 @@
 # Changelog
 
+## 4.2.0 — Security Hardening, Endpoint Permissions, and Access Review
+
+- Added security posture summary and public-safe security shortcode.
+- Added endpoint access inventory that classifies public and admin-only surfaces.
+- Added admin-only security audit and export endpoints.
+- Added secret-safe diagnostics that expose fingerprints rather than raw API keys.
+- Added warnings for missing Gemini fingerprints, empty indexes, long retention windows, and disabled export redaction.
+- Added Research Librarian Security admin page.
+- Added v4.2.0 security manifest and documentation.
+
 ## 4.1.0 — Index Snapshots, Backup, and Recovery Readiness
 
 - Added admin recovery snapshot dashboard.
