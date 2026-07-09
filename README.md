@@ -1,56 +1,67 @@
-# Sustainable Catalyst Research Librarian
+# Sustainable Catalyst Research Librarian v3.2.0
 
-Sustainable Catalyst Research Librarian is the routing layer for the Sustainable Catalyst platform. It helps visitors choose the right library, module, demo, repository, Workbench tool, or Decision Studio workflow.
+The Sustainable Catalyst Research Librarian is the routing and source-aware retrieval layer for the Sustainable Catalyst platform. It helps visitors choose the right Sustainable Catalyst starting point: Knowledge Library, Platform, Platform Demos, Decision Studio, Workbench, Catalyst Canvas, Catalyst Data, Analytics R, Global Impact Catalyst, Narrative Risk, Catalyst Finance, Catalyst Grit, Methodology, Feature Suggestions, or GitHub repositories.
 
-Version 3.0.0 upgrades the plugin from a simple AI Q&A box into product-level routing infrastructure aligned with Workbench and Decision Studio.
+v3.2.0 adds a Knowledge Indexer and Admin Crawl Dashboard on top of the v3.1.0 grounded routing layer.
 
 ## What it does
 
-- Routes questions to the Knowledge Library, Platform, Demos, Workbench, Decision Studio, and Catalyst modules
-- Explains why a route fits and how it connects to the broader platform
-- Supports deterministic fallback routing when no AI provider is configured
-- Supports optional Gemini or OpenAI server-side AI responses
-- Preserves strict professional boundaries and avoids confidential-data collection
-- Generates exportable route notes as Markdown/JSON from the browser
-- Provides shortcode modes for full assistant, compact assistant, landing card, and route map
+- Provides deterministic route recommendations with confidence, reason codes, source support, and handoffs.
+- Supports optional Gemini or OpenAI responses while keeping routing scoped to Sustainable Catalyst.
+- Maintains a curated route map and grounding source index.
+- Builds a local knowledge index from curated source records plus recent published WordPress pages/posts.
+- Flags missing summaries, missing topics, stale records, duplicate URLs, and failed crawl records.
+- Exposes index summary, records, rebuild, and export endpoints.
+- Produces exportable route notes and route JSON.
+
+## v3.2.0 endpoints
+
+```text
+GET  /wp-json/sc-research-librarian-ai/v1/index/summary
+GET  /wp-json/sc-research-librarian-ai/v1/index/records
+POST /wp-json/sc-research-librarian-ai/v1/index/rebuild
+GET  /wp-json/sc-research-librarian-ai/v1/index/export
+```
+
+Existing endpoints remain:
+
+```text
+POST /wp-json/sc-research-librarian-ai/v1/ask
+GET  /wp-json/sc-research-librarian-ai/v1/routes
+GET  /wp-json/sc-research-librarian-ai/v1/sources
+POST /wp-json/sc-research-librarian-ai/v1/grounded-route
+GET  /wp-json/sc-research-librarian-ai/v1/health
+```
 
 ## Shortcodes
 
 ```text
 [sustainable_catalyst_research_librarian_ai]
-[sc_research_librarian]
-[sc_research_librarian mode="compact"]
+[sc_research_librarian title="Sustainable Catalyst Research Librarian"]
 [sc_research_librarian mode="landing" title="Sustainable Catalyst Research Librarian"]
 [sc_research_librarian mode="route-map" title="Research Librarian Route Map"]
+[sc_research_librarian mode="index-summary" title="Research Librarian Knowledge Index"]
 ```
 
-## REST routes
+## Admin workflow
 
-```text
-GET  /wp-json/sc-research-librarian-ai/v1/health
-GET  /wp-json/sc-research-librarian-ai/v1/routes
-POST /wp-json/sc-research-librarian-ai/v1/ask
-POST /wp-json/sc-research-librarian-ai/v1/route-note
-```
+Go to **Settings → Research Librarian**.
 
-## Scope
+The v3.2.0 admin page includes:
 
-The Research Librarian is not a general chatbot. It is site-scoped routing infrastructure for Sustainable Catalyst.
+- Knowledge Indexer and Crawl Dashboard
+- indexed record count
+- route group count
+- metadata warning count
+- stale record count
+- last indexed timestamp
+- rebuild index button
+- reset to seed index button
+- export index JSON link
+- indexed source table
 
-It does not provide legal, financial, medical, tax, engineering, compliance, assurance, ESG/SDG certification, or regulated-information advice.
+## Boundaries
 
-## Repository
+The Research Librarian is educational routing infrastructure. It does not provide legal, financial, medical, tax, engineering, compliance, assurance, ESG/SDG certification, or regulated-information advice.
 
-https://github.com/Content-Catalyst-LLC/sustainable-catalyst-research-librarian-ai
-
-
-## v3.1.0 — Grounded Routing and Source-Aware Recommendations
-
-This release upgrades the Research Librarian from a module-aware route finder into a source-aware routing layer. It now returns recommended routes with grounding sources, confidence level, reason codes, ambiguity notes, handoff suggestions, and exportable route-note metadata.
-
-New endpoints:
-
-```text
-GET  /wp-json/sc-research-librarian-ai/v1/sources
-POST /wp-json/sc-research-librarian-ai/v1/grounded-route
-```
+MIT-licensed.

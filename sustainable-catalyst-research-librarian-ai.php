@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Sustainable Catalyst Research Librarian
  * Plugin URI: https://sustainablecatalyst.com/platform/research-librarian/
- * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, grounded route notes, confidence scoring, Decision Studio and Workbench handoffs, AI-assisted answers, deterministic fallback, and exports.
- * Version: 3.1.0
+ * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, admin crawl dashboard, grounded route notes, confidence scoring, Decision Studio and Workbench handoffs, AI-assisted answers, deterministic fallback, and exports.
+ * Version: 3.2.0
  * Author: Content Catalyst LLC / Tariq Ahmad
  * Author URI: https://sustainablecatalyst.com/
  * License: GPL-2.0-or-later
@@ -16,8 +16,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class Sustainable_Catalyst_Research_Librarian_AI {
     const OPTION_NAME    = 'sc_rl_ai_options';
+    const INDEX_OPTION   = 'sc_rl_ai_knowledge_index';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const VERSION        = '3.1.0';
+    const VERSION        = '3.2.0';
 
     private static $instance = null;
 
@@ -39,6 +40,9 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
     public static function activate() {
         $existing = get_option( self::OPTION_NAME, array() );
         update_option( self::OPTION_NAME, wp_parse_args( $existing, self::defaults() ), false );
+        if ( ! get_option( self::INDEX_OPTION, false ) ) {
+            update_option( self::INDEX_OPTION, self::build_default_index(), false );
+        }
     }
 
     public static function defaults() {
@@ -54,6 +58,8 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
             'temperature'             => '0.2',
             'rate_limit'              => 20,
             'source_result_limit'     => 5,
+            'index_max_posts'         => 250,
+            'stale_after_days'        => 180,
             'system_instructions'     => self::default_system_instructions(),
         );
     }
@@ -121,6 +127,9 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         if ( 'route-map' === $mode || 'routes' === $mode ) {
             return $this->render_route_map( $atts );
         }
+        if ( 'index' === $mode || 'index-summary' === $mode ) {
+            return $this->render_index_summary( $atts );
+        }
         return $this->render_assistant( $atts );
     }
 
@@ -130,11 +139,12 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         <section class="sc-rl-product" data-sc-rl-product="landing">
             <p class="sc-rl-product__eyebrow">Sustainable Catalyst Platform</p>
             <h2><?php echo esc_html( $atts['title'] ); ?></h2>
-            <p class="sc-rl-product__lede">The Research Librarian is the source-aware routing layer for Sustainable Catalyst. It helps visitors move from a question to the right library, module, demo, repository, Workbench tool, or Decision Studio workflow while showing route evidence, confidence, and next handoff.</p>
+            <p class="sc-rl-product__lede">The Research Librarian is the source-aware routing and knowledge-index layer for Sustainable Catalyst. It helps visitors move from a question to the right library, module, demo, repository, Workbench tool, or Decision Studio workflow while showing route evidence, confidence, source status, and next handoff.</p>
             <div class="sc-rl-product__grid">
                 <article><span>Route</span><strong>Find the right starting point</strong><p>Choose between Knowledge Library, Platform, Demos, Workbench, Decision Studio, modules, methodology, support, and feature suggestions.</p></article>
                 <article><span>Connect</span><strong>Explain platform fit</strong><p>Show how Canvas, Data, Analytics R, Global Impact, Narrative Risk, Finance, Grit, Workbench, and Decision Studio connect.</p></article>
                 <article><span>Ground</span><strong>Show sources and confidence</strong><p>Turn a question into a structured route note with source records, confidence, reason codes, handoffs, and boundaries.</p></article>
+                <article><span>Index</span><strong>Maintain source coverage</strong><p>Use the knowledge indexer to track pages, modules, stale records, missing summaries, duplicate URLs, failed crawl items, and exportable index JSON.</p></article>
             </div>
             <div class="sc-rl-product__actions">
                 <a href="/platform/research-librarian/#assistant">Ask the Research Librarian →</a>
@@ -163,6 +173,28 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                     </article>
                 <?php endforeach; ?>
             </div>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+
+
+    private function render_index_summary( $atts ) {
+        $index = $this->knowledge_index();
+        $summary = isset( $index['summary'] ) ? $index['summary'] : $this->knowledge_index_summary( isset( $index['records'] ) ? $index['records'] : array() );
+        ob_start();
+        ?>
+        <section class="sc-rl-index-summary" data-sc-rl-product="index-summary">
+            <p class="sc-rl-routes__eyebrow">Research Librarian Knowledge Index</p>
+            <h2><?php echo esc_html( $atts['title'] ); ?></h2>
+            <p>The knowledge index tracks Sustainable Catalyst routes, source records, module pages, and recent public content so route recommendations can show coverage, confidence, and source status.</p>
+            <div class="sc-rl-index-summary__grid">
+                <article><span><?php echo esc_html( absint( $summary['total_records'] ) ); ?></span><strong>Indexed records</strong></article>
+                <article><span><?php echo esc_html( absint( $summary['route_count'] ) ); ?></span><strong>Route groups</strong></article>
+                <article><span><?php echo esc_html( absint( $summary['stale_records'] ) ); ?></span><strong>Stale records</strong></article>
+                <article><span><?php echo esc_html( absint( $summary['metadata_warnings'] ) ); ?></span><strong>Metadata warnings</strong></article>
+            </div>
+            <p class="sc-rl-index-summary__meta">Last indexed: <?php echo esc_html( isset( $index['last_indexed_utc'] ) ? $index['last_indexed_utc'] : 'seed only' ); ?></p>
         </section>
         <?php
         return ob_get_clean();
@@ -258,6 +290,32 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'permission_callback' => '__return_true',
         ) );
 
+
+
+        register_rest_route( self::REST_NAMESPACE, '/index/summary', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'handle_index_summary_request' ),
+            'permission_callback' => '__return_true',
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/index/records', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'handle_index_records_request' ),
+            'permission_callback' => '__return_true',
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/index/rebuild', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array( $this, 'handle_index_rebuild_request' ),
+            'permission_callback' => array( $this, 'can_manage_options' ),
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/index/export', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'handle_index_export_request' ),
+            'permission_callback' => array( $this, 'can_manage_options' ),
+        ) );
+
         register_rest_route( self::REST_NAMESPACE, '/health', array(
             'methods'             => WP_REST_Server::READABLE,
             'callback'            => array( $this, 'handle_health_request' ),
@@ -273,6 +331,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'provider' => $this->configured_provider( $options ),
             'routes'   => count( $this->routes() ),
             'sources'  => count( $this->source_records() ),
+            'index'    => $this->knowledge_index_summary( $this->knowledge_index_records() ),
         ), 200 );
     }
 
@@ -281,7 +340,54 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
     }
 
     public function handle_sources_request() {
-        return new WP_REST_Response( array( 'sources' => $this->source_records(), 'version' => self::VERSION ), 200 );
+        return new WP_REST_Response( array( 'sources' => $this->source_records(), 'index' => $this->knowledge_index_summary( $this->knowledge_index_records() ), 'version' => self::VERSION ), 200 );
+    }
+
+
+    public function can_manage_options() {
+        return current_user_can( 'manage_options' );
+    }
+
+    public function handle_index_summary_request() {
+        $index = $this->knowledge_index();
+        return new WP_REST_Response( array(
+            'version' => self::VERSION,
+            'last_indexed_utc' => isset( $index['last_indexed_utc'] ) ? $index['last_indexed_utc'] : null,
+            'summary' => isset( $index['summary'] ) ? $index['summary'] : $this->knowledge_index_summary( $this->knowledge_index_records() ),
+        ), 200 );
+    }
+
+    public function handle_index_records_request() {
+        $records = $this->knowledge_index_records();
+        $public = array();
+        foreach ( $records as $record ) {
+            $public[] = array(
+                'id' => $record['id'],
+                'title' => $record['title'],
+                'url' => $record['url'],
+                'type' => $record['type'],
+                'route_id' => $record['route_id'],
+                'summary' => $record['summary'],
+                'topics' => $record['topics'],
+                'status' => isset( $record['status'] ) ? $record['status'] : 'indexed',
+                'metadata_flags' => isset( $record['metadata_flags'] ) ? $record['metadata_flags'] : array(),
+                'last_seen_utc' => isset( $record['last_seen_utc'] ) ? $record['last_seen_utc'] : '',
+            );
+        }
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'records' => $public, 'summary' => $this->knowledge_index_summary( $records ) ), 200 );
+    }
+
+    public function handle_index_rebuild_request( WP_REST_Request $request ) {
+        $nonce = $request->get_header( 'x_wp_nonce' );
+        if ( ! $nonce || ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
+            return new WP_Error( 'sc_rl_ai_bad_nonce', __( 'Security check failed. Refresh the page and try again.', 'sustainable-catalyst-research-librarian-ai' ), array( 'status' => 403 ) );
+        }
+        $index = $this->rebuild_knowledge_index();
+        return new WP_REST_Response( $index, 200 );
+    }
+
+    public function handle_index_export_request() {
+        return new WP_REST_Response( $this->knowledge_index(), 200 );
     }
 
     public function handle_grounded_route_request( WP_REST_Request $request ) {
@@ -649,10 +755,10 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
     private function match_sources( $question, $route ) {
         $terms = $this->normalize_terms( $question . ' ' . $route['title'] . ' ' . $route['category'] );
         $scored = array();
-        foreach ( $this->source_records() as $record ) {
-            $haystack = strtolower( $record['title'] . ' ' . $record['type'] . ' ' . $record['summary'] . ' ' . implode( ' ', $record['topics'] ) . ' ' . $record['route_id'] );
+        foreach ( $this->knowledge_index_records() as $record ) {
+            $haystack = strtolower( ( $record['title'] ?? '' ) . ' ' . ( $record['type'] ?? '' ) . ' ' . ( $record['summary'] ?? '' ) . ' ' . implode( ' ', isset( $record['topics'] ) && is_array( $record['topics'] ) ? $record['topics'] : array() ) . ' ' . ( $record['route_id'] ?? '' ) );
             $score = 0;
-            if ( $record['route_id'] === $route['id'] ) {
+            if ( isset( $record['route_id'] ) && $record['route_id'] === $route['id'] ) {
                 $score += 12;
             }
             foreach ( $terms as $term ) {
@@ -753,6 +859,230 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         return array(
             array( 'id' => 'research-librarian', 'label' => 'Research Librarian', 'url' => '/platform/research-librarian/', 'reason' => 'Ask a more specific follow-up if the route needs narrowing.' ),
         );
+    }
+
+
+    public static function build_default_index() {
+        $now = gmdate( 'c' );
+        $records = array(
+            array( 'id' => 'platform', 'route_id' => 'platform', 'type' => 'architecture-page', 'title' => 'Platform', 'url' => '/platform/', 'summary' => 'Architecture page connecting Decision Studio, Workbench, modules, methodology, demos, and open development.', 'topics' => array( 'platform', 'architecture', 'decision studio', 'workbench', 'modules' ), 'priority' => 5 ),
+            array( 'id' => 'demos', 'route_id' => 'demos', 'type' => 'demo-hub', 'title' => 'Platform Demos', 'url' => '/platform/demos/', 'summary' => 'Workflow demo hub for Canvas, Data, Analytics R, Global Impact, Narrative Risk, Finance, Grit, Workbench, and Decision Studio.', 'topics' => array( 'demos', 'workflow', 'modules', 'artifacts' ), 'priority' => 5 ),
+            array( 'id' => 'research-librarian', 'route_id' => 'platform', 'type' => 'routing-page', 'title' => 'Research Librarian', 'url' => '/platform/research-librarian/', 'summary' => 'Site-scoped routing assistant for choosing Sustainable Catalyst pages, modules, tools, repositories, and workflows.', 'topics' => array( 'routing', 'assistant', 'research librarian', 'navigation' ), 'priority' => 4 ),
+            array( 'id' => 'decision-studio', 'route_id' => 'decision-studio', 'type' => 'platform-module', 'title' => 'Sustainable Catalyst Decision Studio', 'url' => '/platform/#decision-studio', 'summary' => 'Decision Packet workspace for artifact imports, four-pillar review, scenarios, audit/provenance, readiness, handoffs, saved packets, and exportable briefs.', 'topics' => array( 'decision packet', 'brief', 'audit', 'readiness', 'scenario comparison', 'sustainability' ), 'priority' => 6 ),
+            array( 'id' => 'workbench', 'route_id' => 'workbench', 'type' => 'analytical-workspace', 'title' => 'Sustainable Catalyst Workbench', 'url' => 'https://sustainablecatalyst.com/modeling-analytics/workbench/', 'summary' => 'Analytical layer for symbolic math, graphing, engineering notes, advanced calculators, article embeds, and exportable reports.', 'topics' => array( 'calculator', 'formula', 'graph', 'symbolic math', 'engineering', 'analysis' ), 'priority' => 6 ),
+            array( 'id' => 'knowledge-library', 'route_id' => 'knowledge-library', 'type' => 'library', 'title' => 'Open Knowledge Library', 'url' => '/knowledge-libraries/', 'summary' => 'Article maps and research paths across sustainability, governance, infrastructure, AI, economics, risk, law, modeling, and meaning.', 'topics' => array( 'library', 'article map', 'research', 'knowledge', 'publications' ), 'priority' => 5 ),
+            array( 'id' => 'methodology', 'route_id' => 'methodology', 'type' => 'methodology', 'title' => 'Platform Methodology', 'url' => '/platform/methodology/', 'summary' => 'Operating standards for traceability, assumptions, responsible AI, reproducibility, boundaries, and human review.', 'topics' => array( 'methodology', 'traceability', 'assumptions', 'responsible ai', 'review' ), 'priority' => 5 ),
+        );
+        foreach ( $records as &$record ) {
+            $record['source_kind'] = 'seed';
+            $record['status'] = 'indexed';
+            $record['metadata_flags'] = array();
+            $record['last_seen_utc'] = $now;
+            $record['last_indexed_utc'] = $now;
+        }
+        unset( $record );
+        return array(
+            'version' => self::VERSION,
+            'last_indexed_utc' => $now,
+            'crawl_mode' => 'seed',
+            'records' => $records,
+            'failed' => array(),
+            'summary' => self::static_index_summary( $records ),
+        );
+    }
+
+    public static function static_index_summary( $records ) {
+        $route_ids = array();
+        $types = array();
+        $stale = 0;
+        $warnings = 0;
+        $duplicates = 0;
+        $seen = array();
+        foreach ( is_array( $records ) ? $records : array() as $record ) {
+            if ( ! empty( $record['route_id'] ) ) { $route_ids[ $record['route_id'] ] = true; }
+            if ( ! empty( $record['type'] ) ) { $types[ $record['type'] ] = true; }
+            if ( ! empty( $record['metadata_flags'] ) && is_array( $record['metadata_flags'] ) ) {
+                $warnings += count( $record['metadata_flags'] );
+                if ( in_array( 'stale', $record['metadata_flags'], true ) ) { $stale++; }
+            }
+            $url = isset( $record['url'] ) ? $record['url'] : '';
+            if ( $url && isset( $seen[ $url ] ) ) { $duplicates++; }
+            if ( $url ) { $seen[ $url ] = true; }
+        }
+        return array(
+            'total_records' => count( is_array( $records ) ? $records : array() ),
+            'route_count' => count( $route_ids ),
+            'type_count' => count( $types ),
+            'stale_records' => $stale,
+            'metadata_warnings' => $warnings,
+            'duplicate_urls' => $duplicates,
+            'failed_records' => 0,
+        );
+    }
+
+    private function knowledge_index() {
+        $index = get_option( self::INDEX_OPTION, false );
+        if ( ! is_array( $index ) || empty( $index['records'] ) ) {
+            $index = self::build_default_index();
+            update_option( self::INDEX_OPTION, $index, false );
+        }
+        return $index;
+    }
+
+    private function knowledge_index_records() {
+        $index = $this->knowledge_index();
+        $records = isset( $index['records'] ) && is_array( $index['records'] ) ? $index['records'] : array();
+        if ( count( $records ) < count( $this->source_records() ) ) {
+            $records = array_merge( $this->source_records(), $records );
+        }
+        return $this->dedupe_index_records( $records );
+    }
+
+    private function rebuild_knowledge_index() {
+        $records = $this->build_knowledge_index_records();
+        $summary = $this->knowledge_index_summary( $records );
+        $index = array(
+            'version' => self::VERSION,
+            'last_indexed_utc' => gmdate( 'c' ),
+            'crawl_mode' => 'seed-plus-wordpress-content',
+            'records' => $records,
+            'failed' => array(),
+            'summary' => $summary,
+        );
+        update_option( self::INDEX_OPTION, $index, false );
+        return $index;
+    }
+
+    private function build_knowledge_index_records() {
+        $now = gmdate( 'c' );
+        $records = array();
+        foreach ( $this->source_records() as $record ) {
+            $record['source_kind'] = 'seed';
+            $record['status'] = 'indexed';
+            $record['metadata_flags'] = $this->index_metadata_flags( $record );
+            $record['last_seen_utc'] = $now;
+            $record['last_indexed_utc'] = $now;
+            $records[] = $record;
+        }
+        $records = array_merge( $records, $this->wordpress_content_index_records() );
+        return $this->dedupe_index_records( $records );
+    }
+
+    private function wordpress_content_index_records() {
+        if ( ! function_exists( 'get_posts' ) ) {
+            return array();
+        }
+        $options = $this->get_options();
+        $max_posts = max( 25, min( 1000, absint( isset( $options['index_max_posts'] ) ? $options['index_max_posts'] : 250 ) ) );
+        $posts = get_posts( array(
+            'post_type' => array( 'page', 'post' ),
+            'post_status' => 'publish',
+            'numberposts' => $max_posts,
+            'orderby' => 'modified',
+            'order' => 'DESC',
+            'suppress_filters' => true,
+        ) );
+        $records = array();
+        foreach ( $posts as $post ) {
+            $url = get_permalink( $post );
+            if ( ! $url ) { continue; }
+            $title = get_the_title( $post );
+            $content = wp_strip_all_tags( $post->post_excerpt ? $post->post_excerpt : $post->post_content );
+            $summary = trim( preg_replace( '/\s+/', ' ', wp_trim_words( $content, 34, '' ) ) );
+            $topics = $this->derive_topics_from_text( $title . ' ' . $summary . ' ' . $post->post_name );
+            $route_id = $this->detect_route_id_from_record( $title, $url, $summary, $topics );
+            $modified_utc = get_gmt_from_date( $post->post_modified, 'c' );
+            $record = array(
+                'id' => 'wp-' . $post->ID,
+                'route_id' => $route_id,
+                'type' => $post->post_type,
+                'title' => $title ? $title : '(untitled)',
+                'url' => $url,
+                'summary' => $summary,
+                'topics' => $topics,
+                'priority' => 1,
+                'source_kind' => 'wordpress-content',
+                'status' => 'indexed',
+                'last_seen_utc' => gmdate( 'c' ),
+                'last_indexed_utc' => gmdate( 'c' ),
+                'modified_utc' => $modified_utc,
+            );
+            $record['metadata_flags'] = $this->index_metadata_flags( $record );
+            $records[] = $record;
+        }
+        return $records;
+    }
+
+    private function derive_topics_from_text( $text ) {
+        $terms = $this->normalize_terms( $text );
+        $topics = array_slice( $terms, 0, 10 );
+        return array_values( array_unique( $topics ) );
+    }
+
+    private function detect_route_id_from_record( $title, $url, $summary, $topics ) {
+        $haystack = strtolower( $title . ' ' . $url . ' ' . $summary . ' ' . implode( ' ', $topics ) );
+        $best = array( 'id' => 'platform', 'score' => 0 );
+        foreach ( $this->routes() as $route ) {
+            $score = 0;
+            if ( false !== strpos( $haystack, strtolower( trim( $route['url'], '/' ) ) ) ) { $score += 8; }
+            foreach ( $route['keys'] as $key ) {
+                if ( false !== strpos( $haystack, strtolower( $key ) ) ) { $score += 3; }
+            }
+            if ( $score > $best['score'] ) { $best = array( 'id' => $route['id'], 'score' => $score ); }
+        }
+        return $best['id'];
+    }
+
+    private function index_metadata_flags( $record ) {
+        $flags = array();
+        if ( empty( $record['summary'] ) || strlen( wp_strip_all_tags( $record['summary'] ) ) < 35 ) { $flags[] = 'missing-or-short-summary'; }
+        if ( empty( $record['topics'] ) || ! is_array( $record['topics'] ) || count( $record['topics'] ) < 2 ) { $flags[] = 'missing-topics'; }
+        if ( ! empty( $record['modified_utc'] ) ) {
+            $options = $this->get_options();
+            $days = max( 30, min( 1095, absint( isset( $options['stale_after_days'] ) ? $options['stale_after_days'] : 180 ) ) );
+            $modified = strtotime( $record['modified_utc'] );
+            if ( $modified && $modified < ( time() - ( $days * DAY_IN_SECONDS ) ) ) { $flags[] = 'stale'; }
+        }
+        return array_values( array_unique( $flags ) );
+    }
+
+    private function dedupe_index_records( $records ) {
+        $deduped = array();
+        $seen = array();
+        foreach ( is_array( $records ) ? $records : array() as $record ) {
+            if ( empty( $record['url'] ) ) { continue; }
+            $key = strtolower( untrailingslashit( $record['url'] ) );
+            if ( isset( $seen[ $key ] ) ) { continue; }
+            $seen[ $key ] = true;
+            $record['topics'] = isset( $record['topics'] ) && is_array( $record['topics'] ) ? array_values( array_unique( $record['topics'] ) ) : array();
+            $deduped[] = $record;
+        }
+        return $deduped;
+    }
+
+    private function knowledge_index_summary( $records ) {
+        $summary = self::static_index_summary( $records );
+        $failed = 0;
+        $index = get_option( self::INDEX_OPTION, array() );
+        if ( isset( $index['failed'] ) && is_array( $index['failed'] ) ) { $failed = count( $index['failed'] ); }
+        $summary['failed_records'] = $failed;
+        return $summary;
+    }
+
+    private function process_admin_index_actions() {
+        if ( empty( $_POST['sc_rl_index_action'] ) ) { return ''; }
+        if ( ! current_user_can( 'manage_options' ) ) { return ''; }
+        check_admin_referer( 'sc_rl_index_action', 'sc_rl_index_nonce' );
+        $action = sanitize_key( wp_unslash( $_POST['sc_rl_index_action'] ) );
+        if ( 'rebuild' === $action ) {
+            $this->rebuild_knowledge_index();
+            return 'rebuilt';
+        }
+        if ( 'reset' === $action ) {
+            update_option( self::INDEX_OPTION, self::build_default_index(), false );
+            return 'reset';
+        }
+        return '';
     }
 
     private function source_records() {
@@ -961,6 +1291,8 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'temperature' => __( 'Temperature', 'sustainable-catalyst-research-librarian-ai' ),
             'rate_limit' => __( 'Rate Limit', 'sustainable-catalyst-research-librarian-ai' ),
             'source_result_limit' => __( 'Source Result Limit', 'sustainable-catalyst-research-librarian-ai' ),
+            'index_max_posts' => __( 'Indexer Max Posts', 'sustainable-catalyst-research-librarian-ai' ),
+            'stale_after_days' => __( 'Stale After Days', 'sustainable-catalyst-research-librarian-ai' ),
             'system_instructions' => __( 'System Instructions', 'sustainable-catalyst-research-librarian-ai' ),
         );
         foreach ( $fields as $field => $label ) {
@@ -987,6 +1319,8 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'temperature'             => isset( $input['temperature'] ) && is_numeric( $input['temperature'] ) ? (string) max( 0, min( 1, (float) $input['temperature'] ) ) : self::defaults()['temperature'],
             'rate_limit'              => max( 1, min( 100, absint( isset( $input['rate_limit'] ) ? $input['rate_limit'] : self::defaults()['rate_limit'] ) ) ),
             'source_result_limit'     => max( 3, min( 8, absint( isset( $input['source_result_limit'] ) ? $input['source_result_limit'] : self::defaults()['source_result_limit'] ) ) ),
+            'index_max_posts'         => max( 25, min( 1000, absint( isset( $input['index_max_posts'] ) ? $input['index_max_posts'] : self::defaults()['index_max_posts'] ) ) ),
+            'stale_after_days'        => max( 30, min( 1095, absint( isset( $input['stale_after_days'] ) ? $input['stale_after_days'] : self::defaults()['stale_after_days'] ) ) ),
             'system_instructions'     => isset( $input['system_instructions'] ) ? sanitize_textarea_field( wp_unslash( $input['system_instructions'] ) ) : self::default_system_instructions(),
         );
     }
@@ -1004,7 +1338,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
 
     public function settings_section_intro() {
         echo '<p>' . esc_html__( 'The Research Librarian is site-scoped routing infrastructure. It can run entirely in deterministic fallback mode, or use Gemini/OpenAI server-side for richer route explanations. API keys are not exposed to JavaScript.', 'sustainable-catalyst-research-librarian-ai' ) . '</p>';
-        echo '<p><code>[sustainable_catalyst_research_librarian_ai]</code> <code>[sc_research_librarian mode="landing"]</code> <code>[sc_research_librarian mode="route-map"]</code></p>';
+        echo '<p><code>[sustainable_catalyst_research_librarian_ai]</code> <code>[sc_research_librarian mode="landing"]</code> <code>[sc_research_librarian mode="route-map"]</code> <code>[sc_research_librarian mode="index-summary"]</code></p>';
     }
 
     public function render_field( $args ) {
@@ -1032,6 +1366,8 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             case 'max_output_tokens':
             case 'rate_limit':
             case 'source_result_limit':
+            case 'index_max_posts':
+            case 'stale_after_days':
                 echo '<input type="number" class="small-text" name="' . esc_attr( $name ) . '" value="' . esc_attr( $options[ $field ] ) . '" />';
                 break;
             case 'temperature':
@@ -1047,29 +1383,52 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         if ( ! current_user_can( 'manage_options' ) ) {
             return;
         }
+        $notice = $this->process_admin_index_actions();
         $options = $this->get_options();
         $provider = $this->configured_provider( $options );
+        $index = $this->knowledge_index();
+        $records = $this->knowledge_index_records();
+        $summary = $this->knowledge_index_summary( $records );
         ?>
         <div class="wrap">
             <h1><?php esc_html_e( 'Sustainable Catalyst Research Librarian', 'sustainable-catalyst-research-librarian-ai' ); ?></h1>
-            <p><?php esc_html_e( 'Routing layer for Sustainable Catalyst. It helps visitors choose the right library, module, demo, repository, Workbench tool, or Decision Studio workflow.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
+            <p><?php esc_html_e( 'Routing and retrieval infrastructure for Sustainable Catalyst. It helps visitors choose the right library, module, demo, repository, Workbench tool, or Decision Studio workflow.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
             <p><strong><?php esc_html_e( 'Status:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <?php echo esc_html( 'disabled' === $provider ? 'Deterministic fallback only' : 'AI provider configured: ' . $provider ); ?> · <strong><?php esc_html_e( 'Version:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <?php echo esc_html( self::VERSION ); ?></p>
+            <?php if ( $notice ) : ?>
+                <div class="notice notice-success is-dismissible"><p><?php echo esc_html( 'rebuilt' === $notice ? 'Knowledge index rebuilt.' : 'Knowledge index reset to seed records.' ); ?></p></div>
+            <?php endif; ?>
+
+            <h2><?php esc_html_e( 'Knowledge Indexer and Crawl Dashboard', 'sustainable-catalyst-research-librarian-ai' ); ?></h2>
+            <p><?php esc_html_e( 'The indexer combines curated source records with recently published WordPress pages/posts. It tracks source coverage, metadata gaps, stale records, duplicate URLs, and route groups for grounded routing.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
+            <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0;max-width:1100px;">
+                <div class="postbox" style="padding:14px;"><strong style="font-size:22px;display:block;"><?php echo esc_html( $summary['total_records'] ); ?></strong><span><?php esc_html_e( 'Indexed records', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                <div class="postbox" style="padding:14px;"><strong style="font-size:22px;display:block;"><?php echo esc_html( $summary['route_count'] ); ?></strong><span><?php esc_html_e( 'Route groups', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                <div class="postbox" style="padding:14px;"><strong style="font-size:22px;display:block;"><?php echo esc_html( $summary['metadata_warnings'] ); ?></strong><span><?php esc_html_e( 'Metadata warnings', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                <div class="postbox" style="padding:14px;"><strong style="font-size:22px;display:block;"><?php echo esc_html( $summary['stale_records'] ); ?></strong><span><?php esc_html_e( 'Stale records', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+            </div>
+            <p><strong><?php esc_html_e( 'Last indexed:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <?php echo esc_html( isset( $index['last_indexed_utc'] ) ? $index['last_indexed_utc'] : 'seed only' ); ?> · <strong><?php esc_html_e( 'Mode:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <?php echo esc_html( isset( $index['crawl_mode'] ) ? $index['crawl_mode'] : 'unknown' ); ?></p>
+            <form method="post" style="display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 22px;">
+                <?php wp_nonce_field( 'sc_rl_index_action', 'sc_rl_index_nonce' ); ?>
+                <button class="button button-primary" type="submit" name="sc_rl_index_action" value="rebuild"><?php esc_html_e( 'Rebuild Knowledge Index', 'sustainable-catalyst-research-librarian-ai' ); ?></button>
+                <button class="button" type="submit" name="sc_rl_index_action" value="reset"><?php esc_html_e( 'Reset to Seed Index', 'sustainable-catalyst-research-librarian-ai' ); ?></button>
+                <a class="button" href="<?php echo esc_url( rest_url( self::REST_NAMESPACE . '/index/export' ) ); ?>"><?php esc_html_e( 'Export Index JSON', 'sustainable-catalyst-research-librarian-ai' ); ?></a>
+            </form>
+
             <form action="options.php" method="post">
                 <?php settings_fields( 'sc_rl_ai_settings_group' ); do_settings_sections( 'sc-research-librarian-ai' ); submit_button(); ?>
             </form>
             <hr />
+            <h2><?php esc_html_e( 'Indexed Source Records', 'sustainable-catalyst-research-librarian-ai' ); ?></h2>
+            <p><?php esc_html_e( 'Records used for deterministic grounded routing and AI prompt context. Rebuild the index after major page, module, or navigation updates.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
+            <table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Type', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Source', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Route', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Flags', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'URL', 'sustainable-catalyst-research-librarian-ai' ); ?></th></tr></thead><tbody>
+            <?php foreach ( array_slice( $records, 0, 120 ) as $source ) : ?>
+                <tr><td><?php echo esc_html( $source['type'] ); ?></td><td><?php echo esc_html( $source['title'] ); ?></td><td><code><?php echo esc_html( $source['route_id'] ); ?></code></td><td><?php echo esc_html( empty( $source['metadata_flags'] ) ? 'ok' : implode( ', ', $source['metadata_flags'] ) ); ?></td><td><code><?php echo esc_html( $source['url'] ); ?></code></td></tr>
+            <?php endforeach; ?>
+            </tbody></table>
             <h2><?php esc_html_e( 'Route Map', 'sustainable-catalyst-research-librarian-ai' ); ?></h2>
-            <p><?php esc_html_e( 'Current deterministic route map used when AI is disabled or unavailable. v3.1.0 also uses a source index for grounded route recommendations.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
             <table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Category', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Route', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'URL', 'sustainable-catalyst-research-librarian-ai' ); ?></th></tr></thead><tbody>
             <?php foreach ( $this->routes() as $route ) : ?>
                 <tr><td><?php echo esc_html( $route['category'] ); ?></td><td><?php echo esc_html( $route['title'] ); ?></td><td><code><?php echo esc_html( $route['url'] ); ?></code></td></tr>
-            <?php endforeach; ?>
-            </tbody></table>
-            <h2><?php esc_html_e( 'Grounding Source Index', 'sustainable-catalyst-research-librarian-ai' ); ?></h2>
-            <p><?php esc_html_e( 'Source records used for deterministic grounded routing and AI prompt context.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
-            <table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Type', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Source', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Route', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'URL', 'sustainable-catalyst-research-librarian-ai' ); ?></th></tr></thead><tbody>
-            <?php foreach ( $this->source_records() as $source ) : ?>
-                <tr><td><?php echo esc_html( $source['type'] ); ?></td><td><?php echo esc_html( $source['title'] ); ?></td><td><code><?php echo esc_html( $source['route_id'] ); ?></code></td><td><code><?php echo esc_html( $source['url'] ); ?></code></td></tr>
             <?php endforeach; ?>
             </tbody></table>
         </div>

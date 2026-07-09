@@ -1,28 +1,26 @@
 # Changelog
 
-## 3.1.0 — Grounded Routing and Source-Aware Recommendations
+## v3.2.0 — Knowledge Indexer and Admin Crawl Dashboard
 
-- Added source-aware routing with a Sustainable Catalyst source index.
-- Added confidence scoring, reason codes, ambiguity notes, and handoff suggestions.
-- Added `/sources` and `/grounded-route` REST endpoints.
-- Added source and confidence details to exported route notes.
-- Added source context to Gemini/OpenAI prompt construction.
-- Added admin Source Index table.
-- Updated CSS and JavaScript for route confidence and source display.
+- Added Knowledge Indexer and Crawl Dashboard.
+- Added local knowledge index option storage.
+- Added seed-plus-WordPress-content index rebuild workflow.
+- Added stale record, metadata warning, duplicate URL, and route coverage summary logic.
+- Added admin rebuild/reset/export controls.
+- Added REST endpoints for index summary, index records, rebuild, and export.
+- Added public index-summary shortcode mode.
+- Updated health response with index summary.
+- Updated grounded routing to use the knowledge index when available.
+- Updated README, docs, CSS, and plugin metadata.
 
-## 3.0.0 - Product-level routing upgrade
+## v3.1.0 — Grounded Routing and Source-Aware Recommendations
 
-- Added route map architecture aligned with Decision Studio and Workbench
-- Added deterministic route notes with exportable JSON structure
-- Added Copy Route Note and Download JSON controls
-- Added shortcode modes: full, compact, landing, route-map
-- Added REST endpoints for health, routes, ask, and route-note
-- Added Gemini provider option alongside OpenAI and disabled fallback mode
-- Added module-aware routing for Canvas, Data, Analytics R, Global Impact, Narrative Risk, Finance, Grit, Workbench, and Decision Studio
-- Added stronger boundaries for professional advice and confidential submissions
-- Updated CSS and JS for product-level UI polish
-- Updated documentation and route manifest
+- Added grounding source index.
+- Added route confidence scoring, reason codes, ambiguity notes, and handoffs.
+- Added source-aware route notes and exports.
 
-## 2.1.1
+## v3.0.0 — Product Routing Layer Upgrade
 
-- AI-enabled Research Librarian with OpenAI file search and deterministic fallback routing.
+- Reframed Research Librarian as the routing layer for Sustainable Catalyst.
+- Added route map, landing mode, route note exports, and provider options.
+
