@@ -1,0 +1,27 @@
+{
+  "version": "4.0.0",
+  "name": "Enterprise Readiness and Release Audit",
+  "features": [
+    "enterprise readiness summary",
+    "release audit summary",
+    "aggregated system checks",
+    "public-safe readiness shortcode",
+    "admin-only enterprise export",
+    "endpoint inventory",
+    "shortcode inventory",
+    "manifest inventory",
+    "deployment review snapshot"
+  ],
+  "endpoints": [
+    "/enterprise/status",
+    "/enterprise/export",
+    "/release/audit",
+    "/release/export"
+  ],
+  "shortcodes": [
+    "[sc_research_librarian mode=\"enterprise-summary\"]",
+    "[sc_research_librarian mode=\"release-audit\"]"
+  ],
+  "public_safe": true,
+  "admin_exports_exclude_api_keys": true
+}

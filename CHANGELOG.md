@@ -1,5 +1,19 @@
 # Changelog
 
+## 4.0.0 — Enterprise Readiness and Release Audit
+
+- Added enterprise readiness summary.
+- Added release audit summary.
+- Added aggregate checks across index, retrieval, evaluation, handoffs, sessions, feedback, governance, and maintenance.
+- Added public-safe enterprise summary shortcode.
+- Added public-safe release audit shortcode.
+- Added admin-only enterprise export endpoint.
+- Added admin-only release export endpoint.
+- Added endpoint, shortcode, and manifest inventories.
+- Added v4.0.0 enterprise manifest and documentation.
+
+# Changelog
+
 ## 3.9.0 — Scheduled Index Maintenance, Sitemap Sync, and Health Alerts
 
 - Added scheduled knowledge-index maintenance.

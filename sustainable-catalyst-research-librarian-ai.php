@@ -3,7 +3,7 @@
  * Plugin Name: Sustainable Catalyst Research Librarian
  * Plugin URI: https://sustainablecatalyst.com/platform/research-librarian/
  * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, correction triage, knowledge-gap review, governance controls, privacy summaries, retention policies, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, scheduled index maintenance, sitemap sync, health alerts, and exports.
- * Version: 3.9.0
+ * Version: 4.0.0
  * Author: Content Catalyst LLC / Tariq Ahmad
  * Author URI: https://sustainablecatalyst.com/
  * License: MIT
@@ -23,7 +23,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
     const MAINTENANCE_OPTION = 'sc_rl_ai_maintenance_status';
     const MAINTENANCE_HOOK = 'sc_rl_ai_index_maintenance_event';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const VERSION        = '3.9.0';
+    const VERSION        = '4.0.0';
 
     private static $instance = null;
 
@@ -199,6 +199,12 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         }
         if ( 'maintenance' === $mode || 'maintenance-summary' === $mode || 'index-health' === $mode || 'crawl-health' === $mode ) {
             return $this->render_maintenance_summary( $atts );
+        }
+        if ( 'enterprise' === $mode || 'enterprise-summary' === $mode || 'readiness' === $mode || 'readiness-summary' === $mode ) {
+            return $this->render_enterprise_summary( $atts );
+        }
+        if ( 'release-audit' === $mode || 'release' === $mode || 'release-summary' === $mode ) {
+            return $this->render_release_audit_summary( $atts );
         }
         return $this->render_assistant( $atts );
     }
@@ -504,6 +510,47 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         return ob_get_clean();
     }
 
+    private function render_enterprise_summary( $atts ) {
+        $summary = $this->enterprise_readiness_summary();
+        ob_start();
+        ?>
+        <section class="sc-rl-enterprise-summary" data-sc-rl-product="enterprise-summary">
+            <p class="sc-rl-routes__eyebrow">Research Librarian Enterprise Readiness</p>
+            <h2><?php echo esc_html( $atts['title'] ); ?></h2>
+            <p>The enterprise readiness layer summarizes whether the Research Librarian has the operational pieces expected of a serious knowledge-retrieval system: index coverage, semantic retrieval, evaluation, handoffs, logs, feedback, governance, maintenance, and release evidence.</p>
+            <div class="sc-rl-index-summary__grid">
+                <article><span><?php echo esc_html( $summary['readiness_label'] ); ?></span><strong><?php esc_html_e( 'Readiness level', 'sustainable-catalyst-research-librarian-ai' ); ?></strong></article>
+                <article><span><?php echo esc_html( absint( $summary['readiness_score'] ) ); ?>%</span><strong><?php esc_html_e( 'Readiness score', 'sustainable-catalyst-research-librarian-ai' ); ?></strong></article>
+                <article><span><?php echo esc_html( absint( $summary['checks_passed'] ) . '/' . absint( $summary['checks_total'] ) ); ?></span><strong><?php esc_html_e( 'Checks passed', 'sustainable-catalyst-research-librarian-ai' ); ?></strong></article>
+                <article><span><?php echo esc_html( absint( $summary['open_warnings'] ) ); ?></span><strong><?php esc_html_e( 'Open warnings', 'sustainable-catalyst-research-librarian-ai' ); ?></strong></article>
+            </div>
+            <p class="sc-rl-index-summary__meta">Last assessed: <?php echo esc_html( $summary['generated_utc'] ); ?>. Use this as a public-safe infrastructure summary; admin exports include detailed check records.</p>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+
+    private function render_release_audit_summary( $atts ) {
+        $audit = $this->release_audit_summary();
+        ob_start();
+        ?>
+        <section class="sc-rl-release-audit-summary" data-sc-rl-product="release-audit-summary">
+            <p class="sc-rl-routes__eyebrow">Research Librarian Release Audit</p>
+            <h2><?php echo esc_html( $atts['title'] ); ?></h2>
+            <p>The release audit collects version, endpoint, shortcode, manifest, governance, maintenance, retrieval, and evaluation evidence into one exportable snapshot for deployment review.</p>
+            <div class="sc-rl-index-summary__grid">
+                <article><span><?php echo esc_html( $audit['version'] ); ?></span><strong><?php esc_html_e( 'Version', 'sustainable-catalyst-research-librarian-ai' ); ?></strong></article>
+                <article><span><?php echo esc_html( absint( $audit['endpoint_count'] ) ); ?></span><strong><?php esc_html_e( 'REST endpoints', 'sustainable-catalyst-research-librarian-ai' ); ?></strong></article>
+                <article><span><?php echo esc_html( absint( $audit['shortcode_modes'] ) ); ?></span><strong><?php esc_html_e( 'Shortcode modes', 'sustainable-catalyst-research-librarian-ai' ); ?></strong></article>
+                <article><span><?php echo esc_html( $audit['release_label'] ); ?></span><strong><?php esc_html_e( 'Release label', 'sustainable-catalyst-research-librarian-ai' ); ?></strong></article>
+            </div>
+            <p class="sc-rl-index-summary__meta">Generated: <?php echo esc_html( $audit['generated_utc'] ); ?>. Admins can export the full audit from the REST endpoint.</p>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+
+
     public function register_rest_routes() {
         register_rest_route( self::REST_NAMESPACE, '/ask', array(
             'methods'             => WP_REST_Server::CREATABLE,
@@ -737,6 +784,30 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'permission_callback' => array( $this, 'can_manage_options' ),
         ) );
 
+        register_rest_route( self::REST_NAMESPACE, '/enterprise/status', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'handle_enterprise_status_request' ),
+            'permission_callback' => '__return_true',
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/enterprise/export', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'handle_enterprise_export_request' ),
+            'permission_callback' => array( $this, 'can_manage_options' ),
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/release/audit', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'handle_release_audit_request' ),
+            'permission_callback' => '__return_true',
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/release/export', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'handle_release_export_request' ),
+            'permission_callback' => array( $this, 'can_manage_options' ),
+        ) );
+
         register_rest_route( self::REST_NAMESPACE, '/health', array(
             'methods'             => WP_REST_Server::READABLE,
             'callback'            => array( $this, 'handle_health_request' ),
@@ -759,6 +830,8 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'feedback' => $this->feedback_summary(),
             'governance' => $this->governance_summary(),
             'maintenance' => $this->maintenance_summary(),
+            'enterprise' => $this->enterprise_readiness_summary(),
+            'release' => $this->release_audit_summary(),
         ), 200 );
     }
 
@@ -793,6 +866,154 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'index' => $this->knowledge_index_summary( $this->knowledge_index_records() ),
             'retrieval' => $this->retrieval_status(),
         ), 200 );
+    }
+
+
+    public function handle_enterprise_status_request() {
+        return new WP_REST_Response( array(
+            'version' => self::VERSION,
+            'enterprise' => $this->enterprise_readiness_summary(),
+        ), 200 );
+    }
+
+    public function handle_enterprise_export_request() {
+        return new WP_REST_Response( array(
+            'version' => self::VERSION,
+            'generated_utc' => gmdate( 'c' ),
+            'enterprise' => $this->enterprise_readiness_summary( true ),
+            'index' => $this->knowledge_index_summary( $this->knowledge_index_records() ),
+            'retrieval' => $this->retrieval_status(),
+            'evaluation' => $this->evaluation_summary(),
+            'handoff' => $this->handoff_summary(),
+            'sessions' => $this->session_analytics_summary(),
+            'feedback' => $this->feedback_summary(),
+            'governance' => $this->governance_summary(),
+            'maintenance' => $this->maintenance_summary(),
+            'boundary' => 'Admin export excludes API keys and should not be published if it includes operational logs or route questions.',
+        ), 200 );
+    }
+
+    public function handle_release_audit_request() {
+        return new WP_REST_Response( array(
+            'version' => self::VERSION,
+            'release' => $this->release_audit_summary(),
+        ), 200 );
+    }
+
+    public function handle_release_export_request() {
+        return new WP_REST_Response( array(
+            'version' => self::VERSION,
+            'generated_utc' => gmdate( 'c' ),
+            'release' => $this->release_audit_summary( true ),
+            'enterprise' => $this->enterprise_readiness_summary( true ),
+            'registered_endpoints' => $this->release_endpoint_inventory(),
+            'shortcodes' => $this->release_shortcode_inventory(),
+            'manifests' => $this->release_manifest_inventory(),
+        ), 200 );
+    }
+
+    private function enterprise_readiness_summary( $include_checks = false ) {
+        $index = $this->knowledge_index_summary( $this->knowledge_index_records() );
+        $retrieval = $this->retrieval_status();
+        $evaluation = $this->evaluation_summary();
+        $eval_summary = isset( $evaluation['summary'] ) && is_array( $evaluation['summary'] ) ? $evaluation['summary'] : $this->evaluation_summary_defaults();
+        $handoff = $this->handoff_summary();
+        $sessions = $this->session_analytics_summary();
+        $feedback = $this->feedback_summary();
+        $governance = $this->governance_summary();
+        $maintenance = $this->maintenance_summary();
+
+        $checks = array(
+            array( 'id' => 'index_records', 'label' => 'Knowledge index has source records', 'passed' => absint( $index['total_records'] ?? 0 ) > 0, 'value' => absint( $index['total_records'] ?? 0 ), 'warning' => 'Rebuild the knowledge index.' ),
+            array( 'id' => 'index_quality', 'label' => 'Knowledge index has no metadata warnings', 'passed' => 0 === absint( $index['metadata_warnings'] ?? 0 ), 'value' => absint( $index['metadata_warnings'] ?? 0 ), 'warning' => 'Review source records with missing metadata.' ),
+            array( 'id' => 'retrieval_enabled', 'label' => 'Semantic retrieval configuration is enabled', 'passed' => ! empty( $retrieval['enabled'] ), 'value' => ! empty( $retrieval['enabled'] ) ? 'enabled' : 'disabled', 'warning' => 'Enable Gemini retrieval if semantic source matching is required.' ),
+            array( 'id' => 'embeddings_present', 'label' => 'Embedded source records are available', 'passed' => absint( $retrieval['embedded_records'] ?? 0 ) > 0, 'value' => absint( $retrieval['embedded_records'] ?? 0 ), 'warning' => 'Generate embeddings or keep keyword routing as fallback.' ),
+            array( 'id' => 'evaluation_available', 'label' => 'Retrieval evaluation has run', 'passed' => absint( $eval_summary['total_cases'] ?? 0 ) > 0, 'value' => absint( $eval_summary['total_cases'] ?? 0 ), 'warning' => 'Run the retrieval evaluation suite.' ),
+            array( 'id' => 'evaluation_quality', 'label' => 'Evaluation route accuracy is acceptable', 'passed' => (float) ( $eval_summary['accuracy'] ?? 0 ) >= 70, 'value' => (float) ( $eval_summary['accuracy'] ?? 0 ), 'warning' => 'Tune routes, source metadata, or confidence thresholds.' ),
+            array( 'id' => 'handoff_layer', 'label' => 'Handoff schemas are available', 'passed' => absint( $handoff['schemas'] ?? 0 ) > 0, 'value' => absint( $handoff['schemas'] ?? 0 ), 'warning' => 'Confirm Workbench and Decision Studio handoff schemas.' ),
+            array( 'id' => 'governance_layer', 'label' => 'Governance controls are available', 'passed' => ! empty( $governance['version'] ), 'value' => $governance['version'] ?? self::VERSION, 'warning' => 'Review governance, privacy, and retention settings.' ),
+            array( 'id' => 'maintenance_layer', 'label' => 'Maintenance summary is available', 'passed' => ! empty( $maintenance['version'] ), 'value' => $maintenance['last_status'] ?? 'not-run', 'warning' => 'Run index maintenance after deployment.' ),
+            array( 'id' => 'feedback_layer', 'label' => 'Feedback and correction queue is available', 'passed' => isset( $feedback['total_feedback'] ), 'value' => absint( $feedback['total_feedback'] ?? 0 ), 'warning' => 'Enable public feedback to improve route quality.' ),
+            array( 'id' => 'session_layer', 'label' => 'Saved sessions analytics are available', 'passed' => isset( $sessions['total_sessions'] ), 'value' => absint( $sessions['total_sessions'] ?? 0 ), 'warning' => 'Use saved sessions to review high-value route outcomes.' ),
+        );
+
+        $passed = 0;
+        $warnings = array();
+        foreach ( $checks as $i => $check ) {
+            $checks[ $i ]['status'] = $check['passed'] ? 'pass' : 'warning';
+            if ( $check['passed'] ) { $passed++; } else { $warnings[] = $check['warning']; }
+        }
+        $total = count( $checks );
+        $score = $total > 0 ? round( ( $passed / $total ) * 100 ) : 0;
+        $label = 'development';
+        if ( $score >= 90 ) { $label = 'enterprise-ready'; }
+        elseif ( $score >= 75 ) { $label = 'production-ready'; }
+        elseif ( $score >= 55 ) { $label = 'staging-ready'; }
+
+        $summary = array(
+            'version' => self::VERSION,
+            'generated_utc' => gmdate( 'c' ),
+            'readiness_score' => absint( $score ),
+            'readiness_label' => $label,
+            'checks_total' => absint( $total ),
+            'checks_passed' => absint( $passed ),
+            'open_warnings' => absint( $total - $passed ),
+            'top_warnings' => array_slice( $warnings, 0, 5 ),
+            'index_records' => absint( $index['total_records'] ?? 0 ),
+            'embedded_records' => absint( $retrieval['embedded_records'] ?? 0 ),
+            'evaluation_accuracy' => (float) ( $eval_summary['accuracy'] ?? 0 ),
+            'maintenance_status' => $maintenance['last_status'] ?? 'not-run',
+            'privacy_posture' => $governance['privacy_posture'] ?? 'configured',
+        );
+        if ( $include_checks ) { $summary['checks'] = $checks; }
+        return $summary;
+    }
+
+    private function release_audit_summary( $include_details = false ) {
+        $endpoints = $this->release_endpoint_inventory();
+        $shortcodes = $this->release_shortcode_inventory();
+        $manifests = $this->release_manifest_inventory();
+        $enterprise = $this->enterprise_readiness_summary();
+        $summary = array(
+            'version' => self::VERSION,
+            'generated_utc' => gmdate( 'c' ),
+            'release_label' => 'enterprise-readiness-release-audit',
+            'endpoint_count' => count( $endpoints ),
+            'shortcode_modes' => count( $shortcodes ),
+            'manifest_count' => count( $manifests ),
+            'readiness_score' => $enterprise['readiness_score'],
+            'readiness_label' => $enterprise['readiness_label'],
+            'public_safe' => true,
+            'notes' => array(
+                'No API keys are exposed in release audit summaries.',
+                'Admin export can include operational status and should be reviewed before publication.',
+                'Use this audit after plugin upload, index rebuild, embedding generation, and evaluation run.',
+            ),
+        );
+        if ( $include_details ) {
+            $summary['endpoints'] = $endpoints;
+            $summary['shortcodes'] = $shortcodes;
+            $summary['manifests'] = $manifests;
+        }
+        return $summary;
+    }
+
+    private function release_endpoint_inventory() {
+        return array(
+            '/ask','/routes','/sources','/grounded-route','/route-note','/index/summary','/index/records','/index/rebuild','/index/export','/retrieval/status','/retrieval/diagnostics','/retrieval/test-embedding','/retrieval/query','/index/embed','/evaluation/suite','/evaluation/run','/evaluation/query','/evaluation/logs','/evaluation/export','/handoff/schema','/handoff/prepare','/handoff/logs','/handoff/export','/session/save','/session/logs','/session/export','/analytics/summary','/feedback/submit','/feedback/summary','/feedback/logs','/feedback/export','/governance/status','/governance/export','/governance/purge-expired','/maintenance/status','/maintenance/run','/maintenance/export','/enterprise/status','/enterprise/export','/release/audit','/release/export','/health'
+        );
+    }
+
+    private function release_shortcode_inventory() {
+        return array(
+            'full','landing','route-map','index-summary','retrieval-status','evaluation-summary','handoff-summary','session-summary','analytics-summary','feedback-summary','governance-summary','maintenance-summary','enterprise-summary','release-audit'
+        );
+    }
+
+    private function release_manifest_inventory() {
+        return array(
+            'research_librarian_routes_v3.0.0.json','research_librarian_sources_v3.1.0.json','research_librarian_index_seed_v3.2.0.json','research_librarian_retrieval_manifest_v3.3.0.json','research_librarian_retrieval_manifest_v3.3.1.json','research_librarian_retrieval_manifest_v3.3.2.json','research_librarian_retrieval_manifest_v3.3.3.json','research_librarian_retrieval_manifest_v3.4.0.json','research_librarian_handoff_manifest_v3.5.0.json','research_librarian_session_manifest_v3.6.0.json','research_librarian_feedback_manifest_v3.7.0.json','research_librarian_governance_manifest_v3.8.0.json','research_librarian_maintenance_manifest_v3.9.0.json','research_librarian_enterprise_manifest_v4.0.0.json'
+        );
     }
 
     public function can_manage_options() {
