@@ -62,3 +62,8 @@ Gemini embedding diagnostics, request format fix, single-record embedding test, 
 ## v4.5.0 completed
 
 - Integration contracts, API catalog, developer handoffs, and admin/public contract exports.
+
+
+## v4.6.0
+
+Public Answer UX, Source Cards, and Route Action Center.

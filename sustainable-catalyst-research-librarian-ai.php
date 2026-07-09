@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Sustainable Catalyst Research Librarian
  * Plugin URI: https://sustainablecatalyst.com/platform/research-librarian/
- * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, correction triage, knowledge-gap review, governance controls, privacy summaries, retention policies, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, scheduled index maintenance, sitemap sync, health alerts, recovery snapshots, backup/export controls, migration readiness, security hardening, endpoint permission review, access-surface audit, observability checks, operational runbooks, incident-response summaries, editorial curation rules, route overrides, source weighting controls, integration contracts, API catalogs, developer handoff documentation, and exports.
- * Version: 4.5.0
+ * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, correction triage, knowledge-gap review, governance controls, privacy summaries, retention policies, admin crawl dashboard, grounded route notes, AI-assisted answers, polished public answer cards, deterministic fallback, scheduled index maintenance, sitemap sync, health alerts, recovery snapshots, backup/export controls, migration readiness, security hardening, endpoint permission review, access-surface audit, observability checks, operational runbooks, incident-response summaries, editorial curation rules, route overrides, source weighting controls, integration contracts, API catalogs, developer handoff documentation, public answer UX, source cards, route action centers, and exports.
+ * Version: 4.6.0
  * Author: Content Catalyst LLC / Tariq Ahmad
  * Author URI: https://sustainablecatalyst.com/
  * License: MIT
@@ -23,7 +23,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
     const MAINTENANCE_OPTION = 'sc_rl_ai_maintenance_status';
     const MAINTENANCE_HOOK = 'sc_rl_ai_index_maintenance_event';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const VERSION        = '4.5.0';
+    const VERSION        = '4.6.0';
 
     private static $instance = null;
 
@@ -224,6 +224,11 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         if ( 'contracts' === $mode || 'contracts-summary' === $mode || 'api-catalog' === $mode || 'developer-handoffs' === $mode || 'integration-contracts' === $mode ) {
             if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V450_Contracts' ) ) {
                 return Sustainable_Catalyst_Research_Librarian_AI_V450_Contracts::render_public_summary( $atts );
+            }
+        }
+        if ( 'answer-ux' === $mode || 'answer-ui' === $mode || 'source-cards' === $mode || 'route-action-center' === $mode || 'public-answer' === $mode ) {
+            if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V460_Answer_UX' ) ) {
+                return Sustainable_Catalyst_Research_Librarian_AI_V460_Answer_UX::render_public_summary( $atts );
             }
         }
         if ( 'recovery' === $mode || 'recovery-summary' === $mode || 'backup-summary' === $mode || 'snapshot-summary' === $mode ) {
@@ -478,12 +483,13 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         $handoff_endpoint = rest_url( self::REST_NAMESPACE . '/handoff/prepare' );
         $session_endpoint = rest_url( self::REST_NAMESPACE . '/session/save' );
         $feedback_endpoint = rest_url( self::REST_NAMESPACE . '/feedback/submit' );
+        $ux_endpoint = rest_url( self::REST_NAMESPACE . '/answer-ux/status' );
         $nonce = wp_create_nonce( 'wp_rest' );
         $compact = ( 'compact' === sanitize_key( $atts['display'] ) || 'compact' === sanitize_key( $atts['mode'] ) );
 
         ob_start();
         ?>
-        <section id="<?php echo esc_attr( $root_id ); ?>" class="sc-rl-ai<?php echo $compact ? ' sc-rl-ai--compact' : ''; ?>" data-endpoint="<?php echo esc_url( $endpoint ); ?>" data-routes-endpoint="<?php echo esc_url( $routes_endpoint ); ?>" data-note-endpoint="<?php echo esc_url( $note_endpoint ); ?>" data-handoff-endpoint="<?php echo esc_url( $handoff_endpoint ); ?>" data-session-endpoint="<?php echo esc_url( $session_endpoint ); ?>" data-feedback-endpoint="<?php echo esc_url( $feedback_endpoint ); ?>" data-nonce="<?php echo esc_attr( $nonce ); ?>">
+        <section id="<?php echo esc_attr( $root_id ); ?>" class="sc-rl-ai<?php echo $compact ? ' sc-rl-ai--compact' : ''; ?>" data-endpoint="<?php echo esc_url( $endpoint ); ?>" data-routes-endpoint="<?php echo esc_url( $routes_endpoint ); ?>" data-note-endpoint="<?php echo esc_url( $note_endpoint ); ?>" data-handoff-endpoint="<?php echo esc_url( $handoff_endpoint ); ?>" data-session-endpoint="<?php echo esc_url( $session_endpoint ); ?>" data-feedback-endpoint="<?php echo esc_url( $feedback_endpoint ); ?>" data-ux-endpoint="<?php echo esc_url( $ux_endpoint ); ?>" data-nonce="<?php echo esc_attr( $nonce ); ?>">
             <div class="sc-rl-ai__shell">
                 <div class="sc-rl-ai__card sc-rl-ai__ask-card">
                     <p class="sc-rl-ai__eyebrow">Sustainable Catalyst Research Librarian</p>
@@ -520,9 +526,10 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                         <span class="sc-rl-ai__status" data-sc-rl-status>Ready</span>
                     </div>
                     <div class="sc-rl-ai__answer" data-sc-rl-answer>
-                        <p>Ask a question or choose an example. The librarian will recommend a route, explain why it fits, show related links, and produce an exportable route note with a Workbench or Decision Studio handoff payload when relevant.</p>
+                        <p>Ask a question or choose an example. The librarian will recommend a route, explain why it fits, show source cards, display confidence, provide a route action center, and produce exportable route notes and Workbench or Decision Studio handoff payloads when relevant.</p>
                     </div>
                     <div class="sc-rl-ai__route-summary" data-sc-rl-route-summary hidden></div>
+                    <div class="sc-rl-ai__answer-ux" data-sc-rl-answer-ux hidden></div>
                     <div class="sc-rl-ai__boundary-note">Educational routing only. No legal, financial, medical, tax, engineering, compliance, assurance, ESG/SDG certification, or regulated-information advice.</div>
                 </div>
             </div>
@@ -606,6 +613,24 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'methods'             => WP_REST_Server::CREATABLE,
             'callback'            => array( $this, 'handle_route_note_request' ),
             'permission_callback' => '__return_true',
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/answer-ux/status', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'handle_answer_ux_status_request' ),
+            'permission_callback' => '__return_true',
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/answer-ux/schema', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'handle_answer_ux_schema_request' ),
+            'permission_callback' => '__return_true',
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/answer-ux/export', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'handle_answer_ux_export_request' ),
+            'permission_callback' => array( $this, 'can_manage_options' ),
         ) );
 
 
@@ -1027,7 +1052,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
 
     private function release_endpoint_inventory() {
         return array(
-            '/ask','/routes','/sources','/grounded-route','/route-note','/index/summary','/index/records','/index/rebuild','/index/export','/retrieval/status','/retrieval/diagnostics','/retrieval/test-embedding','/retrieval/query','/index/embed','/evaluation/suite','/evaluation/run','/evaluation/query','/evaluation/logs','/evaluation/export','/handoff/schema','/handoff/prepare','/handoff/logs','/handoff/export','/session/save','/session/logs','/session/export','/analytics/summary','/feedback/submit','/feedback/summary','/feedback/logs','/feedback/export','/governance/status','/governance/export','/governance/purge-expired','/maintenance/status','/maintenance/run','/maintenance/export','/enterprise/status','/enterprise/export','/release/audit','/release/export','/recovery/status','/recovery/create','/recovery/export','/recovery/restore','/recovery/delete','/health'
+            '/ask','/routes','/sources','/grounded-route','/route-note','/answer-ux/status','/answer-ux/schema','/answer-ux/export','/index/summary','/index/records','/index/rebuild','/index/export','/retrieval/status','/retrieval/diagnostics','/retrieval/test-embedding','/retrieval/query','/index/embed','/evaluation/suite','/evaluation/run','/evaluation/query','/evaluation/logs','/evaluation/export','/handoff/schema','/handoff/prepare','/handoff/logs','/handoff/export','/session/save','/session/logs','/session/export','/analytics/summary','/feedback/submit','/feedback/summary','/feedback/logs','/feedback/export','/governance/status','/governance/export','/governance/purge-expired','/maintenance/status','/maintenance/run','/maintenance/export','/enterprise/status','/enterprise/export','/release/audit','/release/export','/recovery/status','/recovery/create','/recovery/export','/recovery/restore','/recovery/delete','/health'
         );
     }
 
@@ -1182,6 +1207,62 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             return $result;
         }
         return new WP_REST_Response( $result, 200 );
+    }
+
+    public function handle_answer_ux_status_request( WP_REST_Request $request ) {
+        return new WP_REST_Response( array(
+            'ok' => true,
+            'version' => self::VERSION,
+            'answer_ux' => $this->answer_ux_status(),
+        ), 200 );
+    }
+
+    public function handle_answer_ux_schema_request( WP_REST_Request $request ) {
+        return new WP_REST_Response( array(
+            'version' => self::VERSION,
+            'schema' => $this->answer_ux_schema(),
+        ), 200 );
+    }
+
+    public function handle_answer_ux_export_request( WP_REST_Request $request ) {
+        return new WP_REST_Response( array(
+            'version' => self::VERSION,
+            'status' => $this->answer_ux_status(),
+            'schema' => $this->answer_ux_schema(),
+            'exported_at_utc' => gmdate( 'c' ),
+        ), 200 );
+    }
+
+    private function answer_ux_status() {
+        return array(
+            'public_answer_layout' => 'enabled',
+            'recommended_route_card' => true,
+            'source_cards' => true,
+            'confidence_badges' => true,
+            'reason_code_chips' => true,
+            'route_action_center' => true,
+            'workbench_handoff_action' => true,
+            'decision_studio_handoff_action' => true,
+            'feature_suggestion_fallback' => true,
+            'copy_route_note' => true,
+            'download_route_note_json' => true,
+            'download_handoff_json' => true,
+            'save_route_session' => true,
+            'feedback_actions' => true,
+            'low_confidence_state' => true,
+            'boundary_note_rendering' => true,
+        );
+    }
+
+    private function answer_ux_schema() {
+        return array(
+            'route_card' => array( 'title', 'category', 'url', 'description', 'why_this_fits', 'platform_fit' ),
+            'source_card' => array( 'title', 'url', 'type', 'summary', 'score', 'keyword_score', 'semantic_score', 'retrieval_mode' ),
+            'confidence_badge' => array( 'level', 'score', 'explanation', 'reason_codes', 'ambiguity' ),
+            'action_center' => array( 'open_route', 'copy_route_note', 'download_route_note', 'download_handoff', 'save_session', 'send_feedback' ),
+            'handoff_action' => array( 'label', 'target', 'url', 'reason', 'payload_id' ),
+            'boundary_state' => array( 'message', 'excluded_advice_categories', 'feature_suggestion_fallback' ),
+        );
     }
 
     public function handle_grounded_route_request( WP_REST_Request $request ) {
@@ -5789,6 +5870,9 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V450_Contracts {
             '[sc_research_librarian mode="observability-summary"]',
             '[sc_research_librarian mode="curation-summary"]',
             '[sc_research_librarian mode="contracts-summary"]',
+            '[sc_research_librarian mode="answer-ux"]',
+            '[sc_research_librarian_answer_ux_summary title="Research Librarian Public Answer UX"]',
+            '[sc_research_librarian_route_action_center_summary title="Research Librarian Route Action Center"]',
             '[sc_research_librarian_contracts_summary title="Research Librarian Integration Contracts"]',
             '[sc_research_librarian_api_catalog_summary title="Research Librarian API Catalog"]',
         );
@@ -5815,6 +5899,118 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V450_Contracts {
     }
 }
 
+
+final class Sustainable_Catalyst_Research_Librarian_AI_V460_Answer_UX {
+    const VERSION = '4.6.0';
+    const REST_NAMESPACE = Sustainable_Catalyst_Research_Librarian_AI::REST_NAMESPACE;
+
+    public static function init() {
+        add_shortcode( 'sc_research_librarian_answer_ux_summary', array( __CLASS__, 'render_public_summary' ) );
+        add_shortcode( 'sc_research_librarian_route_action_center_summary', array( __CLASS__, 'render_public_summary' ) );
+        add_action( 'admin_menu', array( __CLASS__, 'register_admin_page' ) );
+        add_action( 'rest_api_init', array( __CLASS__, 'register_rest_routes' ) );
+    }
+
+    public static function register_admin_page() {
+        add_options_page(
+            'Research Librarian Answer UX',
+            'Research Librarian Answer UX',
+            'manage_options',
+            'sc-research-librarian-answer-ux',
+            array( __CLASS__, 'render_admin_page' )
+        );
+    }
+
+    public static function register_rest_routes() {
+        register_rest_route( self::REST_NAMESPACE, '/answer-ux/public-status', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( __CLASS__, 'rest_status' ),
+            'permission_callback' => '__return_true',
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/answer-ux/admin-export', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( __CLASS__, 'rest_export' ),
+            'permission_callback' => array( __CLASS__, 'can_manage_options' ),
+        ) );
+    }
+
+    public static function can_manage_options() {
+        return current_user_can( 'manage_options' );
+    }
+
+    public static function rest_status() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'answer_ux' => self::status() ), 200 );
+    }
+
+    public static function rest_export() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'answer_ux' => self::status(), 'schema' => self::schema(), 'exported_at_utc' => gmdate( 'c' ) ), 200 );
+    }
+
+    public static function status() {
+        return array(
+            'public_answer_layout' => 'enabled',
+            'recommended_route_card' => true,
+            'source_cards' => true,
+            'confidence_badge' => true,
+            'reason_code_chips' => true,
+            'route_action_center' => true,
+            'next_action_buttons' => array( 'open_route', 'workbench_handoff', 'decision_studio_handoff', 'feature_suggestion', 'copy_route_note', 'download_route_note_json', 'download_handoff_json', 'save_session', 'feedback' ),
+            'fallback_states' => array( 'low_confidence', 'no_sources', 'boundary', 'feature_gap', 'endpoint_unavailable' ),
+            'accessibility_notes' => array( 'keyboard-submit', 'aria-live-answer-card', 'semantic-buttons', 'high-contrast-badges' ),
+        );
+    }
+
+    public static function schema() {
+        return array(
+            'recommended_route_card' => array( 'route_id', 'title', 'category', 'description', 'url', 'why_this_fits', 'platform_fit' ),
+            'source_card' => array( 'title', 'url', 'summary', 'type', 'retrieval_mode', 'score', 'keyword_score', 'semantic_score' ),
+            'confidence' => array( 'level', 'score', 'explanation', 'reason_codes', 'ambiguity' ),
+            'action_center' => array( 'open_route', 'open_handoff', 'copy_note', 'download_note', 'save_session', 'feedback' ),
+            'boundary_note' => array( 'public_routing_only', 'excluded_professional_advice_categories', 'feature_suggestion_fallback' ),
+        );
+    }
+
+    public static function render_admin_page() {
+        if ( ! current_user_can( 'manage_options' ) ) { return; }
+        $status = self::status();
+        ?>
+        <div class="wrap sc-rl-admin-wrap">
+            <h1>Research Librarian Public Answer UX</h1>
+            <p>Version <?php echo esc_html( self::VERSION ); ?> documents the public answer layout, source cards, confidence labels, route action center, and fallback states used by the Research Librarian assistant.</p>
+            <table class="widefat striped"><tbody>
+                <tr><th>Recommended route card</th><td><?php echo esc_html( $status['recommended_route_card'] ? 'enabled' : 'disabled' ); ?></td></tr>
+                <tr><th>Source cards</th><td><?php echo esc_html( $status['source_cards'] ? 'enabled' : 'disabled' ); ?></td></tr>
+                <tr><th>Route action center</th><td><?php echo esc_html( $status['route_action_center'] ? 'enabled' : 'disabled' ); ?></td></tr>
+                <tr><th>Fallback states</th><td><?php echo esc_html( implode( ', ', $status['fallback_states'] ) ); ?></td></tr>
+            </tbody></table>
+            <p><a class="button button-primary" href="<?php echo esc_url( rest_url( self::REST_NAMESPACE . '/answer-ux/admin-export' ) ); ?>">Export Answer UX JSON</a></p>
+        </div>
+        <?php
+    }
+
+    public static function render_public_summary( $atts = array() ) {
+        $atts = shortcode_atts( array( 'title' => 'Research Librarian Public Answer UX' ), $atts, 'sc_research_librarian_answer_ux_summary' );
+        $status = self::status();
+        ob_start();
+        ?>
+        <section class="sc-rl-product sc-rl-answer-ux-summary" data-sc-rl-product="answer-ux-summary">
+            <p class="sc-rl-product__eyebrow">Public Answer UX</p>
+            <h2><?php echo esc_html( $atts['title'] ); ?></h2>
+            <p class="sc-rl-product__lede">The Research Librarian now renders public answers as structured route cards with matched source cards, confidence labels, reason-code chips, handoff actions, export actions, and boundary-aware fallback states.</p>
+            <div class="sc-rl-product__grid">
+                <article><span>Route</span><strong>Recommended route card</strong><p>Shows the best Sustainable Catalyst starting point, route category, explanation, route URL, and platform fit.</p></article>
+                <article><span>Sources</span><strong>Source cards</strong><p>Displays matched Sustainable Catalyst pages with summaries, retrieval mode, and score metadata when available.</p></article>
+                <article><span>Confidence</span><strong>Route confidence badge</strong><p>Surfaces high, medium, or low confidence along with reason codes and ambiguity notes.</p></article>
+                <article><span>Actions</span><strong>Route action center</strong><p>Provides open-route, Workbench, Decision Studio, copy, download, save-session, and feedback actions.</p></article>
+            </div>
+            <p class="sc-rl-boundary-note">Public routing only. The UX does not certify claims, replace expert review, or expose admin-only diagnostics.</p>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+}
+
+Sustainable_Catalyst_Research_Librarian_AI_V460_Answer_UX::init();
 Sustainable_Catalyst_Research_Librarian_AI_V450_Contracts::init();
 Sustainable_Catalyst_Research_Librarian_AI_V440_Curation::init();
 Sustainable_Catalyst_Research_Librarian_AI_V430_Observability::init();

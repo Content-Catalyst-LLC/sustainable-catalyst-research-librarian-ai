@@ -118,6 +118,91 @@
     URL.revokeObjectURL(url);
   }
 
+  function confidenceClass(level) {
+    var clean = String(level || 'unknown').toLowerCase();
+    if (clean.indexOf('high') !== -1) return 'sc-rl-answer-ux__badge--high';
+    if (clean.indexOf('medium') !== -1) return 'sc-rl-answer-ux__badge--medium';
+    if (clean.indexOf('low') !== -1) return 'sc-rl-answer-ux__badge--low';
+    return 'sc-rl-answer-ux__badge--unknown';
+  }
+
+  function sourceScore(source) {
+    var score = source.final_score || source.score || source.semantic_score || source.keyword_score || '';
+    if (score === '') return '';
+    return String(score);
+  }
+
+  function routeNoteHandoffTarget(note) {
+    if (!note || !note.handoff_payload) return '';
+    return String(note.handoff_payload.target || '').replace(/_/g, ' ');
+  }
+
+  function renderAnswerUx(container, data, fallbackHtml) {
+    if (!container) return;
+    var route = data.route || (data.route_note && data.route_note.recommended_route) || {};
+    var grounding = data.grounding || {};
+    var note = data.route_note || {};
+    var confidence = grounding.confidence || note.confidence || {};
+    var sources = (grounding.sources || note.sources || []).slice(0, 5);
+    var handoffs = (grounding.handoffs || note.handoffs || []).slice(0, 4);
+    var reasonCodes = grounding.reason_codes || note.reason_codes || [];
+    var ambiguity = grounding.ambiguity || note.ambiguity || [];
+    var confidenceLevel = confidence.level || 'unknown';
+    var routeUrl = route.url || (note.recommended_route && note.recommended_route.url) || '#';
+    var routeTitle = route.title || (note.recommended_route && note.recommended_route.title) || 'Recommended route';
+    var routeCategory = route.category || (note.recommended_route && note.recommended_route.category) || 'Route';
+    var routeDescription = route.description || (note.recommended_route && note.recommended_route.description) || note.intent || '';
+    var why = note.why || route.why || '';
+    var platformFit = note.platform_fit || route.platform_fit || '';
+    var nextStep = note.next_step || route.next_step || '';
+
+    var html = '<div class="sc-rl-answer-ux__grid">';
+    html += '<article class="sc-rl-answer-ux__route-card">';
+    html += '<div class="sc-rl-answer-ux__card-head"><span>' + escapeHtml(routeCategory) + '</span><b class="sc-rl-answer-ux__badge ' + confidenceClass(confidenceLevel) + '">' + escapeHtml(String(confidenceLevel).toUpperCase()) + '</b></div>';
+    html += '<h3>' + escapeHtml(routeTitle) + '</h3>';
+    html += '<p>' + escapeHtml(routeDescription) + '</p>';
+    if (why) html += '<div class="sc-rl-answer-ux__why"><strong>Why this fits</strong><p>' + escapeHtml(why) + '</p></div>';
+    if (platformFit) html += '<div class="sc-rl-answer-ux__why"><strong>Platform fit</strong><p>' + escapeHtml(platformFit) + '</p></div>';
+    html += '<a class="sc-rl-answer-ux__primary-link" href="' + escapeHtml(routeUrl) + '">Open recommended route →</a>';
+    html += '</article>';
+
+    html += '<article class="sc-rl-answer-ux__answer-body"><div class="sc-rl-answer-ux__card-head"><span>Route explanation</span></div>' + (fallbackHtml || '') + '</article>';
+    html += '</div>';
+
+    html += '<div class="sc-rl-answer-ux__meta-row">';
+    html += '<div class="sc-rl-answer-ux__confidence"><strong>Confidence</strong><p>' + escapeHtml(confidence.explanation || 'Confidence is based on route match quality, matched sources, and ambiguity.') + '</p></div>';
+    if (reasonCodes.length) {
+      html += '<div class="sc-rl-answer-ux__chips"><strong>Reason codes</strong><div>' + reasonCodes.map(function (code) { return '<span>' + escapeHtml(code) + '</span>'; }).join('') + '</div></div>';
+    }
+    if (ambiguity.length) {
+      html += '<div class="sc-rl-answer-ux__chips sc-rl-answer-ux__chips--warning"><strong>Ambiguity</strong><div>' + ambiguity.map(function (item) { return '<span>' + escapeHtml(item) + '</span>'; }).join('') + '</div></div>';
+    }
+    html += '</div>';
+
+    html += '<section class="sc-rl-answer-ux__source-section"><div class="sc-rl-answer-ux__section-head"><span>Matched sources</span><strong>' + sources.length + ' source' + (sources.length === 1 ? '' : 's') + '</strong></div>';
+    if (sources.length) {
+      html += '<div class="sc-rl-answer-ux__source-grid">' + sources.map(function (source) {
+        return '<article class="sc-rl-answer-ux__source-card"><span>' + escapeHtml(source.type || source.route_id || 'Source') + '</span><h4><a href="' + escapeHtml(source.url || '#') + '">' + escapeHtml(source.title || 'Untitled source') + '</a></h4><p>' + escapeHtml(source.summary || '') + '</p><small>' + escapeHtml(source.retrieval_mode || 'match') + (sourceScore(source) ? ' · score ' + escapeHtml(sourceScore(source)) : '') + '</small></article>';
+      }).join('') + '</div>';
+    } else {
+      html += '<div class="sc-rl-answer-ux__empty-state"><strong>No strong source match yet.</strong><p>Use the route as a starting point, ask a narrower follow-up, or send the gap to Feature Suggestions.</p></div>';
+    }
+    html += '</section>';
+
+    html += '<section class="sc-rl-answer-ux__action-center"><div class="sc-rl-answer-ux__section-head"><span>Route Action Center</span><strong>Next actions</strong></div><div class="sc-rl-answer-ux__actions-row">';
+    html += '<a href="' + escapeHtml(routeUrl) + '">Open route</a>';
+    handoffs.forEach(function (handoff) { html += '<a href="' + escapeHtml(handoff.url || '#') + '">' + escapeHtml(handoff.label || 'Open handoff') + '</a>'; });
+    if (note.handoff_payload) html += '<button type="button" data-sc-rl-handoff-download-inline>Download ' + escapeHtml(routeNoteHandoffTarget(note) || 'handoff') + ' JSON</button>';
+    html += '<button type="button" data-sc-rl-copy-inline>Copy route note</button><button type="button" data-sc-rl-download-inline>Download route note</button>';
+    html += '<a href="/platform/feature-suggestions/">Suggest missing feature</a>';
+    html += '</div>';
+    if (nextStep) html += '<p class="sc-rl-answer-ux__next-step"><strong>Suggested next step:</strong> ' + escapeHtml(nextStep) + '</p>';
+    html += '</section>';
+
+    container.hidden = false;
+    container.innerHTML = html;
+  }
+
   function renderRouteSummary(container, route, grounding) {
     if (!container || !route) return;
     container.hidden = false;
@@ -164,6 +249,7 @@
     var honeypot = root.querySelector('.sc-rl-ai__hp');
     var examples = root.querySelectorAll('[data-sc-rl-example]');
     var routeSummary = root.querySelector('[data-sc-rl-route-summary]');
+    var answerUx = root.querySelector('[data-sc-rl-answer-ux]');
     var routeStrip = root.querySelector('[data-sc-rl-route-strip]');
     var latest = null;
 
@@ -201,7 +287,9 @@
         .then(function (data) {
           latest = data;
           setStatus(data.source || 'Ready', 'ready');
-          answer.innerHTML = renderMarkdownLite(data.answer || 'No answer was returned. Try the Platform or Feature Suggestions route.');
+          var renderedAnswer = renderMarkdownLite(data.answer || 'No answer was returned. Try the Platform or Feature Suggestions route.');
+          answer.innerHTML = renderedAnswer;
+          renderAnswerUx(answerUx, data, renderedAnswer);
           renderRouteSummary(routeSummary, data.route, data.grounding);
         })
         .catch(function (error) {
@@ -222,6 +310,7 @@
       setStatus('Ready', 'ready');
       answer.innerHTML = '<p>Ask a question or choose an example. The librarian will recommend a route, explain why it fits, show related links, and produce an exportable route note and structured handoff payload.</p>';
       if (routeSummary) { routeSummary.hidden = true; routeSummary.innerHTML = ''; }
+      if (answerUx) { answerUx.hidden = true; answerUx.innerHTML = ''; }
       textarea.focus();
     });
     copy.addEventListener('click', function () {
@@ -256,6 +345,22 @@
         setStatus('Handoff downloaded', 'ready');
       });
     }
+
+    root.addEventListener('click', function (event) {
+      var target = event.target;
+      if (!target || !target.matches) return;
+      if (target.matches('[data-sc-rl-copy-inline]')) {
+        if (copy) copy.click();
+      }
+      if (target.matches('[data-sc-rl-download-inline]')) {
+        if (download) download.click();
+      }
+      if (target.matches('[data-sc-rl-handoff-download-inline]')) {
+        if (handoffDownload) handoffDownload.click();
+      }
+    });
+
+
 
 
     function submitFeedback(type, note) {

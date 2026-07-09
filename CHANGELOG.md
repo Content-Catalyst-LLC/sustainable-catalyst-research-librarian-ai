@@ -1,5 +1,17 @@
 # Changelog
 
+## v4.6.0 — Public Answer UX, Source Cards, and Route Action Center
+
+- Added polished public answer layout for the Research Librarian assistant.
+- Added recommended route card rendering.
+- Added matched source cards with source summaries, URLs, retrieval mode, and score metadata.
+- Added confidence badge, reason-code chips, ambiguity display, and no-source fallback state.
+- Added Route Action Center with open-route, copy, download, handoff, save-session, feedback, and feature-suggestion actions.
+- Added answer UX REST status/schema/export endpoints.
+- Added public answer UX summary shortcodes.
+- Added admin answer UX page and public-safe answer UX status.
+- Updated README, WordPress readme, CSS, JavaScript, release inventory, and plugin metadata.
+
 ## v4.5.0 — Integration Contracts, API Catalog, and Developer Handoffs
 
 - Added integration contract layer for routing, source, retrieval, handoff, session, feedback, governance, and operations payloads.
@@ -67,8 +79,6 @@
 - Added endpoint, shortcode, and manifest inventories.
 - Added v4.0.0 enterprise manifest and documentation.
 
-# Changelog
-
 ## 3.9.0 — Scheduled Index Maintenance, Sitemap Sync, and Health Alerts
 
 - Added scheduled knowledge-index maintenance.
@@ -78,8 +88,6 @@
 - Added maintenance status/export REST endpoints.
 - Added maintenance-summary shortcode.
 - Added health/alert configuration for index maintenance.
-
-# Changelog
 
 ## v3.8.0 — Governance, Privacy Controls, and Retention Policies
 
@@ -136,8 +144,6 @@
 - Added evaluation summary shortcode.
 - Added REST endpoints for suite, run, query, logs, and export.
 - Preserved v3.3.3 Gemini key-persistence and embedding queue behavior.
-
-# Changelog
 
 ## 3.7.0 — Feedback, Correction Queue, and Knowledge Gap Triage
 
