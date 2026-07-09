@@ -501,3 +501,123 @@
   .sc-rl-answer-ux__actions-row button,
   .sc-rl-answer-ux__primary-link { width: 100%; justify-content: center; }
 }
+
+
+/* v4.7.1 — Guided Research Paths and Multi-Step Route Builder */
+.sc-rl-paths-summary,
+.sc-rl-path-builder {
+  border: 1px solid rgba(0,0,0,.12);
+  border-radius: 22px;
+  padding: clamp(1.25rem, 3vw, 2.25rem);
+  background: #fffdf8;
+  color: #111;
+  margin: 2rem 0;
+}
+.sc-rl-path-builder__shell {
+  display: grid;
+  grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+  gap: 1.25rem;
+}
+.sc-rl-path-builder__card {
+  border: 1px solid rgba(0,0,0,.1);
+  border-radius: 18px;
+  background: #fff;
+  padding: 1.25rem;
+  box-shadow: 0 14px 30px rgba(0,0,0,.05);
+}
+.sc-rl-path-builder__textarea {
+  width: 100%;
+  min-height: 130px;
+  border: 1px solid rgba(0,0,0,.2);
+  border-radius: 14px;
+  padding: .9rem;
+  font: inherit;
+  resize: vertical;
+}
+.sc-rl-path-builder__controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .75rem;
+  margin: .9rem 0;
+}
+.sc-rl-path-builder__controls label {
+  font-weight: 700;
+  font-size: .9rem;
+}
+.sc-rl-path-builder__controls select {
+  display: block;
+  width: 100%;
+  margin-top: .35rem;
+  border: 1px solid rgba(0,0,0,.2);
+  border-radius: 999px;
+  padding: .55rem .8rem;
+  background: #fff;
+}
+.sc-rl-path-result__summary {
+  border-left: 4px solid #ff0000;
+  padding-left: 1rem;
+  margin-bottom: 1rem;
+}
+.sc-rl-path-result__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin: .75rem 0;
+}
+.sc-rl-path-result__meta span {
+  border: 1px solid rgba(0,0,0,.15);
+  border-radius: 999px;
+  padding: .35rem .65rem;
+  font-size: .82rem;
+  font-weight: 700;
+  background: #fff8f1;
+}
+.sc-rl-path-steps {
+  display: grid;
+  gap: .8rem;
+  counter-reset: scPathSteps;
+}
+.sc-rl-path-step {
+  position: relative;
+  border: 1px solid rgba(0,0,0,.1);
+  border-radius: 16px;
+  padding: 1rem 1rem 1rem 3rem;
+  background: #fff;
+}
+.sc-rl-path-step::before {
+  counter-increment: scPathSteps;
+  content: counter(scPathSteps);
+  position: absolute;
+  left: 1rem;
+  top: 1rem;
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #000;
+  color: #fff;
+  font-size: .78rem;
+  font-weight: 800;
+}
+.sc-rl-path-step h3 {
+  margin: 0 0 .35rem;
+}
+.sc-rl-path-step p {
+  margin: .25rem 0;
+}
+.sc-rl-path-step a {
+  font-weight: 800;
+  color: #b00000;
+}
+.sc-rl-path-checkpoints {
+  margin-top: 1rem;
+  border-top: 1px solid rgba(0,0,0,.1);
+  padding-top: 1rem;
+}
+@media (max-width: 900px) {
+  .sc-rl-path-builder__shell,
+  .sc-rl-path-builder__controls {
+    grid-template-columns: 1fr;
+  }
+}

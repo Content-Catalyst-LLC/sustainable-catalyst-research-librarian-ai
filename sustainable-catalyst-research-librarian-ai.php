@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Sustainable Catalyst Research Librarian
  * Plugin URI: https://sustainablecatalyst.com/platform/research-librarian/
- * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, correction triage, knowledge-gap review, governance controls, privacy summaries, retention policies, admin crawl dashboard, grounded route notes, AI-assisted answers, polished public answer cards, deterministic fallback, scheduled index maintenance, sitemap sync, health alerts, recovery snapshots, backup/export controls, migration readiness, security hardening, endpoint permission review, access-surface audit, observability checks, operational runbooks, incident-response summaries, editorial curation rules, route overrides, source weighting controls, integration contracts, API catalogs, developer handoff documentation, public answer UX, source cards, route action centers, and exports.
- * Version: 4.6.0
+ * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, correction triage, knowledge-gap review, governance controls, privacy summaries, retention policies, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, scheduled index maintenance, sitemap sync, health alerts, recovery snapshots, backup/export controls, migration readiness, security hardening, endpoint permission review, access-surface audit, observability checks, operational runbooks, incident-response summaries, editorial curation rules, route overrides, source weighting controls, integration contracts, API catalogs, developer handoff documentation, guided research paths, multi-step route builders, and exports.
+ * Version: 4.7.1
  * Author: Content Catalyst LLC / Tariq Ahmad
  * Author URI: https://sustainablecatalyst.com/
  * License: MIT
@@ -23,7 +23,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
     const MAINTENANCE_OPTION = 'sc_rl_ai_maintenance_status';
     const MAINTENANCE_HOOK = 'sc_rl_ai_index_maintenance_event';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const VERSION        = '4.6.0';
+    const VERSION        = '4.7.1';
 
     private static $instance = null;
 
@@ -99,6 +99,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
             'handoff_log_limit'     => 100,
             'session_log_limit'     => 200,
             'feedback_log_limit'    => 200,
+            'guided_path_log_limit' => 150,
             'governance_enable_public_summary' => '1',
             'governance_redact_questions_in_exports' => '0',
             'governance_session_retention_days' => 90,
@@ -149,6 +150,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
     public function register_shortcodes() {
         add_shortcode( 'sustainable_catalyst_research_librarian_ai', array( $this, 'render_shortcode' ) );
         add_shortcode( 'sc_research_librarian', array( $this, 'render_shortcode' ) );
+        add_shortcode( 'sc_research_librarian_path_builder', array( $this, 'render_shortcode' ) );
     }
 
     public function render_shortcode( $atts = array() ) {
@@ -229,6 +231,16 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         if ( 'answer-ux' === $mode || 'answer-ui' === $mode || 'source-cards' === $mode || 'route-action-center' === $mode || 'public-answer' === $mode ) {
             if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V460_Answer_UX' ) ) {
                 return Sustainable_Catalyst_Research_Librarian_AI_V460_Answer_UX::render_public_summary( $atts );
+            }
+        }
+        if ( 'guided-paths' === $mode || 'guided-paths-summary' === $mode || 'research-paths' === $mode || 'pathways' === $mode ) {
+            if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V470_Guided_Paths' ) ) {
+                return Sustainable_Catalyst_Research_Librarian_AI_V470_Guided_Paths::render_public_summary( $atts );
+            }
+        }
+        if ( 'path-builder' === $mode || 'route-builder' === $mode || 'multi-step-builder' === $mode || 'guided-route-builder' === $mode ) {
+            if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V470_Guided_Paths' ) ) {
+                return Sustainable_Catalyst_Research_Librarian_AI_V470_Guided_Paths::render_builder( $atts );
             }
         }
         if ( 'recovery' === $mode || 'recovery-summary' === $mode || 'backup-summary' === $mode || 'snapshot-summary' === $mode ) {
@@ -526,7 +538,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                         <span class="sc-rl-ai__status" data-sc-rl-status>Ready</span>
                     </div>
                     <div class="sc-rl-ai__answer" data-sc-rl-answer>
-                        <p>Ask a question or choose an example. The librarian will recommend a route, explain why it fits, show source cards, display confidence, provide a route action center, and produce exportable route notes and Workbench or Decision Studio handoff payloads when relevant.</p>
+                        <p>Ask a question or choose an example. The librarian will recommend a route, explain why it fits, show source cards, display confidence, provide a route action center, and produce exportable route notes with a Workbench or Decision Studio handoff payload when relevant.</p>
                     </div>
                     <div class="sc-rl-ai__route-summary" data-sc-rl-route-summary hidden></div>
                     <div class="sc-rl-ai__answer-ux" data-sc-rl-answer-ux hidden></div>
@@ -613,24 +625,6 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'methods'             => WP_REST_Server::CREATABLE,
             'callback'            => array( $this, 'handle_route_note_request' ),
             'permission_callback' => '__return_true',
-        ) );
-
-        register_rest_route( self::REST_NAMESPACE, '/answer-ux/status', array(
-            'methods'             => WP_REST_Server::READABLE,
-            'callback'            => array( $this, 'handle_answer_ux_status_request' ),
-            'permission_callback' => '__return_true',
-        ) );
-
-        register_rest_route( self::REST_NAMESPACE, '/answer-ux/schema', array(
-            'methods'             => WP_REST_Server::READABLE,
-            'callback'            => array( $this, 'handle_answer_ux_schema_request' ),
-            'permission_callback' => '__return_true',
-        ) );
-
-        register_rest_route( self::REST_NAMESPACE, '/answer-ux/export', array(
-            'methods'             => WP_REST_Server::READABLE,
-            'callback'            => array( $this, 'handle_answer_ux_export_request' ),
-            'permission_callback' => array( $this, 'can_manage_options' ),
         ) );
 
 
@@ -1052,7 +1046,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
 
     private function release_endpoint_inventory() {
         return array(
-            '/ask','/routes','/sources','/grounded-route','/route-note','/answer-ux/status','/answer-ux/schema','/answer-ux/export','/index/summary','/index/records','/index/rebuild','/index/export','/retrieval/status','/retrieval/diagnostics','/retrieval/test-embedding','/retrieval/query','/index/embed','/evaluation/suite','/evaluation/run','/evaluation/query','/evaluation/logs','/evaluation/export','/handoff/schema','/handoff/prepare','/handoff/logs','/handoff/export','/session/save','/session/logs','/session/export','/analytics/summary','/feedback/submit','/feedback/summary','/feedback/logs','/feedback/export','/governance/status','/governance/export','/governance/purge-expired','/maintenance/status','/maintenance/run','/maintenance/export','/enterprise/status','/enterprise/export','/release/audit','/release/export','/recovery/status','/recovery/create','/recovery/export','/recovery/restore','/recovery/delete','/health'
+            '/ask','/routes','/sources','/grounded-route','/route-note','/index/summary','/index/records','/index/rebuild','/index/export','/retrieval/status','/retrieval/diagnostics','/retrieval/test-embedding','/retrieval/query','/index/embed','/evaluation/suite','/evaluation/run','/evaluation/query','/evaluation/logs','/evaluation/export','/handoff/schema','/handoff/prepare','/handoff/logs','/handoff/export','/session/save','/session/logs','/session/export','/analytics/summary','/feedback/submit','/feedback/summary','/feedback/logs','/feedback/export','/governance/status','/governance/export','/governance/purge-expired','/maintenance/status','/maintenance/run','/maintenance/export','/enterprise/status','/enterprise/export','/release/audit','/release/export','/recovery/status','/recovery/create','/recovery/export','/recovery/restore','/recovery/delete','/health'
         );
     }
 
@@ -1207,62 +1201,6 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             return $result;
         }
         return new WP_REST_Response( $result, 200 );
-    }
-
-    public function handle_answer_ux_status_request( WP_REST_Request $request ) {
-        return new WP_REST_Response( array(
-            'ok' => true,
-            'version' => self::VERSION,
-            'answer_ux' => $this->answer_ux_status(),
-        ), 200 );
-    }
-
-    public function handle_answer_ux_schema_request( WP_REST_Request $request ) {
-        return new WP_REST_Response( array(
-            'version' => self::VERSION,
-            'schema' => $this->answer_ux_schema(),
-        ), 200 );
-    }
-
-    public function handle_answer_ux_export_request( WP_REST_Request $request ) {
-        return new WP_REST_Response( array(
-            'version' => self::VERSION,
-            'status' => $this->answer_ux_status(),
-            'schema' => $this->answer_ux_schema(),
-            'exported_at_utc' => gmdate( 'c' ),
-        ), 200 );
-    }
-
-    private function answer_ux_status() {
-        return array(
-            'public_answer_layout' => 'enabled',
-            'recommended_route_card' => true,
-            'source_cards' => true,
-            'confidence_badges' => true,
-            'reason_code_chips' => true,
-            'route_action_center' => true,
-            'workbench_handoff_action' => true,
-            'decision_studio_handoff_action' => true,
-            'feature_suggestion_fallback' => true,
-            'copy_route_note' => true,
-            'download_route_note_json' => true,
-            'download_handoff_json' => true,
-            'save_route_session' => true,
-            'feedback_actions' => true,
-            'low_confidence_state' => true,
-            'boundary_note_rendering' => true,
-        );
-    }
-
-    private function answer_ux_schema() {
-        return array(
-            'route_card' => array( 'title', 'category', 'url', 'description', 'why_this_fits', 'platform_fit' ),
-            'source_card' => array( 'title', 'url', 'type', 'summary', 'score', 'keyword_score', 'semantic_score', 'retrieval_mode' ),
-            'confidence_badge' => array( 'level', 'score', 'explanation', 'reason_codes', 'ambiguity' ),
-            'action_center' => array( 'open_route', 'copy_route_note', 'download_route_note', 'download_handoff', 'save_session', 'send_feedback' ),
-            'handoff_action' => array( 'label', 'target', 'url', 'reason', 'payload_id' ),
-            'boundary_state' => array( 'message', 'excluded_advice_categories', 'feature_suggestion_fallback' ),
-        );
     }
 
     public function handle_grounded_route_request( WP_REST_Request $request ) {
@@ -5593,6 +5531,537 @@ class Sustainable_Catalyst_Research_Librarian_AI_V440_Curation {
 
 
 
+
+/**
+ * v4.7.1 — Guided Research Paths and Multi-Step Route Builder.
+ *
+ * This layer turns a single visitor question into a structured, inspectable
+ * research path with ordered steps, route targets, handoff suggestions,
+ * checkpoints, and an exportable path session. It is intentionally route-only:
+ * it does not certify outcomes or replace professional review.
+ */
+final class Sustainable_Catalyst_Research_Librarian_AI_V470_Guided_Paths {
+    const VERSION = '4.7.1';
+    const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
+    const LOG_OPTION = 'sc_rl_ai_guided_path_logs';
+
+    public static function init() {
+        add_action( 'rest_api_init', array( __CLASS__, 'register_rest_routes' ) );
+        add_action( 'admin_menu', array( __CLASS__, 'register_admin_page' ) );
+        add_shortcode( 'sc_research_librarian_paths_summary', array( __CLASS__, 'render_public_summary' ) );
+        add_shortcode( 'sc_research_librarian_path_builder', array( __CLASS__, 'render_builder' ) );
+    }
+
+    public static function register_admin_page() {
+        add_submenu_page(
+            'options-general.php',
+            'Research Librarian Guided Paths',
+            'Research Librarian Paths',
+            'manage_options',
+            'sc-research-librarian-guided-paths',
+            array( __CLASS__, 'render_admin_page' )
+        );
+    }
+
+    public static function register_rest_routes() {
+        register_rest_route( self::REST_NAMESPACE, '/paths/status', array(
+            'methods' => 'GET',
+            'callback' => array( __CLASS__, 'rest_status' ),
+            'permission_callback' => '__return_true',
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/paths/catalog', array(
+            'methods' => 'GET',
+            'callback' => array( __CLASS__, 'rest_catalog' ),
+            'permission_callback' => '__return_true',
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/paths/build', array(
+            'methods' => 'POST',
+            'callback' => array( __CLASS__, 'rest_build' ),
+            'permission_callback' => '__return_true',
+            'args' => array(
+                'question' => array( 'required' => true, 'type' => 'string', 'sanitize_callback' => 'sanitize_textarea_field' ),
+                'preferred_path' => array( 'required' => false, 'type' => 'string', 'sanitize_callback' => 'sanitize_key' ),
+                'depth' => array( 'required' => false, 'type' => 'string', 'sanitize_callback' => 'sanitize_key' ),
+            ),
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/paths/save', array(
+            'methods' => 'POST',
+            'callback' => array( __CLASS__, 'rest_save' ),
+            'permission_callback' => '__return_true',
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/paths/logs', array(
+            'methods' => 'GET',
+            'callback' => array( __CLASS__, 'rest_logs' ),
+            'permission_callback' => array( __CLASS__, 'can_manage' ),
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/paths/export', array(
+            'methods' => 'GET',
+            'callback' => array( __CLASS__, 'rest_export' ),
+            'permission_callback' => array( __CLASS__, 'can_manage' ),
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/paths/reset-defaults', array(
+            'methods' => 'POST',
+            'callback' => array( __CLASS__, 'rest_reset_defaults' ),
+            'permission_callback' => array( __CLASS__, 'can_manage' ),
+        ) );
+    }
+
+    public static function can_manage() {
+        return current_user_can( 'manage_options' );
+    }
+
+    public static function rest_status() {
+        return rest_ensure_response( self::status() );
+    }
+
+    public static function rest_catalog() {
+        return rest_ensure_response( array(
+            'version' => self::VERSION,
+            'paths' => self::path_catalog(),
+            'step_contract' => self::step_contract(),
+            'boundary_note' => self::boundary_note(),
+        ) );
+    }
+
+    public static function rest_build( WP_REST_Request $request ) {
+        $question = sanitize_textarea_field( $request->get_param( 'question' ) );
+        if ( strlen( trim( $question ) ) < 3 ) {
+            return new WP_Error( 'sc_rl_paths_empty_question', 'Add a question or goal before building a guided path.', array( 'status' => 400 ) );
+        }
+        $preferred = sanitize_key( $request->get_param( 'preferred_path' ) );
+        $depth = sanitize_key( $request->get_param( 'depth' ) );
+        if ( ! in_array( $depth, array( 'quick', 'standard', 'deep' ), true ) ) {
+            $depth = 'standard';
+        }
+        return rest_ensure_response( self::build_guided_path( $question, $preferred, $depth ) );
+    }
+
+    public static function rest_save( WP_REST_Request $request ) {
+        $payload = $request->get_json_params();
+        $path = isset( $payload['path'] ) && is_array( $payload['path'] ) ? $payload['path'] : array();
+        if ( empty( $path['path_id'] ) ) {
+            return new WP_Error( 'sc_rl_paths_missing_payload', 'A guided path payload is required.', array( 'status' => 400 ) );
+        }
+        $record = array(
+            'session_id' => 'path_' . wp_generate_uuid4(),
+            'path_id' => sanitize_key( $path['path_id'] ),
+            'path_title' => sanitize_text_field( isset( $path['title'] ) ? $path['title'] : '' ),
+            'question' => self::truncate_text( sanitize_textarea_field( isset( $path['question'] ) ? $path['question'] : '' ), 600 ),
+            'confidence' => sanitize_text_field( isset( $path['confidence']['level'] ) ? $path['confidence']['level'] : 'unknown' ),
+            'handoff_targets' => array_map( 'sanitize_text_field', isset( $path['handoff_targets'] ) && is_array( $path['handoff_targets'] ) ? $path['handoff_targets'] : array() ),
+            'step_count' => isset( $path['steps'] ) && is_array( $path['steps'] ) ? count( $path['steps'] ) : 0,
+            'created_utc' => gmdate( 'c' ),
+        );
+        $logs = self::logs();
+        array_unshift( $logs, $record );
+        $logs = array_slice( $logs, 0, self::log_limit() );
+        update_option( self::LOG_OPTION, $logs, false );
+        return rest_ensure_response( array( 'ok' => true, 'session' => $record ) );
+    }
+
+    public static function rest_logs() {
+        return rest_ensure_response( array( 'version' => self::VERSION, 'logs' => self::logs(), 'summary' => self::status() ) );
+    }
+
+    public static function rest_export() {
+        return rest_ensure_response( array(
+            'version' => self::VERSION,
+            'generated_utc' => gmdate( 'c' ),
+            'status' => self::status(),
+            'paths' => self::path_catalog(),
+            'logs' => self::logs(),
+            'step_contract' => self::step_contract(),
+            'boundary_note' => self::boundary_note(),
+        ) );
+    }
+
+    public static function rest_reset_defaults() {
+        delete_option( self::LOG_OPTION );
+        return rest_ensure_response( array( 'ok' => true, 'message' => 'Guided path logs cleared. Default path catalog is code-defined and remains available.' ) );
+    }
+
+    public static function render_public_summary( $atts = array() ) {
+        $atts = shortcode_atts( array( 'title' => 'Research Librarian Guided Paths' ), $atts, 'sc_research_librarian_paths_summary' );
+        $status = self::status();
+        ob_start();
+        ?>
+        <section class="sc-rl-paths-summary" data-sc-rl-product="guided-paths-summary">
+            <p class="sc-rl-routes__eyebrow">Research Librarian Guided Paths</p>
+            <h2><?php echo esc_html( $atts['title'] ); ?></h2>
+            <p>Guided paths turn a single visitor question into an ordered route through Sustainable Catalyst. Each path identifies the recommended starting point, supporting pages, checkpoints, handoffs, and the next action without treating the tool as legal, financial, medical, compliance, or certification advice.</p>
+            <div class="sc-rl-index-summary__grid">
+                <article><span><?php echo esc_html( absint( $status['path_count'] ) ); ?></span><strong>Path templates</strong></article>
+                <article><span><?php echo esc_html( absint( $status['total_steps'] ) ); ?></span><strong>Default steps</strong></article>
+                <article><span><?php echo esc_html( absint( $status['saved_sessions'] ) ); ?></span><strong>Saved path sessions</strong></article>
+                <article><span><?php echo esc_html( $status['primary_handoffs'] ); ?></span><strong>Primary handoffs</strong></article>
+            </div>
+            <p class="sc-rl-index-summary__meta">Use the path builder when a visitor needs more than one route card: orientation, analysis, evidence, review, decision support, and follow-up can be staged as a multi-step workflow.</p>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+
+    public static function render_builder( $atts = array() ) {
+        $atts = shortcode_atts( array( 'title' => 'Research Librarian Path Builder' ), $atts, 'sc_research_librarian_path_builder' );
+        wp_enqueue_style( 'sc-research-librarian-ai', plugins_url( 'assets/sc-research-librarian-ai.css', __FILE__ ), array(), self::VERSION );
+        wp_enqueue_script( 'sc-research-librarian-ai', plugins_url( 'assets/sc-research-librarian-ai.js', __FILE__ ), array(), self::VERSION, true );
+        $root_id = wp_unique_id( 'sc-rl-path-builder-' );
+        $endpoint = rest_url( self::REST_NAMESPACE . '/paths/build' );
+        $save_endpoint = rest_url( self::REST_NAMESPACE . '/paths/save' );
+        $catalog_endpoint = rest_url( self::REST_NAMESPACE . '/paths/catalog' );
+        $nonce = wp_create_nonce( 'wp_rest' );
+        ob_start();
+        ?>
+        <section id="<?php echo esc_attr( $root_id ); ?>" class="sc-rl-path-builder" data-path-endpoint="<?php echo esc_url( $endpoint ); ?>" data-path-save-endpoint="<?php echo esc_url( $save_endpoint ); ?>" data-path-catalog-endpoint="<?php echo esc_url( $catalog_endpoint ); ?>" data-nonce="<?php echo esc_attr( $nonce ); ?>">
+            <div class="sc-rl-path-builder__shell">
+                <div class="sc-rl-path-builder__card">
+                    <p class="sc-rl-ai__eyebrow">Guided Research Paths</p>
+                    <h2><?php echo esc_html( $atts['title'] ); ?></h2>
+                    <p>Describe a goal and the builder will create an ordered Sustainable Catalyst path with route checkpoints, source-oriented tasks, and possible Workbench or Decision Studio handoffs.</p>
+                    <label class="sc-rl-ai__label" for="<?php echo esc_attr( $root_id ); ?>-question">Research question or workflow goal</label>
+                    <textarea id="<?php echo esc_attr( $root_id ); ?>-question" class="sc-rl-path-builder__textarea" rows="5" maxlength="1400" placeholder="Example: I need to compare sustainability options, preserve assumptions, run calculations, and export a decision brief."></textarea>
+                    <div class="sc-rl-path-builder__controls">
+                        <label>Path type <select data-sc-rl-path-preferred><option value="">Auto-detect</option><option value="orientation_path">New visitor orientation</option><option value="decision_packet_path">Decision Packet workflow</option><option value="analysis_workbench_path">Workbench analysis</option><option value="evidence_record_path">Evidence/data record</option><option value="claim_review_path">Claim/risk review</option><option value="impact_measurement_path">Impact measurement</option><option value="feature_gap_path">Feature gap</option></select></label>
+                        <label>Depth <select data-sc-rl-path-depth><option value="quick">Quick</option><option value="standard" selected>Standard</option><option value="deep">Deep</option></select></label>
+                    </div>
+                    <div class="sc-rl-ai__actions">
+                        <button type="button" class="sc-rl-ai__button sc-rl-ai__button--primary" data-sc-rl-path-build>Build guided path</button>
+                        <button type="button" class="sc-rl-ai__button sc-rl-ai__button--secondary" data-sc-rl-path-copy>Copy path</button>
+                        <button type="button" class="sc-rl-ai__button sc-rl-ai__button--secondary" data-sc-rl-path-download>Download JSON</button>
+                        <button type="button" class="sc-rl-ai__button sc-rl-ai__button--secondary" data-sc-rl-path-save>Save path session</button>
+                    </div>
+                    <div class="sc-rl-ai__examples" aria-label="Guided path examples">
+                        <button type="button" data-sc-rl-path-example="I am new to Sustainable Catalyst. Build me a route through the platform.">New visitor</button>
+                        <button type="button" data-sc-rl-path-example="I need to compare sustainability options and export an auditable decision brief.">Decision brief</button>
+                        <button type="button" data-sc-rl-path-example="I need to calculate, graph, and inspect a model from an article.">Model analysis</button>
+                        <button type="button" data-sc-rl-path-example="I need to review a risky sustainability claim and document uncertainty.">Claim review</button>
+                    </div>
+                </div>
+                <div class="sc-rl-path-builder__card sc-rl-path-builder__output" aria-live="polite">
+                    <div class="sc-rl-ai__answer-header"><p class="sc-rl-ai__eyebrow">Generated path</p><span class="sc-rl-ai__status" data-sc-rl-path-status>Ready</span></div>
+                    <div data-sc-rl-path-output><p>Add a question and build a path. The result will show ordered steps, route targets, checkpoints, confidence, and handoff options.</p></div>
+                </div>
+            </div>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+
+    public static function render_admin_page() {
+        if ( ! current_user_can( 'manage_options' ) ) { return; }
+        $status = self::status();
+        $logs = self::logs();
+        ?>
+        <div class="wrap sc-rl-admin">
+            <h1>Research Librarian Guided Paths</h1>
+            <p>v4.7.1 adds multi-step path building for route planning, article-map navigation, Workbench handoffs, Decision Studio seeds, and feature-gap escalation.</p>
+            <div class="sc-rl-admin-grid" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0;">
+                <div class="card"><h2><?php echo esc_html( absint( $status['path_count'] ) ); ?></h2><p>Path templates</p></div>
+                <div class="card"><h2><?php echo esc_html( absint( $status['total_steps'] ) ); ?></h2><p>Default steps</p></div>
+                <div class="card"><h2><?php echo esc_html( absint( $status['saved_sessions'] ) ); ?></h2><p>Saved sessions</p></div>
+                <div class="card"><h2><?php echo esc_html( $status['primary_handoffs'] ); ?></h2><p>Primary handoffs</p></div>
+            </div>
+            <h2>Path templates</h2>
+            <table class="widefat striped"><thead><tr><th>Path</th><th>Use when</th><th>Steps</th><th>Primary routes</th></tr></thead><tbody>
+                <?php foreach ( self::path_catalog() as $path ) : ?>
+                    <tr><td><strong><?php echo esc_html( $path['title'] ); ?></strong><br><code><?php echo esc_html( $path['path_id'] ); ?></code></td><td><?php echo esc_html( $path['use_when'] ); ?></td><td><?php echo esc_html( count( $path['steps'] ) ); ?></td><td><?php echo esc_html( implode( ', ', $path['primary_routes'] ) ); ?></td></tr>
+                <?php endforeach; ?>
+            </tbody></table>
+            <h2>Recent saved path sessions</h2>
+            <table class="widefat striped"><thead><tr><th>Created</th><th>Path</th><th>Question</th><th>Confidence</th><th>Steps</th></tr></thead><tbody>
+                <?php if ( empty( $logs ) ) : ?><tr><td colspan="5">No saved guided path sessions yet.</td></tr><?php endif; ?>
+                <?php foreach ( array_slice( $logs, 0, 15 ) as $log ) : ?>
+                    <tr><td><?php echo esc_html( $log['created_utc'] ); ?></td><td><?php echo esc_html( $log['path_title'] ); ?></td><td><?php echo esc_html( $log['question'] ); ?></td><td><?php echo esc_html( $log['confidence'] ); ?></td><td><?php echo esc_html( absint( $log['step_count'] ) ); ?></td></tr>
+                <?php endforeach; ?>
+            </tbody></table>
+            <p><a class="button" href="<?php echo esc_url( rest_url( self::REST_NAMESPACE . '/paths/export' ) ); ?>">Export guided path JSON</a></p>
+        </div>
+        <?php
+    }
+
+    public static function status() {
+        $paths = self::path_catalog();
+        $steps = 0;
+        $handoffs = array();
+        foreach ( $paths as $path ) {
+            $steps += count( $path['steps'] );
+            foreach ( $path['handoff_targets'] as $handoff ) { $handoffs[ $handoff ] = true; }
+        }
+        $logs = self::logs();
+        return array(
+            'version' => self::VERSION,
+            'path_count' => count( $paths ),
+            'total_steps' => $steps,
+            'saved_sessions' => count( $logs ),
+            'primary_handoffs' => implode( ', ', array_keys( $handoffs ) ),
+            'last_session_utc' => ! empty( $logs[0]['created_utc'] ) ? $logs[0]['created_utc'] : '',
+            'public_builder_shortcode' => '[sc_research_librarian mode="path-builder" title="Research Librarian Path Builder"]',
+            'summary_shortcode' => '[sc_research_librarian mode="guided-paths" title="Research Librarian Guided Paths"]',
+        );
+    }
+
+    public static function build_guided_path( $question, $preferred = '', $depth = 'standard' ) {
+        $catalog = self::path_catalog();
+        $path_id = $preferred && isset( $catalog[ $preferred ] ) ? $preferred : self::infer_path_id( $question );
+        $template = isset( $catalog[ $path_id ] ) ? $catalog[ $path_id ] : $catalog['orientation_path'];
+        $steps = self::adapt_steps_for_depth( $template['steps'], $depth );
+        $confidence = self::confidence_for_question( $question, $template );
+        $result = array(
+            'version' => self::VERSION,
+            'path_session_id' => 'path_' . wp_generate_uuid4(),
+            'created_utc' => gmdate( 'c' ),
+            'question' => self::truncate_text( $question, 1200 ),
+            'path_id' => $template['path_id'],
+            'title' => $template['title'],
+            'summary' => $template['summary'],
+            'use_when' => $template['use_when'],
+            'depth' => $depth,
+            'primary_routes' => $template['primary_routes'],
+            'handoff_targets' => $template['handoff_targets'],
+            'steps' => $steps,
+            'checkpoints' => self::checkpoints_for_path( $template['path_id'] ),
+            'next_action' => self::next_action_for_path( $template ),
+            'confidence' => $confidence,
+            'boundary_note' => self::boundary_note(),
+            'export_contract' => self::step_contract(),
+        );
+        return $result;
+    }
+
+    private static function adapt_steps_for_depth( $steps, $depth ) {
+        if ( 'quick' === $depth ) {
+            return array_values( array_slice( $steps, 0, 3 ) );
+        }
+        if ( 'deep' === $depth ) {
+            $steps[] = array(
+                'step_id' => 'review_and_export',
+                'label' => 'Review and export the path',
+                'route_target' => 'Research Librarian',
+                'task' => 'Review route confidence, unresolved ambiguity, source coverage, and handoff readiness before moving into a tool or module.',
+                'output' => 'Saved route session, exported path JSON, or downstream handoff payload.',
+                'handoff_target' => 'route_session',
+                'checkpoint' => 'The route is understandable, bounded, and ready for the next workflow.'
+            );
+        }
+        return array_values( $steps );
+    }
+
+    private static function infer_path_id( $question ) {
+        $q = strtolower( $question );
+        if ( self::contains_any( $q, array( 'decision', 'brief', 'compare options', 'tradeoff', 'audit', 'packet', 'readiness', 'scenario' ) ) ) { return 'decision_packet_path'; }
+        if ( self::contains_any( $q, array( 'calculate', 'calculator', 'graph', 'formula', 'model', 'equation', 'units', 'symbolic', 'engineering', 'visualize' ) ) ) { return 'analysis_workbench_path'; }
+        if ( self::contains_any( $q, array( 'data', 'evidence record', 'source', 'indicator', 'baseline', 'record', 'dataset', 'metric' ) ) ) { return 'evidence_record_path'; }
+        if ( self::contains_any( $q, array( 'claim', 'risk', 'uncertainty', 'narrative', 'greenwashing', 'messaging', 'communication' ) ) ) { return 'claim_review_path'; }
+        if ( self::contains_any( $q, array( 'impact', 'target', 'progress', 'outcome', 'sdg', 'measurement' ) ) ) { return 'impact_measurement_path'; }
+        if ( self::contains_any( $q, array( 'missing', 'feature', 'does not exist', 'unsupported', 'new module', 'request' ) ) ) { return 'feature_gap_path'; }
+        return 'orientation_path';
+    }
+
+    private static function confidence_for_question( $question, $template ) {
+        $q = strtolower( $question );
+        $hits = 0;
+        foreach ( $template['keywords'] as $keyword ) {
+            if ( false !== strpos( $q, strtolower( $keyword ) ) ) { $hits++; }
+        }
+        $score = min( 95, 45 + ( $hits * 12 ) );
+        if ( $hits >= 3 ) { $level = 'high'; }
+        elseif ( $hits >= 1 ) { $level = 'medium'; }
+        else { $level = 'low'; }
+        return array(
+            'level' => $level,
+            'score' => $score,
+            'explanation' => $hits ? 'The question matches guided-path keywords and route intent.' : 'The question is broad, so the builder starts with the orientation path. Ask a more specific question for higher confidence.',
+        );
+    }
+
+    private static function checkpoints_for_path( $path_id ) {
+        $common = array(
+            'Confirm the route is educational/navigation support only.',
+            'Check whether Workbench, Decision Studio, a platform module, or Feature Suggestions is the correct next step.',
+            'Preserve assumptions, sources, limits, and unresolved ambiguity when moving downstream.',
+        );
+        $specific = array(
+            'decision_packet_path' => array( 'Define decision question before comparing options.', 'Separate assumptions from evidence.', 'Use Workbench only for deeper model/calculation review.' ),
+            'analysis_workbench_path' => array( 'Record formula, units, parameters, assumptions, and interpretation limits.', 'Use graphs for behavior inspection rather than certification.' ),
+            'evidence_record_path' => array( 'Capture source type, time period, confidence, and review status.', 'Avoid unsupported metrics or invented evidence.' ),
+            'claim_review_path' => array( 'Separate claim, evidence, uncertainty, stakeholder pressure, and communication risk.' ),
+            'impact_measurement_path' => array( 'Distinguish baseline, current value, target value, and progress note.' ),
+            'feature_gap_path' => array( 'Describe missing capability without promising it exists.', 'Route unsupported capability requests to Feature Suggestions.' ),
+            'orientation_path' => array( 'Start broad, then narrow to library, demo, Workbench, or Decision Studio.' ),
+        );
+        return array_merge( isset( $specific[ $path_id ] ) ? $specific[ $path_id ] : array(), $common );
+    }
+
+    private static function next_action_for_path( $template ) {
+        $first = isset( $template['steps'][0] ) ? $template['steps'][0] : array();
+        if ( ! empty( $first['route_url'] ) ) {
+            return array( 'label' => 'Open first route', 'url' => $first['route_url'], 'note' => 'Start with the first route, then follow the path checkpoints.' );
+        }
+        return array( 'label' => 'Review path', 'url' => '/platform/research-librarian/', 'note' => 'Review the generated path and choose the next route.' );
+    }
+
+    private static function path_catalog() {
+        return array(
+            'orientation_path' => array(
+                'path_id' => 'orientation_path',
+                'title' => 'New Visitor Orientation Path',
+                'summary' => 'A broad starting path for visitors who need to understand Sustainable Catalyst before choosing a tool or library route.',
+                'use_when' => 'The visitor is new, unsure where to start, or asking for a general route through the platform.',
+                'keywords' => array( 'new', 'start', 'overview', 'platform', 'where should I go' ),
+                'primary_routes' => array( 'Platform', 'Knowledge Libraries', 'Platform Demos', 'Methodology' ),
+                'handoff_targets' => array( 'knowledge_route', 'platform_demo' ),
+                'steps' => array(
+                    self::step( 'orient', 'Orient to the platform', 'Platform', '/platform/', 'Understand how Sustainable Catalyst connects libraries, demos, methodology, Workbench, Decision Studio, and repositories.', 'Starting map of the platform.' ),
+                    self::step( 'choose_library', 'Choose a knowledge area', 'Knowledge Libraries', '/knowledge-libraries/', 'Move from broad orientation into article maps, topic routes, and learning paths.', 'Selected library or article map.' ),
+                    self::step( 'try_demo', 'Try a public module', 'Platform Demos', '/platform/demos/', 'Compare available modules and pick a working demo if the question needs a structured workflow.', 'Selected demo or module route.' ),
+                    self::step( 'review_method', 'Review methodology', 'Methodology', '/platform/methodology/', 'Check claim support, source visibility, assumptions, reproducibility, and human judgment boundaries.', 'Methodology context for responsible use.' ),
+                ),
+            ),
+            'decision_packet_path' => array(
+                'path_id' => 'decision_packet_path',
+                'title' => 'Decision Packet Path',
+                'summary' => 'A multi-step route for comparing options, preserving assumptions, collecting module artifacts, and preparing an exportable decision brief.',
+                'use_when' => 'The visitor needs decision support, scenario comparison, risk review, tradeoff notes, or an auditable brief.',
+                'keywords' => array( 'decision', 'brief', 'packet', 'scenario', 'tradeoff', 'audit', 'readiness' ),
+                'primary_routes' => array( 'Decision Studio', 'Catalyst Canvas', 'Catalyst Data', 'Workbench' ),
+                'handoff_targets' => array( 'decision_studio', 'workbench', 'module_artifact' ),
+                'steps' => array(
+                    self::step( 'frame_decision', 'Frame the decision', 'Catalyst Canvas', '/catalyst-canvas/#demo', 'Define the decision question, options, audience, assumptions, constraints, and test plan.', 'Decision frame and assumptions list.' ),
+                    self::step( 'collect_evidence', 'Collect evidence records', 'Catalyst Data', '/catalyst-data/#demo', 'Structure indicators, sources, time periods, confidence, and review status.', 'Traceable evidence records.' ),
+                    self::step( 'inspect_calculations', 'Inspect calculations when needed', 'Workbench', 'https://sustainablecatalyst.com/modeling-analytics/workbench/', 'Use Workbench for formulas, graphs, unit-aware calculations, model behavior, or engineering-style notes.', 'Calculation or model-review handoff.', 'workbench' ),
+                    self::step( 'build_packet', 'Build the Decision Packet', 'Decision Studio', '/platform/#decision-studio', 'Bring assumptions, sources, scenarios, risk notes, finance outputs, Workbench handoffs, and unresolved issues into a structured brief.', 'Decision Packet seed and export path.', 'decision_studio' ),
+                ),
+            ),
+            'analysis_workbench_path' => array(
+                'path_id' => 'analysis_workbench_path',
+                'title' => 'Workbench Analysis Path',
+                'summary' => 'A calculation and model-inspection path for questions that need formulas, symbolic review, graphs, calculators, or exportable analytical notes.',
+                'use_when' => 'The visitor asks to calculate, graph, inspect a formula, compare parameters, or use an advanced domain calculator.',
+                'keywords' => array( 'calculate', 'graph', 'formula', 'model', 'equation', 'units', 'symbolic', 'visualize' ),
+                'primary_routes' => array( 'Workbench', 'Modeling & Analytics', 'Decision Studio' ),
+                'handoff_targets' => array( 'workbench', 'decision_studio' ),
+                'steps' => array(
+                    self::step( 'translate_question', 'Translate the question into an analysis task', 'Research Librarian', '/platform/research-librarian/', 'Identify formula, variables, units, domain, assumptions, and desired output.', 'Workbench-ready analysis prompt.' ),
+                    self::step( 'run_workbench', 'Use Workbench', 'Workbench', 'https://sustainablecatalyst.com/modeling-analytics/workbench/', 'Run symbolic math, graphing, unit-aware calculations, engineering notes, calculators, or formula-aware tools.', 'Calculation, graph, or model inspection.', 'workbench' ),
+                    self::step( 'interpret_result', 'Interpret results in context', 'Modeling & Analytics', '/modeling-analytics/', 'Connect outputs to the relevant article map or methodology route and keep limits visible.', 'Interpretation note with boundaries.' ),
+                    self::step( 'handoff_decision', 'Move to decision review if needed', 'Decision Studio', '/platform/#decision-studio', 'Send the Workbench result into Decision Studio only if the visitor needs option comparison or an exportable decision brief.', 'Optional Decision Packet handoff.', 'decision_studio' ),
+                ),
+            ),
+            'evidence_record_path' => array(
+                'path_id' => 'evidence_record_path',
+                'title' => 'Evidence and Data Record Path',
+                'summary' => 'A route for organizing sources, indicators, confidence, review status, and traceable data records before analysis or decision synthesis.',
+                'use_when' => 'The visitor needs a traceable source, indicator, metric, dataset, baseline, or evidence record.',
+                'keywords' => array( 'data', 'evidence', 'indicator', 'metric', 'source', 'baseline', 'record' ),
+                'primary_routes' => array( 'Catalyst Data', 'Global Impact Catalyst', 'Methodology' ),
+                'handoff_targets' => array( 'module_artifact', 'decision_studio' ),
+                'steps' => array(
+                    self::step( 'define_record', 'Define the record', 'Catalyst Data', '/catalyst-data/#demo', 'Identify entity, indicator, source, time period, unit, confidence, and method note.', 'Structured data/evidence record.', 'module_artifact' ),
+                    self::step( 'check_method', 'Check method and confidence', 'Methodology', '/platform/methodology/', 'Review source type, assumptions, reproducibility, and confidence limitations.', 'Method note and review status.' ),
+                    self::step( 'connect_impact', 'Connect to impact when relevant', 'Global Impact Catalyst', '/global-impact-catalyst/#demo', 'Use baseline/current/target values when the record is part of an impact pathway.', 'Impact record seed.' ),
+                    self::step( 'prepare_handoff', 'Prepare downstream handoff', 'Decision Studio', '/platform/#decision-studio', 'Send data records into a Decision Packet if options, tradeoffs, or review status need synthesis.', 'Decision Studio artifact seed.', 'decision_studio' ),
+                ),
+            ),
+            'claim_review_path' => array(
+                'path_id' => 'claim_review_path',
+                'title' => 'Claim and Narrative Risk Review Path',
+                'summary' => 'A route for reviewing evidence strength, uncertainty, stakeholder pressure, volatility, and communication risk before using a public claim.',
+                'use_when' => 'The visitor asks whether a claim is supportable, risky, overstated, or needs uncertainty review.',
+                'keywords' => array( 'claim', 'risk', 'uncertainty', 'narrative', 'greenwashing', 'message' ),
+                'primary_routes' => array( 'Narrative Risk', 'Catalyst Data', 'Methodology' ),
+                'handoff_targets' => array( 'module_artifact', 'decision_studio' ),
+                'steps' => array(
+                    self::step( 'state_claim', 'State the claim clearly', 'Narrative Risk', '/narrative-risk/#demo', 'Separate the claim from evidence, implied promise, audience, and decision context.', 'Clear claim statement.' ),
+                    self::step( 'review_evidence', 'Review source and evidence strength', 'Catalyst Data', '/catalyst-data/#demo', 'Attach source records, confidence, time period, method notes, and gaps.', 'Evidence and uncertainty record.' ),
+                    self::step( 'assess_risk', 'Assess narrative risk', 'Narrative Risk', '/narrative-risk/#demo', 'Review uncertainty, stakeholder pressure, volatility, and communication risk.', 'Narrative risk artifact.', 'module_artifact' ),
+                    self::step( 'escalate_if_needed', 'Escalate to decision review if needed', 'Decision Studio', '/platform/#decision-studio', 'Use Decision Studio when the claim affects a larger decision, tradeoff, public brief, or unresolved issue log.', 'Optional Decision Packet seed.', 'decision_studio' ),
+                ),
+            ),
+            'impact_measurement_path' => array(
+                'path_id' => 'impact_measurement_path',
+                'title' => 'Impact Measurement Path',
+                'summary' => 'A route for organizing baseline, current value, target, progress notes, confidence, and evidence around an impact claim or goal.',
+                'use_when' => 'The visitor needs impact records, targets, progress measures, outcomes, or traceable impact documentation.',
+                'keywords' => array( 'impact', 'target', 'progress', 'outcome', 'baseline', 'current value', 'measurement' ),
+                'primary_routes' => array( 'Global Impact Catalyst', 'Catalyst Data', 'Decision Studio' ),
+                'handoff_targets' => array( 'module_artifact', 'decision_studio' ),
+                'steps' => array(
+                    self::step( 'define_impact', 'Define the impact record', 'Global Impact Catalyst', '/global-impact-catalyst/#demo', 'Capture outcome, baseline, current value, target, progress note, source, and review status.', 'Impact record artifact.', 'module_artifact' ),
+                    self::step( 'support_sources', 'Support with evidence records', 'Catalyst Data', '/catalyst-data/#demo', 'Attach source records, indicators, time periods, and confidence notes.', 'Evidence support bundle.' ),
+                    self::step( 'review_limits', 'Review limits and interpretation', 'Methodology', '/platform/methodology/', 'Keep causality, attribution, uncertainty, and metric limits visible.', 'Interpretation and boundary note.' ),
+                    self::step( 'decision_context', 'Connect to decision context', 'Decision Studio', '/platform/#decision-studio', 'Use Decision Studio when impact records become part of option comparison, tradeoff review, or readiness assessment.', 'Decision Packet impact section.', 'decision_studio' ),
+                ),
+            ),
+            'feature_gap_path' => array(
+                'path_id' => 'feature_gap_path',
+                'title' => 'Feature Gap and Unsupported Workflow Path',
+                'summary' => 'A route for missing capabilities, unsupported workflows, requested modules, and new feature ideas.',
+                'use_when' => 'The visitor asks for a tool, feature, calculator, module, or workflow that Sustainable Catalyst does not yet support.',
+                'keywords' => array( 'feature', 'missing', 'unsupported', 'new module', 'request', 'does not exist' ),
+                'primary_routes' => array( 'Feature Suggestions', 'Platform Demos', 'Research Librarian' ),
+                'handoff_targets' => array( 'feature_suggestion' ),
+                'steps' => array(
+                    self::step( 'identify_gap', 'Identify the gap', 'Research Librarian', '/platform/research-librarian/', 'State what the visitor wants and check whether an existing route already covers it.', 'Gap summary.' ),
+                    self::step( 'compare_existing', 'Compare existing modules', 'Platform Demos', '/platform/demos/', 'Check whether a nearby module, Workbench tool, or Decision Studio workflow can partially support the request.', 'Nearest supported route.' ),
+                    self::step( 'submit_request', 'Submit the feature suggestion', 'Feature Suggestions', '/platform/feature-suggestions/', 'Route unsupported capabilities to Feature Suggestions instead of inventing functionality.', 'Feature suggestion seed.', 'feature_suggestion' ),
+                ),
+            ),
+        );
+    }
+
+    private static function step( $id, $label, $target, $url, $task, $output, $handoff = '' ) {
+        return array(
+            'step_id' => $id,
+            'label' => $label,
+            'route_target' => $target,
+            'route_url' => $url,
+            'task' => $task,
+            'output' => $output,
+            'handoff_target' => $handoff,
+            'checkpoint' => 'The step produces a visible artifact, route decision, or bounded next action.',
+        );
+    }
+
+    private static function step_contract() {
+        return array(
+            'path_id' => 'string',
+            'title' => 'string',
+            'question' => 'string',
+            'depth' => 'quick|standard|deep',
+            'steps' => array( 'step_id', 'label', 'route_target', 'route_url', 'task', 'output', 'handoff_target', 'checkpoint' ),
+            'confidence' => array( 'level', 'score', 'explanation' ),
+            'handoff_targets' => array( 'workbench', 'decision_studio', 'module_artifact', 'feature_suggestion', 'knowledge_route' ),
+        );
+    }
+
+    private static function boundary_note() {
+        return 'Guided paths are for routing, learning, and workflow orientation only. They do not provide legal, financial, medical, mental health, tax, engineering, architecture, compliance, assurance, ESG/SDG certification, or other professional advice.';
+    }
+
+    private static function contains_any( $haystack, $needles ) {
+        foreach ( $needles as $needle ) {
+            if ( false !== strpos( $haystack, strtolower( $needle ) ) ) { return true; }
+        }
+        return false;
+    }
+
+    private static function truncate_text( $text, $max ) {
+        $text = trim( (string) $text );
+        if ( strlen( $text ) <= $max ) { return $text; }
+        return substr( $text, 0, $max - 1 ) . '…';
+    }
+
+    private static function log_limit() {
+        $options = wp_parse_args( get_option( 'sc_rl_ai_options', array() ), array( 'guided_path_log_limit' => 150 ) );
+        return max( 10, min( 1000, absint( $options['guided_path_log_limit'] ) ) );
+    }
+
+    private static function logs() {
+        $logs = get_option( self::LOG_OPTION, array() );
+        return is_array( $logs ) ? $logs : array();
+    }
+}
+
 /**
  * v4.5.0 — Integration Contracts, API Catalog, and Developer Handoffs.
  *
@@ -5825,6 +6294,12 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V450_Contracts {
             array( 'path' => '/contracts/status', 'access' => 'public', 'purpose' => 'Return public-safe integration contract status.' ),
             array( 'path' => '/contracts/catalog', 'access' => 'public', 'purpose' => 'Return public-safe contract catalog.' ),
             array( 'path' => '/developer/catalog', 'access' => 'public', 'purpose' => 'Return public-safe developer catalog.' ),
+            array( 'path' => '/answer-ux/status', 'access' => 'public', 'purpose' => 'Return public-safe answer UX status.' ),
+            array( 'path' => '/answer-ux/schema', 'access' => 'public', 'purpose' => 'Return public answer UX schema.' ),
+            array( 'path' => '/paths/status', 'access' => 'public', 'purpose' => 'Return public-safe guided research path status.' ),
+            array( 'path' => '/paths/catalog', 'access' => 'public', 'purpose' => 'Return guided research path templates.' ),
+            array( 'path' => '/paths/build', 'access' => 'public', 'purpose' => 'Build a multi-step guided route from a visitor question.' ),
+            array( 'path' => '/paths/save', 'access' => 'public', 'purpose' => 'Save a selected guided path session.' ),
             array( 'path' => '/index/rebuild', 'access' => 'admin', 'purpose' => 'Rebuild local knowledge index.' ),
             array( 'path' => '/index/export', 'access' => 'admin', 'purpose' => 'Export knowledge index records.' ),
             array( 'path' => '/index/embed', 'access' => 'admin', 'purpose' => 'Generate Gemini embeddings for indexed records.' ),
@@ -5839,7 +6314,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V450_Contracts {
         );
         foreach ( $paths as $idx => $path ) {
             $paths[ $idx ]['namespace'] = self::REST_NAMESPACE;
-            $paths[ $idx ]['method'] = ( false !== strpos( $path['path'], '/submit' ) || false !== strpos( $path['path'], '/prepare' ) || false !== strpos( $path['path'], '/run' ) || false !== strpos( $path['path'], '/rebuild' ) || false !== strpos( $path['path'], '/embed' ) ) ? 'POST' : 'GET';
+            $paths[ $idx ]['method'] = ( false !== strpos( $path['path'], '/submit' ) || false !== strpos( $path['path'], '/prepare' ) || false !== strpos( $path['path'], '/run' ) || false !== strpos( $path['path'], '/rebuild' ) || false !== strpos( $path['path'], '/embed' ) || false !== strpos( $path['path'], '/build' ) || false !== strpos( $path['path'], '/save' ) ) ? 'POST' : 'GET';
         }
         return $paths;
     }
@@ -5873,6 +6348,9 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V450_Contracts {
             '[sc_research_librarian mode="answer-ux"]',
             '[sc_research_librarian_answer_ux_summary title="Research Librarian Public Answer UX"]',
             '[sc_research_librarian_route_action_center_summary title="Research Librarian Route Action Center"]',
+            '[sc_research_librarian mode="guided-paths"]',
+            '[sc_research_librarian mode="path-builder"]',
+            '[sc_research_librarian_path_builder title="Research Librarian Path Builder"]',
             '[sc_research_librarian_contracts_summary title="Research Librarian Integration Contracts"]',
             '[sc_research_librarian_api_catalog_summary title="Research Librarian API Catalog"]',
         );
@@ -5899,9 +6377,8 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V450_Contracts {
     }
 }
 
-
 final class Sustainable_Catalyst_Research_Librarian_AI_V460_Answer_UX {
-    const VERSION = '4.6.0';
+    const VERSION = '4.7.1';
     const REST_NAMESPACE = Sustainable_Catalyst_Research_Librarian_AI::REST_NAMESPACE;
 
     public static function init() {
@@ -5922,6 +6399,21 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V460_Answer_UX {
     }
 
     public static function register_rest_routes() {
+        register_rest_route( self::REST_NAMESPACE, '/answer-ux/status', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( __CLASS__, 'rest_status' ),
+            'permission_callback' => '__return_true',
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/answer-ux/schema', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( __CLASS__, 'rest_schema' ),
+            'permission_callback' => '__return_true',
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/answer-ux/export', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( __CLASS__, 'rest_export' ),
+            'permission_callback' => array( __CLASS__, 'can_manage_options' ),
+        ) );
         register_rest_route( self::REST_NAMESPACE, '/answer-ux/public-status', array(
             'methods'             => WP_REST_Server::READABLE,
             'callback'            => array( __CLASS__, 'rest_status' ),
@@ -5940,6 +6432,10 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V460_Answer_UX {
 
     public static function rest_status() {
         return new WP_REST_Response( array( 'version' => self::VERSION, 'answer_ux' => self::status() ), 200 );
+    }
+
+    public static function rest_schema() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'schema' => self::schema() ), 200 );
     }
 
     public static function rest_export() {
@@ -6011,6 +6507,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V460_Answer_UX {
 }
 
 Sustainable_Catalyst_Research_Librarian_AI_V460_Answer_UX::init();
+Sustainable_Catalyst_Research_Librarian_AI_V470_Guided_Paths::init();
 Sustainable_Catalyst_Research_Librarian_AI_V450_Contracts::init();
 Sustainable_Catalyst_Research_Librarian_AI_V440_Curation::init();
 Sustainable_Catalyst_Research_Librarian_AI_V430_Observability::init();

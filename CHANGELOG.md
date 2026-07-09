@@ -1,16 +1,25 @@
+## v4.7.1 — Guided Research Paths Rebased on Public Answer UX
+
+- Rebuilt v4.7.x on top of v4.6.0 Public Answer UX.
+- Preserved recommended route cards, matched source cards, confidence badges, reason-code chips, and the Route Action Center.
+- Preserved answer UX endpoints and summary shortcodes.
+- Added guided research path templates and multi-step route builder endpoints.
+- Added path builder UI while keeping the public assistant answer layout intact.
+
 # Changelog
 
-## v4.6.0 — Public Answer UX, Source Cards, and Route Action Center
+## v4.7.1 — Guided Research Paths and Multi-Step Route Builder
 
-- Added polished public answer layout for the Research Librarian assistant.
-- Added recommended route card rendering.
-- Added matched source cards with source summaries, URLs, retrieval mode, and score metadata.
-- Added confidence badge, reason-code chips, ambiguity display, and no-source fallback state.
-- Added Route Action Center with open-route, copy, download, handoff, save-session, feedback, and feature-suggestion actions.
-- Added answer UX REST status/schema/export endpoints.
-- Added public answer UX summary shortcodes.
-- Added admin answer UX page and public-safe answer UX status.
-- Updated README, WordPress readme, CSS, JavaScript, release inventory, and plugin metadata.
+- Added guided research path templates.
+- Added public multi-step route builder endpoint.
+- Added quick, standard, and deep path depth options.
+- Added path confidence scoring and checkpoints.
+- Added Workbench, Decision Studio, module artifact, feature suggestion, and knowledge-route handoff targets.
+- Added path session save/log/export endpoints.
+- Added public guided-path summary and path-builder shortcodes.
+- Added admin Guided Paths dashboard under Settings.
+- Added v4.7.1 guided paths manifest and documentation.
+
 
 ## v4.5.0 — Integration Contracts, API Catalog, and Developer Handoffs
 
@@ -79,6 +88,8 @@
 - Added endpoint, shortcode, and manifest inventories.
 - Added v4.0.0 enterprise manifest and documentation.
 
+# Changelog
+
 ## 3.9.0 — Scheduled Index Maintenance, Sitemap Sync, and Health Alerts
 
 - Added scheduled knowledge-index maintenance.
@@ -88,6 +99,8 @@
 - Added maintenance status/export REST endpoints.
 - Added maintenance-summary shortcode.
 - Added health/alert configuration for index maintenance.
+
+# Changelog
 
 ## v3.8.0 — Governance, Privacy Controls, and Retention Policies
 
@@ -144,6 +157,8 @@
 - Added evaluation summary shortcode.
 - Added REST endpoints for suite, run, query, logs, and export.
 - Preserved v3.3.3 Gemini key-persistence and embedding queue behavior.
+
+# Changelog
 
 ## 3.7.0 — Feedback, Correction Queue, and Knowledge Gap Triage
 

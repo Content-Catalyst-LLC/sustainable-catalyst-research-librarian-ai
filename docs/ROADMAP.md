@@ -64,6 +64,8 @@ Gemini embedding diagnostics, request format fix, single-record embedding test, 
 - Integration contracts, API catalog, developer handoffs, and admin/public contract exports.
 
 
-## v4.6.0
+## v4.7.1 Completed
 
-Public Answer UX, Source Cards, and Route Action Center.
+- Guided research paths and multi-step route builder.
+- Path session save/export layer.
+- Public path builder shortcode.

@@ -465,7 +465,127 @@
     }
   }
 
+  function renderPathMarkdown(path) {
+    if (!path) return '';
+    var lines = [];
+    lines.push('# Sustainable Catalyst Guided Research Path');
+    lines.push('');
+    lines.push('Question: ' + (path.question || ''));
+    lines.push('Path: ' + (path.title || ''));
+    lines.push('Depth: ' + (path.depth || ''));
+    lines.push('Confidence: ' + ((path.confidence && path.confidence.level) || 'unknown') + ' (' + ((path.confidence && path.confidence.score) || 0) + ')');
+    lines.push('');
+    (path.steps || []).forEach(function(step, index) {
+      lines.push((index + 1) + '. ' + (step.label || '') + ' — ' + (step.route_target || ''));
+      lines.push('   Task: ' + (step.task || ''));
+      lines.push('   Output: ' + (step.output || ''));
+      if (step.route_url) lines.push('   Route: ' + step.route_url);
+      if (step.handoff_target) lines.push('   Handoff: ' + step.handoff_target);
+      lines.push('');
+    });
+    if ((path.checkpoints || []).length) {
+      lines.push('Checkpoints:');
+      (path.checkpoints || []).forEach(function(item) { lines.push('- ' + item); });
+    }
+    lines.push('');
+    lines.push('Boundary: ' + (path.boundary_note || ''));
+    return lines.join('\n');
+  }
+
+  function renderPathResult(path) {
+    if (!path) return '<p>No path was returned.</p>';
+    var confidence = path.confidence || {};
+    var html = '<div class="sc-rl-path-result">' +
+      '<div class="sc-rl-path-result__summary"><h3>' + escapeHtml(path.title || '') + '</h3>' +
+      '<p>' + escapeHtml(path.summary || '') + '</p></div>' +
+      '<div class="sc-rl-path-result__meta">' +
+      '<span>Depth: ' + escapeHtml(path.depth || 'standard') + '</span>' +
+      '<span>Confidence: ' + escapeHtml((confidence.level || 'unknown').toUpperCase()) + ' · ' + escapeHtml(confidence.score || 0) + '</span>' +
+      '<span>Steps: ' + escapeHtml((path.steps || []).length) + '</span>' +
+      '</div>' +
+      '<div class="sc-rl-path-steps">';
+    (path.steps || []).forEach(function(step) {
+      html += '<article class="sc-rl-path-step"><h3>' + escapeHtml(step.label || '') + '</h3>' +
+        '<p><strong>Route:</strong> ' + escapeHtml(step.route_target || '') + '</p>' +
+        '<p>' + escapeHtml(step.task || '') + '</p>' +
+        '<p><strong>Output:</strong> ' + escapeHtml(step.output || '') + '</p>';
+      if (step.handoff_target) html += '<p><strong>Handoff:</strong> ' + escapeHtml(step.handoff_target) + '</p>';
+      if (step.route_url) html += '<p><a href="' + escapeHtml(step.route_url) + '">Open route →</a></p>';
+      html += '</article>';
+    });
+    html += '</div>';
+    if ((path.checkpoints || []).length) {
+      html += '<div class="sc-rl-path-checkpoints"><h3>Checkpoints</h3><ul>' + path.checkpoints.map(function(item) { return '<li>' + escapeHtml(item) + '</li>'; }).join('') + '</ul></div>';
+    }
+    if (path.next_action && path.next_action.url) {
+      html += '<p><a class="sc-rl-ai__button sc-rl-ai__button--primary" href="' + escapeHtml(path.next_action.url) + '">' + escapeHtml(path.next_action.label || 'Open next route') + '</a></p>';
+    }
+    html += '<p class="sc-rl-ai__fineprint">' + escapeHtml(path.boundary_note || '') + '</p></div>';
+    return html;
+  }
+
+  function initPathBuilder(root) {
+    var endpoint = root.getAttribute('data-path-endpoint');
+    var saveEndpoint = root.getAttribute('data-path-save-endpoint');
+    var nonce = root.getAttribute('data-nonce');
+    var textarea = root.querySelector('.sc-rl-path-builder__textarea');
+    var preferred = root.querySelector('[data-sc-rl-path-preferred]');
+    var depth = root.querySelector('[data-sc-rl-path-depth]');
+    var build = root.querySelector('[data-sc-rl-path-build]');
+    var copy = root.querySelector('[data-sc-rl-path-copy]');
+    var download = root.querySelector('[data-sc-rl-path-download]');
+    var save = root.querySelector('[data-sc-rl-path-save]');
+    var output = root.querySelector('[data-sc-rl-path-output]');
+    var status = root.querySelector('[data-sc-rl-path-status]');
+    var examples = root.querySelectorAll('[data-sc-rl-path-example]');
+    var latest = null;
+
+    function setStatus(text, state) {
+      if (status) status.textContent = text;
+      root.setAttribute('data-state', state || 'ready');
+    }
+
+    function runBuild(question) {
+      var clean = (question || textarea.value || '').trim();
+      if (!clean) {
+        setStatus('Add a question', 'error');
+        output.innerHTML = '<p>Please enter a question or workflow goal first.</p>';
+        return;
+      }
+      setStatus('Building path…', 'loading');
+      build.disabled = true;
+      output.innerHTML = '<p class="sc-rl-ai__loading">Building an ordered Sustainable Catalyst route path</p>';
+      fetch(endpoint, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
+        body: JSON.stringify({ question: clean, preferred_path: preferred ? preferred.value : '', depth: depth ? depth.value : 'standard' })
+      })
+        .then(function(response) { return response.json().then(function(data) { if (!response.ok) throw new Error(data && data.message ? data.message : 'Path could not be built.'); return data; }); })
+        .then(function(data) { latest = data; output.innerHTML = renderPathResult(data); setStatus('Path ready', 'ready'); })
+        .catch(function(error) { latest = null; output.innerHTML = '<p>' + escapeHtml(error.message || 'The path builder could not run.') + '</p>'; setStatus('Error', 'error'); })
+        .finally(function() { build.disabled = false; });
+    }
+
+    build.addEventListener('click', function() { runBuild(); });
+    textarea.addEventListener('keydown', function(event) { if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') runBuild(); });
+    examples.forEach(function(button) { button.addEventListener('click', function() { textarea.value = button.getAttribute('data-sc-rl-path-example') || ''; runBuild(textarea.value); }); });
+    copy.addEventListener('click', function() { if (!latest) { setStatus('Build first', 'error'); return; } if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(renderPathMarkdown(latest)).then(function(){ setStatus('Copied', 'ready'); }); });
+    download.addEventListener('click', function() { if (!latest) { setStatus('Build first', 'error'); return; } downloadJson('sustainable-catalyst-guided-path.json', latest); setStatus('Downloaded', 'ready'); });
+    save.addEventListener('click', function() {
+      if (!latest) { setStatus('Build first', 'error'); return; }
+      if (!saveEndpoint) { setStatus('Save unavailable', 'error'); return; }
+      setStatus('Saving path…', 'loading');
+      fetch(saveEndpoint, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce }, body: JSON.stringify({ path: latest }) })
+        .then(function(response) { return response.json().then(function(data) { if (!response.ok) throw new Error(data && data.message ? data.message : 'Path could not be saved.'); return data; }); })
+        .then(function(){ setStatus('Path saved', 'ready'); })
+        .catch(function(error){ setStatus(error.message || 'Save failed', 'error'); });
+    });
+  }
+
+
   document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.sc-rl-ai').forEach(init);
+    document.querySelectorAll('.sc-rl-path-builder').forEach(initPathBuilder);
   });
 }());

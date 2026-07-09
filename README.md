@@ -1,48 +1,47 @@
 # Sustainable Catalyst Research Librarian
 
-Current release: **v4.6.0 — Public Answer UX, Source Cards, and Route Action Center**.
+Current release: **v4.7.1 — Guided Research Paths and Multi-Step Route Builder**.
 
-The Research Librarian is the source-aware routing, indexing, retrieval, handoff, governance, and operations layer for Sustainable Catalyst. It routes visitors to the right page, demo, article map, Workbench pathway, Decision Studio workflow, or feature suggestion route while preserving source context, confidence, feedback, governance, curation, and operations metadata.
+The Research Librarian is the source-aware routing, indexing, retrieval, handoff, governance, operations, and guided-path layer for Sustainable Catalyst. It routes visitors to the right page, demo, article map, Workbench pathway, Decision Studio workflow, or feature suggestion route while preserving source context, confidence, feedback, governance, curation, integration contracts, and operations metadata.
 
-## v4.6.0 focus
+## v4.7.1 focus
 
-v4.6.0 upgrades the public assistant experience. The underlying retrieval system already supports source-aware routing, Gemini embeddings, evaluation, handoffs, sessions, feedback, governance, security, observability, curation, and integration contracts. This release makes the visitor-facing answer feel like a finished product by rendering route recommendations as structured cards instead of plain answer text alone.
+v4.7.1 adds guided research paths and a multi-step route builder. Instead of returning only one route card, the plugin can now build ordered paths with steps, checkpoints, route targets, handoff targets, confidence notes, and exportable path JSON.
 
-## What changed
-
-- Recommended route card with title, category, description, route link, and platform fit.
-- Matched source cards with summaries, URLs, retrieval mode, and score metadata where available.
-- Confidence badge with explanation, reason-code chips, and ambiguity notes.
-- Route Action Center with open-route, Workbench/Decision Studio handoff, copy, download, session, and feedback actions.
-- Low-confidence and no-source states that route users toward clarification or Feature Suggestions.
-- Public-safe answer UX summary and admin export endpoints.
-
-## New v4.6.0 shortcodes
+## New v4.7.1 shortcodes
 
 ```text
-[sc_research_librarian mode="answer-ux" title="Research Librarian Public Answer UX"]
-[sc_research_librarian_answer_ux_summary title="Research Librarian Public Answer UX"]
-[sc_research_librarian_route_action_center_summary title="Research Librarian Route Action Center"]
+[sc_research_librarian mode="guided-paths" title="Research Librarian Guided Paths"]
+[sc_research_librarian mode="path-builder" title="Research Librarian Path Builder"]
+[sc_research_librarian_paths_summary title="Research Librarian Guided Paths"]
+[sc_research_librarian_path_builder title="Research Librarian Path Builder"]
 ```
 
-## New v4.6.0 endpoints
+## New v4.7.1 endpoints
 
 ```text
-GET /wp-json/sc-research-librarian-ai/v1/answer-ux/status
-GET /wp-json/sc-research-librarian-ai/v1/answer-ux/schema
-GET /wp-json/sc-research-librarian-ai/v1/answer-ux/public-status
-GET /wp-json/sc-research-librarian-ai/v1/answer-ux/export
-GET /wp-json/sc-research-librarian-ai/v1/answer-ux/admin-export
+GET  /wp-json/sc-research-librarian-ai/v1/paths/status
+GET  /wp-json/sc-research-librarian-ai/v1/paths/catalog
+POST /wp-json/sc-research-librarian-ai/v1/paths/build
+POST /wp-json/sc-research-librarian-ai/v1/paths/save
+GET  /wp-json/sc-research-librarian-ai/v1/paths/logs
+GET  /wp-json/sc-research-librarian-ai/v1/paths/export
+POST /wp-json/sc-research-librarian-ai/v1/paths/reset-defaults
 ```
 
 ## Installation
 
-1. Upload and activate `sustainable-catalyst-research-librarian-ai-plugin-v4.6.0.zip`.
+1. Upload and activate `sustainable-catalyst-research-librarian-ai-plugin-v4.7.1.zip`.
 2. Confirm plugin settings are preserved.
-3. Rebuild the knowledge index only if source content changed.
-4. Regenerate embeddings only if the index changed.
-5. Test the public shortcode and confirm answers show route cards, source cards, confidence, and actions.
+3. Rebuild the knowledge index if needed.
+4. Regenerate embeddings if the index changed.
+5. Review `Settings → Research Librarian Paths` for guided-path templates and saved sessions.
 
 ## Boundary
 
-Public answer UX is for navigation and routing. It does not certify claims, replace expert review, or provide legal, financial, medical, tax, engineering, compliance, assurance, ESG/SDG, or other regulated professional advice.
+Guided paths are route-planning and learning artifacts. They do not provide legal, financial, investment, medical, mental health, tax, engineering, architecture, compliance, assurance, ESG/SDG certification, or other professional advice.
+
+
+## v4.7.1 Rebase Note
+
+This release rebuilds guided research paths on top of the v4.6.0 public answer UX layer. It includes the polished public answer layout, source cards, confidence badges, Route Action Center, answer UX endpoints, guided path templates, and the multi-step route builder.
