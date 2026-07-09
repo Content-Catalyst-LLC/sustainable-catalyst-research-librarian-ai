@@ -1,5 +1,15 @@
 # Changelog
 
+## v4.5.0 — Integration Contracts, API Catalog, and Developer Handoffs
+
+- Added integration contract layer for routing, source, retrieval, handoff, session, feedback, governance, and operations payloads.
+- Added public-safe contract status and catalog endpoints.
+- Added developer catalog endpoint with public-safe payload shapes and SDK examples.
+- Added admin-only contract export and developer export endpoints.
+- Added contract summary and API catalog shortcodes.
+- Added admin Contracts page under Settings.
+- Added v4.5.0 manifest and documentation.
+
 ## v4.4.0 — Editorial Curation, Route Overrides, and Source Weighting
 
 - Added route override rules.

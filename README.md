@@ -1,40 +1,39 @@
-# Sustainable Catalyst Research Librarian AI
+# Sustainable Catalyst Research Librarian
 
-Current release: **v4.4.0 — Editorial Curation, Route Overrides, and Source Weighting**.
+Current release: **v4.5.0 — Integration Contracts, API Catalog, and Developer Handoffs**.
 
-Research Librarian is the source-aware routing, indexing, retrieval, evaluation, handoff, governance, maintenance, recovery, security, observability, and editorial curation layer for Sustainable Catalyst. It helps visitors move from a question to the right Sustainable Catalyst page, module, Workbench tool, Decision Studio workflow, repository, methodology page, or feature suggestion route while keeping admin exports, logs, credentials, and operational diagnostics separated from public use.
+The Research Librarian is the source-aware routing, indexing, retrieval, handoff, governance, and operations layer for Sustainable Catalyst. It routes visitors to the right page, demo, article map, Workbench pathway, Decision Studio workflow, or feature suggestion route while preserving source context, confidence, feedback, governance, curation, and operations metadata.
 
-## v4.4.0 focus
+## v4.5.0 focus
 
-v4.4.0 adds editorial curation controls: route override rules, source weighting rules, boundary pattern rules, an admin curation dashboard, curation test/export endpoints, and public-safe curation summaries. These controls let Sustainable Catalyst deliberately prioritize canonical routes when retrieval scores alone are not enough.
+v4.5.0 adds an integration contract layer so the Research Librarian can be used as documented platform infrastructure. It provides public-safe contract status, API catalogs, developer handoff payload shapes, shortcode inventories, and admin-only contract exports.
 
-## New v4.4.0 shortcodes
-
-```text
-[sc_research_librarian mode="curation-summary" title="Research Librarian Editorial Curation"]
-[sc_research_librarian_curation_summary title="Research Librarian Editorial Curation"]
-[sc_research_librarian_route_overrides_summary title="Research Librarian Route Overrides"]
-```
-
-## New v4.4.0 endpoints
+## New v4.5.0 shortcodes
 
 ```text
-GET  /wp-json/sc-research-librarian-ai/v1/curation/status
-GET  /wp-json/sc-research-librarian-ai/v1/curation/rules
-GET  /wp-json/sc-research-librarian-ai/v1/curation/export
-POST /wp-json/sc-research-librarian-ai/v1/curation/test
-POST /wp-json/sc-research-librarian-ai/v1/curation/reset-defaults
+[sc_research_librarian mode="contracts-summary" title="Research Librarian Integration Contracts"]
+[sc_research_librarian_contracts_summary title="Research Librarian Integration Contracts"]
+[sc_research_librarian_api_catalog_summary title="Research Librarian API Catalog"]
 ```
 
-## Setup
+## New v4.5.0 endpoints
 
-1. Upload and activate `sustainable-catalyst-research-librarian-ai-plugin-v4.4.0.zip`.
-2. Confirm your Gemini/API settings still work if retrieval is enabled.
-3. Rebuild the knowledge index if routes or pages changed.
-4. Go to **Settings → Research Librarian Curation**.
-5. Review default override, source-weight, and boundary rules.
-6. Test prompts such as “I need to graph a model,” “I need to compare options and export a brief,” and “Can you certify this as SDG aligned?”
+```text
+GET /wp-json/sc-research-librarian-ai/v1/contracts/status
+GET /wp-json/sc-research-librarian-ai/v1/contracts/catalog
+GET /wp-json/sc-research-librarian-ai/v1/contracts/export
+GET /wp-json/sc-research-librarian-ai/v1/developer/catalog
+GET /wp-json/sc-research-librarian-ai/v1/developer/export
+```
 
-## Public safety
+## Installation
 
-Public curation status exposes counts and high-level posture only. Full rules and curation tests are admin-only.
+1. Upload and activate `sustainable-catalyst-research-librarian-ai-plugin-v4.5.0.zip`.
+2. Confirm plugin settings are preserved.
+3. Rebuild the knowledge index if needed.
+4. Regenerate embeddings if the index changed.
+5. Review `Settings → Research Librarian Contracts` for API and handoff contracts.
+
+## Boundary
+
+Public contract endpoints are safe for page integrations. Admin exports are for maintenance and documentation review only. The plugin does not expose Gemini/OpenAI keys or raw credentials.

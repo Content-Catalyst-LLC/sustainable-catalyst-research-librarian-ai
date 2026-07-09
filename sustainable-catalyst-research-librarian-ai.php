@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Sustainable Catalyst Research Librarian
  * Plugin URI: https://sustainablecatalyst.com/platform/research-librarian/
- * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, correction triage, knowledge-gap review, governance controls, privacy summaries, retention policies, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, scheduled index maintenance, sitemap sync, health alerts, recovery snapshots, backup/export controls, migration readiness, security hardening, endpoint permission review, access-surface audit, observability checks, operational runbooks, incident-response summaries, editorial curation rules, route overrides, source weighting controls, and exports.
- * Version: 4.4.0
+ * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, correction triage, knowledge-gap review, governance controls, privacy summaries, retention policies, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, scheduled index maintenance, sitemap sync, health alerts, recovery snapshots, backup/export controls, migration readiness, security hardening, endpoint permission review, access-surface audit, observability checks, operational runbooks, incident-response summaries, editorial curation rules, route overrides, source weighting controls, integration contracts, API catalogs, developer handoff documentation, and exports.
+ * Version: 4.5.0
  * Author: Content Catalyst LLC / Tariq Ahmad
  * Author URI: https://sustainablecatalyst.com/
  * License: MIT
@@ -23,7 +23,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
     const MAINTENANCE_OPTION = 'sc_rl_ai_maintenance_status';
     const MAINTENANCE_HOOK = 'sc_rl_ai_index_maintenance_event';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const VERSION        = '4.4.0';
+    const VERSION        = '4.5.0';
 
     private static $instance = null;
 
@@ -219,6 +219,11 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         if ( 'curation' === $mode || 'curation-summary' === $mode || 'route-overrides' === $mode || 'source-weighting' === $mode || 'editorial-controls' === $mode ) {
             if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V440_Curation' ) ) {
                 return Sustainable_Catalyst_Research_Librarian_AI_V440_Curation::render_public_summary( $atts );
+            }
+        }
+        if ( 'contracts' === $mode || 'contracts-summary' === $mode || 'api-catalog' === $mode || 'developer-handoffs' === $mode || 'integration-contracts' === $mode ) {
+            if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V450_Contracts' ) ) {
+                return Sustainable_Catalyst_Research_Librarian_AI_V450_Contracts::render_public_summary( $atts );
             }
         }
         if ( 'recovery' === $mode || 'recovery-summary' === $mode || 'backup-summary' === $mode || 'snapshot-summary' === $mode ) {
@@ -5505,6 +5510,312 @@ class Sustainable_Catalyst_Research_Librarian_AI_V440_Curation {
     }
 }
 
+
+
+/**
+ * v4.5.0 — Integration Contracts, API Catalog, and Developer Handoffs.
+ *
+ * This layer documents the Research Librarian integration surface so the plugin
+ * can be treated as infrastructure rather than only a public assistant widget.
+ */
+final class Sustainable_Catalyst_Research_Librarian_AI_V450_Contracts {
+    const VERSION = '4.5.0';
+    const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
+
+    public static function init() {
+        add_action( 'rest_api_init', array( __CLASS__, 'register_rest_routes' ) );
+        add_action( 'admin_menu', array( __CLASS__, 'register_admin_page' ) );
+        add_shortcode( 'sc_research_librarian_contracts_summary', array( __CLASS__, 'render_public_summary' ) );
+        add_shortcode( 'sc_research_librarian_api_catalog_summary', array( __CLASS__, 'render_public_summary' ) );
+    }
+
+    public static function register_admin_page() {
+        add_submenu_page(
+            'options-general.php',
+            'Research Librarian Contracts',
+            'Research Librarian Contracts',
+            'manage_options',
+            'sc-research-librarian-contracts',
+            array( __CLASS__, 'render_admin_page' )
+        );
+    }
+
+    public static function register_rest_routes() {
+        register_rest_route( self::REST_NAMESPACE, '/contracts/status', array(
+            'methods' => 'GET',
+            'callback' => array( __CLASS__, 'rest_status' ),
+            'permission_callback' => '__return_true',
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/contracts/catalog', array(
+            'methods' => 'GET',
+            'callback' => array( __CLASS__, 'rest_catalog_public' ),
+            'permission_callback' => '__return_true',
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/contracts/export', array(
+            'methods' => 'GET',
+            'callback' => array( __CLASS__, 'rest_export' ),
+            'permission_callback' => array( __CLASS__, 'can_manage' ),
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/developer/catalog', array(
+            'methods' => 'GET',
+            'callback' => array( __CLASS__, 'rest_developer_catalog_public' ),
+            'permission_callback' => '__return_true',
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/developer/export', array(
+            'methods' => 'GET',
+            'callback' => array( __CLASS__, 'rest_developer_export' ),
+            'permission_callback' => array( __CLASS__, 'can_manage' ),
+        ) );
+    }
+
+    public static function can_manage() {
+        return current_user_can( 'manage_options' );
+    }
+
+    public static function rest_status() {
+        return rest_ensure_response( self::public_status() );
+    }
+
+    public static function rest_catalog_public() {
+        return rest_ensure_response( self::public_catalog() );
+    }
+
+    public static function rest_developer_catalog_public() {
+        return rest_ensure_response( self::developer_catalog( false ) );
+    }
+
+    public static function rest_export() {
+        return rest_ensure_response( self::contract_export() );
+    }
+
+    public static function rest_developer_export() {
+        return rest_ensure_response( self::developer_catalog( true ) );
+    }
+
+    public static function public_status() {
+        $catalog = self::contract_catalog();
+        return array(
+            'ok' => true,
+            'version' => self::VERSION,
+            'contract_groups' => count( $catalog['contract_groups'] ),
+            'public_endpoint_count' => count( self::filter_endpoints( 'public' ) ),
+            'admin_endpoint_count' => count( self::filter_endpoints( 'admin' ) ),
+            'handoff_contracts' => count( $catalog['handoff_contracts'] ),
+            'response_contracts' => count( $catalog['response_contracts'] ),
+            'sdk_examples' => count( self::sdk_examples() ),
+            'note' => 'Public-safe integration contract summary. Admin export includes fuller endpoint and payload notes, but never includes API keys.',
+        );
+    }
+
+    public static function public_catalog() {
+        $catalog = self::contract_catalog();
+        return array(
+            'version' => self::VERSION,
+            'contract_groups' => $catalog['contract_groups'],
+            'public_endpoints' => self::filter_endpoints( 'public' ),
+            'handoff_contracts' => $catalog['handoff_contracts'],
+            'public_response_contracts' => $catalog['response_contracts'],
+            'boundary' => 'Public catalog only. Admin-only exports, logs, snapshots, credentials, and full diagnostics are excluded.',
+        );
+    }
+
+    public static function contract_export() {
+        return array(
+            'version' => self::VERSION,
+            'generated_utc' => gmdate( 'c' ),
+            'status' => self::public_status(),
+            'catalog' => self::contract_catalog(),
+            'endpoints' => self::endpoint_catalog(),
+            'shortcodes' => self::shortcode_catalog(),
+            'sdk_examples' => self::sdk_examples(),
+            'integration_notes' => self::integration_notes(),
+            'security_notes' => array(
+                'No API keys are exposed in this export.',
+                'Admin endpoints require manage_options.',
+                'Public endpoints return only public-safe status, catalog, and assistant-facing data.',
+                'Handoff payloads are structured as seeds and do not assert professional conclusions.',
+            ),
+        );
+    }
+
+    public static function developer_catalog( $include_admin = false ) {
+        return array(
+            'version' => self::VERSION,
+            'namespace' => self::REST_NAMESPACE,
+            'include_admin' => (bool) $include_admin,
+            'endpoints' => $include_admin ? self::endpoint_catalog() : self::filter_endpoints( 'public' ),
+            'payload_shapes' => self::payload_shapes(),
+            'shortcodes' => self::shortcode_catalog(),
+            'sdk_examples' => self::sdk_examples(),
+            'notes' => self::integration_notes(),
+        );
+    }
+
+    public static function render_admin_page() {
+        if ( ! current_user_can( 'manage_options' ) ) { return; }
+        $status = self::public_status();
+        $endpoints = self::endpoint_catalog();
+        ?>
+        <div class="wrap sc-rl-admin-wrap">
+            <h1>Research Librarian Integration Contracts</h1>
+            <p>Version <?php echo esc_html( self::VERSION ); ?> documents public endpoints, admin-only endpoints, handoff payloads, response contracts, shortcode surfaces, and developer handoff examples.</p>
+            <h2>Contract Status</h2>
+            <table class="widefat striped"><tbody>
+                <tr><th>Contract groups</th><td><?php echo esc_html( absint( $status['contract_groups'] ) ); ?></td></tr>
+                <tr><th>Public endpoints</th><td><?php echo esc_html( absint( $status['public_endpoint_count'] ) ); ?></td></tr>
+                <tr><th>Admin endpoints</th><td><?php echo esc_html( absint( $status['admin_endpoint_count'] ) ); ?></td></tr>
+                <tr><th>Handoff contracts</th><td><?php echo esc_html( absint( $status['handoff_contracts'] ) ); ?></td></tr>
+                <tr><th>Response contracts</th><td><?php echo esc_html( absint( $status['response_contracts'] ) ); ?></td></tr>
+            </tbody></table>
+            <h2>Endpoint Surface</h2>
+            <table class="widefat striped"><thead><tr><th>Path</th><th>Access</th><th>Purpose</th></tr></thead><tbody>
+            <?php foreach ( $endpoints as $endpoint ) : ?>
+                <tr><td><code><?php echo esc_html( $endpoint['path'] ); ?></code></td><td><?php echo esc_html( $endpoint['access'] ); ?></td><td><?php echo esc_html( $endpoint['purpose'] ); ?></td></tr>
+            <?php endforeach; ?>
+            </tbody></table>
+            <p><a class="button button-primary" href="<?php echo esc_url( rest_url( self::REST_NAMESPACE . '/contracts/export' ) ); ?>">Export Integration Contracts JSON</a> <a class="button" href="<?php echo esc_url( rest_url( self::REST_NAMESPACE . '/developer/export' ) ); ?>">Export Developer Catalog JSON</a></p>
+        </div>
+        <?php
+    }
+
+    public static function render_public_summary( $atts = array() ) {
+        $atts = shortcode_atts( array( 'title' => 'Research Librarian Integration Contracts' ), $atts, 'sc_research_librarian_contracts_summary' );
+        $status = self::public_status();
+        ob_start();
+        ?>
+        <section class="sc-rl-product sc-rl-contracts-summary" data-sc-rl-product="contracts-summary">
+            <p class="sc-rl-product__eyebrow">Integration Contracts</p>
+            <h2><?php echo esc_html( $atts['title'] ); ?></h2>
+            <p class="sc-rl-product__lede">The Research Librarian exposes a documented routing and retrieval interface for public assistant use, admin operations, Workbench handoffs, Decision Studio seed packets, and developer review.</p>
+            <div class="sc-rl-product__grid">
+                <article><span><?php echo esc_html( absint( $status['contract_groups'] ) ); ?></span><strong>Contract groups</strong><p>Routes, sources, retrieval matches, handoffs, sessions, feedback, governance, maintenance, security, observability, and curation.</p></article>
+                <article><span><?php echo esc_html( absint( $status['public_endpoint_count'] ) ); ?></span><strong>Public endpoints</strong><p>Public-safe status and catalog endpoints suitable for page integrations and lightweight documentation.</p></article>
+                <article><span><?php echo esc_html( absint( $status['admin_endpoint_count'] ) ); ?></span><strong>Admin endpoints</strong><p>Protected exports, diagnostics, evaluations, snapshots, logs, and operational controls.</p></article>
+                <article><span><?php echo esc_html( absint( $status['handoff_contracts'] ) ); ?></span><strong>Handoff contracts</strong><p>Structured payload seeds for Workbench, Decision Studio, module workflows, feature gaps, and knowledge routes.</p></article>
+            </div>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+
+    private static function contract_catalog() {
+        return array(
+            'contract_groups' => array(
+                array( 'id' => 'routing', 'label' => 'Route recommendation contract', 'status' => 'active' ),
+                array( 'id' => 'source_records', 'label' => 'Source record and knowledge-index contract', 'status' => 'active' ),
+                array( 'id' => 'retrieval', 'label' => 'Hybrid keyword/semantic retrieval contract', 'status' => 'active' ),
+                array( 'id' => 'handoffs', 'label' => 'Workbench and Decision Studio handoff contract', 'status' => 'active' ),
+                array( 'id' => 'governance', 'label' => 'Governance, retention, and export contract', 'status' => 'active' ),
+                array( 'id' => 'operations', 'label' => 'Maintenance, security, observability, recovery, and curation contract', 'status' => 'active' ),
+            ),
+            'handoff_contracts' => array(
+                'workbench' => array( 'required' => array( 'question', 'route_id', 'recommended_tool', 'source_refs' ), 'optional' => array( 'formula', 'units', 'graph_request', 'calculation_context' ) ),
+                'decision_studio' => array( 'required' => array( 'question', 'decision_context', 'assumptions', 'source_refs' ), 'optional' => array( 'scenarios', 'risk_notes', 'finance_notes', 'workbench_handoff' ) ),
+                'module_artifact' => array( 'required' => array( 'module_id', 'question', 'route_id' ), 'optional' => array( 'artifact_seed', 'confidence', 'evidence_notes' ) ),
+                'feature_gap' => array( 'required' => array( 'question', 'gap_summary', 'suggested_route' ), 'optional' => array( 'missing_capability', 'priority_reason', 'related_sources' ) ),
+                'knowledge_route' => array( 'required' => array( 'question', 'source_refs', 'recommended_pages' ), 'optional' => array( 'learning_path', 'article_map', 'follow_up_prompts' ) ),
+            ),
+            'response_contracts' => self::payload_shapes(),
+        );
+    }
+
+    private static function payload_shapes() {
+        return array(
+            'route_response' => array( 'route_id', 'title', 'url', 'confidence', 'reason_codes', 'matched_sources', 'handoff_target', 'boundary_note' ),
+            'source_record' => array( 'id', 'title', 'url', 'type', 'summary', 'topics', 'route_id', 'priority', 'last_indexed_utc' ),
+            'retrieval_match' => array( 'record_id', 'title', 'url', 'keyword_score', 'semantic_score', 'final_score', 'match_reason' ),
+            'evaluation_result' => array( 'query', 'expected_route', 'actual_route', 'passed', 'confidence', 'score_breakdown', 'failure_reason' ),
+            'session_record' => array( 'session_id', 'question', 'route_id', 'confidence', 'handoff_target', 'created_utc' ),
+            'feedback_record' => array( 'feedback_id', 'feedback_type', 'route_id', 'issue_type', 'note', 'created_utc' ),
+        );
+    }
+
+    private static function endpoint_catalog() {
+        $paths = array(
+            array( 'path' => '/ask', 'access' => 'public', 'purpose' => 'Submit an assistant question and receive a route-aware answer.' ),
+            array( 'path' => '/routes', 'access' => 'public', 'purpose' => 'Return public route definitions.' ),
+            array( 'path' => '/sources', 'access' => 'public', 'purpose' => 'Return public source records.' ),
+            array( 'path' => '/grounded-route', 'access' => 'public', 'purpose' => 'Return source-aware route recommendation.' ),
+            array( 'path' => '/retrieval/status', 'access' => 'public', 'purpose' => 'Return public-safe retrieval status.' ),
+            array( 'path' => '/retrieval/query', 'access' => 'public', 'purpose' => 'Run a retrieval query against available index records.' ),
+            array( 'path' => '/handoff/schema', 'access' => 'public', 'purpose' => 'Return public handoff payload schema.' ),
+            array( 'path' => '/handoff/prepare', 'access' => 'public', 'purpose' => 'Prepare a structured handoff payload.' ),
+            array( 'path' => '/feedback/submit', 'access' => 'public', 'purpose' => 'Submit helped/report-issue feedback.' ),
+            array( 'path' => '/contracts/status', 'access' => 'public', 'purpose' => 'Return public-safe integration contract status.' ),
+            array( 'path' => '/contracts/catalog', 'access' => 'public', 'purpose' => 'Return public-safe contract catalog.' ),
+            array( 'path' => '/developer/catalog', 'access' => 'public', 'purpose' => 'Return public-safe developer catalog.' ),
+            array( 'path' => '/index/rebuild', 'access' => 'admin', 'purpose' => 'Rebuild local knowledge index.' ),
+            array( 'path' => '/index/export', 'access' => 'admin', 'purpose' => 'Export knowledge index records.' ),
+            array( 'path' => '/index/embed', 'access' => 'admin', 'purpose' => 'Generate Gemini embeddings for indexed records.' ),
+            array( 'path' => '/evaluation/run', 'access' => 'admin', 'purpose' => 'Run retrieval evaluation suite.' ),
+            array( 'path' => '/session/export', 'access' => 'admin', 'purpose' => 'Export saved route sessions.' ),
+            array( 'path' => '/feedback/export', 'access' => 'admin', 'purpose' => 'Export feedback and triage records.' ),
+            array( 'path' => '/security/export', 'access' => 'admin', 'purpose' => 'Export security and access review.' ),
+            array( 'path' => '/observability/export', 'access' => 'admin', 'purpose' => 'Export operations status and events.' ),
+            array( 'path' => '/curation/export', 'access' => 'admin', 'purpose' => 'Export curation, route override, and source weighting rules.' ),
+            array( 'path' => '/contracts/export', 'access' => 'admin', 'purpose' => 'Export full integration contract catalog.' ),
+            array( 'path' => '/developer/export', 'access' => 'admin', 'purpose' => 'Export full developer handoff catalog.' ),
+        );
+        foreach ( $paths as $idx => $path ) {
+            $paths[ $idx ]['namespace'] = self::REST_NAMESPACE;
+            $paths[ $idx ]['method'] = ( false !== strpos( $path['path'], '/submit' ) || false !== strpos( $path['path'], '/prepare' ) || false !== strpos( $path['path'], '/run' ) || false !== strpos( $path['path'], '/rebuild' ) || false !== strpos( $path['path'], '/embed' ) ) ? 'POST' : 'GET';
+        }
+        return $paths;
+    }
+
+    private static function filter_endpoints( $access ) {
+        $out = array();
+        foreach ( self::endpoint_catalog() as $endpoint ) {
+            if ( $access === $endpoint['access'] ) { $out[] = $endpoint; }
+        }
+        return $out;
+    }
+
+    private static function shortcode_catalog() {
+        return array(
+            '[sc_research_librarian title="Sustainable Catalyst Research Librarian"]',
+            '[sc_research_librarian mode="landing"]',
+            '[sc_research_librarian mode="route-map"]',
+            '[sc_research_librarian mode="index-summary"]',
+            '[sc_research_librarian mode="retrieval-status"]',
+            '[sc_research_librarian mode="evaluation-summary"]',
+            '[sc_research_librarian mode="handoff-summary"]',
+            '[sc_research_librarian mode="session-summary"]',
+            '[sc_research_librarian mode="feedback-summary"]',
+            '[sc_research_librarian mode="governance-summary"]',
+            '[sc_research_librarian mode="maintenance-summary"]',
+            '[sc_research_librarian mode="enterprise-summary"]',
+            '[sc_research_librarian mode="security-summary"]',
+            '[sc_research_librarian mode="observability-summary"]',
+            '[sc_research_librarian mode="curation-summary"]',
+            '[sc_research_librarian mode="contracts-summary"]',
+            '[sc_research_librarian_contracts_summary title="Research Librarian Integration Contracts"]',
+            '[sc_research_librarian_api_catalog_summary title="Research Librarian API Catalog"]',
+        );
+    }
+
+    private static function sdk_examples() {
+        return array(
+            'javascript_fetch_grounded_route' => "fetch('/wp-json/sc-research-librarian-ai/v1/grounded-route', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ question: 'I need to compare options and export a brief.' }) })",
+            'javascript_prepare_handoff' => "fetch('/wp-json/sc-research-librarian-ai/v1/handoff/prepare', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ question: 'Graph this model', target: 'workbench' }) })",
+            'curl_contract_status' => "curl https://sustainablecatalyst.com/wp-json/sc-research-librarian-ai/v1/contracts/status",
+            'curl_developer_catalog' => "curl https://sustainablecatalyst.com/wp-json/sc-research-librarian-ai/v1/developer/catalog",
+        );
+    }
+
+    private static function integration_notes() {
+        return array(
+            'Use public endpoints for public pages and demos.',
+            'Use admin exports only for maintenance, deployment review, and repository documentation.',
+            'Handoff payloads are seeds for downstream tools; they do not certify outcomes.',
+            'Workbench handoffs should contain formulas, units, graph requests, or calculation context when available.',
+            'Decision Studio handoffs should preserve assumptions, sources, scenarios, and unresolved issues.',
+            'Do not expose Gemini/OpenAI keys, internal diagnostics, or unredacted logs in public pages.',
+        );
+    }
+}
+
+Sustainable_Catalyst_Research_Librarian_AI_V450_Contracts::init();
 Sustainable_Catalyst_Research_Librarian_AI_V440_Curation::init();
 Sustainable_Catalyst_Research_Librarian_AI_V430_Observability::init();
 Sustainable_Catalyst_Research_Librarian_AI_V420_Security::init();

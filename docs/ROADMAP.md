@@ -57,3 +57,8 @@ Gemini embedding diagnostics, request format fix, single-record embedding test, 
 - Knowledge-gap triage records
 - Admin feedback dashboard
 - Feedback export JSON
+
+
+## v4.5.0 completed
+
+- Integration contracts, API catalog, developer handoffs, and admin/public contract exports.
