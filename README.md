@@ -218,3 +218,23 @@ New endpoints:
 New shortcode:
 
 `[sc_research_librarian mode="handoff-summary" title="Research Librarian Handoff Layer"]`
+
+
+## v3.7.0 Feedback and Triage Layer
+
+Research Librarian v3.7.0 adds a human review loop for retrieval quality. Visitors can mark a route as helpful or report an issue. Administrators can review wrong-route reports, missing-source notes, unclear answers, feature gaps, and knowledge gaps from a structured feedback dashboard.
+
+New shortcode:
+
+```text
+[sc_research_librarian mode="feedback-summary" title="Research Librarian Feedback and Triage"]
+```
+
+New endpoints:
+
+```text
+POST /wp-json/sc-research-librarian-ai/v1/feedback/submit
+GET  /wp-json/sc-research-librarian-ai/v1/feedback/summary
+GET  /wp-json/sc-research-librarian-ai/v1/feedback/logs
+GET  /wp-json/sc-research-librarian-ai/v1/feedback/export
+```

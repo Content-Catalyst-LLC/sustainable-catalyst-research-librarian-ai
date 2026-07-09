@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Sustainable Catalyst Research Librarian
  * Plugin URI: https://sustainablecatalyst.com/platform/research-librarian/
- * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, and exports.
- * Version: 3.6.0
+ * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, source-correction triage, knowledge-gap review, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, and exports.
+ * Version: 3.7.0
  * Author: Content Catalyst LLC / Tariq Ahmad
  * Author URI: https://sustainablecatalyst.com/
  * License: MIT
@@ -21,7 +21,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
     const EVAL_OPTION    = 'sc_rl_ai_evaluation_status';
     const HANDOFF_OPTION = 'sc_rl_ai_handoff_status';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const VERSION        = '3.6.0';
+    const VERSION        = '3.7.0';
 
     private static $instance = null;
 
@@ -81,6 +81,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
             'evaluation_min_source_count' => 1,
             'handoff_log_limit'     => 100,
             'session_log_limit'     => 200,
+            'feedback_log_limit'    => 200,
             'system_instructions'     => self::default_system_instructions(),
         );
     }
@@ -165,6 +166,9 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         }
         if ( 'analytics' === $mode || 'analytics-summary' === $mode || 'route-analytics' === $mode ) {
             return $this->render_analytics_summary( $atts );
+        }
+        if ( 'feedback' === $mode || 'feedback-summary' === $mode || 'route-feedback' === $mode || 'triage-summary' === $mode ) {
+            return $this->render_feedback_summary( $atts );
         }
         return $this->render_assistant( $atts );
     }
@@ -342,6 +346,27 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         return ob_get_clean();
     }
 
+
+    private function render_feedback_summary( $atts ) {
+        $summary = $this->feedback_summary();
+        ob_start();
+        ?>
+        <section class="sc-rl-feedback-summary" data-sc-rl-product="feedback-summary">
+            <p class="sc-rl-routes__eyebrow">Research Librarian Feedback and Triage</p>
+            <h2><?php echo esc_html( $atts['title'] ); ?></h2>
+            <p>The feedback layer helps improve Research Librarian routing quality by collecting route-helpfulness signals, source-correction notes, missing-route reports, and knowledge-gap triage items without exposing API keys or turning the tool into general analytics surveillance.</p>
+            <div class="sc-rl-index-summary__grid">
+                <article><span><?php echo esc_html( absint( $summary['total_feedback'] ) ); ?></span><strong>Feedback records</strong></article>
+                <article><span><?php echo esc_html( absint( $summary['helpful_count'] ) ); ?></span><strong>Helpful marks</strong></article>
+                <article><span><?php echo esc_html( absint( $summary['issue_count'] ) ); ?></span><strong>Issues reported</strong></article>
+                <article><span><?php echo esc_html( absint( $summary['knowledge_gap_count'] ) ); ?></span><strong>Knowledge gaps</strong></article>
+            </div>
+            <p class="sc-rl-index-summary__meta">Last feedback: <?php echo esc_html( $summary['last_feedback_utc'] ? $summary['last_feedback_utc'] : 'none' ); ?>.</p>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+
     private function render_assistant( $atts ) {
         $root_id = wp_unique_id( 'sc-rl-ai-' );
         $endpoint = rest_url( self::REST_NAMESPACE . '/ask' );
@@ -349,12 +374,13 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         $note_endpoint = rest_url( self::REST_NAMESPACE . '/route-note' );
         $handoff_endpoint = rest_url( self::REST_NAMESPACE . '/handoff/prepare' );
         $session_endpoint = rest_url( self::REST_NAMESPACE . '/session/save' );
+        $feedback_endpoint = rest_url( self::REST_NAMESPACE . '/feedback/submit' );
         $nonce = wp_create_nonce( 'wp_rest' );
         $compact = ( 'compact' === sanitize_key( $atts['display'] ) || 'compact' === sanitize_key( $atts['mode'] ) );
 
         ob_start();
         ?>
-        <section id="<?php echo esc_attr( $root_id ); ?>" class="sc-rl-ai<?php echo $compact ? ' sc-rl-ai--compact' : ''; ?>" data-endpoint="<?php echo esc_url( $endpoint ); ?>" data-routes-endpoint="<?php echo esc_url( $routes_endpoint ); ?>" data-note-endpoint="<?php echo esc_url( $note_endpoint ); ?>" data-handoff-endpoint="<?php echo esc_url( $handoff_endpoint ); ?>" data-session-endpoint="<?php echo esc_url( $session_endpoint ); ?>" data-nonce="<?php echo esc_attr( $nonce ); ?>">
+        <section id="<?php echo esc_attr( $root_id ); ?>" class="sc-rl-ai<?php echo $compact ? ' sc-rl-ai--compact' : ''; ?>" data-endpoint="<?php echo esc_url( $endpoint ); ?>" data-routes-endpoint="<?php echo esc_url( $routes_endpoint ); ?>" data-note-endpoint="<?php echo esc_url( $note_endpoint ); ?>" data-handoff-endpoint="<?php echo esc_url( $handoff_endpoint ); ?>" data-session-endpoint="<?php echo esc_url( $session_endpoint ); ?>" data-feedback-endpoint="<?php echo esc_url( $feedback_endpoint ); ?>" data-nonce="<?php echo esc_attr( $nonce ); ?>">
             <div class="sc-rl-ai__shell">
                 <div class="sc-rl-ai__card sc-rl-ai__ask-card">
                     <p class="sc-rl-ai__eyebrow">Sustainable Catalyst Research Librarian</p>
@@ -371,6 +397,8 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                         <button type="button" class="sc-rl-ai__button sc-rl-ai__button--secondary" data-sc-rl-download>Download JSON</button>
                         <button type="button" class="sc-rl-ai__button sc-rl-ai__button--secondary" data-sc-rl-handoff-download>Download handoff</button>
                         <button type="button" class="sc-rl-ai__button sc-rl-ai__button--secondary" data-sc-rl-save-session>Save session</button>
+                        <button type="button" class="sc-rl-ai__button sc-rl-ai__button--secondary" data-sc-rl-feedback-helpful>This helped</button>
+                        <button type="button" class="sc-rl-ai__button sc-rl-ai__button--secondary" data-sc-rl-feedback-issue>Report issue</button>
                         <button type="button" class="sc-rl-ai__button sc-rl-ai__button--ghost" data-sc-rl-clear>Clear</button>
                     </div>
 
@@ -574,6 +602,31 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'permission_callback' => '__return_true',
         ) );
 
+
+        register_rest_route( self::REST_NAMESPACE, '/feedback/submit', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array( $this, 'handle_feedback_submit_request' ),
+            'permission_callback' => '__return_true',
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/feedback/summary', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'handle_feedback_summary_request' ),
+            'permission_callback' => '__return_true',
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/feedback/logs', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'handle_feedback_logs_request' ),
+            'permission_callback' => array( $this, 'can_manage_options' ),
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/feedback/export', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'handle_feedback_export_request' ),
+            'permission_callback' => array( $this, 'can_manage_options' ),
+        ) );
+
         register_rest_route( self::REST_NAMESPACE, '/health', array(
             'methods'             => WP_REST_Server::READABLE,
             'callback'            => array( $this, 'handle_health_request' ),
@@ -593,6 +646,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'retrieval' => $this->retrieval_status(),
             'evaluation' => $this->evaluation_summary(),
             'handoff' => $this->handoff_summary(),
+            'feedback' => $this->feedback_summary(),
         ), 200 );
     }
 
@@ -1331,6 +1385,149 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
 
     public function handle_analytics_summary_request() {
         return new WP_REST_Response( array( 'version' => self::VERSION, 'analytics' => $this->session_analytics_summary(), 'retrieval' => $this->retrieval_status(), 'index' => $this->knowledge_index_summary( $this->knowledge_index_records() ) ), 200 );
+    }
+
+
+    public function handle_feedback_submit_request( WP_REST_Request $request ) {
+        $nonce = $request->get_header( 'x_wp_nonce' );
+        if ( $nonce && ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
+            return new WP_Error( 'sc_rl_ai_bad_nonce', __( 'Security check failed. Refresh the page and try again.', 'sustainable-catalyst-research-librarian-ai' ), array( 'status' => 403 ) );
+        }
+        $params = $request->get_json_params();
+        if ( ! is_array( $params ) ) {
+            $params = array();
+        }
+        $feedback = $this->build_feedback_record( $params );
+        $this->append_feedback_log( $feedback );
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'saved' => true, 'feedback' => $feedback, 'summary' => $this->feedback_summary() ), 200 );
+    }
+
+    public function handle_feedback_summary_request() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'summary' => $this->feedback_summary() ), 200 );
+    }
+
+    public function handle_feedback_logs_request() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'summary' => $this->feedback_summary(), 'logs' => $this->feedback_logs() ), 200 );
+    }
+
+    public function handle_feedback_export_request() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'summary' => $this->feedback_summary(), 'logs' => $this->feedback_logs(), 'sessions' => $this->session_logs(), 'evaluation' => $this->evaluation_summary(), 'retrieval' => $this->retrieval_status() ), 200 );
+    }
+
+    private function build_feedback_record( $params ) {
+        $route_note = isset( $params['route_note'] ) && is_array( $params['route_note'] ) ? $this->sanitize_deep( $params['route_note'] ) : array();
+        $type = isset( $params['type'] ) ? sanitize_key( wp_unslash( $params['type'] ) ) : 'issue';
+        $allowed_types = array( 'helpful', 'issue', 'wrong_route', 'missing_source', 'knowledge_gap', 'unclear', 'feature_gap' );
+        if ( ! in_array( $type, $allowed_types, true ) ) {
+            $type = 'issue';
+        }
+        $note = isset( $params['note'] ) ? sanitize_textarea_field( wp_unslash( $params['note'] ) ) : '';
+        $question = '';
+        if ( ! empty( $route_note['question'] ) ) {
+            $question = sanitize_textarea_field( $route_note['question'] );
+        } elseif ( ! empty( $params['question'] ) ) {
+            $question = sanitize_textarea_field( wp_unslash( $params['question'] ) );
+        }
+        $route_id = 'unknown';
+        if ( ! empty( $route_note['recommended_route']['id'] ) ) {
+            $route_id = sanitize_key( $route_note['recommended_route']['id'] );
+        } elseif ( ! empty( $params['route_id'] ) ) {
+            $route_id = sanitize_key( wp_unslash( $params['route_id'] ) );
+        }
+        $handoff_target = 'none';
+        if ( ! empty( $route_note['handoff_payload']['target'] ) ) {
+            $handoff_target = sanitize_key( $route_note['handoff_payload']['target'] );
+        }
+        $confidence_level = ! empty( $route_note['confidence']['level'] ) ? sanitize_key( $route_note['confidence']['level'] ) : 'unknown';
+        $confidence_score = ! empty( $route_note['confidence']['score'] ) ? absint( $route_note['confidence']['score'] ) : 0;
+        $source_count = ! empty( $route_note['sources'] ) && is_array( $route_note['sources'] ) ? count( $route_note['sources'] ) : 0;
+        $triage = $this->feedback_triage_label( $type, $route_id, $confidence_level, $source_count );
+        return array(
+            'feedback_id' => 'sc-rl-feedback-' . gmdate( 'YmdHis' ) . '-' . substr( md5( wp_json_encode( array( $type, $question, $route_id, $note ) ) ), 0, 8 ),
+            'created_at_utc' => gmdate( 'c' ),
+            'type' => $type,
+            'triage_label' => $triage,
+            'status' => 'new',
+            'question' => wp_trim_words( $question, 80, '' ),
+            'route_id' => $route_id,
+            'handoff_target' => $handoff_target,
+            'confidence_level' => $confidence_level,
+            'confidence_score' => $confidence_score,
+            'source_count' => $source_count,
+            'note' => wp_trim_words( $note, 80, '' ),
+            'route_note_id' => ! empty( $route_note['note_id'] ) ? sanitize_text_field( $route_note['note_id'] ) : '',
+            'user_agent_hash' => ! empty( $_SERVER['HTTP_USER_AGENT'] ) ? substr( hash( 'sha256', sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) ), 0, 12 ) : '',
+        );
+    }
+
+    private function feedback_triage_label( $type, $route_id, $confidence_level, $source_count ) {
+        if ( 'helpful' === $type ) {
+            return 'positive-signal';
+        }
+        if ( 'knowledge_gap' === $type || 'missing_source' === $type || 'feature_gap' === $type ) {
+            return 'knowledge-gap-triage';
+        }
+        if ( 'wrong_route' === $type || 'unknown' === $route_id ) {
+            return 'route-correction-review';
+        }
+        if ( 'low' === $confidence_level || 0 === absint( $source_count ) ) {
+            return 'confidence-review';
+        }
+        return 'editorial-review';
+    }
+
+    private function append_feedback_log( $feedback ) {
+        $logs = $this->feedback_logs();
+        array_unshift( $logs, $feedback );
+        $limit = max( 10, min( 1000, absint( $this->get_options()['feedback_log_limit'] ?? 200 ) ) );
+        $logs = array_slice( $logs, 0, $limit );
+        update_option( 'sc_rl_ai_feedback_log', $logs, false );
+        update_option( 'sc_rl_ai_feedback_status', array(
+            'last_feedback_utc' => $feedback['created_at_utc'],
+            'last_type' => $feedback['type'],
+            'last_triage_label' => $feedback['triage_label'],
+            'last_route_id' => $feedback['route_id'],
+        ), false );
+    }
+
+    private function feedback_logs() {
+        $logs = get_option( 'sc_rl_ai_feedback_log', array() );
+        return is_array( $logs ) ? $logs : array();
+    }
+
+    private function clear_feedback_logs() {
+        update_option( 'sc_rl_ai_feedback_log', array(), false );
+        update_option( 'sc_rl_ai_feedback_status', array(), false );
+    }
+
+    private function feedback_summary() {
+        $logs = $this->feedback_logs();
+        $types = array();
+        $triage = array();
+        $routes = array();
+        $last = get_option( 'sc_rl_ai_feedback_status', array() );
+        foreach ( $logs as $log ) {
+            $type = $log['type'] ?? 'issue';
+            $label = $log['triage_label'] ?? 'editorial-review';
+            $route = $log['route_id'] ?? 'unknown';
+            $types[ $type ] = ( $types[ $type ] ?? 0 ) + 1;
+            $triage[ $label ] = ( $triage[ $label ] ?? 0 ) + 1;
+            $routes[ $route ] = ( $routes[ $route ] ?? 0 ) + 1;
+        }
+        arsort( $routes );
+        $top_route_id = $routes ? array_key_first( $routes ) : 'none';
+        return array(
+            'total_feedback' => count( $logs ),
+            'helpful_count' => absint( $types['helpful'] ?? 0 ),
+            'issue_count' => count( $logs ) - absint( $types['helpful'] ?? 0 ),
+            'knowledge_gap_count' => absint( $types['knowledge_gap'] ?? 0 ) + absint( $types['missing_source'] ?? 0 ) + absint( $types['feature_gap'] ?? 0 ),
+            'wrong_route_count' => absint( $types['wrong_route'] ?? 0 ),
+            'types' => $types,
+            'triage' => $triage,
+            'top_route' => array( 'id' => $top_route_id, 'count' => absint( $routes[ $top_route_id ] ?? 0 ) ),
+            'last_feedback_utc' => ! empty( $last['last_feedback_utc'] ) ? $last['last_feedback_utc'] : '',
+            'recent_feedback' => array_slice( $logs, 0, 10 ),
+        );
     }
 
     private function sanitize_deep( $value ) {
@@ -2501,6 +2698,10 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             $this->clear_session_logs();
             return 'sessions-cleared';
         }
+        if ( 'clear_feedback' === $action ) {
+            $this->clear_feedback_logs();
+            return 'feedback-cleared';
+        }
         return '';
     }
 
@@ -2774,6 +2975,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'evaluation_log_limit'    => max( 10, min( 500, absint( isset( $input['evaluation_log_limit'] ) ? $input['evaluation_log_limit'] : self::defaults()['evaluation_log_limit'] ) ) ),
             'handoff_log_limit'       => max( 10, min( 500, absint( isset( $input['handoff_log_limit'] ) ? $input['handoff_log_limit'] : self::defaults()['handoff_log_limit'] ) ) ),
             'session_log_limit'       => max( 10, min( 1000, absint( isset( $input['session_log_limit'] ) ? $input['session_log_limit'] : self::defaults()['session_log_limit'] ) ) ),
+            'feedback_log_limit'      => max( 10, min( 1000, absint( isset( $input['feedback_log_limit'] ) ? $input['feedback_log_limit'] : self::defaults()['feedback_log_limit'] ) ) ),
             'system_instructions'     => isset( $input['system_instructions'] ) ? sanitize_textarea_field( wp_unslash( $input['system_instructions'] ) ) : self::default_system_instructions(),
         );
     }
@@ -2815,7 +3017,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
 
     public function settings_section_intro() {
         echo '<p>' . esc_html__( 'The Research Librarian is site-scoped routing infrastructure. It can run entirely in deterministic fallback mode, use Gemini/OpenAI server-side for richer route explanations, and use optional Gemini embeddings for semantic retrieval over the Sustainable Catalyst knowledge index. API keys are not exposed to JavaScript.', 'sustainable-catalyst-research-librarian-ai' ) . '</p>';
-        echo '<p><code>[sustainable_catalyst_research_librarian_ai]</code> <code>[sc_research_librarian mode="landing"]</code> <code>[sc_research_librarian mode="route-map"]</code> <code>[sc_research_librarian mode="index-summary"]</code> <code>[sc_research_librarian mode="retrieval-status"]</code> <code>[sc_research_librarian mode="evaluation-summary"]</code> <code>[sc_research_librarian mode="handoff-summary"]</code> <code>[sc_research_librarian mode="session-summary"]</code> <code>[sc_research_librarian mode="analytics-summary"]</code></p>';
+        echo '<p><code>[sustainable_catalyst_research_librarian_ai]</code> <code>[sc_research_librarian mode="landing"]</code> <code>[sc_research_librarian mode="route-map"]</code> <code>[sc_research_librarian mode="index-summary"]</code> <code>[sc_research_librarian mode="retrieval-status"]</code> <code>[sc_research_librarian mode="evaluation-summary"]</code> <code>[sc_research_librarian mode="handoff-summary"]</code> <code>[sc_research_librarian mode="session-summary"]</code> <code>[sc_research_librarian mode="analytics-summary"]</code> <code>[sc_research_librarian mode="feedback-summary"]</code></p>';
     }
 
     public function render_field( $args ) {
@@ -2914,6 +3116,8 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         $evaluation_results = isset( $evaluation_status['results'] ) && is_array( $evaluation_status['results'] ) ? $evaluation_status['results'] : array();
         $session_summary = $this->session_analytics_summary();
         $session_logs = $this->session_logs();
+        $feedback_summary = $this->feedback_summary();
+        $feedback_logs = $this->feedback_logs();
         $notice_label = '';
         if ( $notice ) {
             if ( 'rebuilt' === $notice ) { $notice_label = 'Knowledge index rebuilt.'; }
@@ -2922,6 +3126,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             elseif ( 'evaluation-run' === $notice ) { $notice_label = 'Retrieval evaluation suite completed.'; }
             elseif ( 'evaluation-cleared' === $notice ) { $notice_label = 'Evaluation logs cleared.'; }
             elseif ( 'sessions-cleared' === $notice ) { $notice_label = 'Saved route sessions cleared.'; }
+            elseif ( 'feedback-cleared' === $notice ) { $notice_label = 'Feedback and triage logs cleared.'; }
             else { $notice_label = 'Knowledge index reset to seed records.'; }
         }
         ?>
@@ -2962,6 +3167,8 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                 <a class="button" href="<?php echo esc_url( rest_url( self::REST_NAMESPACE . '/evaluation/export' ) ); ?>"><?php esc_html_e( 'Export Evaluation JSON', 'sustainable-catalyst-research-librarian-ai' ); ?></a>
                 <a class="button" href="<?php echo esc_url( rest_url( self::REST_NAMESPACE . '/session/export' ) ); ?>"><?php esc_html_e( 'Export Session Analytics JSON', 'sustainable-catalyst-research-librarian-ai' ); ?></a>
                 <button class="button" type="submit" name="sc_rl_index_action" value="clear_sessions"><?php esc_html_e( 'Clear Saved Sessions', 'sustainable-catalyst-research-librarian-ai' ); ?></button>
+                <a class="button" href="<?php echo esc_url( rest_url( self::REST_NAMESPACE . '/feedback/export' ) ); ?>"><?php esc_html_e( 'Export Feedback JSON', 'sustainable-catalyst-research-librarian-ai' ); ?></a>
+                <button class="button" type="submit" name="sc_rl_index_action" value="clear_feedback"><?php esc_html_e( 'Clear Feedback Logs', 'sustainable-catalyst-research-librarian-ai' ); ?></button>
             </form>
 
             <div class="postbox" style="padding:14px;max-width:1100px;margin:12px 0 22px;">
@@ -3007,6 +3214,29 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                 <?php endif; ?>
             </div>
 
+
+
+            <div class="postbox" style="padding:14px;max-width:1100px;margin:12px 0 22px;">
+                <h2 style="margin-top:0;"><?php esc_html_e( 'Feedback, Correction Queue, and Knowledge Gap Triage', 'sustainable-catalyst-research-librarian-ai' ); ?></h2>
+                <p><?php esc_html_e( 'Feedback records collect helpful-route signals, wrong-route reports, missing-source notes, knowledge gaps, and feature gaps. Use this queue to tune the route map, improve source metadata, add missing pages, or turn repeated gaps into Feature Suggestions.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
+                <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:12px 0;">
+                    <div class="postbox" style="padding:10px;"><strong style="font-size:20px;display:block;"><?php echo esc_html( absint( $feedback_summary['total_feedback'] ) ); ?></strong><span><?php esc_html_e( 'Feedback records', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                    <div class="postbox" style="padding:10px;"><strong style="font-size:20px;display:block;"><?php echo esc_html( absint( $feedback_summary['helpful_count'] ) ); ?></strong><span><?php esc_html_e( 'Helpful marks', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                    <div class="postbox" style="padding:10px;"><strong style="font-size:20px;display:block;"><?php echo esc_html( absint( $feedback_summary['issue_count'] ) ); ?></strong><span><?php esc_html_e( 'Issues', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                    <div class="postbox" style="padding:10px;"><strong style="font-size:20px;display:block;"><?php echo esc_html( absint( $feedback_summary['knowledge_gap_count'] ) ); ?></strong><span><?php esc_html_e( 'Knowledge gaps', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                    <div class="postbox" style="padding:10px;"><strong style="font-size:20px;display:block;"><?php echo esc_html( $feedback_summary['top_route']['id'] ); ?></strong><span><?php esc_html_e( 'Top route', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                </div>
+                <p><strong><?php esc_html_e( 'Last feedback:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <?php echo esc_html( $feedback_summary['last_feedback_utc'] ? $feedback_summary['last_feedback_utc'] : 'none' ); ?></p>
+                <?php if ( ! empty( $feedback_logs ) ) : ?>
+                    <table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Received', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Type', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Triage', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Route', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Confidence', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Question / note', 'sustainable-catalyst-research-librarian-ai' ); ?></th></tr></thead><tbody>
+                    <?php foreach ( array_slice( $feedback_logs, 0, 12 ) as $feedback ) : ?>
+                        <tr><td><?php echo esc_html( $feedback['created_at_utc'] ?? '' ); ?></td><td><code><?php echo esc_html( $feedback['type'] ?? '' ); ?></code></td><td><code><?php echo esc_html( $feedback['triage_label'] ?? '' ); ?></code></td><td><code><?php echo esc_html( $feedback['route_id'] ?? '' ); ?></code></td><td><?php echo esc_html( ( $feedback['confidence_level'] ?? 'unknown' ) . ' / ' . ( $feedback['confidence_score'] ?? 0 ) ); ?></td><td><?php echo esc_html( wp_trim_words( trim( ( $feedback['question'] ?? '' ) . ' ' . ( $feedback['note'] ?? '' ) ), 22 ) ); ?></td></tr>
+                    <?php endforeach; ?>
+                    </tbody></table>
+                <?php else : ?>
+                    <p><?php esc_html_e( 'No feedback has been saved yet. Use This helped or Report issue from the assistant UI after a route answer is generated.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
+                <?php endif; ?>
+            </div>
 
             <div class="postbox" style="padding:14px;max-width:1100px;margin:12px 0 22px;">
                 <h2 style="margin-top:0;"><?php esc_html_e( 'Saved Route Sessions and Admin Analytics', 'sustainable-catalyst-research-librarian-ai' ); ?></h2>

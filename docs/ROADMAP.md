@@ -49,3 +49,11 @@ Gemini embedding diagnostics, request format fix, single-record embedding test, 
 - Route analytics summary.
 - Session export and clear-session controls.
 - Session/analytics shortcode modes.
+
+
+## Completed in v3.7.0
+
+- Feedback and route-correction queue
+- Knowledge-gap triage records
+- Admin feedback dashboard
+- Feedback export JSON

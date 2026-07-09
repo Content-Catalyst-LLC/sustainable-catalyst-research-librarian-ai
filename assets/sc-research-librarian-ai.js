@@ -148,6 +148,7 @@
     var endpoint = root.getAttribute('data-endpoint');
     var routesEndpoint = root.getAttribute('data-routes-endpoint');
     var sessionEndpoint = root.getAttribute('data-session-endpoint');
+    var feedbackEndpoint = root.getAttribute('data-feedback-endpoint');
     var nonce = root.getAttribute('data-nonce');
     var textarea = root.querySelector('.sc-rl-ai__textarea');
     var submit = root.querySelector('[data-sc-rl-submit]');
@@ -156,6 +157,8 @@
     var download = root.querySelector('[data-sc-rl-download]');
     var handoffDownload = root.querySelector('[data-sc-rl-handoff-download]');
     var saveSession = root.querySelector('[data-sc-rl-save-session]');
+    var feedbackHelpful = root.querySelector('[data-sc-rl-feedback-helpful]');
+    var feedbackIssue = root.querySelector('[data-sc-rl-feedback-issue]');
     var answer = root.querySelector('[data-sc-rl-answer]');
     var status = root.querySelector('[data-sc-rl-status]');
     var honeypot = root.querySelector('.sc-rl-ai__hp');
@@ -254,6 +257,35 @@
       });
     }
 
+
+    function submitFeedback(type, note) {
+      if (!latest || !latest.route_note) {
+        setStatus('Ask first', 'error');
+        return;
+      }
+      if (!feedbackEndpoint) {
+        setStatus('Feedback endpoint unavailable', 'error');
+        return;
+      }
+      setStatus('Saving feedback…', 'loading');
+      fetch(feedbackEndpoint, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
+        body: JSON.stringify({ type: type, note: note || '', route_note: latest.route_note })
+      })
+        .then(function (response) {
+          return response.json().then(function (data) {
+            if (!response.ok) {
+              throw new Error(data && data.message ? data.message : 'Feedback could not be saved.');
+            }
+            return data;
+          });
+        })
+        .then(function () { setStatus(type === 'helpful' ? 'Feedback saved' : 'Issue recorded', 'ready'); })
+        .catch(function (error) { setStatus(error.message || 'Feedback failed', 'error'); });
+    }
+
     if (saveSession) {
       saveSession.addEventListener('click', function () {
         if (!latest || !latest.route_note) {
@@ -283,6 +315,28 @@
           .then(function () { setStatus('Session saved', 'ready'); })
           .catch(function (error) { setStatus(error.message || 'Save failed', 'error'); })
           .finally(function () { saveSession.disabled = false; });
+      });
+    }
+
+
+    if (feedbackHelpful) {
+      feedbackHelpful.addEventListener('click', function () {
+        submitFeedback('helpful', 'Visitor marked this route as helpful.');
+      });
+    }
+
+    if (feedbackIssue) {
+      feedbackIssue.addEventListener('click', function () {
+        var note = window.prompt('What should be reviewed? Examples: wrong route, missing source, unclear answer, feature gap, knowledge gap.');
+        if (note === null) return;
+        var lowered = (note || '').toLowerCase();
+        var type = 'issue';
+        if (lowered.indexOf('wrong route') !== -1) type = 'wrong_route';
+        else if (lowered.indexOf('missing source') !== -1 || lowered.indexOf('source') !== -1) type = 'missing_source';
+        else if (lowered.indexOf('knowledge gap') !== -1 || lowered.indexOf('gap') !== -1) type = 'knowledge_gap';
+        else if (lowered.indexOf('feature') !== -1) type = 'feature_gap';
+        else if (lowered.indexOf('unclear') !== -1) type = 'unclear';
+        submitFeedback(type, note || 'Visitor reported a route issue.');
       });
     }
 

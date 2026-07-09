@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.7.0 — Feedback, Correction Queue, and Knowledge Gap Triage
+
+- Added public feedback actions for helpful routes and route issues.
+- Added feedback records, triage labels, and knowledge-gap review logging.
+- Added admin feedback dashboard and exportable feedback JSON.
+- Added feedback summary shortcode and REST endpoints.
+- Added feedback log limit setting and clear-feedback admin action.
+
+
 ## v3.6.0 — Saved Route Sessions and Admin Analytics
 
 - Added saved route-session records for useful Research Librarian outputs.
@@ -37,6 +46,15 @@
 - Preserved v3.3.3 Gemini key-persistence and embedding queue behavior.
 
 # Changelog
+
+## 3.7.0 — Feedback, Correction Queue, and Knowledge Gap Triage
+
+- Added public feedback actions for helpful routes and route issues.
+- Added feedback records, triage labels, and knowledge-gap review logging.
+- Added admin feedback dashboard and exportable feedback JSON.
+- Added feedback summary shortcode and REST endpoints.
+- Added feedback log limit setting and clear-feedback admin action.
+
 
 ## v3.3.3 — Gemini Key Persistence and Batch Credential Fix
 

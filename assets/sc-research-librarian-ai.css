@@ -317,3 +317,17 @@
   background: #fffdf8;
   box-shadow: 0 18px 45px rgba(0,0,0,.06);
 }
+
+
+/* v3.7.0 feedback / correction queue */
+.sc-rl-feedback-summary {
+  border: 1px solid rgba(0,0,0,.12);
+  border-radius: 18px;
+  padding: 1.25rem;
+  background: #fffdf8;
+}
+
+.sc-rl-ai__actions [data-sc-rl-feedback-helpful],
+.sc-rl-ai__actions [data-sc-rl-feedback-issue] {
+  white-space: nowrap;
+}
