@@ -72,6 +72,25 @@
     Object.keys(note.related || {}).forEach(function (label) {
       lines.push('- [' + label + '](' + note.related[label] + ')');
     });
+    if (note.confidence) {
+      lines.push('');
+      lines.push('## Confidence');
+      lines.push((note.confidence.level || '') + ' — ' + (note.confidence.explanation || ''));
+    }
+    if ((note.sources || []).length) {
+      lines.push('');
+      lines.push('## Grounding Sources');
+      (note.sources || []).forEach(function (source) {
+        lines.push('- [' + source.title + '](' + source.url + ') — ' + source.summary);
+      });
+    }
+    if ((note.handoffs || []).length) {
+      lines.push('');
+      lines.push('## Handoffs');
+      (note.handoffs || []).forEach(function (handoff) {
+        lines.push('- ' + handoff.label + ': ' + handoff.reason + ' (' + handoff.url + ')');
+      });
+    }
     lines.push('');
     lines.push('## Next Step');
     lines.push(note.next_step || '');
@@ -93,13 +112,30 @@
     URL.revokeObjectURL(url);
   }
 
-  function renderRouteSummary(container, route) {
+  function renderRouteSummary(container, route, grounding) {
     if (!container || !route) return;
     container.hidden = false;
-    container.innerHTML = '<span>' + escapeHtml(route.category || 'Route') + '</span>' +
+    var confidence = grounding && grounding.confidence ? grounding.confidence : null;
+    var sources = grounding && grounding.sources ? grounding.sources.slice(0, 3) : [];
+    var handoffs = grounding && grounding.handoffs ? grounding.handoffs.slice(0, 2) : [];
+    var html = '<span>' + escapeHtml(route.category || 'Route') + '</span>' +
       '<strong>' + escapeHtml(route.title || '') + '</strong>' +
-      '<p>' + escapeHtml(route.description || '') + '</p>' +
-      '<a href="' + escapeHtml(route.url || '#') + '">Open route →</a>';
+      '<p>' + escapeHtml(route.description || '') + '</p>';
+    if (confidence) {
+      html += '<div class="sc-rl-ai__confidence"><b>' + escapeHtml((confidence.level || 'unknown').toUpperCase()) + '</b><small>' + escapeHtml(confidence.explanation || '') + '</small></div>';
+    }
+    if (sources.length) {
+      html += '<div class="sc-rl-ai__source-list"><b>Grounding sources</b>' + sources.map(function (source) {
+        return '<a href="' + escapeHtml(source.url || '#') + '">' + escapeHtml(source.title || '') + '</a>';
+      }).join('') + '</div>';
+    }
+    if (handoffs.length) {
+      html += '<div class="sc-rl-ai__source-list"><b>Suggested handoffs</b>' + handoffs.map(function (handoff) {
+        return '<a href="' + escapeHtml(handoff.url || '#') + '">' + escapeHtml(handoff.label || '') + '</a>';
+      }).join('') + '</div>';
+    }
+    html += '<a href="' + escapeHtml(route.url || '#') + '">Open route →</a>';
+    container.innerHTML = html;
   }
 
   function init(root) {
@@ -154,7 +190,7 @@
           latest = data;
           setStatus(data.source || 'Ready', 'ready');
           answer.innerHTML = renderMarkdownLite(data.answer || 'No answer was returned. Try the Platform or Feature Suggestions route.');
-          renderRouteSummary(routeSummary, data.route);
+          renderRouteSummary(routeSummary, data.route, data.grounding);
         })
         .catch(function (error) {
           latest = null;

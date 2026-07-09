@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Sustainable Catalyst Research Librarian
  * Plugin URI: https://sustainablecatalyst.com/platform/research-librarian/
- * Description: Site-scoped routing and research navigation layer for Sustainable Catalyst with module-aware routing, Decision Studio and Workbench handoffs, AI-assisted answers, deterministic fallback, and exportable route notes.
- * Version: 3.0.0
+ * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, grounded route notes, confidence scoring, Decision Studio and Workbench handoffs, AI-assisted answers, deterministic fallback, and exports.
+ * Version: 3.1.0
  * Author: Content Catalyst LLC / Tariq Ahmad
  * Author URI: https://sustainablecatalyst.com/
  * License: GPL-2.0-or-later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Sustainable_Catalyst_Research_Librarian_AI {
     const OPTION_NAME    = 'sc_rl_ai_options';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const VERSION        = '3.0.0';
+    const VERSION        = '3.1.0';
 
     private static $instance = null;
 
@@ -53,12 +53,24 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
             'max_output_tokens'       => 900,
             'temperature'             => '0.2',
             'rate_limit'              => 20,
+            'source_result_limit'     => 5,
             'system_instructions'     => self::default_system_instructions(),
         );
     }
 
     public static function default_system_instructions() {
-        return "You are the Sustainable Catalyst Research Librarian, a site-scoped routing and research navigation assistant for Sustainable Catalyst, an open knowledge lab by Tariq Ahmad / Content Catalyst.\n\nYour task is not to be a general chatbot. Help visitors choose the right Sustainable Catalyst route: Knowledge Library, Workbench, Decision Studio, Platform Demos, Catalyst Canvas, Catalyst Data, Analytics R, Global Impact Catalyst, Narrative Risk, Catalyst Finance, Catalyst Grit, methodology, GitHub repositories, consulting, support, or feature suggestions.\n\nAnswer shape:\n1. What you seem to be trying to do\n2. Best starting point\n3. Why this route fits\n4. How it connects to the platform\n5. Relevant links\n6. Suggested next step\n\nBoundaries: educational routing only. Do not provide legal, financial, investment, medical, mental health, tax, compliance, assurance, engineering, architecture, ESG/SDG certification, or regulated-information advice. Do not request confidential, proprietary, sensitive personal, legal, medical, tax, financial, or safety-critical information. If a capability does not exist, say so and route to /platform/feature-suggestions/.";
+        return "You are the Sustainable Catalyst Research Librarian, a site-scoped routing and research navigation assistant for Sustainable Catalyst, an open knowledge lab by Tariq Ahmad / Content Catalyst.\n\nYour task is not to be a general chatbot. Help visitors choose the right Sustainable Catalyst route: Knowledge Library, Workbench, Decision Studio, Platform Demos, Catalyst Canvas, Catalyst Data, Analytics R, Global Impact Catalyst, Narrative Risk, Catalyst Finance, Catalyst Grit, methodology, GitHub repositories, consulting, support, or feature suggestions.\n\nAnswer shape:
+1. What the visitor appears to need
+2. Recommended route
+3. Why this route fits
+4. Source-aware support from Sustainable Catalyst pages/modules
+5. Suggested handoff to Workbench, Decision Studio, or a module when relevant
+6. Confidence and unresolved ambiguity
+7. Suggested next step
+
+Use only the Sustainable Catalyst routes and source context provided by the plugin. Do not invent pages, capabilities, citations, or repositories. When the match is weak, say that the route is low-confidence and suggest Research Librarian clarification or Feature Suggestions.
+
+Boundaries: educational routing only. Do not provide legal, financial, investment, medical, mental health, tax, compliance, assurance, engineering, architecture, ESG/SDG certification, or regulated-information advice. Do not request confidential, proprietary, sensitive personal, legal, medical, tax, financial, or safety-critical information. If a capability does not exist, say so and route to /platform/feature-suggestions/.";
     }
 
     private function get_options() {
@@ -118,11 +130,11 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
         <section class="sc-rl-product" data-sc-rl-product="landing">
             <p class="sc-rl-product__eyebrow">Sustainable Catalyst Platform</p>
             <h2><?php echo esc_html( $atts['title'] ); ?></h2>
-            <p class="sc-rl-product__lede">The Research Librarian is the routing layer for Sustainable Catalyst. It helps visitors move from a question to the right library, module, demo, repository, Workbench tool, or Decision Studio workflow.</p>
+            <p class="sc-rl-product__lede">The Research Librarian is the source-aware routing layer for Sustainable Catalyst. It helps visitors move from a question to the right library, module, demo, repository, Workbench tool, or Decision Studio workflow while showing route evidence, confidence, and next handoff.</p>
             <div class="sc-rl-product__grid">
                 <article><span>Route</span><strong>Find the right starting point</strong><p>Choose between Knowledge Library, Platform, Demos, Workbench, Decision Studio, modules, methodology, support, and feature suggestions.</p></article>
                 <article><span>Connect</span><strong>Explain platform fit</strong><p>Show how Canvas, Data, Analytics R, Global Impact, Narrative Risk, Finance, Grit, Workbench, and Decision Studio connect.</p></article>
-                <article><span>Document</span><strong>Export route notes</strong><p>Turn a question into a structured route note with recommended links, next steps, and boundaries.</p></article>
+                <article><span>Ground</span><strong>Show sources and confidence</strong><p>Turn a question into a structured route note with source records, confidence, reason codes, handoffs, and boundaries.</p></article>
             </div>
             <div class="sc-rl-product__actions">
                 <a href="/platform/research-librarian/#assistant">Ask the Research Librarian →</a>
@@ -228,6 +240,18 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
             'permission_callback' => '__return_true',
         ) );
 
+        register_rest_route( self::REST_NAMESPACE, '/sources', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'handle_sources_request' ),
+            'permission_callback' => '__return_true',
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/grounded-route', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array( $this, 'handle_grounded_route_request' ),
+            'permission_callback' => '__return_true',
+        ) );
+
         register_rest_route( self::REST_NAMESPACE, '/route-note', array(
             'methods'             => WP_REST_Server::CREATABLE,
             'callback'            => array( $this, 'handle_route_note_request' ),
@@ -248,11 +272,28 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
             'version'  => self::VERSION,
             'provider' => $this->configured_provider( $options ),
             'routes'   => count( $this->routes() ),
+            'sources'  => count( $this->source_records() ),
         ), 200 );
     }
 
     public function handle_routes_request() {
         return new WP_REST_Response( array( 'routes' => $this->routes(), 'version' => self::VERSION ), 200 );
+    }
+
+    public function handle_sources_request() {
+        return new WP_REST_Response( array( 'sources' => $this->source_records(), 'version' => self::VERSION ), 200 );
+    }
+
+    public function handle_grounded_route_request( WP_REST_Request $request ) {
+        $nonce = $request->get_header( 'x_wp_nonce' );
+        if ( ! $nonce || ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
+            return new WP_Error( 'sc_rl_ai_bad_nonce', __( 'Security check failed. Refresh the page and try again.', 'sustainable-catalyst-research-librarian-ai' ), array( 'status' => 403 ) );
+        }
+        $params = $request->get_json_params();
+        $question = isset( $params['question'] ) ? sanitize_textarea_field( wp_unslash( $params['question'] ) ) : '';
+        $route = $this->match_route( strtolower( $question ) );
+        $grounding = $this->grounding_context( $question, $route );
+        return new WP_REST_Response( array( 'route' => $route, 'grounding' => $grounding, 'route_note' => $this->build_route_note( $question, $route, 'grounded-route', $grounding ) ), 200 );
     }
 
     public function handle_route_note_request( WP_REST_Request $request ) {
@@ -264,7 +305,8 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
         $params = $request->get_json_params();
         $question = isset( $params['question'] ) ? sanitize_textarea_field( wp_unslash( $params['question'] ) ) : '';
         $route = $this->match_route( strtolower( $question ) );
-        $note = $this->build_route_note( $question, $route, 'manual' );
+        $grounding = $this->grounding_context( $question, $route );
+        $note = $this->build_route_note( $question, $route, 'manual', $grounding );
         return new WP_REST_Response( $note, 200 );
     }
 
@@ -278,7 +320,8 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
         $honeypot = isset( $params['hp'] ) ? sanitize_text_field( wp_unslash( $params['hp'] ) ) : '';
         if ( '' !== $honeypot ) {
             $route = $this->match_route( 'general' );
-            return new WP_REST_Response( array( 'answer' => $this->fallback_response( 'general' ), 'source' => 'fallback', 'route' => $route, 'route_note' => $this->build_route_note( 'general', $route, 'fallback' ) ), 200 );
+            $grounding = $this->grounding_context( 'general', $route );
+            return new WP_REST_Response( array( 'answer' => $this->fallback_response( 'general', $grounding ), 'source' => 'fallback', 'route' => $route, 'grounding' => $grounding, 'route_note' => $this->build_route_note( 'general', $route, 'fallback', $grounding ) ), 200 );
         }
 
         $question = isset( $params['question'] ) ? trim( sanitize_textarea_field( wp_unslash( $params['question'] ) ) ) : '';
@@ -294,22 +337,24 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
 
         $boundary = $this->boundary_response_if_needed( $question );
         $route = $this->match_route( strtolower( $question ) );
+        $grounding = $this->grounding_context( $question, $route );
         if ( $boundary ) {
-            return new WP_REST_Response( array( 'answer' => $boundary, 'source' => 'boundary', 'route' => $route, 'route_note' => $this->build_route_note( $question, $route, 'boundary' ) ), 200 );
+            return new WP_REST_Response( array( 'answer' => $boundary, 'source' => 'boundary', 'route' => $route, 'grounding' => $grounding, 'route_note' => $this->build_route_note( $question, $route, 'boundary', $grounding ) ), 200 );
         }
 
         $provider = $this->configured_provider( $options );
         if ( 'disabled' === $provider ) {
-            return new WP_REST_Response( array( 'answer' => $this->fallback_response( $question ), 'source' => 'fallback', 'route' => $route, 'route_note' => $this->build_route_note( $question, $route, 'fallback' ) ), 200 );
+            return new WP_REST_Response( array( 'answer' => $this->fallback_response( $question, $grounding ), 'source' => 'fallback', 'route' => $route, 'grounding' => $grounding, 'route_note' => $this->build_route_note( $question, $route, 'fallback', $grounding ) ), 200 );
         }
 
-        $ai_answer = $this->call_ai( $question, $options, $provider );
+        $ai_answer = $this->call_ai( $question, $options, $provider, $grounding );
         if ( is_wp_error( $ai_answer ) ) {
             $fallback = "The AI route is temporarily unavailable, so I am using the deterministic route system.\n\n" . $this->fallback_response( $question );
             return new WP_REST_Response( array( 'answer' => $fallback, 'source' => 'fallback', 'error' => $ai_answer->get_error_message(), 'route' => $route, 'route_note' => $this->build_route_note( $question, $route, 'fallback' ) ), 200 );
         }
 
-        return new WP_REST_Response( array( 'answer' => $ai_answer, 'source' => $provider, 'route' => $route, 'route_note' => $this->build_route_note( $question, $route, $provider ) ), 200 );
+        $ai_answer = $this->append_grounding_footer( $ai_answer, $grounding );
+        return new WP_REST_Response( array( 'answer' => $ai_answer, 'source' => $provider, 'route' => $route, 'grounding' => $grounding, 'route_note' => $this->build_route_note( $question, $route, $provider, $grounding ) ), 200 );
     }
 
     private function configured_provider( $options ) {
@@ -384,17 +429,17 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
         return "I can help with educational routing, but I cannot provide {$label}.\n\n**Best starting point**\n[Platform Methodology](/platform/methodology/) for how Sustainable Catalyst handles evidence, assumptions, responsible interpretation, and boundaries.\n\n**Related routes**\n- [Knowledge Libraries](/knowledge-libraries/) for educational article maps and research context.\n- [Research Librarian](/platform/research-librarian/) for site navigation.\n- [Feature Suggestions](/platform/feature-suggestions/) if you need a capability that does not exist yet.\n\nPlease avoid sharing confidential, regulated, personal, legal, medical, tax, financial, or safety-critical information here.";
     }
 
-    private function call_ai( $question, $options, $provider ) {
+    private function call_ai( $question, $options, $provider, $grounding = array() ) {
         if ( 'openai' === $provider ) {
-            return $this->call_openai( $question, $options );
+            return $this->call_openai( $question, $options, $grounding );
         }
         if ( 'gemini' === $provider ) {
-            return $this->call_gemini( $question, $options );
+            return $this->call_gemini( $question, $options, $grounding );
         }
         return new WP_Error( 'sc_rl_ai_no_provider', __( 'No AI provider is configured.', 'sustainable-catalyst-research-librarian-ai' ) );
     }
 
-    private function build_instructions( $options ) {
+    private function build_instructions( $options, $grounding = array() ) {
         $admin = isset( $options['system_instructions'] ) ? trim( wp_strip_all_tags( $options['system_instructions'] ) ) : '';
         $routes = $this->routes();
         $route_lines = array();
@@ -404,13 +449,13 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
         return ( $admin ? $admin : self::default_system_instructions() ) . "\n\nCurrent route map:\n" . implode( "\n", $route_lines );
     }
 
-    private function call_openai( $question, $options ) {
+    private function call_openai( $question, $options, $grounding = array() ) {
         $api_key = trim( $options['openai_api_key'] );
         $model = sanitize_text_field( $options['openai_model'] );
         $vector_store_id = sanitize_text_field( $options['openai_vector_store_id'] );
         $max_results = max( 1, min( 20, absint( $options['max_file_search_results'] ) ) );
         $max_output_tokens = max( 150, min( 4000, absint( $options['max_output_tokens'] ) ) );
-        $instructions = $this->build_instructions( $options );
+        $instructions = $this->build_instructions( $options, $grounding );
         $input = "Visitor question:\n" . $question . "\n\nAnswer as the Sustainable Catalyst Research Librarian. Use Markdown links. Do not request confidential information. If the requested route does not exist, route to /platform/feature-suggestions/.";
 
         $body = array(
@@ -465,12 +510,12 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
         return implode( "\n\n", $parts );
     }
 
-    private function call_gemini( $question, $options ) {
+    private function call_gemini( $question, $options, $grounding = array() ) {
         $api_key = trim( $options['gemini_api_key'] );
         $model = sanitize_text_field( $options['gemini_model'] );
         $max_output_tokens = max( 150, min( 4000, absint( $options['max_output_tokens'] ) ) );
         $temperature = is_numeric( $options['temperature'] ) ? (float) $options['temperature'] : 0.2;
-        $instructions = $this->build_instructions( $options );
+        $instructions = $this->build_instructions( $options, $grounding );
         $prompt = $instructions . "\n\nVisitor question:\n" . $question . "\n\nAnswer as the Sustainable Catalyst Research Librarian using concise Markdown links.";
         $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . rawurlencode( $model ) . ':generateContent?key=' . rawurlencode( $api_key );
         $body = array(
@@ -503,7 +548,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
         return trim( wp_strip_all_tags( $text, false ) );
     }
 
-    private function fallback_response( $question ) {
+    private function fallback_response( $question, $grounding = array() ) {
         $route = $this->match_route( strtolower( $question ) );
         $answer = "**What you seem to be trying to do**\n" . $route['intent'] . "\n\n";
         $answer .= "**Best starting point**\n[" . $route['title'] . "](" . $route['url'] . ")\n\n";
@@ -517,7 +562,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
         return $answer;
     }
 
-    private function build_route_note( $question, $route, $source ) {
+    private function build_route_note( $question, $route, $source, $grounding = array() ) {
         return array(
             'version'        => self::VERSION,
             'created_at_utc' => gmdate( 'c' ),
@@ -535,11 +580,199 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
             'platform_fit' => $route['platform_fit'],
             'related'      => $route['related'],
             'next_step'    => $route['next_step'],
+            'confidence'   => isset( $grounding['confidence'] ) ? $grounding['confidence'] : array(),
+            'reason_codes' => isset( $grounding['reason_codes'] ) ? $grounding['reason_codes'] : array(),
+            'sources'      => isset( $grounding['sources'] ) ? $grounding['sources'] : array(),
+            'handoffs'     => isset( $grounding['handoffs'] ) ? $grounding['handoffs'] : array(),
+            'ambiguity'    => isset( $grounding['ambiguity'] ) ? $grounding['ambiguity'] : array(),
             'boundaries'   => array(
                 'Educational routing only.',
                 'No legal, financial, medical, tax, engineering, compliance, assurance, or ESG/SDG certification advice.',
                 'Do not submit confidential, regulated, proprietary, sensitive personal, or safety-critical information.',
             ),
+        );
+    }
+
+
+    private function append_grounding_footer( $answer, $grounding ) {
+        if ( empty( $grounding ) || ! is_array( $grounding ) ) {
+            return $answer;
+        }
+        $footer = "\n\n**Grounding note**\n";
+        if ( ! empty( $grounding['confidence']['level'] ) ) {
+            $footer .= 'Route confidence: ' . ucfirst( $grounding['confidence']['level'] ) . ' — ' . $grounding['confidence']['explanation'] . "\n";
+        }
+        if ( ! empty( $grounding['sources'] ) ) {
+            $footer .= "\n**Relevant Sustainable Catalyst sources**\n";
+            foreach ( $grounding['sources'] as $source ) {
+                $footer .= '- [' . $source['title'] . '](' . $source['url'] . ') — ' . $source['summary'] . "\n";
+            }
+        }
+        if ( ! empty( $grounding['handoffs'] ) ) {
+            $footer .= "\n**Possible handoffs**\n";
+            foreach ( $grounding['handoffs'] as $handoff ) {
+                $footer .= '- ' . $handoff['label'] . ': ' . $handoff['reason'] . ' ([open](' . $handoff['url'] . "))\n";
+            }
+        }
+        return trim( $answer ) . $footer;
+    }
+
+    private function grounding_context( $question, $route ) {
+        $sources = $this->match_sources( $question, $route );
+        $reason_codes = $this->reason_codes( $question, $route, $sources );
+        $confidence = $this->route_confidence( $question, $route, $sources, $reason_codes );
+        return array(
+            'sources'      => $sources,
+            'reason_codes' => $reason_codes,
+            'confidence'   => $confidence,
+            'handoffs'     => $this->route_handoffs( $route ),
+            'ambiguity'    => $this->route_ambiguity( $route, $confidence ),
+        );
+    }
+
+    private function normalize_terms( $text ) {
+        $text = strtolower( wp_strip_all_tags( (string) $text ) );
+        $text = preg_replace( '/[^a-z0-9\s\-]/', ' ', $text );
+        $parts = preg_split( '/\s+/', $text );
+        $stop = array( 'the', 'and', 'for', 'with', 'that', 'this', 'from', 'into', 'about', 'where', 'what', 'when', 'how', 'why', 'need', 'needs', 'use', 'using', 'can', 'should', 'would', 'could', 'are', 'you', 'your', 'our', 'their', 'there', 'here' );
+        $terms = array();
+        foreach ( $parts as $part ) {
+            $part = trim( $part );
+            if ( strlen( $part ) < 3 || in_array( $part, $stop, true ) ) {
+                continue;
+            }
+            $terms[] = $part;
+        }
+        return array_values( array_unique( $terms ) );
+    }
+
+    private function match_sources( $question, $route ) {
+        $terms = $this->normalize_terms( $question . ' ' . $route['title'] . ' ' . $route['category'] );
+        $scored = array();
+        foreach ( $this->source_records() as $record ) {
+            $haystack = strtolower( $record['title'] . ' ' . $record['type'] . ' ' . $record['summary'] . ' ' . implode( ' ', $record['topics'] ) . ' ' . $record['route_id'] );
+            $score = 0;
+            if ( $record['route_id'] === $route['id'] ) {
+                $score += 12;
+            }
+            foreach ( $terms as $term ) {
+                if ( false !== strpos( $haystack, $term ) ) {
+                    $score += 2;
+                }
+            }
+            if ( ! empty( $record['priority'] ) ) {
+                $score += (int) $record['priority'];
+            }
+            if ( $score > 0 ) {
+                $record['score'] = $score;
+                $scored[] = $record;
+            }
+        }
+        usort( $scored, function( $a, $b ) { return $b['score'] <=> $a['score']; } );
+        $options = $this->get_options();
+        $limit = max( 3, min( 8, absint( isset( $options['source_result_limit'] ) ? $options['source_result_limit'] : 5 ) ) );
+        return array_slice( $scored, 0, $limit );
+    }
+
+    private function reason_codes( $question, $route, $sources ) {
+        $codes = array();
+        $q = strtolower( $question );
+        foreach ( $route['keys'] as $key ) {
+            if ( false !== strpos( $q, $key ) ) {
+                $codes[] = 'keyword:' . $key;
+            }
+        }
+        if ( ! empty( $sources ) ) {
+            $codes[] = 'source-match:' . count( $sources );
+        }
+        if ( ! empty( $route['related'] ) ) {
+            $codes[] = 'related-routes:' . count( $route['related'] );
+        }
+        if ( empty( $codes ) ) {
+            $codes[] = 'default-platform-route';
+        }
+        return array_values( array_unique( $codes ) );
+    }
+
+    private function route_confidence( $question, $route, $sources, $reason_codes ) {
+        $top = ! empty( $sources[0]['score'] ) ? (int) $sources[0]['score'] : 0;
+        $keyword_hits = 0;
+        foreach ( $reason_codes as $code ) {
+            if ( 0 === strpos( $code, 'keyword:' ) ) {
+                $keyword_hits++;
+            }
+        }
+        $score = min( 100, ( $keyword_hits * 18 ) + ( min( $top, 30 ) * 2 ) + ( count( $sources ) * 3 ) );
+        $level = 'low';
+        if ( $score >= 75 ) {
+            $level = 'high';
+        } elseif ( $score >= 45 ) {
+            $level = 'medium';
+        }
+        $explanation = 'Matched ' . count( $sources ) . ' source record(s) and ' . $keyword_hits . ' route keyword signal(s).';
+        if ( 'platform' === $route['id'] && $keyword_hits < 1 ) {
+            $level = 'low';
+            $explanation = 'The question is broad or ambiguous, so the platform overview is the safest starting route.';
+        }
+        return array( 'level' => $level, 'score' => $score, 'explanation' => $explanation );
+    }
+
+    private function route_ambiguity( $route, $confidence ) {
+        if ( isset( $confidence['level'] ) && 'high' === $confidence['level'] ) {
+            return array();
+        }
+        $items = array();
+        if ( 'low' === $confidence['level'] ) {
+            $items[] = 'The request may need one more detail about the intended output: learning route, calculation, module artifact, or decision brief.';
+        }
+        if ( 'platform' === $route['id'] ) {
+            $items[] = 'Defaulted to Platform because no specialized module clearly dominated the route match.';
+        }
+        return $items;
+    }
+
+    private function route_handoffs( $route ) {
+        $id = $route['id'];
+        if ( 'decision-studio' === $id ) {
+            return array(
+                array( 'id' => 'workbench', 'label' => 'Workbench', 'url' => 'https://sustainablecatalyst.com/modeling-analytics/workbench/', 'reason' => 'Use when the decision packet needs deeper calculation, graphing, symbolic review, or model inspection.' ),
+                array( 'id' => 'demos', 'label' => 'Platform Demos', 'url' => '/platform/demos/', 'reason' => 'Use to create module artifacts before synthesizing a packet.' ),
+            );
+        }
+        if ( 'workbench' === $id ) {
+            return array(
+                array( 'id' => 'decision-studio', 'label' => 'Decision Studio', 'url' => '/platform/#decision-studio', 'reason' => 'Use when calculator results need to become part of a broader Decision Packet.' ),
+                array( 'id' => 'modeling', 'label' => 'Modeling & Analytics', 'url' => '/modeling-analytics/', 'reason' => 'Use for related article maps and modeling context.' ),
+            );
+        }
+        if ( in_array( $id, array( 'canvas', 'data', 'analytics-r', 'impact', 'narrative-risk', 'finance', 'grit' ), true ) ) {
+            return array(
+                array( 'id' => 'decision-studio', 'label' => 'Decision Studio', 'url' => '/platform/#decision-studio', 'reason' => 'Import or summarize this module output into a Decision Packet.' ),
+            );
+        }
+        return array(
+            array( 'id' => 'research-librarian', 'label' => 'Research Librarian', 'url' => '/platform/research-librarian/', 'reason' => 'Ask a more specific follow-up if the route needs narrowing.' ),
+        );
+    }
+
+    private function source_records() {
+        return array(
+            array( 'id' => 'platform', 'route_id' => 'platform', 'type' => 'architecture-page', 'title' => 'Platform', 'url' => '/platform/', 'summary' => 'Architecture page connecting Decision Studio, Workbench, modules, methodology, demos, and open development.', 'topics' => array( 'platform', 'architecture', 'decision studio', 'workbench', 'modules' ), 'priority' => 5 ),
+            array( 'id' => 'demos', 'route_id' => 'demos', 'type' => 'demo-hub', 'title' => 'Platform Demos', 'url' => '/platform/demos/', 'summary' => 'Workflow demo hub for Canvas, Data, Analytics R, Global Impact, Narrative Risk, Finance, Grit, Workbench, and Decision Studio.', 'topics' => array( 'demos', 'workflow', 'modules', 'artifacts' ), 'priority' => 5 ),
+            array( 'id' => 'research-librarian', 'route_id' => 'platform', 'type' => 'routing-page', 'title' => 'Research Librarian', 'url' => '/platform/research-librarian/', 'summary' => 'Site-scoped routing assistant for choosing Sustainable Catalyst pages, modules, tools, repositories, and workflows.', 'topics' => array( 'routing', 'assistant', 'research librarian', 'navigation' ), 'priority' => 4 ),
+            array( 'id' => 'decision-studio', 'route_id' => 'decision-studio', 'type' => 'platform-module', 'title' => 'Sustainable Catalyst Decision Studio', 'url' => '/platform/#decision-studio', 'summary' => 'Decision Packet workspace for artifact imports, four-pillar review, scenarios, audit/provenance, readiness, handoffs, saved packets, and exportable briefs.', 'topics' => array( 'decision packet', 'brief', 'audit', 'readiness', 'scenario comparison', 'sustainability' ), 'priority' => 6 ),
+            array( 'id' => 'workbench', 'route_id' => 'workbench', 'type' => 'analytical-workspace', 'title' => 'Sustainable Catalyst Workbench', 'url' => 'https://sustainablecatalyst.com/modeling-analytics/workbench/', 'summary' => 'Analytical layer for symbolic math, graphing, engineering notes, advanced calculators, article embeds, and exportable reports.', 'topics' => array( 'calculator', 'formula', 'graph', 'symbolic math', 'engineering', 'analysis' ), 'priority' => 6 ),
+            array( 'id' => 'knowledge-library', 'route_id' => 'knowledge-library', 'type' => 'library', 'title' => 'Open Knowledge Library', 'url' => '/knowledge-libraries/', 'summary' => 'Article maps and research paths across sustainability, governance, infrastructure, AI, economics, risk, law, modeling, and meaning.', 'topics' => array( 'library', 'article map', 'research', 'knowledge', 'publications' ), 'priority' => 5 ),
+            array( 'id' => 'methodology', 'route_id' => 'methodology', 'type' => 'methodology', 'title' => 'Platform Methodology', 'url' => '/platform/methodology/', 'summary' => 'Operating standards for traceability, assumptions, responsible AI, reproducibility, boundaries, and human review.', 'topics' => array( 'methodology', 'traceability', 'assumptions', 'responsible ai', 'review' ), 'priority' => 5 ),
+            array( 'id' => 'canvas', 'route_id' => 'canvas', 'type' => 'module-demo', 'title' => 'Catalyst Canvas', 'url' => '/catalyst-canvas/#demo', 'summary' => 'Problem-framing module for audience, POV, HMW prompts, prototype direction, and test planning.', 'topics' => array( 'problem framing', 'canvas', 'prototype', 'audience', 'test plan' ), 'priority' => 4 ),
+            array( 'id' => 'data', 'route_id' => 'data', 'type' => 'module-demo', 'title' => 'Catalyst Data', 'url' => '/catalyst-data/#demo', 'summary' => 'Traceable data records for entities, indicators, periods, sources, confidence, methods, and review status.', 'topics' => array( 'data', 'source', 'provenance', 'indicator', 'measurement', 'sql' ), 'priority' => 4 ),
+            array( 'id' => 'analytics-r', 'route_id' => 'analytics-r', 'type' => 'module-demo', 'title' => 'Catalyst Analytics R', 'url' => '/catalyst-analytics-r/#demo', 'summary' => 'Scenario analysis and reproducible outputs for assumptions, emissions budgets, capital values, and interpretation notes.', 'topics' => array( 'analytics', 'scenario', 'r', 'emissions', 'reproducible' ), 'priority' => 4 ),
+            array( 'id' => 'impact', 'route_id' => 'impact', 'type' => 'module-demo', 'title' => 'Global Impact Catalyst', 'url' => '/global-impact-catalyst/#demo', 'summary' => 'Impact records with initiative, goal, SDG-style theme, indicator, baseline, current value, target, source, and progress notes.', 'topics' => array( 'impact', 'sdg', 'indicator', 'baseline', 'target', 'progress' ), 'priority' => 4 ),
+            array( 'id' => 'narrative-risk', 'route_id' => 'narrative-risk', 'type' => 'module-demo', 'title' => 'Narrative Risk', 'url' => '/narrative-risk/#demo', 'summary' => 'Claim review by evidence strength, uncertainty, source type, stakeholder pressure, narrative volatility, and consequence level.', 'topics' => array( 'claim', 'narrative risk', 'evidence', 'uncertainty', 'stakeholder', 'volatility' ), 'priority' => 4 ),
+            array( 'id' => 'finance', 'route_id' => 'finance', 'type' => 'module-demo', 'title' => 'Catalyst Finance', 'url' => '/catalyst-finance/#demo', 'summary' => 'Tradeoff calculations for NPV, ROI, payback, benefit-cost ratio, carbon cost per ton, and risk-adjusted score.', 'topics' => array( 'finance', 'npv', 'roi', 'payback', 'cost', 'benefit', 'tradeoff' ), 'priority' => 4 ),
+            array( 'id' => 'grit', 'route_id' => 'grit', 'type' => 'module-demo', 'title' => 'Catalyst Grit', 'url' => '/human-systems/catalyst-grit/#demo', 'summary' => 'Recovery and execution tracking for setbacks, pressure, energy, support, clarity, actions, and resilience signals.', 'topics' => array( 'grit', 'recovery', 'resilience', 'setback', 'execution', 'human systems' ), 'priority' => 4 ),
+            array( 'id' => 'feature-suggestions', 'route_id' => 'feature-suggestions', 'type' => 'open-development', 'title' => 'Feature Suggestions', 'url' => '/platform/feature-suggestions/', 'summary' => 'Structured route for missing capabilities, bug reports, module ideas, Workbench calculator requests, and documentation improvements.', 'topics' => array( 'feature', 'suggestion', 'bug', 'improvement', 'missing capability' ), 'priority' => 4 ),
+            array( 'id' => 'github', 'route_id' => 'platform', 'type' => 'repository-index', 'title' => 'Content Catalyst GitHub Organization', 'url' => 'https://github.com/Content-Catalyst-LLC', 'summary' => 'Open-source repositories for Sustainable Catalyst platform modules, plugins, schemas, documentation, and roadmaps.', 'topics' => array( 'github', 'repository', 'open source', 'documentation', 'code' ), 'priority' => 2 ),
         );
     }
 
@@ -727,6 +960,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
             'max_output_tokens' => __( 'Max Output Tokens', 'sustainable-catalyst-research-librarian-ai' ),
             'temperature' => __( 'Temperature', 'sustainable-catalyst-research-librarian-ai' ),
             'rate_limit' => __( 'Rate Limit', 'sustainable-catalyst-research-librarian-ai' ),
+            'source_result_limit' => __( 'Source Result Limit', 'sustainable-catalyst-research-librarian-ai' ),
             'system_instructions' => __( 'System Instructions', 'sustainable-catalyst-research-librarian-ai' ),
         );
         foreach ( $fields as $field => $label ) {
@@ -752,6 +986,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
             'max_output_tokens'       => max( 150, min( 4000, absint( isset( $input['max_output_tokens'] ) ? $input['max_output_tokens'] : self::defaults()['max_output_tokens'] ) ) ),
             'temperature'             => isset( $input['temperature'] ) && is_numeric( $input['temperature'] ) ? (string) max( 0, min( 1, (float) $input['temperature'] ) ) : self::defaults()['temperature'],
             'rate_limit'              => max( 1, min( 100, absint( isset( $input['rate_limit'] ) ? $input['rate_limit'] : self::defaults()['rate_limit'] ) ) ),
+            'source_result_limit'     => max( 3, min( 8, absint( isset( $input['source_result_limit'] ) ? $input['source_result_limit'] : self::defaults()['source_result_limit'] ) ) ),
             'system_instructions'     => isset( $input['system_instructions'] ) ? sanitize_textarea_field( wp_unslash( $input['system_instructions'] ) ) : self::default_system_instructions(),
         );
     }
@@ -796,6 +1031,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
             case 'max_file_search_results':
             case 'max_output_tokens':
             case 'rate_limit':
+            case 'source_result_limit':
                 echo '<input type="number" class="small-text" name="' . esc_attr( $name ) . '" value="' . esc_attr( $options[ $field ] ) . '" />';
                 break;
             case 'temperature':
@@ -823,10 +1059,17 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
             </form>
             <hr />
             <h2><?php esc_html_e( 'Route Map', 'sustainable-catalyst-research-librarian-ai' ); ?></h2>
-            <p><?php esc_html_e( 'Current deterministic route map used when AI is disabled or unavailable.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
+            <p><?php esc_html_e( 'Current deterministic route map used when AI is disabled or unavailable. v3.1.0 also uses a source index for grounded route recommendations.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
             <table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Category', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Route', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'URL', 'sustainable-catalyst-research-librarian-ai' ); ?></th></tr></thead><tbody>
             <?php foreach ( $this->routes() as $route ) : ?>
                 <tr><td><?php echo esc_html( $route['category'] ); ?></td><td><?php echo esc_html( $route['title'] ); ?></td><td><code><?php echo esc_html( $route['url'] ); ?></code></td></tr>
+            <?php endforeach; ?>
+            </tbody></table>
+            <h2><?php esc_html_e( 'Grounding Source Index', 'sustainable-catalyst-research-librarian-ai' ); ?></h2>
+            <p><?php esc_html_e( 'Source records used for deterministic grounded routing and AI prompt context.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
+            <table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Type', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Source', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Route', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'URL', 'sustainable-catalyst-research-librarian-ai' ); ?></th></tr></thead><tbody>
+            <?php foreach ( $this->source_records() as $source ) : ?>
+                <tr><td><?php echo esc_html( $source['type'] ); ?></td><td><?php echo esc_html( $source['title'] ); ?></td><td><code><?php echo esc_html( $source['route_id'] ); ?></code></td><td><code><?php echo esc_html( $source['url'] ); ?></code></td></tr>
             <?php endforeach; ?>
             </tbody></table>
         </div>

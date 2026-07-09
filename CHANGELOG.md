@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.1.0 — Grounded Routing and Source-Aware Recommendations
+
+- Added source-aware routing with a Sustainable Catalyst source index.
+- Added confidence scoring, reason codes, ambiguity notes, and handoff suggestions.
+- Added `/sources` and `/grounded-route` REST endpoints.
+- Added source and confidence details to exported route notes.
+- Added source context to Gemini/OpenAI prompt construction.
+- Added admin Source Index table.
+- Updated CSS and JavaScript for route confidence and source display.
+
 ## 3.0.0 - Product-level routing upgrade
 
 - Added route map architecture aligned with Decision Studio and Workbench

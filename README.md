@@ -42,3 +42,15 @@ It does not provide legal, financial, medical, tax, engineering, compliance, ass
 ## Repository
 
 https://github.com/Content-Catalyst-LLC/sustainable-catalyst-research-librarian-ai
+
+
+## v3.1.0 — Grounded Routing and Source-Aware Recommendations
+
+This release upgrades the Research Librarian from a module-aware route finder into a source-aware routing layer. It now returns recommended routes with grounding sources, confidence level, reason codes, ambiguity notes, handoff suggestions, and exportable route-note metadata.
+
+New endpoints:
+
+```text
+GET  /wp-json/sc-research-librarian-ai/v1/sources
+POST /wp-json/sc-research-librarian-ai/v1/grounded-route
+```

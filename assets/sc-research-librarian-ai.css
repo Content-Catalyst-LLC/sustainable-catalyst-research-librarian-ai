@@ -179,3 +179,49 @@
   .sc-rl-routes__grid,
   .sc-rl-ai__route-strip { grid-template-columns: 1fr; }
 }
+
+
+/* v3.1.0 grounded routing additions */
+.sc-rl-ai__confidence {
+  background: #fff;
+  border: 1px solid var(--sc-line);
+  border-radius: 12px;
+  margin: 0.75rem 0;
+  padding: 0.75rem;
+}
+.sc-rl-ai__confidence b {
+  color: var(--sc-black);
+  display: block;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.sc-rl-ai__confidence small {
+  color: var(--sc-muted);
+  display: block;
+  line-height: 1.45;
+  margin-top: 0.25rem;
+}
+.sc-rl-ai__source-list {
+  border-top: 1px solid var(--sc-line);
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+}
+.sc-rl-ai__source-list b {
+  color: var(--sc-black);
+  display: block;
+  font-size: 0.82rem;
+  margin-bottom: 0.35rem;
+}
+.sc-rl-ai__source-list a {
+  background: #fff;
+  border: 1px solid var(--sc-line);
+  border-radius: 999px;
+  color: var(--sc-black);
+  display: inline-flex;
+  font-size: 0.8rem;
+  font-weight: 800;
+  margin: 0.25rem 0.25rem 0 0;
+  padding: 0.36rem 0.6rem;
+  text-decoration: none;
+}
