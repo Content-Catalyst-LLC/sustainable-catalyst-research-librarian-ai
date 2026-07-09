@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Sustainable Catalyst Research Librarian
  * Plugin URI: https://sustainablecatalyst.com/platform/research-librarian/
- * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, correction triage, knowledge-gap review, governance controls, privacy summaries, retention policies, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, scheduled index maintenance, sitemap sync, health alerts, and exports.
- * Version: 4.0.0
+ * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, correction triage, knowledge-gap review, governance controls, privacy summaries, retention policies, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, scheduled index maintenance, sitemap sync, health alerts, recovery snapshots, backup/export controls, migration readiness, and exports.
+ * Version: 4.1.0
  * Author: Content Catalyst LLC / Tariq Ahmad
  * Author URI: https://sustainablecatalyst.com/
  * License: MIT
@@ -23,7 +23,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
     const MAINTENANCE_OPTION = 'sc_rl_ai_maintenance_status';
     const MAINTENANCE_HOOK = 'sc_rl_ai_index_maintenance_event';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const VERSION        = '4.0.0';
+    const VERSION        = '4.1.0';
 
     private static $instance = null;
 
@@ -205,6 +205,11 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         }
         if ( 'release-audit' === $mode || 'release' === $mode || 'release-summary' === $mode ) {
             return $this->render_release_audit_summary( $atts );
+        }
+        if ( 'recovery' === $mode || 'recovery-summary' === $mode || 'backup-summary' === $mode || 'snapshot-summary' === $mode ) {
+            if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V410_Recovery' ) ) {
+                return Sustainable_Catalyst_Research_Librarian_AI_V410_Recovery::render_public_summary( $atts );
+            }
         }
         return $this->render_assistant( $atts );
     }
@@ -832,6 +837,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'maintenance' => $this->maintenance_summary(),
             'enterprise' => $this->enterprise_readiness_summary(),
             'release' => $this->release_audit_summary(),
+            'recovery' => class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V410_Recovery' ) ? Sustainable_Catalyst_Research_Librarian_AI_V410_Recovery::status() : array(),
         ), 200 );
     }
 
@@ -1000,19 +1006,19 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
 
     private function release_endpoint_inventory() {
         return array(
-            '/ask','/routes','/sources','/grounded-route','/route-note','/index/summary','/index/records','/index/rebuild','/index/export','/retrieval/status','/retrieval/diagnostics','/retrieval/test-embedding','/retrieval/query','/index/embed','/evaluation/suite','/evaluation/run','/evaluation/query','/evaluation/logs','/evaluation/export','/handoff/schema','/handoff/prepare','/handoff/logs','/handoff/export','/session/save','/session/logs','/session/export','/analytics/summary','/feedback/submit','/feedback/summary','/feedback/logs','/feedback/export','/governance/status','/governance/export','/governance/purge-expired','/maintenance/status','/maintenance/run','/maintenance/export','/enterprise/status','/enterprise/export','/release/audit','/release/export','/health'
+            '/ask','/routes','/sources','/grounded-route','/route-note','/index/summary','/index/records','/index/rebuild','/index/export','/retrieval/status','/retrieval/diagnostics','/retrieval/test-embedding','/retrieval/query','/index/embed','/evaluation/suite','/evaluation/run','/evaluation/query','/evaluation/logs','/evaluation/export','/handoff/schema','/handoff/prepare','/handoff/logs','/handoff/export','/session/save','/session/logs','/session/export','/analytics/summary','/feedback/submit','/feedback/summary','/feedback/logs','/feedback/export','/governance/status','/governance/export','/governance/purge-expired','/maintenance/status','/maintenance/run','/maintenance/export','/enterprise/status','/enterprise/export','/release/audit','/release/export','/recovery/status','/recovery/create','/recovery/export','/recovery/restore','/recovery/delete','/health'
         );
     }
 
     private function release_shortcode_inventory() {
         return array(
-            'full','landing','route-map','index-summary','retrieval-status','evaluation-summary','handoff-summary','session-summary','analytics-summary','feedback-summary','governance-summary','maintenance-summary','enterprise-summary','release-audit'
+            'full','landing','route-map','index-summary','retrieval-status','evaluation-summary','handoff-summary','session-summary','analytics-summary','feedback-summary','governance-summary','maintenance-summary','enterprise-summary','release-audit','recovery-summary'
         );
     }
 
     private function release_manifest_inventory() {
         return array(
-            'research_librarian_routes_v3.0.0.json','research_librarian_sources_v3.1.0.json','research_librarian_index_seed_v3.2.0.json','research_librarian_retrieval_manifest_v3.3.0.json','research_librarian_retrieval_manifest_v3.3.1.json','research_librarian_retrieval_manifest_v3.3.2.json','research_librarian_retrieval_manifest_v3.3.3.json','research_librarian_retrieval_manifest_v3.4.0.json','research_librarian_handoff_manifest_v3.5.0.json','research_librarian_session_manifest_v3.6.0.json','research_librarian_feedback_manifest_v3.7.0.json','research_librarian_governance_manifest_v3.8.0.json','research_librarian_maintenance_manifest_v3.9.0.json','research_librarian_enterprise_manifest_v4.0.0.json'
+            'research_librarian_routes_v3.0.0.json','research_librarian_sources_v3.1.0.json','research_librarian_index_seed_v3.2.0.json','research_librarian_retrieval_manifest_v3.3.0.json','research_librarian_retrieval_manifest_v3.3.1.json','research_librarian_retrieval_manifest_v3.3.2.json','research_librarian_retrieval_manifest_v3.3.3.json','research_librarian_retrieval_manifest_v3.4.0.json','research_librarian_handoff_manifest_v3.5.0.json','research_librarian_session_manifest_v3.6.0.json','research_librarian_feedback_manifest_v3.7.0.json','research_librarian_governance_manifest_v3.8.0.json','research_librarian_maintenance_manifest_v3.9.0.json','research_librarian_enterprise_manifest_v4.0.0.json','research_librarian_recovery_manifest_v4.1.0.json'
         );
     }
 
@@ -4052,6 +4058,338 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         <?php
     }
 }
+
+
+/**
+ * v4.1.0 companion layer: index snapshots, backup/export controls, and recovery readiness.
+ * Kept as a companion class so it can be maintained without disrupting the core routing class.
+ */
+final class Sustainable_Catalyst_Research_Librarian_AI_V410_Recovery {
+    const OPTION_NAME = 'sc_rl_ai_recovery_snapshots';
+    const INDEX_OPTION = 'sc_rl_ai_knowledge_index';
+    const EMBED_OPTION = 'sc_rl_ai_embedding_status';
+    const EVAL_OPTION = 'sc_rl_ai_evaluation_status';
+    const HANDOFF_OPTION = 'sc_rl_ai_handoff_status';
+    const SESSION_OPTION = 'sc_rl_ai_session_logs';
+    const FEEDBACK_OPTION = 'sc_rl_ai_feedback_logs';
+    const GOVERNANCE_OPTION = 'sc_rl_ai_governance_status';
+    const MAINTENANCE_OPTION = 'sc_rl_ai_maintenance_status';
+    const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
+    const VERSION = '4.1.0';
+
+    public static function init() {
+        add_action( 'rest_api_init', array( __CLASS__, 'register_rest_routes' ) );
+        add_shortcode( 'sc_research_librarian_recovery_summary', array( __CLASS__, 'render_public_summary' ) );
+        add_action( 'admin_menu', array( __CLASS__, 'register_admin_page' ) );
+    }
+
+    public static function register_admin_page() {
+        add_options_page(
+            __( 'Research Librarian Recovery', 'sustainable-catalyst-research-librarian-ai' ),
+            __( 'Research Librarian Recovery', 'sustainable-catalyst-research-librarian-ai' ),
+            'manage_options',
+            'sc-research-librarian-ai-recovery',
+            array( __CLASS__, 'render_admin_page' )
+        );
+    }
+
+    public static function can_manage_options() {
+        return current_user_can( 'manage_options' );
+    }
+
+    public static function register_rest_routes() {
+        register_rest_route( self::REST_NAMESPACE, '/recovery/status', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( __CLASS__, 'handle_status' ),
+            'permission_callback' => '__return_true',
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/recovery/create', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array( __CLASS__, 'handle_create' ),
+            'permission_callback' => array( __CLASS__, 'can_manage_options' ),
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/recovery/export', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( __CLASS__, 'handle_export' ),
+            'permission_callback' => array( __CLASS__, 'can_manage_options' ),
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/recovery/restore', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array( __CLASS__, 'handle_restore' ),
+            'permission_callback' => array( __CLASS__, 'can_manage_options' ),
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/recovery/delete', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array( __CLASS__, 'handle_delete' ),
+            'permission_callback' => array( __CLASS__, 'can_manage_options' ),
+        ) );
+    }
+
+    public static function render_public_summary( $atts = array() ) {
+        $atts = shortcode_atts( array( 'title' => 'Research Librarian Recovery Readiness' ), $atts, 'sc_research_librarian_recovery_summary' );
+        wp_enqueue_style( 'sc-research-librarian-ai', plugins_url( 'assets/sc-research-librarian-ai.css', __FILE__ ), array(), self::VERSION );
+        $status = self::status();
+        ob_start();
+        ?>
+        <section class="sc-rl-product" data-sc-rl-product="recovery">
+            <p class="sc-rl-product__eyebrow">Recovery Layer</p>
+            <h2><?php echo esc_html( $atts['title'] ); ?></h2>
+            <p class="sc-rl-product__lede">Index snapshots preserve Research Librarian source records, route coverage, retrieval status, evaluation state, governance settings, and maintenance health for backup, review, and migration readiness.</p>
+            <div class="sc-rl-product__grid">
+                <article><span>Snapshots</span><strong><?php echo esc_html( absint( $status['snapshot_count'] ) ); ?></strong><p>Saved recovery snapshots.</p></article>
+                <article><span>Index</span><strong><?php echo esc_html( absint( $status['current_index_records'] ) ); ?></strong><p>Current source records.</p></article>
+                <article><span>Embeddings</span><strong><?php echo esc_html( absint( $status['current_embedded_records'] ) ); ?></strong><p>Current embedded records.</p></article>
+                <article><span>Latest</span><strong><?php echo esc_html( $status['latest_snapshot_utc'] ? $status['latest_snapshot_utc'] : 'none' ); ?></strong><p>Most recent snapshot time.</p></article>
+            </div>
+            <p class="sc-rl-boundary-note">Public summary only. Full recovery exports and restore actions are admin-only and should be reviewed before use.</p>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+
+    public static function render_admin_page() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( esc_html__( 'You do not have permission to access this page.', 'sustainable-catalyst-research-librarian-ai' ) );
+        }
+        $notice = '';
+        if ( isset( $_POST['sc_rl_recovery_action'] ) && check_admin_referer( 'sc_rl_recovery_action', 'sc_rl_recovery_nonce' ) ) {
+            $action = sanitize_key( wp_unslash( $_POST['sc_rl_recovery_action'] ) );
+            if ( 'create' === $action ) {
+                $snapshot = self::create_snapshot( 'manual_admin' );
+                $notice = 'Snapshot created: ' . $snapshot['id'];
+            } elseif ( 'delete' === $action && ! empty( $_POST['snapshot_id'] ) ) {
+                self::delete_snapshot( sanitize_text_field( wp_unslash( $_POST['snapshot_id'] ) ) );
+                $notice = 'Snapshot deleted.';
+            }
+        }
+        $status = self::status();
+        $snapshots = self::snapshots();
+        ?>
+        <div class="wrap">
+            <h1><?php esc_html_e( 'Research Librarian Recovery', 'sustainable-catalyst-research-librarian-ai' ); ?></h1>
+            <p><?php esc_html_e( 'Create exportable recovery snapshots of the Research Librarian knowledge index and operational state before major rebuilds, embedding runs, upgrades, or migrations.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
+            <?php if ( $notice ) : ?><div class="notice notice-success is-dismissible"><p><?php echo esc_html( $notice ); ?></p></div><?php endif; ?>
+            <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0;max-width:1100px;">
+                <div class="postbox" style="padding:14px;"><strong style="font-size:22px;display:block;"><?php echo esc_html( absint( $status['snapshot_count'] ) ); ?></strong><span><?php esc_html_e( 'Snapshots', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                <div class="postbox" style="padding:14px;"><strong style="font-size:22px;display:block;"><?php echo esc_html( absint( $status['current_index_records'] ) ); ?></strong><span><?php esc_html_e( 'Current index records', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                <div class="postbox" style="padding:14px;"><strong style="font-size:22px;display:block;"><?php echo esc_html( absint( $status['current_embedded_records'] ) ); ?></strong><span><?php esc_html_e( 'Embedded records', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                <div class="postbox" style="padding:14px;"><strong style="font-size:16px;display:block;"><?php echo esc_html( $status['latest_snapshot_utc'] ? $status['latest_snapshot_utc'] : 'none' ); ?></strong><span><?php esc_html_e( 'Latest snapshot', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+            </div>
+            <form method="post" style="display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 22px;">
+                <?php wp_nonce_field( 'sc_rl_recovery_action', 'sc_rl_recovery_nonce' ); ?>
+                <button class="button button-primary" type="submit" name="sc_rl_recovery_action" value="create"><?php esc_html_e( 'Create Recovery Snapshot', 'sustainable-catalyst-research-librarian-ai' ); ?></button>
+                <a class="button" href="<?php echo esc_url( rest_url( self::REST_NAMESPACE . '/recovery/export' ) ); ?>"><?php esc_html_e( 'Export Recovery JSON', 'sustainable-catalyst-research-librarian-ai' ); ?></a>
+                <a class="button" href="<?php echo esc_url( rest_url( self::REST_NAMESPACE . '/recovery/status' ) ); ?>"><?php esc_html_e( 'View Recovery Status JSON', 'sustainable-catalyst-research-librarian-ai' ); ?></a>
+            </form>
+            <h2><?php esc_html_e( 'Saved Snapshots', 'sustainable-catalyst-research-librarian-ai' ); ?></h2>
+            <?php if ( ! empty( $snapshots ) ) : ?>
+                <table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Created', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'ID', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Index', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Embeddings', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Reason', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Action', 'sustainable-catalyst-research-librarian-ai' ); ?></th></tr></thead><tbody>
+                    <?php foreach ( $snapshots as $snapshot ) : ?>
+                        <tr>
+                            <td><?php echo esc_html( $snapshot['created_at_utc'] ?? '' ); ?></td>
+                            <td><code><?php echo esc_html( $snapshot['id'] ?? '' ); ?></code></td>
+                            <td><?php echo esc_html( absint( $snapshot['summary']['index_records'] ?? 0 ) ); ?></td>
+                            <td><?php echo esc_html( absint( $snapshot['summary']['embedded_records'] ?? 0 ) ); ?></td>
+                            <td><?php echo esc_html( $snapshot['reason'] ?? '' ); ?></td>
+                            <td>
+                                <form method="post" style="display:inline;">
+                                    <?php wp_nonce_field( 'sc_rl_recovery_action', 'sc_rl_recovery_nonce' ); ?>
+                                    <input type="hidden" name="snapshot_id" value="<?php echo esc_attr( $snapshot['id'] ?? '' ); ?>" />
+                                    <button class="button button-small" type="submit" name="sc_rl_recovery_action" value="delete"><?php esc_html_e( 'Delete', 'sustainable-catalyst-research-librarian-ai' ); ?></button>
+                                </form>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody></table>
+            <?php else : ?>
+                <p><?php esc_html_e( 'No recovery snapshots have been created yet.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
+            <?php endif; ?>
+        </div>
+        <?php
+    }
+
+    public static function handle_status() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'recovery' => self::status() ), 200 );
+    }
+
+    public static function handle_create( WP_REST_Request $request ) {
+        $nonce = $request->get_header( 'x_wp_nonce' );
+        if ( ! $nonce || ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
+            return new WP_Error( 'sc_rl_ai_bad_nonce', __( 'Security check failed. Refresh the page and try again.', 'sustainable-catalyst-research-librarian-ai' ), array( 'status' => 403 ) );
+        }
+        $reason = sanitize_text_field( $request->get_param( 'reason' ) ? $request->get_param( 'reason' ) : 'manual_rest' );
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'snapshot' => self::create_snapshot( $reason ), 'recovery' => self::status() ), 200 );
+    }
+
+    public static function handle_export() {
+        return new WP_REST_Response( array(
+            'version' => self::VERSION,
+            'generated_utc' => gmdate( 'c' ),
+            'recovery' => self::status(),
+            'snapshots' => self::snapshots(),
+        ), 200 );
+    }
+
+    public static function handle_restore( WP_REST_Request $request ) {
+        $nonce = $request->get_header( 'x_wp_nonce' );
+        if ( ! $nonce || ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
+            return new WP_Error( 'sc_rl_ai_bad_nonce', __( 'Security check failed. Refresh the page and try again.', 'sustainable-catalyst-research-librarian-ai' ), array( 'status' => 403 ) );
+        }
+        $snapshot_id = sanitize_text_field( $request->get_param( 'snapshot_id' ) );
+        $dry_run = $request->get_param( 'dry_run' );
+        $dry_run = null === $dry_run ? true : rest_sanitize_boolean( $dry_run );
+        $snapshot = self::find_snapshot( $snapshot_id );
+        if ( ! $snapshot ) {
+            return new WP_Error( 'sc_rl_ai_snapshot_not_found', __( 'Recovery snapshot not found.', 'sustainable-catalyst-research-librarian-ai' ), array( 'status' => 404 ) );
+        }
+        if ( $dry_run ) {
+            return new WP_REST_Response( array( 'version' => self::VERSION, 'dry_run' => true, 'would_restore' => self::snapshot_restore_plan( $snapshot ) ), 200 );
+        }
+        if ( ! empty( $snapshot['payload']['knowledge_index'] ) && is_array( $snapshot['payload']['knowledge_index'] ) ) {
+            update_option( self::INDEX_OPTION, $snapshot['payload']['knowledge_index'], false );
+        }
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'restored' => true, 'snapshot_id' => $snapshot_id, 'recovery' => self::status() ), 200 );
+    }
+
+    public static function handle_delete( WP_REST_Request $request ) {
+        $nonce = $request->get_header( 'x_wp_nonce' );
+        if ( ! $nonce || ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
+            return new WP_Error( 'sc_rl_ai_bad_nonce', __( 'Security check failed. Refresh the page and try again.', 'sustainable-catalyst-research-librarian-ai' ), array( 'status' => 403 ) );
+        }
+        $snapshot_id = sanitize_text_field( $request->get_param( 'snapshot_id' ) );
+        self::delete_snapshot( $snapshot_id );
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'deleted' => $snapshot_id, 'recovery' => self::status() ), 200 );
+    }
+
+    public static function status() {
+        $snapshots = self::snapshots();
+        $index = get_option( self::INDEX_OPTION, array() );
+        $records = isset( $index['records'] ) && is_array( $index['records'] ) ? $index['records'] : array();
+        $embedded = 0;
+        foreach ( $records as $record ) {
+            if ( ! empty( $record['embedding'] ) && is_array( $record['embedding'] ) ) {
+                $embedded++;
+            }
+        }
+        $latest = ! empty( $snapshots ) ? $snapshots[0] : array();
+        return array(
+            'enabled' => true,
+            'snapshot_count' => count( $snapshots ),
+            'snapshot_limit' => 10,
+            'latest_snapshot_id' => isset( $latest['id'] ) ? $latest['id'] : '',
+            'latest_snapshot_utc' => isset( $latest['created_at_utc'] ) ? $latest['created_at_utc'] : '',
+            'current_index_records' => count( $records ),
+            'current_embedded_records' => $embedded,
+            'current_index_last_indexed_utc' => isset( $index['last_indexed_utc'] ) ? $index['last_indexed_utc'] : '',
+            'recoverable_payloads' => array( 'knowledge_index', 'embedding_status', 'evaluation_status', 'handoff_status', 'governance_status', 'maintenance_status' ),
+            'restore_default_mode' => 'dry_run',
+            'admin_only_restore' => true,
+            'notes' => array(
+                'Embeddings are summarized in snapshots, but vector payloads are stripped from source records to keep recovery exports manageable.',
+                'Restore endpoint defaults to dry_run=true and should be used only by administrators after export review.',
+            ),
+        );
+    }
+
+    public static function snapshots() {
+        $snapshots = get_option( self::OPTION_NAME, array() );
+        return is_array( $snapshots ) ? array_values( $snapshots ) : array();
+    }
+
+    public static function create_snapshot( $reason = 'manual' ) {
+        $index = get_option( self::INDEX_OPTION, array() );
+        $sanitized_index = self::strip_embeddings_from_index( $index );
+        $snapshot = array(
+            'id' => 'rl-snapshot-' . gmdate( 'Ymd-His' ) . '-' . wp_generate_password( 6, false, false ),
+            'created_at_utc' => gmdate( 'c' ),
+            'plugin_version' => self::VERSION,
+            'reason' => sanitize_text_field( $reason ),
+            'summary' => self::snapshot_summary( $index ),
+            'payload' => array(
+                'knowledge_index' => $sanitized_index,
+                'embedding_status' => get_option( self::EMBED_OPTION, array() ),
+                'evaluation_status' => get_option( self::EVAL_OPTION, array() ),
+                'handoff_status' => get_option( self::HANDOFF_OPTION, array() ),
+                'governance_status' => get_option( self::GOVERNANCE_OPTION, array() ),
+                'maintenance_status' => get_option( self::MAINTENANCE_OPTION, array() ),
+            ),
+        );
+        $snapshots = self::snapshots();
+        array_unshift( $snapshots, $snapshot );
+        $snapshots = array_slice( $snapshots, 0, 10 );
+        update_option( self::OPTION_NAME, $snapshots, false );
+        return $snapshot;
+    }
+
+    public static function find_snapshot( $snapshot_id ) {
+        foreach ( self::snapshots() as $snapshot ) {
+            if ( isset( $snapshot['id'] ) && $snapshot['id'] === $snapshot_id ) {
+                return $snapshot;
+            }
+        }
+        return null;
+    }
+
+    public static function delete_snapshot( $snapshot_id ) {
+        $kept = array();
+        foreach ( self::snapshots() as $snapshot ) {
+            if ( ! isset( $snapshot['id'] ) || $snapshot['id'] !== $snapshot_id ) {
+                $kept[] = $snapshot;
+            }
+        }
+        update_option( self::OPTION_NAME, $kept, false );
+        return $kept;
+    }
+
+    private static function snapshot_restore_plan( $snapshot ) {
+        return array(
+            'snapshot_id' => isset( $snapshot['id'] ) ? $snapshot['id'] : '',
+            'created_at_utc' => isset( $snapshot['created_at_utc'] ) ? $snapshot['created_at_utc'] : '',
+            'payloads' => isset( $snapshot['payload'] ) ? array_keys( $snapshot['payload'] ) : array(),
+            'index_records' => isset( $snapshot['summary']['index_records'] ) ? absint( $snapshot['summary']['index_records'] ) : 0,
+            'embedded_records_after_restore' => 0,
+            'post_restore_note' => 'Knowledge index can be restored from the snapshot. Gemini embeddings should be regenerated after restore because vector payloads are intentionally stripped from recovery exports.',
+        );
+    }
+
+    private static function snapshot_summary( $index ) {
+        $records = isset( $index['records'] ) && is_array( $index['records'] ) ? $index['records'] : array();
+        $embedded = 0;
+        $types = array();
+        $routes = array();
+        foreach ( $records as $record ) {
+            if ( ! empty( $record['embedding'] ) && is_array( $record['embedding'] ) ) {
+                $embedded++;
+            }
+            if ( ! empty( $record['type'] ) ) { $types[ $record['type'] ] = true; }
+            if ( ! empty( $record['route_id'] ) ) { $routes[ $record['route_id'] ] = true; }
+        }
+        return array(
+            'index_records' => count( $records ),
+            'embedded_records' => $embedded,
+            'type_count' => count( $types ),
+            'route_count' => count( $routes ),
+            'last_indexed_utc' => isset( $index['last_indexed_utc'] ) ? $index['last_indexed_utc'] : '',
+        );
+    }
+
+    private static function strip_embeddings_from_index( $index ) {
+        if ( empty( $index['records'] ) || ! is_array( $index['records'] ) ) {
+            return $index;
+        }
+        foreach ( $index['records'] as $i => $record ) {
+            if ( isset( $index['records'][ $i ]['embedding'] ) ) {
+                unset( $index['records'][ $i ]['embedding'] );
+            }
+            if ( isset( $index['records'][ $i ]['embedding_model'] ) ) {
+                unset( $index['records'][ $i ]['embedding_model'] );
+            }
+        }
+        $index['snapshot_note'] = 'Embedding vectors stripped by v4.1.0 recovery snapshot to keep backup payload manageable. Regenerate embeddings after restore.';
+        return $index;
+    }
+}
+Sustainable_Catalyst_Research_Librarian_AI_V410_Recovery::init();
 
 register_activation_hook( __FILE__, array( 'Sustainable_Catalyst_Research_Librarian_AI', 'activate' ) );
 register_deactivation_hook( __FILE__, array( 'Sustainable_Catalyst_Research_Librarian_AI', 'deactivate' ) );

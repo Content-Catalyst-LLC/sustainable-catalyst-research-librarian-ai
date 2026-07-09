@@ -289,3 +289,36 @@ GET  /wp-json/sc-research-librarian-ai/v1/maintenance/export
 ```
 
 Recommended first setup: enable scheduled maintenance daily, enable sitemap URLs if your sitemap is stable, leave automatic embedding after rebuild off until Gemini rate limits are confirmed.
+
+## v4.1.0 — Index Snapshots, Backup, and Recovery Readiness
+
+Version 4.1.0 adds an operational recovery layer for the Research Librarian. Administrators can create recovery snapshots before major index rebuilds, embedding jobs, sitemap maintenance, upgrades, or migrations.
+
+### Added
+
+- Recovery snapshot dashboard
+- Admin-only recovery export JSON
+- Dry-run restore planning
+- Snapshot deletion
+- Public-safe recovery summary
+- Recovery status endpoint
+- Snapshot manifest
+
+### New endpoints
+
+```text
+GET  /wp-json/sc-research-librarian-ai/v1/recovery/status
+POST /wp-json/sc-research-librarian-ai/v1/recovery/create
+GET  /wp-json/sc-research-librarian-ai/v1/recovery/export
+POST /wp-json/sc-research-librarian-ai/v1/recovery/restore
+POST /wp-json/sc-research-librarian-ai/v1/recovery/delete
+```
+
+### New shortcodes
+
+```text
+[sc_research_librarian mode="recovery-summary" title="Research Librarian Recovery Readiness"]
+[sc_research_librarian_recovery_summary title="Research Librarian Recovery Readiness"]
+```
+
+Embedding vectors are summarized but stripped from snapshots so recovery exports remain manageable. Regenerate embeddings after restore.

@@ -1,5 +1,16 @@
 # Changelog
 
+## 4.1.0 — Index Snapshots, Backup, and Recovery Readiness
+
+- Added admin recovery snapshot dashboard.
+- Added recovery status, create, export, restore, and delete endpoints.
+- Added public-safe recovery summary shortcode.
+- Added dry-run restore planning.
+- Added snapshot retention limit.
+- Added recovery manifest and documentation.
+- Strips embedding vectors from snapshots while preserving embedding status summaries.
+
+
 ## 4.0.0 — Enterprise Readiness and Release Audit
 
 - Added enterprise readiness summary.
