@@ -1,5 +1,17 @@
 # Changelog
 
+## 3.9.0 — Scheduled Index Maintenance, Sitemap Sync, and Health Alerts
+
+- Added scheduled knowledge-index maintenance.
+- Added WordPress cron hook and maintenance schedule sync action.
+- Added manual maintenance run action.
+- Added optional sitemap URL ingestion.
+- Added maintenance status/export REST endpoints.
+- Added maintenance-summary shortcode.
+- Added health/alert configuration for index maintenance.
+
+# Changelog
+
 ## v3.8.0 — Governance, Privacy Controls, and Retention Policies
 
 - Added governance status endpoint.

@@ -243,3 +243,23 @@ GET  /wp-json/sc-research-librarian-ai/v1/feedback/export
 ## v3.8.0 Governance Layer
 
 Adds governance, privacy, retention, and admin export controls for saved route sessions, feedback, handoffs, evaluation logs, retrieval status, and public-safe summary display.
+
+## v3.9.0 — Scheduled Index Maintenance, Sitemap Sync, and Health Alerts
+
+v3.9.0 adds the operational maintenance layer for the Research Librarian knowledge index. It can rebuild the index on a WordPress cron schedule, optionally include sitemap URLs in source coverage, expose index-health status, export maintenance JSON, and provide a public-safe maintenance summary shortcode.
+
+New shortcode:
+
+```text
+[sc_research_librarian mode="maintenance-summary" title="Research Librarian Index Maintenance"]
+```
+
+New endpoints:
+
+```text
+GET  /wp-json/sc-research-librarian-ai/v1/maintenance/status
+POST /wp-json/sc-research-librarian-ai/v1/maintenance/run
+GET  /wp-json/sc-research-librarian-ai/v1/maintenance/export
+```
+
+Recommended first setup: enable scheduled maintenance daily, enable sitemap URLs if your sitemap is stable, leave automatic embedding after rebuild off until Gemini rate limits are confirmed.

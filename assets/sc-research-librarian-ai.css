@@ -331,3 +331,7 @@
 .sc-rl-ai__actions [data-sc-rl-feedback-issue] {
   white-space: nowrap;
 }
+
+
+/* v3.9.0 maintenance summary */
+.sc-rl-maintenance-summary .sc-rl-index-summary__grid article { min-height: auto; }

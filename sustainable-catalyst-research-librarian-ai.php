@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Sustainable Catalyst Research Librarian
  * Plugin URI: https://sustainablecatalyst.com/platform/research-librarian/
- * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, correction triage, knowledge-gap review, governance controls, privacy summaries, retention policies, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, and exports.
- * Version: 3.8.0
+ * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, correction triage, knowledge-gap review, governance controls, privacy summaries, retention policies, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, scheduled index maintenance, sitemap sync, health alerts, and exports.
+ * Version: 3.9.0
  * Author: Content Catalyst LLC / Tariq Ahmad
  * Author URI: https://sustainablecatalyst.com/
  * License: MIT
@@ -20,8 +20,10 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
     const EMBED_OPTION   = 'sc_rl_ai_embedding_status';
     const EVAL_OPTION    = 'sc_rl_ai_evaluation_status';
     const HANDOFF_OPTION = 'sc_rl_ai_handoff_status';
+    const MAINTENANCE_OPTION = 'sc_rl_ai_maintenance_status';
+    const MAINTENANCE_HOOK = 'sc_rl_ai_index_maintenance_event';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const VERSION        = '3.8.0';
+    const VERSION        = '3.9.0';
 
     private static $instance = null;
 
@@ -38,6 +40,8 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
         add_action( 'admin_menu', array( $this, 'register_admin_page' ) );
         add_action( 'admin_init', array( $this, 'register_settings' ) );
         add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), array( $this, 'add_settings_link' ) );
+        add_filter( 'cron_schedules', array( $this, 'register_cron_schedules' ) );
+        add_action( self::MAINTENANCE_HOOK, array( $this, 'run_scheduled_index_maintenance' ) );
     }
 
     public static function activate() {
@@ -46,6 +50,11 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
         if ( ! get_option( self::INDEX_OPTION, false ) ) {
             update_option( self::INDEX_OPTION, self::build_default_index(), false );
         }
+        self::sync_maintenance_schedule_static();
+    }
+
+    public static function deactivate() {
+        wp_clear_scheduled_hook( self::MAINTENANCE_HOOK );
     }
 
     public static function defaults() {
@@ -75,6 +84,14 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
             'source_result_limit'     => 5,
             'index_max_posts'         => 250,
             'stale_after_days'        => 180,
+            'maintenance_auto_rebuild_enabled' => '0',
+            'maintenance_frequency'    => 'daily',
+            'maintenance_include_sitemap_urls' => '0',
+            'maintenance_sitemap_url'  => '',
+            'maintenance_max_sitemap_urls' => 75,
+            'maintenance_auto_embed_after_rebuild' => '0',
+            'maintenance_alert_email'  => '',
+            'maintenance_alert_on_failures' => '0',
             'eval_high_confidence_threshold' => 75,
             'eval_medium_confidence_threshold' => 45,
             'evaluation_log_limit'    => 100,
@@ -179,6 +196,9 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         }
         if ( 'governance' === $mode || 'governance-summary' === $mode || 'privacy-summary' === $mode || 'retention-summary' === $mode ) {
             return $this->render_governance_summary( $atts );
+        }
+        if ( 'maintenance' === $mode || 'maintenance-summary' === $mode || 'index-health' === $mode || 'crawl-health' === $mode ) {
+            return $this->render_maintenance_summary( $atts );
         }
         return $this->render_assistant( $atts );
     }
@@ -393,6 +413,27 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                 <article><span><?php echo esc_html( $summary['public_summary_enabled'] ? 'on' : 'off' ); ?></span><strong>Public summary</strong></article>
             </div>
             <p class="sc-rl-index-summary__meta">Retention targets: sessions <?php echo esc_html( absint( $summary['retention_days']['sessions'] ) ); ?> days, feedback <?php echo esc_html( absint( $summary['retention_days']['feedback'] ) ); ?> days, evaluation <?php echo esc_html( absint( $summary['retention_days']['evaluation'] ) ); ?> days, handoffs <?php echo esc_html( absint( $summary['retention_days']['handoffs'] ) ); ?> days.</p>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+
+
+    private function render_maintenance_summary( $atts ) {
+        $summary = $this->maintenance_summary();
+        ob_start();
+        ?>
+        <section class="sc-rl-index-summary sc-rl-maintenance-summary" data-sc-rl-product="maintenance-summary">
+            <p class="sc-rl-routes__eyebrow">Research Librarian Index Maintenance</p>
+            <h2><?php echo esc_html( $atts['title'] ); ?></h2>
+            <p>The maintenance layer tracks scheduled index rebuilds, sitemap URL sync, health status, source coverage, embedding coverage, and operational alerts for the Sustainable Catalyst knowledge index.</p>
+            <div class="sc-rl-index-summary__grid">
+                <article><span><?php echo esc_html( $summary['schedule_enabled'] ? 'on' : 'off' ); ?></span><strong>Scheduled rebuilds</strong></article>
+                <article><span><?php echo esc_html( $summary['frequency'] ); ?></span><strong>Frequency</strong></article>
+                <article><span><?php echo esc_html( absint( $summary['index_records'] ) ); ?></span><strong>Index records</strong></article>
+                <article><span><?php echo esc_html( absint( $summary['embedded_records'] ) ); ?></span><strong>Embedded records</strong></article>
+            </div>
+            <p class="sc-rl-index-summary__meta">Last maintenance: <?php echo esc_html( $summary['last_run_utc'] ? $summary['last_run_utc'] : 'not yet run' ); ?> · Next scheduled run: <?php echo esc_html( $summary['next_run_utc'] ? $summary['next_run_utc'] : 'not scheduled' ); ?> · Last status: <?php echo esc_html( $summary['last_status'] ); ?></p>
         </section>
         <?php
         return ob_get_clean();
@@ -676,6 +717,26 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'permission_callback' => array( $this, 'can_manage_options' ),
         ) );
 
+
+
+        register_rest_route( self::REST_NAMESPACE, '/maintenance/status', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'handle_maintenance_status_request' ),
+            'permission_callback' => '__return_true',
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/maintenance/run', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array( $this, 'handle_maintenance_run_request' ),
+            'permission_callback' => array( $this, 'can_manage_options' ),
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/maintenance/export', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'handle_maintenance_export_request' ),
+            'permission_callback' => array( $this, 'can_manage_options' ),
+        ) );
+
         register_rest_route( self::REST_NAMESPACE, '/health', array(
             'methods'             => WP_REST_Server::READABLE,
             'callback'            => array( $this, 'handle_health_request' ),
@@ -697,6 +758,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'handoff' => $this->handoff_summary(),
             'feedback' => $this->feedback_summary(),
             'governance' => $this->governance_summary(),
+            'maintenance' => $this->maintenance_summary(),
         ), 200 );
     }
 
@@ -708,6 +770,30 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         return new WP_REST_Response( array( 'sources' => $this->source_records(), 'index' => $this->knowledge_index_summary( $this->knowledge_index_records() ), 'version' => self::VERSION ), 200 );
     }
 
+
+
+    public function handle_maintenance_status_request() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'maintenance' => $this->maintenance_summary() ), 200 );
+    }
+
+    public function handle_maintenance_run_request( WP_REST_Request $request ) {
+        $nonce = $request->get_header( 'x_wp_nonce' );
+        if ( ! $nonce || ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
+            return new WP_Error( 'sc_rl_ai_bad_nonce', __( 'Security check failed. Refresh the page and try again.', 'sustainable-catalyst-research-librarian-ai' ), array( 'status' => 403 ) );
+        }
+        $result = $this->run_scheduled_index_maintenance( true );
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'maintenance' => $result ), 200 );
+    }
+
+    public function handle_maintenance_export_request() {
+        return new WP_REST_Response( array(
+            'version' => self::VERSION,
+            'maintenance' => $this->maintenance_summary(),
+            'status' => get_option( self::MAINTENANCE_OPTION, array() ),
+            'index' => $this->knowledge_index_summary( $this->knowledge_index_records() ),
+            'retrieval' => $this->retrieval_status(),
+        ), 200 );
+    }
 
     public function can_manage_options() {
         return current_user_can( 'manage_options' );
@@ -2596,6 +2682,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             $records[] = $record;
         }
         $records = array_merge( $records, $this->wordpress_content_index_records() );
+        $records = array_merge( $records, $this->sitemap_index_records() );
         return $this->dedupe_index_records( $records );
     }
 
@@ -2642,6 +2729,70 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             $records[] = $record;
         }
         return $records;
+    }
+
+
+    private function sitemap_index_records() {
+        $options = $this->get_options();
+        if ( empty( $options['maintenance_include_sitemap_urls'] ) || '1' !== (string) $options['maintenance_include_sitemap_urls'] ) {
+            return array();
+        }
+        $sitemap_url = ! empty( $options['maintenance_sitemap_url'] ) ? esc_url_raw( $options['maintenance_sitemap_url'] ) : home_url( '/sitemap_index.xml' );
+        if ( empty( $sitemap_url ) || ! wp_http_validate_url( $sitemap_url ) ) {
+            return array();
+        }
+        $max_urls = max( 1, min( 500, absint( $options['maintenance_max_sitemap_urls'] ?? 75 ) ) );
+        $response = wp_remote_get( $sitemap_url, array( 'timeout' => 12, 'redirection' => 3 ) );
+        if ( is_wp_error( $response ) ) {
+            $this->update_maintenance_status( array( 'last_sitemap_error' => $response->get_error_message(), 'last_sitemap_utc' => gmdate( 'c' ) ) );
+            return array();
+        }
+        $code = wp_remote_retrieve_response_code( $response );
+        $body = wp_remote_retrieve_body( $response );
+        if ( 200 !== absint( $code ) || empty( $body ) ) {
+            $this->update_maintenance_status( array( 'last_sitemap_error' => 'Sitemap request returned HTTP ' . absint( $code ), 'last_sitemap_utc' => gmdate( 'c' ) ) );
+            return array();
+        }
+        $urls = $this->extract_urls_from_sitemap_body( $body );
+        $records = array();
+        foreach ( array_slice( $urls, 0, $max_urls ) as $idx => $url ) {
+            if ( ! wp_http_validate_url( $url ) ) { continue; }
+            $path = wp_parse_url( $url, PHP_URL_PATH );
+            $slug = trim( basename( untrailingslashit( (string) $path ) ) );
+            $title = $slug ? ucwords( str_replace( array( '-', '_' ), ' ', $slug ) ) : $url;
+            $summary = 'Sitemap-discovered Sustainable Catalyst source URL used for route coverage and crawl-health review.';
+            $topics = $this->derive_topics_from_text( $title . ' ' . $url );
+            $route_id = $this->detect_route_id_from_record( $title, $url, $summary, $topics );
+            $record = array(
+                'id' => 'sitemap-' . md5( strtolower( $url ) ),
+                'route_id' => $route_id,
+                'type' => 'sitemap-url',
+                'title' => $title,
+                'url' => esc_url_raw( $url ),
+                'summary' => $summary,
+                'topics' => $topics,
+                'priority' => 1,
+                'source_kind' => 'sitemap',
+                'status' => 'indexed',
+                'last_seen_utc' => gmdate( 'c' ),
+                'last_indexed_utc' => gmdate( 'c' ),
+            );
+            $record['metadata_flags'] = $this->index_metadata_flags( $record );
+            $records[] = $record;
+        }
+        $this->update_maintenance_status( array( 'last_sitemap_error' => '', 'last_sitemap_utc' => gmdate( 'c' ), 'last_sitemap_urls' => count( $records ) ) );
+        return $records;
+    }
+
+    private function extract_urls_from_sitemap_body( $body ) {
+        $urls = array();
+        if ( preg_match_all( '#<loc>\s*([^<]+)\s*</loc>#i', (string) $body, $matches ) ) {
+            foreach ( $matches[1] as $loc ) {
+                $url = esc_url_raw( html_entity_decode( trim( $loc ), ENT_QUOTES ) );
+                if ( $url ) { $urls[] = $url; }
+            }
+        }
+        return array_values( array_unique( $urls ) );
     }
 
     private function derive_topics_from_text( $text ) {
@@ -2910,7 +3061,131 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             $this->clear_feedback_logs();
             return 'feedback-cleared';
         }
+        if ( 'run_maintenance' === $action ) {
+            $this->run_scheduled_index_maintenance( true );
+            return 'maintenance-run';
+        }
+        if ( 'sync_maintenance' === $action ) {
+            self::sync_maintenance_schedule_static();
+            return 'maintenance-synced';
+        }
         return '';
+    }
+
+
+    public function register_cron_schedules( $schedules ) {
+        if ( ! isset( $schedules['sc_rl_weekly'] ) ) {
+            $schedules['sc_rl_weekly'] = array( 'interval' => WEEK_IN_SECONDS, 'display' => __( 'Once Weekly', 'sustainable-catalyst-research-librarian-ai' ) );
+        }
+        return $schedules;
+    }
+
+    public static function sync_maintenance_schedule_static() {
+        $options = wp_parse_args( get_option( self::OPTION_NAME, array() ), self::defaults() );
+        wp_clear_scheduled_hook( self::MAINTENANCE_HOOK );
+        if ( ! empty( $options['maintenance_auto_rebuild_enabled'] ) && '1' === (string) $options['maintenance_auto_rebuild_enabled'] ) {
+            $frequency = in_array( $options['maintenance_frequency'], array( 'hourly', 'twicedaily', 'daily', 'sc_rl_weekly' ), true ) ? $options['maintenance_frequency'] : 'daily';
+            wp_schedule_event( time() + 300, $frequency, self::MAINTENANCE_HOOK );
+        }
+        $status = get_option( self::MAINTENANCE_OPTION, array() );
+        $status['schedule_synced_utc'] = gmdate( 'c' );
+        update_option( self::MAINTENANCE_OPTION, $status, false );
+    }
+
+    private function update_maintenance_status( $patch ) {
+        $status = get_option( self::MAINTENANCE_OPTION, array() );
+        if ( ! is_array( $status ) ) { $status = array(); }
+        $status = array_merge( $status, is_array( $patch ) ? $patch : array() );
+        update_option( self::MAINTENANCE_OPTION, $status, false );
+        return $status;
+    }
+
+    public function run_scheduled_index_maintenance( $manual = false ) {
+        $started = gmdate( 'c' );
+        $status = array(
+            'last_run_utc' => $started,
+            'last_run_manual' => (bool) $manual,
+            'last_status' => 'running',
+            'last_message' => 'Maintenance run started.',
+        );
+        $this->update_maintenance_status( $status );
+        try {
+            $index = $this->rebuild_knowledge_index();
+            $records = isset( $index['records'] ) && is_array( $index['records'] ) ? $index['records'] : array();
+            $summary = $this->knowledge_index_summary( $records );
+            $embedding_result = null;
+            $options = $this->get_options();
+            if ( ! empty( $options['maintenance_auto_embed_after_rebuild'] ) && '1' === (string) $options['maintenance_auto_embed_after_rebuild'] && 'gemini' === $options['embeddings_provider'] ) {
+                $embedding_result = $this->generate_index_embeddings();
+            }
+            $errors = array();
+            if ( isset( $summary['metadata_warnings'] ) && absint( $summary['metadata_warnings'] ) > 0 ) { $errors[] = 'metadata-warnings'; }
+            if ( isset( $summary['failed_records'] ) && absint( $summary['failed_records'] ) > 0 ) { $errors[] = 'failed-records'; }
+            $last_error = is_wp_error( $embedding_result ) ? $embedding_result->get_error_message() : '';
+            $final = array(
+                'last_run_utc' => $started,
+                'last_completed_utc' => gmdate( 'c' ),
+                'last_run_manual' => (bool) $manual,
+                'last_status' => $last_error ? 'warning' : 'ok',
+                'last_message' => $last_error ? $last_error : 'Knowledge index maintenance completed.',
+                'last_index_records' => absint( $summary['total_records'] ?? 0 ),
+                'last_metadata_warnings' => absint( $summary['metadata_warnings'] ?? 0 ),
+                'last_failed_records' => absint( $summary['failed_records'] ?? 0 ),
+                'last_embedded_records' => absint( $this->retrieval_status()['embedded_records'] ?? 0 ),
+                'last_error_flags' => $errors,
+            );
+            $this->update_maintenance_status( $final );
+            if ( ! empty( $options['maintenance_alert_on_failures'] ) && '1' === (string) $options['maintenance_alert_on_failures'] && ( ! empty( $errors ) || $last_error ) ) {
+                $this->send_maintenance_alert( $final );
+            }
+            return $this->maintenance_summary();
+        } catch ( Exception $e ) {
+            $final = array( 'last_completed_utc' => gmdate( 'c' ), 'last_status' => 'error', 'last_message' => $e->getMessage() );
+            $this->update_maintenance_status( $final );
+            return $this->maintenance_summary();
+        }
+    }
+
+    private function send_maintenance_alert( $status ) {
+        $options = $this->get_options();
+        $email = ! empty( $options['maintenance_alert_email'] ) ? sanitize_email( $options['maintenance_alert_email'] ) : get_option( 'admin_email' );
+        if ( ! $email || ! is_email( $email ) ) { return false; }
+        $subject = 'Research Librarian index maintenance warning';
+        $message = "Research Librarian maintenance completed with warnings.\n\nStatus: " . ( $status['last_status'] ?? 'unknown' ) . "\nMessage: " . ( $status['last_message'] ?? '' ) . "\nRecords: " . ( $status['last_index_records'] ?? 0 ) . "\nMetadata warnings: " . ( $status['last_metadata_warnings'] ?? 0 ) . "\nFailed records: " . ( $status['last_failed_records'] ?? 0 );
+        $sent = wp_mail( $email, $subject, $message );
+        if ( $sent ) { $this->update_maintenance_status( array( 'last_alert_email_utc' => gmdate( 'c' ), 'last_alert_email' => $email ) ); }
+        return $sent;
+    }
+
+    private function maintenance_summary() {
+        $options = $this->get_options();
+        $status = get_option( self::MAINTENANCE_OPTION, array() );
+        if ( ! is_array( $status ) ) { $status = array(); }
+        $next = wp_next_scheduled( self::MAINTENANCE_HOOK );
+        $index_summary = $this->knowledge_index_summary( $this->knowledge_index_records() );
+        $retrieval = $this->retrieval_status();
+        return array(
+            'version' => self::VERSION,
+            'schedule_enabled' => ! empty( $options['maintenance_auto_rebuild_enabled'] ) && '1' === (string) $options['maintenance_auto_rebuild_enabled'],
+            'frequency' => $options['maintenance_frequency'] ?? 'daily',
+            'next_run_utc' => $next ? gmdate( 'c', $next ) : '',
+            'last_run_utc' => $status['last_run_utc'] ?? '',
+            'last_completed_utc' => $status['last_completed_utc'] ?? '',
+            'last_status' => $status['last_status'] ?? 'not-run',
+            'last_message' => $status['last_message'] ?? '',
+            'sitemap_enabled' => ! empty( $options['maintenance_include_sitemap_urls'] ) && '1' === (string) $options['maintenance_include_sitemap_urls'],
+            'sitemap_url' => $options['maintenance_sitemap_url'] ?: home_url( '/sitemap_index.xml' ),
+            'last_sitemap_utc' => $status['last_sitemap_utc'] ?? '',
+            'last_sitemap_urls' => absint( $status['last_sitemap_urls'] ?? 0 ),
+            'last_sitemap_error' => $status['last_sitemap_error'] ?? '',
+            'auto_embed_after_rebuild' => ! empty( $options['maintenance_auto_embed_after_rebuild'] ) && '1' === (string) $options['maintenance_auto_embed_after_rebuild'],
+            'index_records' => absint( $index_summary['total_records'] ?? 0 ),
+            'metadata_warnings' => absint( $index_summary['metadata_warnings'] ?? 0 ),
+            'failed_records' => absint( $index_summary['failed_records'] ?? 0 ),
+            'embedded_records' => absint( $retrieval['embedded_records'] ?? 0 ),
+            'embedding_dimensions' => absint( $retrieval['embedding_dimensions'] ?? 0 ),
+            'last_error_flags' => isset( $status['last_error_flags'] ) && is_array( $status['last_error_flags'] ) ? $status['last_error_flags'] : array(),
+        );
     }
 
     private function source_records() {
@@ -3131,6 +3406,14 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'source_result_limit' => __( 'Source Result Limit', 'sustainable-catalyst-research-librarian-ai' ),
             'index_max_posts' => __( 'Indexer Max Posts', 'sustainable-catalyst-research-librarian-ai' ),
             'stale_after_days' => __( 'Stale After Days', 'sustainable-catalyst-research-librarian-ai' ),
+            'maintenance_auto_rebuild_enabled' => __( 'Enable Scheduled Index Maintenance', 'sustainable-catalyst-research-librarian-ai' ),
+            'maintenance_frequency' => __( 'Maintenance Frequency', 'sustainable-catalyst-research-librarian-ai' ),
+            'maintenance_include_sitemap_urls' => __( 'Include Sitemap URLs in Index', 'sustainable-catalyst-research-librarian-ai' ),
+            'maintenance_sitemap_url' => __( 'Sitemap URL', 'sustainable-catalyst-research-librarian-ai' ),
+            'maintenance_max_sitemap_urls' => __( 'Max Sitemap URLs', 'sustainable-catalyst-research-librarian-ai' ),
+            'maintenance_auto_embed_after_rebuild' => __( 'Auto-generate Embeddings After Maintenance Rebuild', 'sustainable-catalyst-research-librarian-ai' ),
+            'maintenance_alert_email' => __( 'Maintenance Alert Email', 'sustainable-catalyst-research-librarian-ai' ),
+            'maintenance_alert_on_failures' => __( 'Send Alerts on Maintenance Warnings', 'sustainable-catalyst-research-librarian-ai' ),
             'eval_high_confidence_threshold' => __( 'High Confidence Threshold', 'sustainable-catalyst-research-librarian-ai' ),
             'eval_medium_confidence_threshold' => __( 'Medium Confidence Threshold', 'sustainable-catalyst-research-librarian-ai' ),
             'evaluation_min_source_count' => __( 'Minimum Source Matches for Evaluation', 'sustainable-catalyst-research-librarian-ai' ),
@@ -3177,6 +3460,14 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'source_result_limit'     => max( 3, min( 8, absint( isset( $input['source_result_limit'] ) ? $input['source_result_limit'] : self::defaults()['source_result_limit'] ) ) ),
             'index_max_posts'         => max( 25, min( 1000, absint( isset( $input['index_max_posts'] ) ? $input['index_max_posts'] : self::defaults()['index_max_posts'] ) ) ),
             'stale_after_days'        => max( 30, min( 1095, absint( isset( $input['stale_after_days'] ) ? $input['stale_after_days'] : self::defaults()['stale_after_days'] ) ) ),
+            'maintenance_auto_rebuild_enabled' => ( isset( $input['maintenance_auto_rebuild_enabled'] ) && '1' === (string) wp_unslash( $input['maintenance_auto_rebuild_enabled'] ) ) ? '1' : '0',
+            'maintenance_frequency' => isset( $input['maintenance_frequency'] ) && in_array( sanitize_key( wp_unslash( $input['maintenance_frequency'] ) ), array( 'hourly', 'twicedaily', 'daily', 'sc_rl_weekly' ), true ) ? sanitize_key( wp_unslash( $input['maintenance_frequency'] ) ) : 'daily',
+            'maintenance_include_sitemap_urls' => ( isset( $input['maintenance_include_sitemap_urls'] ) && '1' === (string) wp_unslash( $input['maintenance_include_sitemap_urls'] ) ) ? '1' : '0',
+            'maintenance_sitemap_url' => isset( $input['maintenance_sitemap_url'] ) ? esc_url_raw( wp_unslash( $input['maintenance_sitemap_url'] ) ) : '',
+            'maintenance_max_sitemap_urls' => max( 1, min( 500, absint( isset( $input['maintenance_max_sitemap_urls'] ) ? $input['maintenance_max_sitemap_urls'] : self::defaults()['maintenance_max_sitemap_urls'] ) ) ),
+            'maintenance_auto_embed_after_rebuild' => ( isset( $input['maintenance_auto_embed_after_rebuild'] ) && '1' === (string) wp_unslash( $input['maintenance_auto_embed_after_rebuild'] ) ) ? '1' : '0',
+            'maintenance_alert_email' => isset( $input['maintenance_alert_email'] ) ? sanitize_email( wp_unslash( $input['maintenance_alert_email'] ) ) : '',
+            'maintenance_alert_on_failures' => ( isset( $input['maintenance_alert_on_failures'] ) && '1' === (string) wp_unslash( $input['maintenance_alert_on_failures'] ) ) ? '1' : '0',
             'eval_high_confidence_threshold' => max( 50, min( 95, absint( isset( $input['eval_high_confidence_threshold'] ) ? $input['eval_high_confidence_threshold'] : self::defaults()['eval_high_confidence_threshold'] ) ) ),
             'eval_medium_confidence_threshold' => max( 20, min( 90, absint( isset( $input['eval_medium_confidence_threshold'] ) ? $input['eval_medium_confidence_threshold'] : self::defaults()['eval_medium_confidence_threshold'] ) ) ),
             'evaluation_min_source_count' => max( 0, min( 5, absint( isset( $input['evaluation_min_source_count'] ) ? $input['evaluation_min_source_count'] : self::defaults()['evaluation_min_source_count'] ) ) ),
@@ -3265,6 +3556,21 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                 echo '<label><input type="checkbox" name="' . esc_attr( $name ) . '" value="1" ' . checked( $options[ $field ], '1', false ) . ' /> ' . esc_html__( 'Skip records that already have embeddings for the selected model. Recommended.', 'sustainable-catalyst-research-librarian-ai' ) . '</label>';
                 echo '<p class="description">' . esc_html__( 'This makes the embedding job resumable and prevents a later failure from destroying existing semantic coverage.', 'sustainable-catalyst-research-librarian-ai' ) . '</p>';
                 break;
+            case 'maintenance_auto_rebuild_enabled':
+            case 'maintenance_include_sitemap_urls':
+            case 'maintenance_auto_embed_after_rebuild':
+            case 'maintenance_alert_on_failures':
+                echo '<label><input type="checkbox" name="' . esc_attr( $name ) . '" value="1" ' . checked( $options[ $field ], '1', false ) . ' /> ' . esc_html__( 'Enabled', 'sustainable-catalyst-research-librarian-ai' ) . '</label>';
+                if ( 'maintenance_auto_embed_after_rebuild' === $field ) { echo '<p class="description">' . esc_html__( 'Use carefully on free-tier Gemini keys; scheduled runs can rebuild the index without generating embeddings.', 'sustainable-catalyst-research-librarian-ai' ) . '</p>'; }
+                break;
+            case 'maintenance_frequency':
+                echo '<select name="' . esc_attr( $name ) . '">';
+                foreach ( array( 'hourly' => 'Hourly', 'twicedaily' => 'Twice daily', 'daily' => 'Daily', 'sc_rl_weekly' => 'Weekly' ) as $value => $label ) {
+                    echo '<option value="' . esc_attr( $value ) . '" ' . selected( $options[ $field ], $value, false ) . '>' . esc_html( $label ) . '</option>';
+                }
+                echo '</select>';
+                echo '<p class="description">' . esc_html__( 'Click Sync Maintenance Schedule after changing this setting.', 'sustainable-catalyst-research-librarian-ai' ) . '</p>';
+                break;
             case 'system_instructions':
                 echo '<textarea class="large-text code" rows="14" name="' . esc_attr( $name ) . '">' . esc_textarea( $options[ $field ] ) . '</textarea>';
                 break;
@@ -3274,6 +3580,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             case 'source_result_limit':
             case 'index_max_posts':
             case 'stale_after_days':
+            case 'maintenance_max_sitemap_urls':
             case 'embedding_source_limit':
             case 'embedding_output_dimensionality':
             case 'embedding_retry_limit':
@@ -3326,6 +3633,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         $session_logs = $this->session_logs();
         $feedback_summary = $this->feedback_summary();
         $feedback_logs = $this->feedback_logs();
+        $maintenance_summary = $this->maintenance_summary();
         $notice_label = '';
         if ( $notice ) {
             if ( 'rebuilt' === $notice ) { $notice_label = 'Knowledge index rebuilt.'; }
@@ -3335,6 +3643,8 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             elseif ( 'evaluation-cleared' === $notice ) { $notice_label = 'Evaluation logs cleared.'; }
             elseif ( 'sessions-cleared' === $notice ) { $notice_label = 'Saved route sessions cleared.'; }
             elseif ( 'feedback-cleared' === $notice ) { $notice_label = 'Feedback and triage logs cleared.'; }
+            elseif ( 'maintenance-run' === $notice ) { $notice_label = 'Index maintenance run completed.'; }
+            elseif ( 'maintenance-synced' === $notice ) { $notice_label = 'Index maintenance schedule synced.'; }
             else { $notice_label = 'Knowledge index reset to seed records.'; }
         }
         ?>
@@ -3378,7 +3688,25 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                 <a class="button" href="<?php echo esc_url( rest_url( self::REST_NAMESPACE . '/feedback/export' ) ); ?>"><?php esc_html_e( 'Export Feedback JSON', 'sustainable-catalyst-research-librarian-ai' ); ?></a>
                 <button class="button" type="submit" name="sc_rl_index_action" value="clear_feedback"><?php esc_html_e( 'Clear Feedback Logs', 'sustainable-catalyst-research-librarian-ai' ); ?></button>
                 <a class="button" href="<?php echo esc_url( rest_url( self::REST_NAMESPACE . '/governance/export' ) ); ?>"><?php esc_html_e( 'Export Governance JSON', 'sustainable-catalyst-research-librarian-ai' ); ?></a>
+                <button class="button" type="submit" name="sc_rl_index_action" value="run_maintenance"><?php esc_html_e( 'Run Index Maintenance', 'sustainable-catalyst-research-librarian-ai' ); ?></button>
+                <button class="button" type="submit" name="sc_rl_index_action" value="sync_maintenance"><?php esc_html_e( 'Sync Maintenance Schedule', 'sustainable-catalyst-research-librarian-ai' ); ?></button>
+                <a class="button" href="<?php echo esc_url( rest_url( self::REST_NAMESPACE . '/maintenance/export' ) ); ?>"><?php esc_html_e( 'Export Maintenance JSON', 'sustainable-catalyst-research-librarian-ai' ); ?></a>
             </form>
+
+            <div class="postbox" style="padding:14px;max-width:1100px;margin:12px 0 22px;">
+                <h2 style="margin-top:0;"><?php esc_html_e( 'Scheduled Index Maintenance, Sitemap Sync, and Health Alerts', 'sustainable-catalyst-research-librarian-ai' ); ?></h2>
+                <p><?php esc_html_e( 'This layer keeps the knowledge index from becoming stale. It can rebuild the index on a schedule, include sitemap URLs in source coverage, optionally regenerate embeddings after rebuilds, and surface maintenance health for review.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
+                <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:12px 0;">
+                    <div class="postbox" style="padding:10px;"><strong style="font-size:20px;display:block;"><?php echo esc_html( $maintenance_summary['schedule_enabled'] ? 'on' : 'off' ); ?></strong><span><?php esc_html_e( 'Schedule', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                    <div class="postbox" style="padding:10px;"><strong style="font-size:20px;display:block;"><?php echo esc_html( $maintenance_summary['frequency'] ); ?></strong><span><?php esc_html_e( 'Frequency', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                    <div class="postbox" style="padding:10px;"><strong style="font-size:20px;display:block;"><?php echo esc_html( $maintenance_summary['last_status'] ); ?></strong><span><?php esc_html_e( 'Last status', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                    <div class="postbox" style="padding:10px;"><strong style="font-size:20px;display:block;"><?php echo esc_html( $maintenance_summary['next_run_utc'] ? $maintenance_summary['next_run_utc'] : 'none' ); ?></strong><span><?php esc_html_e( 'Next run', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                    <div class="postbox" style="padding:10px;"><strong style="font-size:20px;display:block;"><?php echo esc_html( absint( $maintenance_summary['last_sitemap_urls'] ) ); ?></strong><span><?php esc_html_e( 'Sitemap URLs', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                </div>
+                <p><strong><?php esc_html_e( 'Last run:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <?php echo esc_html( $maintenance_summary['last_run_utc'] ? $maintenance_summary['last_run_utc'] : 'not yet run' ); ?> · <strong><?php esc_html_e( 'Last message:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <?php echo esc_html( $maintenance_summary['last_message'] ? $maintenance_summary['last_message'] : 'none' ); ?></p>
+                <?php if ( ! empty( $maintenance_summary['last_sitemap_error'] ) ) : ?><p><strong><?php esc_html_e( 'Sitemap warning:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <?php echo esc_html( $maintenance_summary['last_sitemap_error'] ); ?></p><?php endif; ?>
+            </div>
+
 
             <div class="postbox" style="padding:14px;max-width:1100px;margin:12px 0 22px;">
                 <h2 style="margin-top:0;"><?php esc_html_e( 'Gemini Embedding Diagnostics', 'sustainable-catalyst-research-librarian-ai' ); ?></h2>
@@ -3505,4 +3833,5 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
 }
 
 register_activation_hook( __FILE__, array( 'Sustainable_Catalyst_Research_Librarian_AI', 'activate' ) );
+register_deactivation_hook( __FILE__, array( 'Sustainable_Catalyst_Research_Librarian_AI', 'deactivate' ) );
 Sustainable_Catalyst_Research_Librarian_AI::instance();
