@@ -1,5 +1,61 @@
 # Changelog
 
+## v3.6.0 — Saved Route Sessions and Admin Analytics
+
+- Added saved route-session records for useful Research Librarian outputs.
+- Added public assistant **Save session** action.
+- Added `/session/save`, `/session/logs`, `/session/export`, and `/analytics/summary` REST endpoints.
+- Added admin analytics for common routes, handoff targets, confidence distribution, and recent saved sessions.
+- Added session export and clear-session admin controls.
+- Added public `session-summary` and `analytics-summary` shortcode modes.
+- Added session log limit setting.
+- Preserved v3.5.0 handoff payload behavior and v3.4.0 evaluation behavior.
+
+
+## v3.5.0 — Workbench and Decision Studio Handoff Payloads
+
+- Added structured handoff payload generation for Workbench, Decision Studio, module artifacts, Feature Suggestions, and knowledge-route follow-up.
+- Added `/handoff/schema`, `/handoff/prepare`, `/handoff/logs`, and `/handoff/export` REST endpoints.
+- Added `handoff_payload` to exported route notes.
+- Added public `[sc_research_librarian mode="handoff-summary"]` shortcode.
+- Added handoff JSON download button to the assistant UI.
+- Added handoff target inference, source-context preservation, assumptions/register seeds, Decision Packet seed objects, Workbench analysis-intent objects, and module artifact field recommendations.
+- Added handoff log summary and admin-only handoff log export.
+
+
+## 3.4.0 — Retrieval Evaluation, Confidence Tuning, and Failure Logs
+
+- Added retrieval evaluation suite for standard Sustainable Catalyst routing prompts.
+- Added expected-route comparison and pass/fail labels.
+- Added confidence threshold settings for high/medium route confidence.
+- Added source-coverage checks and weak-source warnings.
+- Added keyword vs semantic score breakdown for top source matches.
+- Added evaluation failure logs and admin export endpoint.
+- Added admin dashboard section for evaluation results.
+- Added evaluation summary shortcode.
+- Added REST endpoints for suite, run, query, logs, and export.
+- Preserved v3.3.3 Gemini key-persistence and embedding queue behavior.
+
+# Changelog
+
+## v3.3.3 — Gemini Key Persistence and Batch Credential Fix
+
+- Added protected API-key replacement fields so blank password inputs cannot overwrite saved keys.
+- Added explicit clear-key checkboxes for Gemini and OpenAI credentials.
+- Added placeholder/masked/autofill/incomplete-key detection.
+- Added saved-key and last-run key fingerprints to diagnostics without exposing secrets.
+- Added key fingerprint metadata to embedding status, single tests, and batch runs.
+- Improved admin guidance for batch embedding after successful single embedding tests.
+
+## v3.3.2 — Embedding Queue, Rate Limit Handling, and Key Preservation
+
+- Added resumable Gemini embedding generation.
+- Added delay and retry settings for more stable free-tier embedding jobs.
+- Added saved-key fingerprint diagnostics without exposing the key.
+- Preserved existing embeddings when later batches fail.
+- Improved distinction between key/auth failures and temporary rate-limit/server failures.
+
+
 ## v3.3.1 — Gemini Embedding Diagnostics and Request Format Fix
 
 - Added a single-record Gemini embedding test button in the admin dashboard.

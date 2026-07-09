@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Sustainable Catalyst Research Librarian
  * Plugin URI: https://sustainablecatalyst.com/platform/research-librarian/
- * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, admin crawl dashboard, grounded route notes, confidence scoring, Decision Studio and Workbench handoffs, AI-assisted answers, deterministic fallback, and exports.
- * Version: 3.3.1
+ * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, and exports.
+ * Version: 3.6.0
  * Author: Content Catalyst LLC / Tariq Ahmad
  * Author URI: https://sustainablecatalyst.com/
  * License: MIT
@@ -18,8 +18,10 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
     const OPTION_NAME    = 'sc_rl_ai_options';
     const INDEX_OPTION   = 'sc_rl_ai_knowledge_index';
     const EMBED_OPTION   = 'sc_rl_ai_embedding_status';
+    const EVAL_OPTION    = 'sc_rl_ai_evaluation_status';
+    const HANDOFF_OPTION = 'sc_rl_ai_handoff_status';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const VERSION        = '3.3.1';
+    const VERSION        = '3.6.0';
 
     private static $instance = null;
 
@@ -50,15 +52,20 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
         return array(
             'provider'                => 'disabled',
             'openai_api_key'          => '',
+            'openai_key_fingerprint'  => '',
             'openai_model'            => 'gpt-5.5',
             'openai_vector_store_id'  => '',
             'gemini_api_key'          => '',
+            'gemini_key_fingerprint'  => '',
             'gemini_model'            => 'gemini-2.5-flash',
             'embeddings_provider'     => 'disabled',
             'gemini_embedding_model'  => 'gemini-embedding-001',
             'embedding_source_limit'  => 250,
             'embedding_output_dimensionality' => 0,
             'embedding_retry_limit'   => 3,
+            'embedding_batch_delay_ms' => 1200,
+            'embedding_retry_after_seconds' => 5,
+            'embedding_resume_existing' => '1',
             'semantic_weight'         => '0.65',
             'keyword_weight'          => '0.35',
             'max_file_search_results' => 6,
@@ -68,6 +75,12 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
             'source_result_limit'     => 5,
             'index_max_posts'         => 250,
             'stale_after_days'        => 180,
+            'eval_high_confidence_threshold' => 75,
+            'eval_medium_confidence_threshold' => 45,
+            'evaluation_log_limit'    => 100,
+            'evaluation_min_source_count' => 1,
+            'handoff_log_limit'     => 100,
+            'session_log_limit'     => 200,
             'system_instructions'     => self::default_system_instructions(),
         );
     }
@@ -140,6 +153,18 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         }
         if ( 'retrieval' === $mode || 'retrieval-status' === $mode ) {
             return $this->render_retrieval_status( $atts );
+        }
+        if ( 'evaluation' === $mode || 'evaluation-summary' === $mode ) {
+            return $this->render_evaluation_summary( $atts );
+        }
+        if ( 'handoff' === $mode || 'handoff-summary' === $mode || 'handoffs' === $mode ) {
+            return $this->render_handoff_summary( $atts );
+        }
+        if ( 'sessions' === $mode || 'session-summary' === $mode || 'route-sessions' === $mode ) {
+            return $this->render_session_summary( $atts );
+        }
+        if ( 'analytics' === $mode || 'analytics-summary' === $mode || 'route-analytics' === $mode ) {
+            return $this->render_analytics_summary( $atts );
         }
         return $this->render_assistant( $atts );
     }
@@ -233,17 +258,103 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         return ob_get_clean();
     }
 
+
+    private function render_evaluation_summary( $atts ) {
+        $evaluation = $this->evaluation_summary();
+        $summary = isset( $evaluation['summary'] ) && is_array( $evaluation['summary'] ) ? $evaluation['summary'] : $this->evaluation_summary_defaults();
+        ob_start();
+        ?>
+        <section class="sc-rl-evaluation-summary" data-sc-rl-product="evaluation-summary">
+            <p class="sc-rl-routes__eyebrow">Research Librarian Retrieval Evaluation</p>
+            <h2><?php echo esc_html( $atts['title'] ); ?></h2>
+            <p>Evaluation checks whether the Research Librarian routes standard Sustainable Catalyst questions to the expected product, module, or knowledge path. It reports route accuracy, confidence, source coverage, and weak matches.</p>
+            <div class="sc-rl-index-summary__grid">
+                <article><span><?php echo esc_html( absint( $summary['total_cases'] ) ); ?></span><strong>Test cases</strong></article>
+                <article><span><?php echo esc_html( absint( round( (float) $summary['accuracy'] ) ) ); ?>%</span><strong>Route accuracy</strong></article>
+                <article><span><?php echo esc_html( absint( $summary['low_confidence'] ) ); ?></span><strong>Low confidence</strong></article>
+                <article><span><?php echo esc_html( absint( $summary['weak_source_matches'] ) ); ?></span><strong>Weak source matches</strong></article>
+            </div>
+            <p class="sc-rl-index-summary__meta">Last evaluation: <?php echo esc_html( ! empty( $evaluation['last_run_utc'] ) ? $evaluation['last_run_utc'] : 'not run yet' ); ?></p>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+
+
+    private function render_handoff_summary( $atts ) {
+        $summary = $this->handoff_summary();
+        ob_start();
+        ?>
+        <section class="sc-rl-handoff-summary" data-sc-rl-product="handoff-summary">
+            <p class="sc-rl-routes__eyebrow">Research Librarian Handoff Layer</p>
+            <h2><?php echo esc_html( $atts['title'] ); ?></h2>
+            <p>The handoff layer turns Research Librarian route results into structured payloads for Workbench, Decision Studio, and Sustainable Catalyst module workflows. It preserves the question, route, sources, assumptions, confidence, next action, and boundary notes so downstream tools receive usable context instead of an unstructured chat answer.</p>
+            <div class="sc-rl-index-summary__grid">
+                <article><span><?php echo esc_html( absint( $summary['targets'] ) ); ?></span><strong>Handoff targets</strong></article>
+                <article><span><?php echo esc_html( absint( $summary['schemas'] ) ); ?></span><strong>Payload schemas</strong></article>
+                <article><span><?php echo esc_html( absint( $summary['last_payload_source_count'] ) ); ?></span><strong>Last source count</strong></article>
+                <article><span><?php echo esc_html( esc_html( $summary['last_target'] ) ); ?></span><strong>Last target</strong></article>
+            </div>
+            <p class="sc-rl-index-summary__meta">Supported targets: Workbench, Decision Studio, module artifact workflow, Feature Suggestions, and knowledge-route follow-up.</p>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+
+
+    private function render_session_summary( $atts ) {
+        $summary = $this->session_analytics_summary();
+        ob_start();
+        ?>
+        <section class="sc-rl-session-summary" data-sc-rl-product="session-summary">
+            <p class="sc-rl-routes__eyebrow">Research Librarian Route Sessions</p>
+            <h2><?php echo esc_html( $atts['title'] ); ?></h2>
+            <p>Saved route sessions preserve a visitor question, recommended route, source count, confidence, handoff target, and downstream next step so useful routing work can be reviewed without exposing API keys or confidential data.</p>
+            <div class="sc-rl-index-summary__grid">
+                <article><span><?php echo esc_html( absint( $summary['total_sessions'] ) ); ?></span><strong>Saved sessions</strong></article>
+                <article><span><?php echo esc_html( absint( $summary['unique_routes'] ) ); ?></span><strong>Routes used</strong></article>
+                <article><span><?php echo esc_html( absint( $summary['unique_targets'] ) ); ?></span><strong>Handoff targets</strong></article>
+                <article><span><?php echo esc_html( $summary['last_saved_utc'] ? $summary['last_saved_utc'] : 'none' ); ?></span><strong>Last saved</strong></article>
+            </div>
+            <p class="sc-rl-index-summary__meta">Use the assistant's Save session action after a useful route note is generated.</p>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+
+    private function render_analytics_summary( $atts ) {
+        $summary = $this->session_analytics_summary();
+        ob_start();
+        ?>
+        <section class="sc-rl-analytics-summary" data-sc-rl-product="analytics-summary">
+            <p class="sc-rl-routes__eyebrow">Research Librarian Route Analytics</p>
+            <h2><?php echo esc_html( $atts['title'] ); ?></h2>
+            <p>Route analytics summarize saved sessions, common routes, handoff targets, confidence distribution, and recent routing activity. This is lightweight operational telemetry for improving the Research Librarian without turning it into a tracking product.</p>
+            <div class="sc-rl-index-summary__grid">
+                <article><span><?php echo esc_html( absint( $summary['total_sessions'] ) ); ?></span><strong>Total sessions</strong></article>
+                <article><span><?php echo esc_html( $summary['top_route']['label'] ); ?></span><strong>Top route</strong></article>
+                <article><span><?php echo esc_html( $summary['top_target']['label'] ); ?></span><strong>Top handoff</strong></article>
+                <article><span><?php echo esc_html( absint( $summary['confidence_counts']['low'] ?? 0 ) ); ?></span><strong>Low-confidence saves</strong></article>
+            </div>
+            <p class="sc-rl-index-summary__meta">Recent saved session count: <?php echo esc_html( absint( count( $summary['recent_sessions'] ) ) ); ?>.</p>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+
     private function render_assistant( $atts ) {
         $root_id = wp_unique_id( 'sc-rl-ai-' );
         $endpoint = rest_url( self::REST_NAMESPACE . '/ask' );
         $routes_endpoint = rest_url( self::REST_NAMESPACE . '/routes' );
         $note_endpoint = rest_url( self::REST_NAMESPACE . '/route-note' );
+        $handoff_endpoint = rest_url( self::REST_NAMESPACE . '/handoff/prepare' );
+        $session_endpoint = rest_url( self::REST_NAMESPACE . '/session/save' );
         $nonce = wp_create_nonce( 'wp_rest' );
         $compact = ( 'compact' === sanitize_key( $atts['display'] ) || 'compact' === sanitize_key( $atts['mode'] ) );
 
         ob_start();
         ?>
-        <section id="<?php echo esc_attr( $root_id ); ?>" class="sc-rl-ai<?php echo $compact ? ' sc-rl-ai--compact' : ''; ?>" data-endpoint="<?php echo esc_url( $endpoint ); ?>" data-routes-endpoint="<?php echo esc_url( $routes_endpoint ); ?>" data-note-endpoint="<?php echo esc_url( $note_endpoint ); ?>" data-nonce="<?php echo esc_attr( $nonce ); ?>">
+        <section id="<?php echo esc_attr( $root_id ); ?>" class="sc-rl-ai<?php echo $compact ? ' sc-rl-ai--compact' : ''; ?>" data-endpoint="<?php echo esc_url( $endpoint ); ?>" data-routes-endpoint="<?php echo esc_url( $routes_endpoint ); ?>" data-note-endpoint="<?php echo esc_url( $note_endpoint ); ?>" data-handoff-endpoint="<?php echo esc_url( $handoff_endpoint ); ?>" data-session-endpoint="<?php echo esc_url( $session_endpoint ); ?>" data-nonce="<?php echo esc_attr( $nonce ); ?>">
             <div class="sc-rl-ai__shell">
                 <div class="sc-rl-ai__card sc-rl-ai__ask-card">
                     <p class="sc-rl-ai__eyebrow">Sustainable Catalyst Research Librarian</p>
@@ -258,6 +369,8 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                         <button type="button" class="sc-rl-ai__button sc-rl-ai__button--primary" data-sc-rl-submit>Ask the Librarian</button>
                         <button type="button" class="sc-rl-ai__button sc-rl-ai__button--secondary" data-sc-rl-copy>Copy route note</button>
                         <button type="button" class="sc-rl-ai__button sc-rl-ai__button--secondary" data-sc-rl-download>Download JSON</button>
+                        <button type="button" class="sc-rl-ai__button sc-rl-ai__button--secondary" data-sc-rl-handoff-download>Download handoff</button>
+                        <button type="button" class="sc-rl-ai__button sc-rl-ai__button--secondary" data-sc-rl-save-session>Save session</button>
                         <button type="button" class="sc-rl-ai__button sc-rl-ai__button--ghost" data-sc-rl-clear>Clear</button>
                     </div>
 
@@ -276,7 +389,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                         <span class="sc-rl-ai__status" data-sc-rl-status>Ready</span>
                     </div>
                     <div class="sc-rl-ai__answer" data-sc-rl-answer>
-                        <p>Ask a question or choose an example. The librarian will recommend a route, explain why it fits, show related links, and produce an exportable route note.</p>
+                        <p>Ask a question or choose an example. The librarian will recommend a route, explain why it fits, show related links, and produce an exportable route note with a Workbench or Decision Studio handoff payload when relevant.</p>
                     </div>
                     <div class="sc-rl-ai__route-summary" data-sc-rl-route-summary hidden></div>
                     <div class="sc-rl-ai__boundary-note">Educational routing only. No legal, financial, medical, tax, engineering, compliance, assurance, ESG/SDG certification, or regulated-information advice.</div>
@@ -380,6 +493,87 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'permission_callback' => array( $this, 'can_manage_options' ),
         ) );
 
+
+        register_rest_route( self::REST_NAMESPACE, '/evaluation/suite', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'handle_evaluation_suite_request' ),
+            'permission_callback' => '__return_true',
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/evaluation/run', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array( $this, 'handle_evaluation_run_request' ),
+            'permission_callback' => array( $this, 'can_manage_options' ),
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/evaluation/query', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array( $this, 'handle_evaluation_query_request' ),
+            'permission_callback' => array( $this, 'can_manage_options' ),
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/evaluation/logs', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'handle_evaluation_logs_request' ),
+            'permission_callback' => array( $this, 'can_manage_options' ),
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/evaluation/export', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'handle_evaluation_export_request' ),
+            'permission_callback' => array( $this, 'can_manage_options' ),
+        ) );
+
+
+        register_rest_route( self::REST_NAMESPACE, '/handoff/schema', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'handle_handoff_schema_request' ),
+            'permission_callback' => '__return_true',
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/handoff/prepare', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array( $this, 'handle_handoff_prepare_request' ),
+            'permission_callback' => '__return_true',
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/handoff/logs', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'handle_handoff_logs_request' ),
+            'permission_callback' => array( $this, 'can_manage_options' ),
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/handoff/export', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'handle_handoff_export_request' ),
+            'permission_callback' => array( $this, 'can_manage_options' ),
+        ) );
+
+
+        register_rest_route( self::REST_NAMESPACE, '/session/save', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array( $this, 'handle_session_save_request' ),
+            'permission_callback' => '__return_true',
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/session/logs', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'handle_session_logs_request' ),
+            'permission_callback' => array( $this, 'can_manage_options' ),
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/session/export', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'handle_session_export_request' ),
+            'permission_callback' => array( $this, 'can_manage_options' ),
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/analytics/summary', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'handle_analytics_summary_request' ),
+            'permission_callback' => '__return_true',
+        ) );
+
         register_rest_route( self::REST_NAMESPACE, '/health', array(
             'methods'             => WP_REST_Server::READABLE,
             'callback'            => array( $this, 'handle_health_request' ),
@@ -397,6 +591,8 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'sources'  => count( $this->source_records() ),
             'index'    => $this->knowledge_index_summary( $this->knowledge_index_records() ),
             'retrieval' => $this->retrieval_status(),
+            'evaluation' => $this->evaluation_summary(),
+            'handoff' => $this->handoff_summary(),
         ), 200 );
     }
 
@@ -489,6 +685,53 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         $route = $this->match_route( strtolower( $query ) );
         $matches = $this->match_sources( $query, $route );
         return new WP_REST_Response( array( 'version' => self::VERSION, 'query' => $query, 'route' => $route, 'matches' => $matches, 'retrieval' => $this->retrieval_status() ), 200 );
+    }
+
+
+    public function handle_evaluation_suite_request() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'suite' => $this->evaluation_suite(), 'summary' => $this->evaluation_summary() ), 200 );
+    }
+
+    public function handle_evaluation_run_request( WP_REST_Request $request ) {
+        $nonce = $request->get_header( 'x_wp_nonce' );
+        if ( ! $nonce || ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
+            return new WP_Error( 'sc_rl_ai_bad_nonce', __( 'Security check failed. Refresh the page and try again.', 'sustainable-catalyst-research-librarian-ai' ), array( 'status' => 403 ) );
+        }
+        $params = $request->get_json_params();
+        $cases = array();
+        if ( isset( $params['cases'] ) && is_array( $params['cases'] ) ) {
+            $cases = $params['cases'];
+        }
+        $result = $this->run_retrieval_evaluation( $cases, true );
+        return new WP_REST_Response( $result, 200 );
+    }
+
+    public function handle_evaluation_query_request( WP_REST_Request $request ) {
+        $nonce = $request->get_header( 'x_wp_nonce' );
+        if ( ! $nonce || ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
+            return new WP_Error( 'sc_rl_ai_bad_nonce', __( 'Security check failed. Refresh the page and try again.', 'sustainable-catalyst-research-librarian-ai' ), array( 'status' => 403 ) );
+        }
+        $params = $request->get_json_params();
+        $prompt = isset( $params['query'] ) ? sanitize_textarea_field( wp_unslash( $params['query'] ) ) : '';
+        if ( '' === trim( $prompt ) ) {
+            return new WP_Error( 'sc_rl_ai_empty_query', __( 'Please enter a retrieval evaluation query.', 'sustainable-catalyst-research-librarian-ai' ), array( 'status' => 400 ) );
+        }
+        $expected = array();
+        if ( ! empty( $params['expected_route'] ) ) {
+            $expected[] = sanitize_key( wp_unslash( $params['expected_route'] ) );
+        }
+        if ( isset( $params['expected_routes'] ) && is_array( $params['expected_routes'] ) ) {
+            foreach ( $params['expected_routes'] as $route_id ) { $expected[] = sanitize_key( wp_unslash( $route_id ) ); }
+        }
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'result' => $this->evaluate_retrieval_query( $prompt, $expected, 'manual' ) ), 200 );
+    }
+
+    public function handle_evaluation_logs_request() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'evaluation' => $this->evaluation_summary(), 'logs' => $this->evaluation_logs() ), 200 );
+    }
+
+    public function handle_evaluation_export_request() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'evaluation' => $this->evaluation_summary(), 'logs' => $this->evaluation_logs(), 'suite' => $this->evaluation_suite(), 'retrieval' => $this->retrieval_status(), 'index' => $this->knowledge_index_summary( $this->knowledge_index_records() ) ), 200 );
     }
 
     public function handle_index_embed_request( WP_REST_Request $request ) {
@@ -825,6 +1068,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'reason_codes' => isset( $grounding['reason_codes'] ) ? $grounding['reason_codes'] : array(),
             'sources'      => isset( $grounding['sources'] ) ? $grounding['sources'] : array(),
             'handoffs'     => isset( $grounding['handoffs'] ) ? $grounding['handoffs'] : array(),
+            'handoff_payload' => $this->build_handoff_payload( $question, $route, $source, $grounding ),
             'ambiguity'    => isset( $grounding['ambiguity'] ) ? $grounding['ambiguity'] : array(),
             'boundaries'   => array(
                 'Educational routing only.',
@@ -967,9 +1211,12 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         }
         $score = min( 100, ( $keyword_hits * 18 ) + ( min( $top, 30 ) * 2 ) + ( count( $sources ) * 3 ) );
         $level = 'low';
-        if ( $score >= 75 ) {
+        $options = $this->get_options();
+        $high_threshold = max( 50, min( 95, absint( $options['eval_high_confidence_threshold'] ?? 75 ) ) );
+        $medium_threshold = max( 20, min( $high_threshold - 1, absint( $options['eval_medium_confidence_threshold'] ?? 45 ) ) );
+        if ( $score >= $high_threshold ) {
             $level = 'high';
-        } elseif ( $score >= 45 ) {
+        } elseif ( $score >= $medium_threshold ) {
             $level = 'medium';
         }
         $semantic_hits = 0;
@@ -1023,6 +1270,387 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
     }
 
 
+    public function handle_handoff_schema_request() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'schema' => $this->handoff_schema(), 'summary' => $this->handoff_summary() ), 200 );
+    }
+
+    public function handle_handoff_prepare_request( WP_REST_Request $request ) {
+        $nonce = $request->get_header( 'x_wp_nonce' );
+        if ( ! $nonce || ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
+            return new WP_Error( 'sc_rl_ai_bad_nonce', __( 'Security check failed. Refresh the page and try again.', 'sustainable-catalyst-research-librarian-ai' ), array( 'status' => 403 ) );
+        }
+        $params = $request->get_json_params();
+        $question = isset( $params['question'] ) ? sanitize_textarea_field( wp_unslash( $params['question'] ) ) : '';
+        if ( '' === trim( $question ) ) {
+            return new WP_Error( 'sc_rl_ai_empty_question', __( 'Please enter a question before preparing a handoff.', 'sustainable-catalyst-research-librarian-ai' ), array( 'status' => 400 ) );
+        }
+        $route = $this->match_route( strtolower( $question ) );
+        $grounding = $this->grounding_context( $question, $route );
+        $payload = $this->build_handoff_payload( $question, $route, 'handoff-prepare', $grounding );
+        $this->append_handoff_log( $payload );
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'handoff_payload' => $payload, 'route' => $route, 'grounding' => $grounding ), 200 );
+    }
+
+    public function handle_handoff_logs_request() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'summary' => $this->handoff_summary(), 'logs' => $this->handoff_logs() ), 200 );
+    }
+
+    public function handle_handoff_export_request() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'summary' => $this->handoff_summary(), 'schema' => $this->handoff_schema(), 'logs' => $this->handoff_logs() ), 200 );
+    }
+
+
+    public function handle_session_save_request( WP_REST_Request $request ) {
+        $nonce = $request->get_header( 'x_wp_nonce' );
+        if ( ! $nonce || ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
+            return new WP_Error( 'sc_rl_ai_bad_nonce', __( 'Security check failed. Refresh the page and try again.', 'sustainable-catalyst-research-librarian-ai' ), array( 'status' => 403 ) );
+        }
+        $params = $request->get_json_params();
+        $note = isset( $params['route_note'] ) && is_array( $params['route_note'] ) ? $this->sanitize_deep( $params['route_note'] ) : array();
+        if ( empty( $note ) ) {
+            $question = isset( $params['question'] ) ? sanitize_textarea_field( wp_unslash( $params['question'] ) ) : '';
+            if ( '' === trim( $question ) ) {
+                return new WP_Error( 'sc_rl_ai_empty_session', __( 'Please generate a route note before saving a session.', 'sustainable-catalyst-research-librarian-ai' ), array( 'status' => 400 ) );
+            }
+            $route = $this->match_route( strtolower( $question ) );
+            $grounding = $this->grounding_context( $question, $route );
+            $note = $this->build_route_note( $question, $route, 'session-save', $grounding );
+        }
+        $session = $this->build_saved_session_record( $note );
+        $this->append_session_log( $session );
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'saved' => true, 'session' => $session, 'analytics' => $this->session_analytics_summary() ), 200 );
+    }
+
+    public function handle_session_logs_request() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'summary' => $this->session_analytics_summary(), 'logs' => $this->session_logs() ), 200 );
+    }
+
+    public function handle_session_export_request() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'summary' => $this->session_analytics_summary(), 'logs' => $this->session_logs(), 'handoffs' => $this->handoff_logs(), 'evaluation' => $this->evaluation_summary() ), 200 );
+    }
+
+    public function handle_analytics_summary_request() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'analytics' => $this->session_analytics_summary(), 'retrieval' => $this->retrieval_status(), 'index' => $this->knowledge_index_summary( $this->knowledge_index_records() ) ), 200 );
+    }
+
+    private function sanitize_deep( $value ) {
+        if ( is_array( $value ) ) {
+            $clean = array();
+            foreach ( $value as $key => $item ) {
+                $clean_key = is_string( $key ) ? sanitize_key( $key ) : $key;
+                $clean[ $clean_key ] = $this->sanitize_deep( $item );
+            }
+            return $clean;
+        }
+        if ( is_bool( $value ) || is_int( $value ) || is_float( $value ) ) { return $value; }
+        return sanitize_textarea_field( wp_unslash( (string) $value ) );
+    }
+
+    private function build_saved_session_record( $note ) {
+        $route = isset( $note['recommended_route'] ) && is_array( $note['recommended_route'] ) ? $note['recommended_route'] : array();
+        $confidence = isset( $note['confidence'] ) && is_array( $note['confidence'] ) ? $note['confidence'] : array();
+        $handoff_payload = isset( $note['handoff_payload'] ) && is_array( $note['handoff_payload'] ) ? $note['handoff_payload'] : array();
+        $target = isset( $handoff_payload['target'] ) ? sanitize_key( $handoff_payload['target'] ) : 'knowledge_route';
+        return array(
+            'session_id' => 'sc-rl-session-' . gmdate( 'YmdHis' ) . '-' . substr( md5( wp_json_encode( $note ) ), 0, 8 ),
+            'created_at_utc' => gmdate( 'c' ),
+            'question' => isset( $note['question'] ) ? sanitize_textarea_field( $note['question'] ) : '',
+            'route_id' => isset( $route['id'] ) ? sanitize_key( $route['id'] ) : '',
+            'route_title' => isset( $route['title'] ) ? sanitize_text_field( $route['title'] ) : '',
+            'route_url' => isset( $route['url'] ) ? esc_url_raw( $route['url'] ) : '',
+            'source' => isset( $note['source'] ) ? sanitize_key( $note['source'] ) : '',
+            'confidence_level' => isset( $confidence['level'] ) ? sanitize_key( $confidence['level'] ) : 'unknown',
+            'confidence_score' => isset( $confidence['score'] ) ? (float) $confidence['score'] : 0,
+            'source_count' => isset( $note['sources'] ) && is_array( $note['sources'] ) ? count( $note['sources'] ) : 0,
+            'handoff_target' => $target,
+            'handoff_payload_id' => isset( $handoff_payload['payload_id'] ) ? sanitize_text_field( $handoff_payload['payload_id'] ) : '',
+            'next_step' => isset( $note['next_step'] ) ? sanitize_textarea_field( $note['next_step'] ) : '',
+            'route_note' => $note,
+        );
+    }
+
+    private function append_session_log( $session ) {
+        $logs = $this->session_logs();
+        array_unshift( $logs, $session );
+        $limit = max( 10, min( 1000, absint( $this->get_options()['session_log_limit'] ?? 200 ) ) );
+        $logs = array_slice( $logs, 0, $limit );
+        update_option( 'sc_rl_ai_session_log', $logs, false );
+        update_option( 'sc_rl_ai_session_status', array(
+            'last_saved_utc' => $session['created_at_utc'],
+            'last_route_id' => $session['route_id'],
+            'last_handoff_target' => $session['handoff_target'],
+            'last_confidence_level' => $session['confidence_level'],
+        ), false );
+    }
+
+    private function session_logs() {
+        $logs = get_option( 'sc_rl_ai_session_log', array() );
+        return is_array( $logs ) ? $logs : array();
+    }
+
+    private function clear_session_logs() {
+        update_option( 'sc_rl_ai_session_log', array(), false );
+        update_option( 'sc_rl_ai_session_status', array(), false );
+    }
+
+    private function session_analytics_summary() {
+        $logs = $this->session_logs();
+        $route_counts = array();
+        $target_counts = array();
+        $confidence_counts = array( 'high' => 0, 'medium' => 0, 'low' => 0, 'unknown' => 0 );
+        foreach ( $logs as $log ) {
+            $route_id = isset( $log['route_id'] ) && $log['route_id'] ? $log['route_id'] : 'unknown';
+            $target = isset( $log['handoff_target'] ) && $log['handoff_target'] ? $log['handoff_target'] : 'knowledge_route';
+            $confidence = isset( $log['confidence_level'] ) && $log['confidence_level'] ? $log['confidence_level'] : 'unknown';
+            $route_counts[ $route_id ] = isset( $route_counts[ $route_id ] ) ? $route_counts[ $route_id ] + 1 : 1;
+            $target_counts[ $target ] = isset( $target_counts[ $target ] ) ? $target_counts[ $target ] + 1 : 1;
+            if ( ! isset( $confidence_counts[ $confidence ] ) ) { $confidence_counts[ $confidence ] = 0; }
+            $confidence_counts[ $confidence ]++;
+        }
+        arsort( $route_counts );
+        arsort( $target_counts );
+        $top_route_id = key( $route_counts );
+        $top_target = key( $target_counts );
+        $last = ! empty( $logs[0] ) && is_array( $logs[0] ) ? $logs[0] : array();
+        return array(
+            'total_sessions' => count( $logs ),
+            'unique_routes' => count( $route_counts ),
+            'unique_targets' => count( $target_counts ),
+            'route_counts' => $route_counts,
+            'target_counts' => $target_counts,
+            'confidence_counts' => $confidence_counts,
+            'top_route' => array( 'id' => $top_route_id ? $top_route_id : 'none', 'label' => $top_route_id ? $top_route_id : 'none', 'count' => $top_route_id && isset( $route_counts[ $top_route_id ] ) ? $route_counts[ $top_route_id ] : 0 ),
+            'top_target' => array( 'id' => $top_target ? $top_target : 'none', 'label' => $top_target ? $top_target : 'none', 'count' => $top_target && isset( $target_counts[ $top_target ] ) ? $target_counts[ $top_target ] : 0 ),
+            'last_saved_utc' => isset( $last['created_at_utc'] ) ? $last['created_at_utc'] : '',
+            'recent_sessions' => array_slice( $logs, 0, 10 ),
+        );
+    }
+
+    private function handoff_schema() {
+        return array(
+            'targets' => array(
+                'workbench' => array(
+                    'label' => 'Sustainable Catalyst Workbench',
+                    'use_when' => 'The next step requires calculation, graphing, formula inspection, symbolic review, unit-aware analysis, engineering notes, or exportable analytical reports.',
+                    'payload_sections' => array( 'analysis_intent', 'tool_family', 'input_question', 'source_context', 'assumptions', 'variables', 'outputs_requested', 'boundary_notes' ),
+                ),
+                'decision_studio' => array(
+                    'label' => 'Sustainable Catalyst Decision Studio',
+                    'use_when' => 'The next step requires option comparison, assumptions, scenarios, audit/provenance, readiness review, module artifacts, or an exportable Decision Packet.',
+                    'payload_sections' => array( 'decision_packet_seed', 'decision_question', 'artifact_slots', 'four_pillar_review', 'source_ledger_seed', 'assumptions_register_seed', 'workbench_handoff_needed', 'boundary_notes' ),
+                ),
+                'module_artifact' => array(
+                    'label' => 'Sustainable Catalyst Module Artifact',
+                    'use_when' => 'The next step is a specific module output such as Canvas framing, Data evidence, Analytics R scenario notes, Global Impact records, Narrative Risk claim review, Finance tradeoff notes, or Grit recovery tracking.',
+                    'payload_sections' => array( 'module_id', 'module_title', 'artifact_intent', 'suggested_fields', 'decision_studio_import_note', 'source_context' ),
+                ),
+                'feature_suggestion' => array(
+                    'label' => 'Feature Suggestions',
+                    'use_when' => 'The visitor asks for a missing, unsupported, or not-yet-built capability.',
+                    'payload_sections' => array( 'requested_capability', 'gap_reason', 'suggestion_route', 'source_context' ),
+                ),
+            ),
+            'common_fields' => array( 'version', 'created_at_utc', 'payload_id', 'source', 'target', 'question', 'recommended_route', 'confidence', 'reason_codes', 'sources', 'handoffs', 'boundaries' ),
+        );
+    }
+
+    private function handoff_summary() {
+        $schema = $this->handoff_schema();
+        $last = get_option( self::HANDOFF_OPTION, array() );
+        return array(
+            'targets' => count( $schema['targets'] ),
+            'schemas' => count( $schema['targets'] ),
+            'last_target' => ! empty( $last['last_target'] ) ? sanitize_text_field( $last['last_target'] ) : 'none',
+            'last_payload_utc' => ! empty( $last['last_payload_utc'] ) ? sanitize_text_field( $last['last_payload_utc'] ) : '',
+            'last_payload_source_count' => isset( $last['last_payload_source_count'] ) ? absint( $last['last_payload_source_count'] ) : 0,
+            'log_count' => count( $this->handoff_logs() ),
+        );
+    }
+
+    private function determine_handoff_target( $question, $route, $grounding ) {
+        $id = isset( $route['id'] ) ? $route['id'] : 'platform';
+        $q = strtolower( (string) $question );
+        if ( 'feature-suggestions' === $id || preg_match( '/\b(missing|does not exist|new feature|feature request|unsupported|build a new)\b/', $q ) ) {
+            return 'feature_suggestion';
+        }
+        if ( 'workbench' === $id || preg_match( '/\b(calculate|calculator|graph|plot|formula|equation|symbolic|unit|units|model inspection|engineering note|diagnostic)\b/', $q ) ) {
+            return 'workbench';
+        }
+        if ( 'decision-studio' === $id || preg_match( '/\b(decision packet|decision brief|compare options|tradeoff|scenario comparison|readiness|audit|provenance|four pillar|four-pillar)\b/', $q ) ) {
+            return 'decision_studio';
+        }
+        if ( in_array( $id, array( 'canvas', 'data', 'analytics-r', 'impact', 'narrative-risk', 'finance', 'grit' ), true ) ) {
+            return 'module_artifact';
+        }
+        return 'knowledge_route';
+    }
+
+    private function build_handoff_payload( $question, $route, $source, $grounding = array() ) {
+        $target = $this->determine_handoff_target( $question, $route, $grounding );
+        $sources = isset( $grounding['sources'] ) && is_array( $grounding['sources'] ) ? $grounding['sources'] : array();
+        $confidence = isset( $grounding['confidence'] ) ? $grounding['confidence'] : array();
+        $base = array(
+            'version' => self::VERSION,
+            'payload_id' => 'sc-rl-handoff-' . gmdate( 'YmdHis' ) . '-' . substr( md5( $question . '|' . ( $route['id'] ?? '' ) ), 0, 8 ),
+            'created_at_utc' => gmdate( 'c' ),
+            'source' => $source,
+            'target' => $target,
+            'question' => $question,
+            'recommended_route' => array(
+                'id' => $route['id'],
+                'title' => $route['title'],
+                'url' => $route['url'],
+                'category' => $route['category'],
+                'description' => $route['description'],
+            ),
+            'confidence' => $confidence,
+            'reason_codes' => isset( $grounding['reason_codes'] ) ? $grounding['reason_codes'] : array(),
+            'sources' => $this->handoff_source_context( $sources ),
+            'handoffs' => isset( $grounding['handoffs'] ) ? $grounding['handoffs'] : array(),
+            'boundary_notes' => array(
+                'Educational routing and structured handoff only.',
+                'No legal, financial, medical, tax, engineering, compliance, assurance, ESG/SDG certification, or regulated-information advice.',
+                'Human review is required before using any downstream result for consequential decisions.',
+            ),
+        );
+        if ( 'workbench' === $target ) {
+            $base['workbench_payload'] = $this->workbench_handoff_body( $question, $route, $sources );
+        } elseif ( 'decision_studio' === $target ) {
+            $base['decision_studio_payload'] = $this->decision_studio_handoff_body( $question, $route, $sources );
+        } elseif ( 'module_artifact' === $target ) {
+            $base['module_artifact_payload'] = $this->module_artifact_handoff_body( $question, $route, $sources );
+        } elseif ( 'feature_suggestion' === $target ) {
+            $base['feature_suggestion_payload'] = array(
+                'requested_capability' => $question,
+                'gap_reason' => 'The request appears to involve a missing, unsupported, or not-yet-built capability.',
+                'suggestion_route' => array( 'title' => 'Feature Suggestions', 'url' => '/platform/feature-suggestions/' ),
+                'submission_note' => 'Describe the desired workflow, expected inputs, outputs, and where it should connect to Workbench, Decision Studio, modules, or the Knowledge Library.',
+            );
+        } else {
+            $base['knowledge_route_payload'] = array(
+                'research_intent' => $route['intent'],
+                'starting_route' => $route['url'],
+                'suggested_next_step' => $route['next_step'],
+                'clarification_prompt' => 'Clarify whether the next output should be a reading path, calculation, module artifact, or Decision Packet.',
+            );
+        }
+        return $base;
+    }
+
+    private function handoff_source_context( $sources ) {
+        $context = array();
+        foreach ( array_slice( $sources, 0, 6 ) as $source ) {
+            $context[] = array(
+                'id' => isset( $source['id'] ) ? $source['id'] : '',
+                'title' => isset( $source['title'] ) ? $source['title'] : '',
+                'url' => isset( $source['url'] ) ? $source['url'] : '',
+                'type' => isset( $source['type'] ) ? $source['type'] : '',
+                'route_id' => isset( $source['route_id'] ) ? $source['route_id'] : '',
+                'summary' => isset( $source['summary'] ) ? $source['summary'] : '',
+                'score' => isset( $source['score'] ) ? $source['score'] : 0,
+                'keyword_score' => isset( $source['keyword_score'] ) ? $source['keyword_score'] : 0,
+                'semantic_score' => isset( $source['semantic_score'] ) ? $source['semantic_score'] : 0,
+                'retrieval_mode' => isset( $source['retrieval_mode'] ) ? $source['retrieval_mode'] : 'unknown',
+            );
+        }
+        return $context;
+    }
+
+    private function workbench_handoff_body( $question, $route, $sources ) {
+        return array(
+            'analysis_intent' => 'Turn the routed question into an inspectable calculation, graph, formula review, model note, or domain-calculator task.',
+            'input_question' => $question,
+            'tool_family' => $this->infer_workbench_tool_family( $question ),
+            'formula_or_model_prompt' => '',
+            'variables' => array(),
+            'assumptions' => array( 'User-provided inputs still need to be reviewed.', 'Units, ranges, and data provenance should be checked before analysis.' ),
+            'outputs_requested' => array( 'calculation_note', 'graph_or_visual_output_if_relevant', 'validation_warnings', 'exportable_report' ),
+            'decision_studio_return_note' => 'Send the resulting calculation report back to Decision Studio if it should support a Decision Packet.',
+        );
+    }
+
+    private function infer_workbench_tool_family( $question ) {
+        $q = strtolower( $question );
+        if ( preg_match( '/\b(graph|plot|visual|curve|sensitivity|slider)\b/', $q ) ) { return 'graph_studio'; }
+        if ( preg_match( '/\b(formula|equation|symbolic|latex|derive)\b/', $q ) ) { return 'chalkboard_symbolic'; }
+        if ( preg_match( '/\b(unit|units|engineering|structural|mechanical|electrical|calculation note)\b/', $q ) ) { return 'engineering_mode'; }
+        if ( preg_match( '/\b(econometrics|psychometrics|biology|chemistry|physics|architecture|infrastructure|music|art|astrophysics)\b/', $q ) ) { return 'advanced_domain_calculator'; }
+        return 'general_workbench_analysis';
+    }
+
+    private function decision_studio_handoff_body( $question, $route, $sources ) {
+        return array(
+            'decision_packet_seed' => array(
+                'decision_question' => $question,
+                'recommended_starting_route' => $route['title'],
+                'status' => 'draft_seed',
+                'review_stage' => 'intake',
+            ),
+            'artifact_slots' => array( 'framing', 'evidence', 'scenario', 'impact', 'claim_review', 'finance', 'recovery', 'workbench_calculation' ),
+            'four_pillar_review' => array( 'environmental' => '', 'social' => '', 'economic' => '', 'governance_institutional' => '' ),
+            'source_ledger_seed' => $this->handoff_source_context( $sources ),
+            'assumptions_register_seed' => array( 'Known assumptions should be made explicit before comparing options.', 'Unresolved uncertainties should remain visible in the packet.' ),
+            'workbench_handoff_needed' => $this->decision_needs_workbench( $question ),
+            'export_targets' => array( 'integrated_brief', 'audit_appendix', 'decision_packet_json' ),
+        );
+    }
+
+    private function decision_needs_workbench( $question ) {
+        return (bool) preg_match( '/\b(calculate|calculator|graph|formula|model|equation|scenario value|sensitivity|diagnostic)\b/i', $question );
+    }
+
+    private function module_artifact_handoff_body( $question, $route, $sources ) {
+        return array(
+            'module_id' => $route['id'],
+            'module_title' => $route['title'],
+            'artifact_intent' => $route['intent'],
+            'suggested_fields' => $this->module_artifact_fields( $route['id'] ),
+            'decision_studio_import_note' => 'After the module artifact is created, import or summarize it in Decision Studio if it should support a larger decision brief.',
+            'source_context' => $this->handoff_source_context( $sources ),
+        );
+    }
+
+    private function module_artifact_fields( $route_id ) {
+        $fields = array(
+            'canvas' => array( 'challenge', 'audience', 'assumptions', 'point_of_view', 'prototype_direction', 'test_plan' ),
+            'data' => array( 'entity', 'indicator', 'value', 'time_period', 'source', 'confidence', 'method_note', 'review_status' ),
+            'analytics-r' => array( 'scenario_name', 'assumptions', 'input_values', 'outputs', 'interpretation_note', 'export_logic' ),
+            'impact' => array( 'initiative', 'indicator', 'baseline', 'current_value', 'target', 'source', 'progress_note' ),
+            'narrative-risk' => array( 'claim', 'evidence_strength', 'uncertainty', 'source_type', 'stakeholder_pressure', 'communication_risk' ),
+            'finance' => array( 'option', 'cost', 'benefit', 'npv', 'roi', 'payback', 'risk_note', 'decision_note' ),
+            'grit' => array( 'setback', 'pressure', 'impact', 'energy', 'support', 'clarity', 'recovery_action', 'next_step' ),
+        );
+        return isset( $fields[ $route_id ] ) ? $fields[ $route_id ] : array( 'title', 'context', 'inputs', 'outputs', 'source_note', 'review_status' );
+    }
+
+    private function append_handoff_log( $payload ) {
+        $logs = $this->handoff_logs();
+        array_unshift( $logs, array(
+            'created_at_utc' => $payload['created_at_utc'],
+            'payload_id' => $payload['payload_id'],
+            'target' => $payload['target'],
+            'route_id' => isset( $payload['recommended_route']['id'] ) ? $payload['recommended_route']['id'] : '',
+            'route_title' => isset( $payload['recommended_route']['title'] ) ? $payload['recommended_route']['title'] : '',
+            'source_count' => count( $payload['sources'] ),
+            'confidence' => isset( $payload['confidence']['level'] ) ? $payload['confidence']['level'] : '',
+        ) );
+        $limit = max( 10, min( 500, absint( $this->get_options()['handoff_log_limit'] ?? 100 ) ) );
+        $logs = array_slice( $logs, 0, $limit );
+        update_option( 'sc_rl_ai_handoff_log', $logs, false );
+        update_option( self::HANDOFF_OPTION, array(
+            'last_target' => $payload['target'],
+            'last_payload_utc' => $payload['created_at_utc'],
+            'last_payload_source_count' => count( $payload['sources'] ),
+        ), false );
+    }
+
+    private function handoff_logs() {
+        $logs = get_option( 'sc_rl_ai_handoff_log', array() );
+        return is_array( $logs ) ? $logs : array();
+    }
+
+
+
 
     private function semantic_retrieval_enabled( $options = null ) {
         $options = $options ? $options : $this->get_options();
@@ -1057,7 +1685,55 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'last_http_status' => isset( $status['last_http_status'] ) ? absint( $status['last_http_status'] ) : 0,
             'first_failure_title' => isset( $status['first_failure_title'] ) ? $status['first_failure_title'] : '',
             'failure_sample_count' => isset( $status['failure_sample'] ) && is_array( $status['failure_sample'] ) ? count( $status['failure_sample'] ) : 0,
+            'api_key_fingerprint_used' => isset( $status['api_key_fingerprint_used'] ) ? $status['api_key_fingerprint_used'] : array(),
+            'current_api_key_fingerprint' => $this->secret_fingerprint( $options['gemini_api_key'] ?? '' ),
         );
+    }
+
+
+    private function secret_fingerprint( $secret ) {
+        $secret = trim( (string) $secret );
+        if ( '' === $secret ) {
+            return array( 'present' => false, 'length' => 0, 'last4' => '', 'hash8' => '' );
+        }
+        return array(
+            'present' => true,
+            'length' => strlen( $secret ),
+            'last4' => substr( $secret, -4 ),
+            'hash8' => substr( hash( 'sha256', $secret ), 0, 8 ),
+        );
+    }
+
+    private function fingerprint_changed( $current, $used ) {
+        if ( ! is_array( $current ) || ! is_array( $used ) || empty( $used['present'] ) ) {
+            return false;
+        }
+        return isset( $current['hash8'], $used['hash8'] ) && $current['hash8'] !== $used['hash8'];
+    }
+
+    private function secret_looks_plausible( $raw, $field = '' ) {
+        $raw = trim( (string) $raw );
+        if ( '' === $raw || '-' === $raw ) {
+            return true;
+        }
+        $lower = strtolower( $raw );
+        if ( false !== strpos( $lower, 'key saved' ) || false !== strpos( $lower, 'leave blank' ) || false !== strpos( $lower, 'api key' ) ) {
+            return false;
+        }
+        if ( preg_match( '/^[\*\x{2022}\x{25CF}\x{2026}\.]+$/u', $raw ) ) {
+            return false;
+        }
+        if ( preg_match( '/\s/', $raw ) ) {
+            return false;
+        }
+        if ( strlen( $raw ) < 25 ) {
+            return false;
+        }
+        if ( false !== strpos( $field, 'gemini' ) && 0 !== strpos( $raw, 'AIza' ) ) {
+            // Preserve existing key on obviously accidental non-Google values, but keep this soft enough for future auth keys.
+            return strlen( $raw ) >= 32 && preg_match( '/^[A-Za-z0-9_\-]+$/', $raw );
+        }
+        return (bool) preg_match( '/^[A-Za-z0-9_\-\.]+$/', $raw );
     }
 
     private function embedding_diagnostics() {
@@ -1072,6 +1748,9 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'endpoint_model' => $this->gemini_model_endpoint_name( sanitize_text_field( $options['gemini_embedding_model'] ?? 'gemini-embedding-001' ) ),
             'uses_header_key' => true,
             'api_key_present' => ! empty( $options['gemini_api_key'] ),
+            'api_key_fingerprint' => $this->secret_fingerprint( $options['gemini_api_key'] ?? '' ),
+            'api_key_fingerprint_used' => isset( $status['api_key_fingerprint_used'] ) ? $status['api_key_fingerprint_used'] : array(),
+            'api_key_fingerprint_changed_since_last_run' => $this->fingerprint_changed( $this->secret_fingerprint( $options['gemini_api_key'] ?? '' ), isset( $status['api_key_fingerprint_used'] ) ? $status['api_key_fingerprint_used'] : array() ),
             'index_records' => count( $records ),
             'last_embedding_utc' => isset( $status['last_embedding_utc'] ) ? $status['last_embedding_utc'] : '',
             'last_error' => isset( $status['last_error'] ) ? $status['last_error'] : '',
@@ -1244,16 +1923,42 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         $records = isset( $index['records'] ) && is_array( $index['records'] ) ? $index['records'] : $this->knowledge_index_records();
         $limit = max( 1, min( 1000, absint( $options['embedding_source_limit'] ?? 250 ) ) );
         $retry_limit = max( 1, min( 25, absint( $options['embedding_retry_limit'] ?? 3 ) ) );
+        $delay_ms = max( 0, min( 10000, absint( $options['embedding_batch_delay_ms'] ?? 1200 ) ) );
+        $retry_after_seconds = max( 1, min( 60, absint( $options['embedding_retry_after_seconds'] ?? 5 ) ) );
+        $resume_existing = ! isset( $options['embedding_resume_existing'] ) || '1' === (string) $options['embedding_resume_existing'];
+        $model = sanitize_text_field( $options['gemini_embedding_model'] ?? 'gemini-embedding-001' );
+        $api_key_fingerprint_used = $this->secret_fingerprint( $options['gemini_api_key'] ?? '' );
         $embedded = 0;
         $attempted = 0;
+        $skipped_existing = 0;
         $failed = array();
         $first_error = null;
+
         foreach ( $records as $i => $record ) {
             if ( $attempted >= $limit ) { break; }
+
+            if ( $resume_existing && ! empty( $record['embedding'] ) && is_array( $record['embedding'] ) && ( empty( $record['embedding_model'] ) || $record['embedding_model'] === $model ) ) {
+                $skipped_existing++;
+                continue;
+            }
+
             $text = $this->embedding_text_for_record( $record );
             $title = isset( $record['title'] ) ? $record['title'] : '';
             $attempted++;
             $embedding = $this->call_gemini_embedding( $text, $options, 'RETRIEVAL_DOCUMENT', $title );
+
+            if ( is_wp_error( $embedding ) ) {
+                $diag = $this->wp_error_diagnostics( $embedding );
+                $retryable = in_array( absint( $diag['http_status'] ), array( 429, 500, 502, 503, 504 ), true );
+                if ( $retryable ) {
+                    sleep( $retry_after_seconds );
+                    $embedding = $this->call_gemini_embedding( $text, $options, 'RETRIEVAL_DOCUMENT', $title );
+                    if ( is_wp_error( $embedding ) ) {
+                        $diag = $this->wp_error_diagnostics( $embedding );
+                    }
+                }
+            }
+
             if ( is_wp_error( $embedding ) ) {
                 $diag = $this->wp_error_diagnostics( $embedding );
                 if ( null === $first_error ) { $first_error = $diag; }
@@ -1265,31 +1970,41 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                     'http_status' => $diag['http_status'],
                     'gemini_error_code' => $diag['gemini_error_code'],
                 );
+
+                // Stop immediately for real key/authentication errors. Retrying those only burns time.
+                $authish = ( 400 === absint( $diag['http_status'] ) || 401 === absint( $diag['http_status'] ) || 403 === absint( $diag['http_status'] ) ) && false !== stripos( (string) $diag['message'], 'key' );
+                if ( $authish ) { break; }
                 if ( count( $failed ) >= $retry_limit && 0 === $embedded ) { break; }
                 continue;
             }
+
             $records[ $i ]['embedding'] = $embedding;
-            $records[ $i ]['embedding_model'] = sanitize_text_field( $options['gemini_embedding_model'] ?? 'gemini-embedding-001' );
+            $records[ $i ]['embedding_model'] = $model;
             $records[ $i ]['embedding_updated_utc'] = gmdate( 'c' );
             $embedded++;
+            if ( $delay_ms > 0 && $attempted < $limit ) {
+                usleep( $delay_ms * 1000 );
+            }
         }
+
         $index['records'] = $records;
         $index['summary'] = $this->knowledge_index_summary( $records );
         $index['last_embedding_utc'] = gmdate( 'c' );
-        $index['embedding_model'] = sanitize_text_field( $options['gemini_embedding_model'] ?? 'gemini-embedding-001' );
+        $index['embedding_model'] = $model;
         $index['embedding_failures'] = array_slice( $failed, 0, 50 );
         update_option( self::INDEX_OPTION, $index, false );
 
         $last_error = '';
         if ( ! empty( $failed ) && 0 === $embedded ) {
-            $last_error = 'All attempted records failed to embed. First error: ' . ( $first_error['message'] ?? 'unknown error' );
+            $last_error = 'No new records embedded in this run. First error: ' . ( $first_error['message'] ?? 'unknown error' );
         } elseif ( ! empty( $failed ) ) {
-            $last_error = 'Some records failed to embed. First error: ' . ( $first_error['message'] ?? 'unknown error' );
+            $last_error = 'Some records failed to embed. Existing embeddings were preserved. First error: ' . ( $first_error['message'] ?? 'unknown error' );
         }
         $status = array(
             'last_embedding_utc' => gmdate( 'c' ),
             'attempted_records' => $attempted,
-            'embedded_records' => $embedded,
+            'embedded_records_this_run' => $embedded,
+            'skipped_existing' => $skipped_existing,
             'failed_records' => count( $failed ),
             'last_error' => sanitize_text_field( $last_error ),
             'last_error_code' => $first_error['code'] ?? '',
@@ -1299,9 +2014,13 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'first_failure_title' => $failed[0]['title'] ?? '',
             'failure_sample' => array_slice( $failed, 0, 5 ),
             'raw_response_excerpt' => $first_error['raw_response_excerpt'] ?? '',
+            'delay_ms' => $delay_ms,
+            'retry_after_seconds' => $retry_after_seconds,
+            'resume_existing' => $resume_existing ? '1' : '0',
+            'api_key_fingerprint_used' => $api_key_fingerprint_used,
         );
         update_option( self::EMBED_OPTION, $status, false );
-        return array( 'version' => self::VERSION, 'attempted_records' => $attempted, 'embedded_records' => $embedded, 'failed_records' => count( $failed ), 'failure_sample' => array_slice( $failed, 0, 5 ), 'summary' => $this->knowledge_index_summary( $records ), 'retrieval' => $this->retrieval_status(), 'diagnostics' => $this->embedding_diagnostics() );
+        return array( 'version' => self::VERSION, 'attempted_records' => $attempted, 'embedded_records_this_run' => $embedded, 'skipped_existing' => $skipped_existing, 'failed_records' => count( $failed ), 'failure_sample' => array_slice( $failed, 0, 5 ), 'summary' => $this->knowledge_index_summary( $records ), 'retrieval' => $this->retrieval_status(), 'diagnostics' => $this->embedding_diagnostics() );
     }
 
     private function test_single_embedding() {
@@ -1324,6 +2043,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                 'last_error' => sanitize_text_field( 'Single embedding test failed: ' . $diag['message'] ),
                 'last_error_code' => $diag['code'],
                 'last_http_status' => $diag['http_status'],
+                'api_key_fingerprint_used' => $this->secret_fingerprint( $options['gemini_api_key'] ?? '' ),
                 'gemini_error_code' => $diag['gemini_error_code'],
                 'first_failure_id' => $record['id'] ?? '',
                 'first_failure_title' => $record['title'] ?? '',
@@ -1341,6 +2061,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'last_error' => '',
             'last_error_code' => '',
             'last_http_status' => 200,
+            'api_key_fingerprint_used' => $this->secret_fingerprint( $options['gemini_api_key'] ?? '' ),
             'first_failure_id' => '',
             'first_failure_title' => '',
             'failure_sample' => array(),
@@ -1579,6 +2300,159 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         return $summary;
     }
 
+
+    private function evaluation_suite() {
+        return array(
+            array( 'id' => 'new-visitor', 'prompt' => 'I am new to Sustainable Catalyst. Where should I start?', 'expected_routes' => array( 'platform', 'knowledge-library' ), 'category' => 'orientation' ),
+            array( 'id' => 'decision-brief', 'prompt' => 'I need to compare sustainability options and export a decision brief.', 'expected_routes' => array( 'decision-studio' ), 'category' => 'decision-support' ),
+            array( 'id' => 'workbench-calc', 'prompt' => 'I need to calculate, graph, or compare a model.', 'expected_routes' => array( 'workbench' ), 'category' => 'analysis' ),
+            array( 'id' => 'claim-risk', 'prompt' => 'Which tool helps me review a risky public claim?', 'expected_routes' => array( 'narrative-risk' ), 'category' => 'claim-review' ),
+            array( 'id' => 'impact-record', 'prompt' => 'I need a traceable impact record with baseline and target values.', 'expected_routes' => array( 'impact' ), 'category' => 'impact' ),
+            array( 'id' => 'problem-framing', 'prompt' => 'I want to frame a sustainability problem before choosing metrics.', 'expected_routes' => array( 'canvas' ), 'category' => 'framing' ),
+            array( 'id' => 'data-provenance', 'prompt' => 'I need to structure sources, indicators, evidence, and provenance.', 'expected_routes' => array( 'data' ), 'category' => 'data' ),
+            array( 'id' => 'scenario-analysis', 'prompt' => 'I need scenario analysis and reproducible analytical outputs.', 'expected_routes' => array( 'analytics-r', 'workbench' ), 'category' => 'scenario-analysis' ),
+            array( 'id' => 'finance-tradeoff', 'prompt' => 'I need educational NPV, ROI, payback, and tradeoff analysis.', 'expected_routes' => array( 'finance' ), 'category' => 'finance' ),
+            array( 'id' => 'recovery-grit', 'prompt' => 'I need to track pressure, energy, support, recovery actions, and next steps after a setback.', 'expected_routes' => array( 'grit' ), 'category' => 'human-systems' ),
+            array( 'id' => 'missing-feature', 'prompt' => 'I need a capability that does not exist yet. Where should I send the idea?', 'expected_routes' => array( 'feature-suggestions' ), 'category' => 'open-development' ),
+            array( 'id' => 'methodology-boundary', 'prompt' => 'Where can I read about assumptions, traceability, responsible AI, and evidence boundaries?', 'expected_routes' => array( 'methodology' ), 'category' => 'methodology' ),
+        );
+    }
+
+    private function evaluation_summary_defaults() {
+        return array( 'total_cases' => 0, 'passed_cases' => 0, 'failed_cases' => 0, 'accuracy' => 0, 'average_confidence_score' => 0, 'low_confidence' => 0, 'weak_source_matches' => 0, 'route_mismatches' => 0, 'last_quality_label' => 'not-run' );
+    }
+
+    private function evaluation_summary( $last = null ) {
+        if ( null === $last ) { $last = get_option( self::EVAL_OPTION, array() ); }
+        $summary = isset( $last['summary'] ) && is_array( $last['summary'] ) ? wp_parse_args( $last['summary'], $this->evaluation_summary_defaults() ) : $this->evaluation_summary_defaults();
+        return array(
+            'version' => self::VERSION,
+            'last_run_utc' => isset( $last['last_run_utc'] ) ? $last['last_run_utc'] : '',
+            'summary' => $summary,
+        );
+    }
+
+    private function run_retrieval_evaluation( $cases = array(), $store = true ) {
+        if ( empty( $cases ) || ! is_array( $cases ) ) { $cases = $this->evaluation_suite(); }
+        $results = array(); $passed = 0; $low = 0; $weak = 0; $mismatches = 0; $score_total = 0;
+        foreach ( $cases as $case ) {
+            $prompt = isset( $case['prompt'] ) ? sanitize_textarea_field( $case['prompt'] ) : '';
+            if ( '' === trim( $prompt ) ) { continue; }
+            $expected = isset( $case['expected_routes'] ) && is_array( $case['expected_routes'] ) ? array_map( 'sanitize_key', $case['expected_routes'] ) : array();
+            if ( empty( $expected ) && ! empty( $case['expected_route'] ) ) { $expected = array( sanitize_key( $case['expected_route'] ) ); }
+            $result = $this->evaluate_retrieval_query( $prompt, $expected, isset( $case['id'] ) ? sanitize_key( $case['id'] ) : 'case' );
+            $result['category'] = isset( $case['category'] ) ? sanitize_key( $case['category'] ) : 'general';
+            $results[] = $result;
+            if ( ! empty( $result['passed'] ) ) { $passed++; } else { $mismatches++; }
+            if ( isset( $result['confidence']['level'] ) && 'low' === $result['confidence']['level'] ) { $low++; }
+            if ( isset( $result['source_count'] ) && $result['source_count'] < $this->evaluation_min_source_count() ) { $weak++; }
+            $score_total += isset( $result['confidence']['score'] ) ? (float) $result['confidence']['score'] : 0;
+        }
+        $total = count( $results );
+        $summary = array(
+            'total_cases' => $total,
+            'passed_cases' => $passed,
+            'failed_cases' => max( 0, $total - $passed ),
+            'accuracy' => $total ? round( ( $passed / $total ) * 100, 2 ) : 0,
+            'average_confidence_score' => $total ? round( $score_total / $total, 2 ) : 0,
+            'low_confidence' => $low,
+            'weak_source_matches' => $weak,
+            'route_mismatches' => $mismatches,
+            'last_quality_label' => $this->evaluation_quality_label_for_summary( $total, $passed, $low, $weak ),
+        );
+        $report = array(
+            'version' => self::VERSION,
+            'last_run_utc' => gmdate( 'c' ),
+            'summary' => $summary,
+            'results' => $results,
+            'retrieval' => $this->retrieval_status(),
+            'index' => $this->knowledge_index_summary( $this->knowledge_index_records() ),
+        );
+        if ( $store ) {
+            update_option( self::EVAL_OPTION, $report, false );
+            $failures = array_values( array_filter( $results, function( $result ) { return empty( $result['passed'] ) || 'low' === ( $result['confidence']['level'] ?? '' ) || ( isset( $result['source_count'] ) && $result['source_count'] < $this->evaluation_min_source_count() ); } ) );
+            $this->append_evaluation_log( $failures, $summary );
+        }
+        return $report;
+    }
+
+    private function evaluate_retrieval_query( $prompt, $expected_routes = array(), $case_id = 'manual' ) {
+        $route = $this->match_route( strtolower( $prompt ) );
+        $grounding = $this->grounding_context( $prompt, $route );
+        $sources = isset( $grounding['sources'] ) && is_array( $grounding['sources'] ) ? $grounding['sources'] : array();
+        $confidence = isset( $grounding['confidence'] ) && is_array( $grounding['confidence'] ) ? $grounding['confidence'] : array( 'level' => 'low', 'score' => 0, 'explanation' => 'No confidence data returned.' );
+        $expected_routes = array_values( array_unique( array_filter( array_map( 'sanitize_key', (array) $expected_routes ) ) ) );
+        $passed = empty( $expected_routes ) ? null : in_array( $route['id'], $expected_routes, true );
+        $top = ! empty( $sources[0] ) ? $sources[0] : array();
+        $second = ! empty( $sources[1] ) ? $sources[1] : array();
+        $top_score = isset( $top['score'] ) ? (float) $top['score'] : 0;
+        $second_score = isset( $second['score'] ) ? (float) $second['score'] : 0;
+        $margin = round( max( 0, $top_score - $second_score ), 3 );
+        $source_count = count( $sources );
+        $warnings = array();
+        if ( false === $passed ) { $warnings[] = 'expected-route-mismatch'; }
+        if ( 'low' === ( $confidence['level'] ?? 'low' ) ) { $warnings[] = 'low-confidence'; }
+        if ( $source_count < $this->evaluation_min_source_count() ) { $warnings[] = 'weak-source-coverage'; }
+        if ( $top && empty( $top['semantic_score'] ) && $this->semantic_retrieval_enabled() ) { $warnings[] = 'no-semantic-top-match'; }
+        return array(
+            'case_id' => $case_id,
+            'prompt' => $prompt,
+            'expected_routes' => $expected_routes,
+            'recommended_route' => array( 'id' => $route['id'], 'title' => $route['title'], 'url' => $route['url'] ),
+            'passed' => $passed,
+            'quality_label' => $this->evaluation_quality_label( $passed, $confidence, $source_count, $margin ),
+            'confidence' => $confidence,
+            'source_count' => $source_count,
+            'top_source' => $top ? array( 'title' => $top['title'] ?? '', 'url' => $top['url'] ?? '', 'route_id' => $top['route_id'] ?? '', 'score' => $top['score'] ?? 0, 'keyword_score' => $top['keyword_score'] ?? 0, 'semantic_score' => $top['semantic_score'] ?? 0, 'retrieval_mode' => $top['retrieval_mode'] ?? '' ) : array(),
+            'score_breakdown' => array( 'top_score' => $top_score, 'second_score' => $second_score, 'margin' => $margin, 'semantic_weight' => $this->get_options()['semantic_weight'] ?? '0.65', 'keyword_weight' => $this->get_options()['keyword_weight'] ?? '0.35' ),
+            'reason_codes' => isset( $grounding['reason_codes'] ) ? $grounding['reason_codes'] : array(),
+            'warnings' => $warnings,
+        );
+    }
+
+    private function evaluation_min_source_count() {
+        $options = $this->get_options();
+        return max( 0, min( 5, absint( $options['evaluation_min_source_count'] ?? 1 ) ) );
+    }
+
+    private function evaluation_quality_label( $passed, $confidence, $source_count, $margin ) {
+        $level = isset( $confidence['level'] ) ? $confidence['level'] : 'low';
+        if ( false === $passed ) { return 'route-mismatch'; }
+        if ( 'low' === $level ) { return 'low-confidence'; }
+        if ( $source_count < $this->evaluation_min_source_count() ) { return 'weak-source-coverage'; }
+        if ( 'high' === $level && $margin >= 5 ) { return 'strong'; }
+        return 'acceptable';
+    }
+
+    private function evaluation_quality_label_for_summary( $total, $passed, $low, $weak ) {
+        if ( 0 === $total ) { return 'not-run'; }
+        $accuracy = ( $passed / $total ) * 100;
+        if ( $accuracy >= 90 && 0 === $low && 0 === $weak ) { return 'strong'; }
+        if ( $accuracy >= 75 ) { return 'acceptable'; }
+        return 'needs-review';
+    }
+
+    private function append_evaluation_log( $failures, $summary ) {
+        $log = get_option( 'sc_rl_ai_evaluation_failure_log', array() );
+        $log = is_array( $log ) ? $log : array();
+        if ( ! empty( $failures ) ) {
+            $log[] = array( 'created_at_utc' => gmdate( 'c' ), 'summary' => $summary, 'failures' => array_slice( $failures, 0, 25 ) );
+        }
+        $limit = max( 10, min( 500, absint( $this->get_options()['evaluation_log_limit'] ?? 100 ) ) );
+        $log = array_slice( $log, -1 * $limit );
+        update_option( 'sc_rl_ai_evaluation_failure_log', $log, false );
+    }
+
+    private function evaluation_logs() {
+        $log = get_option( 'sc_rl_ai_evaluation_failure_log', array() );
+        return is_array( $log ) ? $log : array();
+    }
+
+    private function clear_evaluation_logs() {
+        update_option( 'sc_rl_ai_evaluation_failure_log', array(), false );
+        update_option( self::EVAL_OPTION, array(), false );
+    }
+
     private function process_admin_index_actions() {
         if ( empty( $_POST['sc_rl_index_action'] ) ) { return ''; }
         if ( ! current_user_can( 'manage_options' ) ) { return ''; }
@@ -1614,6 +2488,18 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             update_option( self::INDEX_OPTION, self::build_default_index(), false );
             update_option( self::EMBED_OPTION, array(), false );
             return 'reset';
+        }
+        if ( 'run_evaluation' === $action ) {
+            $this->run_retrieval_evaluation( array(), true );
+            return 'evaluation-run';
+        }
+        if ( 'clear_evaluation' === $action ) {
+            $this->clear_evaluation_logs();
+            return 'evaluation-cleared';
+        }
+        if ( 'clear_sessions' === $action ) {
+            $this->clear_session_logs();
+            return 'sessions-cleared';
         }
         return '';
     }
@@ -1821,6 +2707,9 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'embedding_source_limit' => __( 'Embedding Source Limit', 'sustainable-catalyst-research-librarian-ai' ),
             'embedding_output_dimensionality' => __( 'Embedding Output Dimensionality', 'sustainable-catalyst-research-librarian-ai' ),
             'embedding_retry_limit' => __( 'Embedding Failure Stop Limit', 'sustainable-catalyst-research-librarian-ai' ),
+            'embedding_batch_delay_ms' => __( 'Embedding Delay Between Requests (ms)', 'sustainable-catalyst-research-librarian-ai' ),
+            'embedding_retry_after_seconds' => __( 'Retry Delay for Rate Limits (seconds)', 'sustainable-catalyst-research-librarian-ai' ),
+            'embedding_resume_existing' => __( 'Resume Existing Embeddings', 'sustainable-catalyst-research-librarian-ai' ),
             'semantic_weight' => __( 'Semantic Weight', 'sustainable-catalyst-research-librarian-ai' ),
             'keyword_weight' => __( 'Keyword Weight', 'sustainable-catalyst-research-librarian-ai' ),
             'openai_api_key' => __( 'OpenAI API Key', 'sustainable-catalyst-research-librarian-ai' ),
@@ -1833,6 +2722,12 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'source_result_limit' => __( 'Source Result Limit', 'sustainable-catalyst-research-librarian-ai' ),
             'index_max_posts' => __( 'Indexer Max Posts', 'sustainable-catalyst-research-librarian-ai' ),
             'stale_after_days' => __( 'Stale After Days', 'sustainable-catalyst-research-librarian-ai' ),
+            'eval_high_confidence_threshold' => __( 'High Confidence Threshold', 'sustainable-catalyst-research-librarian-ai' ),
+            'eval_medium_confidence_threshold' => __( 'Medium Confidence Threshold', 'sustainable-catalyst-research-librarian-ai' ),
+            'evaluation_min_source_count' => __( 'Minimum Source Matches for Evaluation', 'sustainable-catalyst-research-librarian-ai' ),
+            'evaluation_log_limit' => __( 'Evaluation Failure Log Limit', 'sustainable-catalyst-research-librarian-ai' ),
+            'handoff_log_limit' => __( 'Handoff Log Limit', 'sustainable-catalyst-research-librarian-ai' ),
+            'session_log_limit' => __( 'Saved Route Session Log Limit', 'sustainable-catalyst-research-librarian-ai' ),
             'system_instructions' => __( 'System Instructions', 'sustainable-catalyst-research-librarian-ai' ),
         );
         foreach ( $fields as $field => $label ) {
@@ -1850,15 +2745,20 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         return array(
             'provider'                => $provider,
             'gemini_api_key'          => $this->sanitize_secret_field( $input, 'gemini_api_key', $old['gemini_api_key'] ),
+            'gemini_key_fingerprint'  => $this->secret_fingerprint_hash_for_options( $this->sanitize_secret_field( $input, 'gemini_api_key', $old['gemini_api_key'] ) ),
             'gemini_model'            => isset( $input['gemini_model'] ) ? sanitize_text_field( wp_unslash( $input['gemini_model'] ) ) : self::defaults()['gemini_model'],
             'embeddings_provider'     => ( isset( $input['embeddings_provider'] ) && 'gemini' === sanitize_key( wp_unslash( $input['embeddings_provider'] ) ) ) ? 'gemini' : 'disabled',
             'gemini_embedding_model'  => isset( $input['gemini_embedding_model'] ) ? sanitize_text_field( wp_unslash( $input['gemini_embedding_model'] ) ) : self::defaults()['gemini_embedding_model'],
             'embedding_source_limit'  => max( 1, min( 1000, absint( isset( $input['embedding_source_limit'] ) ? $input['embedding_source_limit'] : self::defaults()['embedding_source_limit'] ) ) ),
             'embedding_output_dimensionality' => max( 0, min( 3072, absint( isset( $input['embedding_output_dimensionality'] ) ? $input['embedding_output_dimensionality'] : self::defaults()['embedding_output_dimensionality'] ) ) ),
             'embedding_retry_limit'   => max( 1, min( 25, absint( isset( $input['embedding_retry_limit'] ) ? $input['embedding_retry_limit'] : self::defaults()['embedding_retry_limit'] ) ) ),
+            'embedding_batch_delay_ms' => max( 0, min( 10000, absint( isset( $input['embedding_batch_delay_ms'] ) ? $input['embedding_batch_delay_ms'] : self::defaults()['embedding_batch_delay_ms'] ) ) ),
+            'embedding_retry_after_seconds' => max( 1, min( 60, absint( isset( $input['embedding_retry_after_seconds'] ) ? $input['embedding_retry_after_seconds'] : self::defaults()['embedding_retry_after_seconds'] ) ) ),
+            'embedding_resume_existing' => ( isset( $input['embedding_resume_existing'] ) && '1' === (string) wp_unslash( $input['embedding_resume_existing'] ) ) ? '1' : '0',
             'semantic_weight'         => isset( $input['semantic_weight'] ) && is_numeric( $input['semantic_weight'] ) ? (string) max( 0, min( 1, (float) $input['semantic_weight'] ) ) : self::defaults()['semantic_weight'],
             'keyword_weight'          => isset( $input['keyword_weight'] ) && is_numeric( $input['keyword_weight'] ) ? (string) max( 0, min( 1, (float) $input['keyword_weight'] ) ) : self::defaults()['keyword_weight'],
             'openai_api_key'          => $this->sanitize_secret_field( $input, 'openai_api_key', $old['openai_api_key'] ),
+            'openai_key_fingerprint'  => $this->secret_fingerprint_hash_for_options( $this->sanitize_secret_field( $input, 'openai_api_key', $old['openai_api_key'] ) ),
             'openai_model'            => isset( $input['openai_model'] ) ? sanitize_text_field( wp_unslash( $input['openai_model'] ) ) : self::defaults()['openai_model'],
             'openai_vector_store_id'  => isset( $input['openai_vector_store_id'] ) ? sanitize_text_field( wp_unslash( $input['openai_vector_store_id'] ) ) : '',
             'max_file_search_results' => max( 1, min( 20, absint( isset( $input['max_file_search_results'] ) ? $input['max_file_search_results'] : self::defaults()['max_file_search_results'] ) ) ),
@@ -1868,24 +2768,54 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'source_result_limit'     => max( 3, min( 8, absint( isset( $input['source_result_limit'] ) ? $input['source_result_limit'] : self::defaults()['source_result_limit'] ) ) ),
             'index_max_posts'         => max( 25, min( 1000, absint( isset( $input['index_max_posts'] ) ? $input['index_max_posts'] : self::defaults()['index_max_posts'] ) ) ),
             'stale_after_days'        => max( 30, min( 1095, absint( isset( $input['stale_after_days'] ) ? $input['stale_after_days'] : self::defaults()['stale_after_days'] ) ) ),
+            'eval_high_confidence_threshold' => max( 50, min( 95, absint( isset( $input['eval_high_confidence_threshold'] ) ? $input['eval_high_confidence_threshold'] : self::defaults()['eval_high_confidence_threshold'] ) ) ),
+            'eval_medium_confidence_threshold' => max( 20, min( 90, absint( isset( $input['eval_medium_confidence_threshold'] ) ? $input['eval_medium_confidence_threshold'] : self::defaults()['eval_medium_confidence_threshold'] ) ) ),
+            'evaluation_min_source_count' => max( 0, min( 5, absint( isset( $input['evaluation_min_source_count'] ) ? $input['evaluation_min_source_count'] : self::defaults()['evaluation_min_source_count'] ) ) ),
+            'evaluation_log_limit'    => max( 10, min( 500, absint( isset( $input['evaluation_log_limit'] ) ? $input['evaluation_log_limit'] : self::defaults()['evaluation_log_limit'] ) ) ),
+            'handoff_log_limit'       => max( 10, min( 500, absint( isset( $input['handoff_log_limit'] ) ? $input['handoff_log_limit'] : self::defaults()['handoff_log_limit'] ) ) ),
+            'session_log_limit'       => max( 10, min( 1000, absint( isset( $input['session_log_limit'] ) ? $input['session_log_limit'] : self::defaults()['session_log_limit'] ) ) ),
             'system_instructions'     => isset( $input['system_instructions'] ) ? sanitize_textarea_field( wp_unslash( $input['system_instructions'] ) ) : self::default_system_instructions(),
         );
     }
 
     private function sanitize_secret_field( $input, $field, $old_value ) {
-        $raw = isset( $input[ $field ] ) ? trim( sanitize_text_field( wp_unslash( $input[ $field ] ) ) ) : '';
+        $new_field = $field . '_new';
+        $clear_field = $field . '_clear';
+
+        if ( isset( $input[ $clear_field ] ) && '1' === (string) wp_unslash( $input[ $clear_field ] ) ) {
+            return '';
+        }
+
+        if ( isset( $input[ $new_field ] ) ) {
+            $raw = trim( sanitize_text_field( wp_unslash( $input[ $new_field ] ) ) );
+        } elseif ( isset( $input[ $field ] ) ) {
+            // Backward compatibility with older settings forms.
+            $raw = trim( sanitize_text_field( wp_unslash( $input[ $field ] ) ) );
+        } else {
+            return $old_value;
+        }
+
         if ( '-' === $raw ) {
             return '';
         }
-        if ( '' === $raw ) {
+        if ( '' === $raw || '__KEEP__' === $raw ) {
+            return $old_value;
+        }
+        if ( ! $this->secret_looks_plausible( $raw, $field ) ) {
+            add_settings_error( self::OPTION_NAME, 'sc_rl_ai_key_preserved_' . $field, __( 'The API key field looked like a placeholder, mask, browser autofill value, or incomplete key. Existing saved key was preserved.', 'sustainable-catalyst-research-librarian-ai' ), 'warning' );
             return $old_value;
         }
         return $raw;
     }
 
+    private function secret_fingerprint_hash_for_options( $secret ) {
+        $fp = $this->secret_fingerprint( $secret );
+        return ! empty( $fp['present'] ) ? $fp['hash8'] : '';
+    }
+
     public function settings_section_intro() {
         echo '<p>' . esc_html__( 'The Research Librarian is site-scoped routing infrastructure. It can run entirely in deterministic fallback mode, use Gemini/OpenAI server-side for richer route explanations, and use optional Gemini embeddings for semantic retrieval over the Sustainable Catalyst knowledge index. API keys are not exposed to JavaScript.', 'sustainable-catalyst-research-librarian-ai' ) . '</p>';
-        echo '<p><code>[sustainable_catalyst_research_librarian_ai]</code> <code>[sc_research_librarian mode="landing"]</code> <code>[sc_research_librarian mode="route-map"]</code> <code>[sc_research_librarian mode="index-summary"]</code> <code>[sc_research_librarian mode="retrieval-status"]</code></p>';
+        echo '<p><code>[sustainable_catalyst_research_librarian_ai]</code> <code>[sc_research_librarian mode="landing"]</code> <code>[sc_research_librarian mode="route-map"]</code> <code>[sc_research_librarian mode="index-summary"]</code> <code>[sc_research_librarian mode="retrieval-status"]</code> <code>[sc_research_librarian mode="evaluation-summary"]</code> <code>[sc_research_librarian mode="handoff-summary"]</code> <code>[sc_research_librarian mode="session-summary"]</code> <code>[sc_research_librarian mode="analytics-summary"]</code></p>';
     }
 
     public function render_field( $args ) {
@@ -1911,8 +2841,19 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             case 'gemini_api_key':
             case 'openai_api_key':
                 $has_key = ! empty( $options[ $field ] );
-                echo '<input type="password" class="regular-text" name="' . esc_attr( $name ) . '" value="" autocomplete="off" placeholder="' . esc_attr( $has_key ? 'Key saved. Leave blank to keep it.' : 'API key' ) . '" />';
-                echo '<p class="description">' . esc_html__( 'Leave blank to keep the existing key. Enter a single hyphen (-) and save to clear it.', 'sustainable-catalyst-research-librarian-ai' ) . '</p>';
+                $new_name = self::OPTION_NAME . '[' . $field . '_new]';
+                $clear_name = self::OPTION_NAME . '[' . $field . '_clear]';
+                $fp = $this->secret_fingerprint( $options[ $field ] ?? '' );
+                echo '<input type="password" class="regular-text" name="' . esc_attr( $new_name ) . '" value="" autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" placeholder="' . esc_attr( $has_key ? 'Key saved. Paste only to replace.' : 'Paste API key' ) . '" />';
+                echo '<p class="description">' . esc_html__( 'Leave blank to preserve the saved key. The saved key cannot be overwritten by an empty password field. Paste a new key only when replacing it.', 'sustainable-catalyst-research-librarian-ai' ) . '</p>';
+                if ( $has_key ) {
+                    echo '<p class="description"><strong>' . esc_html__( 'Saved key:', 'sustainable-catalyst-research-librarian-ai' ) . '</strong> ' . esc_html( 'length ' . $fp['length'] . ' · ending ' . $fp['last4'] . ' · fingerprint ' . $fp['hash8'] ) . '</p>';
+                    echo '<label><input type="checkbox" name="' . esc_attr( $clear_name ) . '" value="1" /> ' . esc_html__( 'Clear saved key on next save', 'sustainable-catalyst-research-librarian-ai' ) . '</label>';
+                }
+                break;
+            case 'embedding_resume_existing':
+                echo '<label><input type="checkbox" name="' . esc_attr( $name ) . '" value="1" ' . checked( $options[ $field ], '1', false ) . ' /> ' . esc_html__( 'Skip records that already have embeddings for the selected model. Recommended.', 'sustainable-catalyst-research-librarian-ai' ) . '</label>';
+                echo '<p class="description">' . esc_html__( 'This makes the embedding job resumable and prevents a later failure from destroying existing semantic coverage.', 'sustainable-catalyst-research-librarian-ai' ) . '</p>';
                 break;
             case 'system_instructions':
                 echo '<textarea class="large-text code" rows="14" name="' . esc_attr( $name ) . '">' . esc_textarea( $options[ $field ] ) . '</textarea>';
@@ -1926,9 +2867,19 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             case 'embedding_source_limit':
             case 'embedding_output_dimensionality':
             case 'embedding_retry_limit':
+            case 'embedding_batch_delay_ms':
+            case 'embedding_retry_after_seconds':
+            case 'eval_high_confidence_threshold':
+            case 'eval_medium_confidence_threshold':
+            case 'evaluation_min_source_count':
+            case 'evaluation_log_limit':
+            case 'handoff_log_limit':
+            case 'session_log_limit':
                 echo '<input type="number" class="small-text" name="' . esc_attr( $name ) . '" value="' . esc_attr( $options[ $field ] ) . '" />';
                 if ( 'embedding_output_dimensionality' === $field ) { echo '<p class="description">' . esc_html__( 'Use 0 for the model default. Set only if you want reduced dimensions.', 'sustainable-catalyst-research-librarian-ai' ) . '</p>'; }
                 if ( 'embedding_retry_limit' === $field ) { echo '<p class="description">' . esc_html__( 'Stops early after this many consecutive failures when no records embed, so diagnostics return quickly.', 'sustainable-catalyst-research-librarian-ai' ) . '</p>'; }
+                if ( 'embedding_batch_delay_ms' === $field ) { echo '<p class="description">' . esc_html__( 'Pause between Gemini embedding requests. Use 1000–2500ms for free-tier stability.', 'sustainable-catalyst-research-librarian-ai' ) . '</p>'; }
+                if ( 'embedding_retry_after_seconds' === $field ) { echo '<p class="description">' . esc_html__( 'When Gemini returns a rate-limit or temporary server error, wait this many seconds before one retry.', 'sustainable-catalyst-research-librarian-ai' ) . '</p>'; }
                 break;
             case 'temperature':
             case 'semantic_weight':
@@ -1957,13 +2908,29 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         $embedding_success_notice = get_transient( 'sc_rl_ai_admin_success_notice' );
         if ( $embedding_success_notice ) { delete_transient( 'sc_rl_ai_admin_success_notice' ); }
         $diagnostics = $this->embedding_diagnostics();
+        $evaluation = $this->evaluation_summary();
+        $evaluation_summary = isset( $evaluation['summary'] ) ? $evaluation['summary'] : $this->evaluation_summary_defaults();
+        $evaluation_status = get_option( self::EVAL_OPTION, array() );
+        $evaluation_results = isset( $evaluation_status['results'] ) && is_array( $evaluation_status['results'] ) ? $evaluation_status['results'] : array();
+        $session_summary = $this->session_analytics_summary();
+        $session_logs = $this->session_logs();
+        $notice_label = '';
+        if ( $notice ) {
+            if ( 'rebuilt' === $notice ) { $notice_label = 'Knowledge index rebuilt.'; }
+            elseif ( 'embedded' === $notice ) { $notice_label = 'Gemini embeddings generated for indexed records.'; }
+            elseif ( 'test-embedding-ok' === $notice ) { $notice_label = 'Single Gemini embedding test passed.'; }
+            elseif ( 'evaluation-run' === $notice ) { $notice_label = 'Retrieval evaluation suite completed.'; }
+            elseif ( 'evaluation-cleared' === $notice ) { $notice_label = 'Evaluation logs cleared.'; }
+            elseif ( 'sessions-cleared' === $notice ) { $notice_label = 'Saved route sessions cleared.'; }
+            else { $notice_label = 'Knowledge index reset to seed records.'; }
+        }
         ?>
         <div class="wrap">
             <h1><?php esc_html_e( 'Sustainable Catalyst Research Librarian', 'sustainable-catalyst-research-librarian-ai' ); ?></h1>
             <p><?php esc_html_e( 'Routing and retrieval infrastructure for Sustainable Catalyst. It helps visitors choose the right library, module, demo, repository, Workbench tool, or Decision Studio workflow.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
             <p><strong><?php esc_html_e( 'Status:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <?php echo esc_html( 'disabled' === $provider ? 'Deterministic fallback only' : 'AI provider configured: ' . $provider ); ?> · <strong><?php esc_html_e( 'Version:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <?php echo esc_html( self::VERSION ); ?></p>
             <?php if ( $notice && 'embedding-error' !== $notice ) : ?>
-                <div class="notice notice-success is-dismissible"><p><?php echo esc_html( 'rebuilt' === $notice ? 'Knowledge index rebuilt.' : ( 'embedded' === $notice ? 'Gemini embeddings generated for indexed records.' : ( 'test-embedding-ok' === $notice ? 'Single Gemini embedding test passed.' : 'Knowledge index reset to seed records.' ) ) ); ?></p></div>
+                <div class="notice notice-success is-dismissible"><p><?php echo esc_html( $notice_label ); ?></p></div>
             <?php endif; ?>
             <?php if ( $embedding_success_notice ) : ?>
                 <div class="notice notice-success is-dismissible"><p><?php echo esc_html( $embedding_success_notice ); ?></p></div>
@@ -1990,11 +2957,22 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                 <button class="button" type="submit" name="sc_rl_index_action" value="reset"><?php esc_html_e( 'Reset to Seed Index', 'sustainable-catalyst-research-librarian-ai' ); ?></button>
                 <a class="button" href="<?php echo esc_url( rest_url( self::REST_NAMESPACE . '/index/export' ) ); ?>"><?php esc_html_e( 'Export Index JSON', 'sustainable-catalyst-research-librarian-ai' ); ?></a>
                 <a class="button" href="<?php echo esc_url( rest_url( self::REST_NAMESPACE . '/retrieval/diagnostics' ) ); ?>"><?php esc_html_e( 'Embedding Diagnostics JSON', 'sustainable-catalyst-research-librarian-ai' ); ?></a>
+                <button class="button" type="submit" name="sc_rl_index_action" value="run_evaluation"><?php esc_html_e( 'Run Retrieval Evaluation', 'sustainable-catalyst-research-librarian-ai' ); ?></button>
+                <button class="button" type="submit" name="sc_rl_index_action" value="clear_evaluation"><?php esc_html_e( 'Clear Evaluation Logs', 'sustainable-catalyst-research-librarian-ai' ); ?></button>
+                <a class="button" href="<?php echo esc_url( rest_url( self::REST_NAMESPACE . '/evaluation/export' ) ); ?>"><?php esc_html_e( 'Export Evaluation JSON', 'sustainable-catalyst-research-librarian-ai' ); ?></a>
+                <a class="button" href="<?php echo esc_url( rest_url( self::REST_NAMESPACE . '/session/export' ) ); ?>"><?php esc_html_e( 'Export Session Analytics JSON', 'sustainable-catalyst-research-librarian-ai' ); ?></a>
+                <button class="button" type="submit" name="sc_rl_index_action" value="clear_sessions"><?php esc_html_e( 'Clear Saved Sessions', 'sustainable-catalyst-research-librarian-ai' ); ?></button>
             </form>
 
             <div class="postbox" style="padding:14px;max-width:1100px;margin:12px 0 22px;">
                 <h2 style="margin-top:0;"><?php esc_html_e( 'Gemini Embedding Diagnostics', 'sustainable-catalyst-research-librarian-ai' ); ?></h2>
                 <p><strong><?php esc_html_e( 'Model:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <code><?php echo esc_html( $diagnostics['request_model'] ); ?></code> · <strong><?php esc_html_e( 'HTTP:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <?php echo esc_html( $diagnostics['last_http_status'] ? $diagnostics['last_http_status'] : 'n/a' ); ?> · <strong><?php esc_html_e( 'Last error code:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <code><?php echo esc_html( $diagnostics['last_error_code'] ? $diagnostics['last_error_code'] : 'none' ); ?></code></p>
+                <?php $fp = isset( $diagnostics['api_key_fingerprint'] ) && is_array( $diagnostics['api_key_fingerprint'] ) ? $diagnostics['api_key_fingerprint'] : array(); ?>
+                <p><strong><?php esc_html_e( 'Saved key check:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <?php echo ! empty( $fp['present'] ) ? esc_html( 'present · length ' . $fp['length'] . ' · ending ' . $fp['last4'] . ' · fingerprint ' . $fp['hash8'] ) : esc_html__( 'not saved', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
+                <?php $used_fp = isset( $diagnostics['api_key_fingerprint_used'] ) && is_array( $diagnostics['api_key_fingerprint_used'] ) ? $diagnostics['api_key_fingerprint_used'] : array(); ?>
+                <?php if ( ! empty( $used_fp['present'] ) ) : ?>
+                    <p><strong><?php esc_html_e( 'Last run used key:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <?php echo esc_html( 'length ' . $used_fp['length'] . ' · ending ' . $used_fp['last4'] . ' · fingerprint ' . $used_fp['hash8'] ); ?><?php echo ! empty( $diagnostics['api_key_fingerprint_changed_since_last_run'] ) ? esc_html__( ' · changed since last run', 'sustainable-catalyst-research-librarian-ai' ) : ''; ?></p>
+                <?php endif; ?>
                 <?php if ( ! empty( $diagnostics['last_error'] ) ) : ?>
                     <p><strong><?php esc_html_e( 'Last error:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <?php echo esc_html( $diagnostics['last_error'] ); ?></p>
                     <p><strong><?php esc_html_e( 'Recommended next step:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <?php echo esc_html( $diagnostics['recommended_next_step'] ); ?></p>
@@ -2003,6 +2981,52 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                 <?php endif; ?>
                 <?php if ( ! empty( $diagnostics['raw_response_excerpt'] ) ) : ?>
                     <details><summary><?php esc_html_e( 'Raw response excerpt', 'sustainable-catalyst-research-librarian-ai' ); ?></summary><pre style="white-space:pre-wrap;max-height:180px;overflow:auto;"><?php echo esc_html( $diagnostics['raw_response_excerpt'] ); ?></pre></details>
+                <?php endif; ?>
+            </div>
+
+
+            <div class="postbox" style="padding:14px;max-width:1100px;margin:12px 0 22px;">
+                <h2 style="margin-top:0;"><?php esc_html_e( 'Retrieval Evaluation, Confidence, and Failure Logs', 'sustainable-catalyst-research-librarian-ai' ); ?></h2>
+                <p><?php esc_html_e( 'Run the evaluation suite after rebuilding the index or generating embeddings. It checks expected route matches, confidence levels, source coverage, and keyword/semantic score behavior.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
+                <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:12px 0;">
+                    <div class="postbox" style="padding:10px;"><strong style="font-size:20px;display:block;"><?php echo esc_html( absint( $evaluation_summary['total_cases'] ) ); ?></strong><span><?php esc_html_e( 'Cases', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                    <div class="postbox" style="padding:10px;"><strong style="font-size:20px;display:block;"><?php echo esc_html( $evaluation_summary['accuracy'] ); ?>%</strong><span><?php esc_html_e( 'Accuracy', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                    <div class="postbox" style="padding:10px;"><strong style="font-size:20px;display:block;"><?php echo esc_html( absint( $evaluation_summary['low_confidence'] ) ); ?></strong><span><?php esc_html_e( 'Low confidence', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                    <div class="postbox" style="padding:10px;"><strong style="font-size:20px;display:block;"><?php echo esc_html( absint( $evaluation_summary['weak_source_matches'] ) ); ?></strong><span><?php esc_html_e( 'Weak sources', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                    <div class="postbox" style="padding:10px;"><strong style="font-size:20px;display:block;"><?php echo esc_html( $evaluation_summary['last_quality_label'] ); ?></strong><span><?php esc_html_e( 'Quality label', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                </div>
+                <p><strong><?php esc_html_e( 'Last evaluation:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <?php echo esc_html( ! empty( $evaluation['last_run_utc'] ) ? $evaluation['last_run_utc'] : 'not run yet' ); ?></p>
+                <?php if ( ! empty( $evaluation_results ) ) : ?>
+                    <table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Case', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Expected', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Recommended', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Confidence', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Top source scores', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Quality', 'sustainable-catalyst-research-librarian-ai' ); ?></th></tr></thead><tbody>
+                    <?php foreach ( array_slice( $evaluation_results, 0, 20 ) as $result ) : ?>
+                        <tr><td><?php echo esc_html( $result['case_id'] ); ?></td><td><code><?php echo esc_html( implode( ', ', $result['expected_routes'] ) ); ?></code></td><td><code><?php echo esc_html( $result['recommended_route']['id'] ); ?></code></td><td><?php echo esc_html( ( $result['confidence']['level'] ?? 'low' ) . ' / ' . ( $result['confidence']['score'] ?? 0 ) ); ?></td><td><?php echo esc_html( 'keyword ' . ( $result['top_source']['keyword_score'] ?? 0 ) . ' · semantic ' . ( $result['top_source']['semantic_score'] ?? 0 ) . ' · score ' . ( $result['top_source']['score'] ?? 0 ) ); ?></td><td><?php echo esc_html( $result['quality_label'] ); ?></td></tr>
+                    <?php endforeach; ?>
+                    </tbody></table>
+                <?php else : ?>
+                    <p><?php esc_html_e( 'No evaluation run has been stored yet. Click Run Retrieval Evaluation after embeddings are generated.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
+                <?php endif; ?>
+            </div>
+
+
+            <div class="postbox" style="padding:14px;max-width:1100px;margin:12px 0 22px;">
+                <h2 style="margin-top:0;"><?php esc_html_e( 'Saved Route Sessions and Admin Analytics', 'sustainable-catalyst-research-librarian-ai' ); ?></h2>
+                <p><?php esc_html_e( 'Saved sessions preserve useful Research Librarian route notes for review. The analytics summary shows common routes, handoff targets, confidence distribution, and recent activity.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
+                <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:12px 0;">
+                    <div class="postbox" style="padding:10px;"><strong style="font-size:20px;display:block;"><?php echo esc_html( absint( $session_summary['total_sessions'] ) ); ?></strong><span><?php esc_html_e( 'Saved sessions', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                    <div class="postbox" style="padding:10px;"><strong style="font-size:20px;display:block;"><?php echo esc_html( absint( $session_summary['unique_routes'] ) ); ?></strong><span><?php esc_html_e( 'Routes used', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                    <div class="postbox" style="padding:10px;"><strong style="font-size:20px;display:block;"><?php echo esc_html( absint( $session_summary['unique_targets'] ) ); ?></strong><span><?php esc_html_e( 'Handoff targets', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                    <div class="postbox" style="padding:10px;"><strong style="font-size:20px;display:block;"><?php echo esc_html( $session_summary['top_route']['label'] ); ?></strong><span><?php esc_html_e( 'Top route', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                    <div class="postbox" style="padding:10px;"><strong style="font-size:20px;display:block;"><?php echo esc_html( $session_summary['top_target']['label'] ); ?></strong><span><?php esc_html_e( 'Top target', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                </div>
+                <p><strong><?php esc_html_e( 'Last saved:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <?php echo esc_html( $session_summary['last_saved_utc'] ? $session_summary['last_saved_utc'] : 'none' ); ?></p>
+                <?php if ( ! empty( $session_logs ) ) : ?>
+                    <table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Saved', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Route', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Handoff', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Confidence', 'sustainable-catalyst-research-librarian-ai' ); ?></th><th><?php esc_html_e( 'Question', 'sustainable-catalyst-research-librarian-ai' ); ?></th></tr></thead><tbody>
+                    <?php foreach ( array_slice( $session_logs, 0, 12 ) as $session ) : ?>
+                        <tr><td><?php echo esc_html( $session['created_at_utc'] ?? '' ); ?></td><td><code><?php echo esc_html( $session['route_id'] ?? '' ); ?></code></td><td><code><?php echo esc_html( $session['handoff_target'] ?? '' ); ?></code></td><td><?php echo esc_html( ( $session['confidence_level'] ?? 'unknown' ) . ' / ' . ( $session['confidence_score'] ?? 0 ) ); ?></td><td><?php echo esc_html( wp_trim_words( $session['question'] ?? '', 18 ) ); ?></td></tr>
+                    <?php endforeach; ?>
+                    </tbody></table>
+                <?php else : ?>
+                    <p><?php esc_html_e( 'No sessions have been saved yet. Ask the public assistant a route question and click Save session.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
                 <?php endif; ?>
             </div>
 

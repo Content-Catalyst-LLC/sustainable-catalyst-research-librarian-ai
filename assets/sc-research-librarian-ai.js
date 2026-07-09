@@ -91,6 +91,12 @@
         lines.push('- ' + handoff.label + ': ' + handoff.reason + ' (' + handoff.url + ')');
       });
     }
+    if (note.handoff_payload) {
+      lines.push('');
+      lines.push('## Structured Handoff Payload');
+      lines.push('Target: ' + (note.handoff_payload.target || ''));
+      lines.push('Payload ID: ' + (note.handoff_payload.payload_id || ''));
+    }
     lines.push('');
     lines.push('## Next Step');
     lines.push(note.next_step || '');
@@ -141,12 +147,15 @@
   function init(root) {
     var endpoint = root.getAttribute('data-endpoint');
     var routesEndpoint = root.getAttribute('data-routes-endpoint');
+    var sessionEndpoint = root.getAttribute('data-session-endpoint');
     var nonce = root.getAttribute('data-nonce');
     var textarea = root.querySelector('.sc-rl-ai__textarea');
     var submit = root.querySelector('[data-sc-rl-submit]');
     var clear = root.querySelector('[data-sc-rl-clear]');
     var copy = root.querySelector('[data-sc-rl-copy]');
     var download = root.querySelector('[data-sc-rl-download]');
+    var handoffDownload = root.querySelector('[data-sc-rl-handoff-download]');
+    var saveSession = root.querySelector('[data-sc-rl-save-session]');
     var answer = root.querySelector('[data-sc-rl-answer]');
     var status = root.querySelector('[data-sc-rl-status]');
     var honeypot = root.querySelector('.sc-rl-ai__hp');
@@ -208,7 +217,7 @@
       textarea.value = '';
       latest = null;
       setStatus('Ready', 'ready');
-      answer.innerHTML = '<p>Ask a question or choose an example. The librarian will recommend a route, explain why it fits, show related links, and produce an exportable route note.</p>';
+      answer.innerHTML = '<p>Ask a question or choose an example. The librarian will recommend a route, explain why it fits, show related links, and produce an exportable route note and structured handoff payload.</p>';
       if (routeSummary) { routeSummary.hidden = true; routeSummary.innerHTML = ''; }
       textarea.focus();
     });
@@ -232,6 +241,51 @@
       downloadJson('sustainable-catalyst-route-note.json', latest.route_note);
       setStatus('Downloaded', 'ready');
     });
+
+    if (handoffDownload) {
+      handoffDownload.addEventListener('click', function () {
+        if (!latest || !latest.route_note || !latest.route_note.handoff_payload) {
+          setStatus('Ask first', 'error');
+          return;
+        }
+        var target = latest.route_note.handoff_payload.target || 'handoff';
+        downloadJson('sustainable-catalyst-' + target.replace(/_/g, '-') + '-handoff.json', latest.route_note.handoff_payload);
+        setStatus('Handoff downloaded', 'ready');
+      });
+    }
+
+    if (saveSession) {
+      saveSession.addEventListener('click', function () {
+        if (!latest || !latest.route_note) {
+          setStatus('Ask first', 'error');
+          return;
+        }
+        if (!sessionEndpoint) {
+          setStatus('Session endpoint unavailable', 'error');
+          return;
+        }
+        saveSession.disabled = true;
+        setStatus('Saving session…', 'loading');
+        fetch(sessionEndpoint, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
+          body: JSON.stringify({ route_note: latest.route_note })
+        })
+          .then(function (response) {
+            return response.json().then(function (data) {
+              if (!response.ok) {
+                throw new Error(data && data.message ? data.message : 'The session could not be saved.');
+              }
+              return data;
+            });
+          })
+          .then(function () { setStatus('Session saved', 'ready'); })
+          .catch(function (error) { setStatus(error.message || 'Save failed', 'error'); })
+          .finally(function () { saveSession.disabled = false; });
+      });
+    }
+
     examples.forEach(function (button) {
       button.addEventListener('click', function () {
         textarea.value = button.getAttribute('data-sc-rl-example') || '';

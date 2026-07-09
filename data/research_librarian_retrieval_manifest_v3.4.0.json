@@ -1,0 +1,24 @@
+{
+  "version": "3.4.0",
+  "name": "Retrieval Evaluation, Confidence Tuning, and Failure Logs",
+  "adds": [
+    "evaluation suite",
+    "expected route comparison",
+    "confidence threshold settings",
+    "weak source warnings",
+    "failure logs",
+    "evaluation export",
+    "admin dashboard evaluation panel",
+    "evaluation summary shortcode"
+  ],
+  "endpoints": [
+    "/evaluation/suite",
+    "/evaluation/run",
+    "/evaluation/query",
+    "/evaluation/logs",
+    "/evaluation/export"
+  ],
+  "shortcodes": [
+    "[sc_research_librarian mode=\"evaluation-summary\"]"
+  ]
+}

@@ -3,16 +3,16 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 3.3.1
+Stable tag: 3.6.0
 License: MIT
 
-A site-scoped Research Librarian for Sustainable Catalyst with source-aware routing, route notes, provider options, a knowledge indexer, admin crawl dashboard, and optional Gemini embeddings for hybrid retrieval.
+A site-scoped Research Librarian for Sustainable Catalyst with source-aware routing, route notes, handoff payloads, saved route sessions, admin analytics, a knowledge indexer, and optional Gemini embeddings for hybrid retrieval.
 
 == Description ==
 
 The Research Librarian helps visitors choose the right Sustainable Catalyst route: Knowledge Library, Platform, Demos, Decision Studio, Workbench, Catalyst modules, Methodology, Feature Suggestions, or GitHub repositories.
 
-v3.3.0 adds a Gemini retrieval backend with server-side embeddings for indexed Sustainable Catalyst source records. Keyword/source routing remains available when embeddings are disabled.
+v3.6.0 adds saved route sessions and admin analytics on top of the Gemini retrieval, evaluation, and Workbench/Decision Studio handoff layers.
 
 == Shortcodes ==
 
@@ -22,8 +22,19 @@ v3.3.0 adds a Gemini retrieval backend with server-side embeddings for indexed S
 [sc_research_librarian mode="route-map"]
 [sc_research_librarian mode="index-summary"]
 [sc_research_librarian mode="retrieval-status"]
+[sc_research_librarian mode="evaluation-summary"]
+[sc_research_librarian mode="handoff-summary"]
+[sc_research_librarian mode="session-summary"]
+[sc_research_librarian mode="analytics-summary"]
 
 == Changelog ==
+
+= 3.6.0 =
+* Added saved route sessions and admin analytics.
+* Added Save session button to the assistant UI.
+* Added session save/log/export and analytics summary REST endpoints.
+* Added session-summary and analytics-summary shortcode modes.
+* Added session log limit setting and admin clear/export actions.
 
 = 3.3.0 =
 * Added Gemini Retrieval Backend with Embeddings.
@@ -47,6 +58,32 @@ v3.3.0 adds a Gemini retrieval backend with server-side embeddings for indexed S
 
 == Changelog ==
 
+= 3.6.0 =
+* Added saved route sessions and admin analytics.
+* Added Save session button to the assistant UI.
+* Added session save/log/export and analytics summary REST endpoints.
+* Added session-summary and analytics-summary shortcode modes.
+* Added session log limit setting and admin clear/export actions.
+
 = 3.3.1 =
 * Gemini embedding diagnostics and request-format reliability build.
 * Adds single-record embedding test, admin diagnostics JSON, clearer errors, model normalization, and x-goog-api-key request header support.
+
+
+= 3.4.0 =
+* Added resumable Gemini embedding batches.
+* Added delay/retry settings for rate-limit stability.
+* Added saved-key fingerprint diagnostics.
+
+= 3.4.0 =
+* Protect Gemini/OpenAI keys from blank, masked, autofilled, or incomplete overwrites.
+* Add last-run key fingerprint diagnostics for embedding tests and batches.
+
+= 3.4.0 =
+* Added retrieval evaluation suite, confidence tuning, source coverage checks, failure logs, and evaluation exports.
+
+
+= 3.5.0 =
+* Added structured Workbench, Decision Studio, module artifact, feature suggestion, and knowledge-route handoff payloads.
+* Added handoff schema, prepare, logs, and export endpoints.
+* Added handoff summary shortcode and assistant handoff JSON download.

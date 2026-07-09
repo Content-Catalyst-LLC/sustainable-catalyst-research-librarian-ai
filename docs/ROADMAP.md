@@ -11,6 +11,7 @@
 - v3.3.0 — Gemini Retrieval Backend with Embeddings
 - v3.4.0 — Route Confidence Evaluation Tests and Failure Logs
 - v3.5.0 — Workbench and Decision Studio Handoff Payloads
+- v3.6.0 — Saved Route Sessions and Admin Analytics
 
 ## Architecture direction
 
@@ -34,3 +35,17 @@ The Research Librarian should become the source-aware retrieval and routing infr
 ## v3.3.1
 
 Gemini embedding diagnostics, request format fix, single-record embedding test, and clearer admin failure reporting.
+
+
+## Completed in v3.5.0
+
+- Structured Workbench and Decision Studio handoff payloads.
+- Module artifact and Feature Suggestions handoff targets.
+
+
+## Completed in v3.6.0
+
+- Saved route sessions.
+- Route analytics summary.
+- Session export and clear-session controls.
+- Session/analytics shortcode modes.

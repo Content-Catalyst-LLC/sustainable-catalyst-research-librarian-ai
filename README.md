@@ -1,10 +1,53 @@
-# Sustainable Catalyst Research Librarian v3.3.1
+# Sustainable Catalyst Research Librarian v3.6.0
+
+**Saved Route Sessions and Admin Analytics**
+
+v3.6.0 adds a saved-session and analytics layer on top of the v3.5.0 handoff payload system. The Research Librarian can now preserve useful route notes, summarize common routes and handoff targets, expose route-session exports, and provide lightweight admin analytics for improving retrieval quality and product routing.
+
+## What changed in v3.6.0
+
+- Added saved route sessions from public assistant results.
+- Added Save session button to the assistant UI.
+- Added session logs that preserve the question, recommended route, confidence, source count, handoff target, next step, and structured route note.
+- Added admin route analytics: total sessions, unique routes, common handoff targets, confidence distribution, top route, top target, and recent saved sessions.
+- Added public session and analytics summary shortcode modes.
+- Added REST endpoints for saving sessions, exporting session logs, and reading analytics summaries.
+- Added session log limit setting and admin clear/export actions.
+- Preserved v3.5.0 Workbench and Decision Studio handoff payload behavior.
+
+## New shortcodes
+
+```text
+[sc_research_librarian mode="session-summary" title="Research Librarian Route Sessions"]
+[sc_research_librarian mode="analytics-summary" title="Research Librarian Route Analytics"]
+```
+
+## New endpoints
+
+```text
+POST /wp-json/sc-research-librarian-ai/v1/session/save
+GET  /wp-json/sc-research-librarian-ai/v1/session/logs
+GET  /wp-json/sc-research-librarian-ai/v1/session/export
+GET  /wp-json/sc-research-librarian-ai/v1/analytics/summary
+```
+
+## Recommended workflow
+
+1. Ask the Research Librarian a route question.
+2. Review the recommended route, sources, confidence, and handoff payload.
+3. Click **Save session** when the route is useful.
+4. Use the admin analytics panel to see route patterns, handoff targets, confidence distribution, and recent sessions.
+5. Export session analytics JSON when you want to review routing behavior outside WordPress.
+
+---
+
+# Sustainable Catalyst Research Librarian v3.4.0
 
 **Gemini Embedding Diagnostics and Request Format Fix**
 
-v3.3.1 is a diagnostic and reliability build for the Gemini retrieval backend. It keeps the v3.3.0 knowledge index and hybrid retrieval architecture, but improves the embedding request format, exposes clearer diagnostics, and adds a single-record test path before running a full embedding job.
+v3.4.0 is a diagnostic and reliability build for the Gemini retrieval backend. It keeps the v3.3.0 knowledge index and hybrid retrieval architecture, but improves the embedding request format, exposes clearer diagnostics, and adds a single-record test path before running a full embedding job.
 
-## What changed in v3.3.1
+## What changed in v3.4.0
 
 - Uses the Gemini embedding endpoint with a server-side `x-goog-api-key` header.
 - Normalizes model names so both `gemini-embedding-001` and `models/gemini-embedding-001` are handled safely.
@@ -118,3 +161,60 @@ The admin page now includes:
 The Research Librarian is educational routing infrastructure. It does not provide legal, financial, medical, tax, engineering, compliance, assurance, ESG/SDG certification, or regulated-information advice.
 
 MIT-licensed.
+
+
+## v3.4.0 Notes
+
+This release adds a safer Gemini embedding queue with resumable batches, request delay controls, retry handling for rate limits, and saved-key diagnostics. For stable setup, test one embedding first, then run batches of 5, 10, 25, 50, and 100 before full coverage.
+
+
+## v3.4.0 Gemini key persistence hotfix
+
+v3.4.0 fixes the setup pattern where a Gemini key could pass a single embedding test and then fail during a later batch after settings were saved. API keys now use protected replacement fields, blank fields preserve the existing key, masked/autofilled/incomplete values are rejected, and diagnostics show saved-key and last-run fingerprints without exposing secrets.
+
+
+## v3.4.0 — Retrieval Evaluation, Confidence Tuning, and Failure Logs
+
+This release adds a reliability layer for the Research Librarian retrieval system. The plugin now includes a built-in evaluation suite for common Sustainable Catalyst routing prompts, expected-route comparison, confidence and source-coverage summaries, keyword/semantic score breakdowns, low-confidence warnings, route-mismatch labels, and exportable evaluation reports.
+
+New admin tools:
+
+- Run Retrieval Evaluation
+- Clear Evaluation Logs
+- Export Evaluation JSON
+- View route accuracy, low-confidence cases, weak source matches, and quality labels
+- Inspect per-case expected route, recommended route, confidence score, keyword score, semantic score, and top source
+
+New endpoints:
+
+- `GET /wp-json/sc-research-librarian-ai/v1/evaluation/suite`
+- `POST /wp-json/sc-research-librarian-ai/v1/evaluation/run`
+- `POST /wp-json/sc-research-librarian-ai/v1/evaluation/query`
+- `GET /wp-json/sc-research-librarian-ai/v1/evaluation/logs`
+- `GET /wp-json/sc-research-librarian-ai/v1/evaluation/export`
+
+New shortcode:
+
+- `[sc_research_librarian mode="evaluation-summary" title="Research Librarian Retrieval Evaluation"]`
+
+
+## v3.5.0 — Workbench and Decision Studio Handoff Payloads
+
+Research Librarian now turns route results into structured handoff payloads. A visitor question can produce a route note plus a machine-readable handoff object for:
+
+- Sustainable Catalyst Workbench analysis tasks
+- Sustainable Catalyst Decision Studio Decision Packet seeds
+- Catalyst module artifact workflows
+- Feature Suggestions for missing capabilities
+- Knowledge-route follow-up when the request is still broad
+
+New endpoints:
+
+- `GET /wp-json/sc-research-librarian-ai/v1/handoff/schema`
+- `POST /wp-json/sc-research-librarian-ai/v1/handoff/prepare`
+- `GET /wp-json/sc-research-librarian-ai/v1/handoff/logs`
+- `GET /wp-json/sc-research-librarian-ai/v1/handoff/export`
+
+New shortcode:
+
+`[sc_research_librarian mode="handoff-summary" title="Research Librarian Handoff Layer"]`
