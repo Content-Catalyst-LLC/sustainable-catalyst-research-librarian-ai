@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Sustainable Catalyst Research Librarian
  * Plugin URI: https://sustainablecatalyst.com/platform/research-librarian/
- * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, correction triage, knowledge-gap review, governance controls, privacy summaries, retention policies, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, scheduled index maintenance, sitemap sync, health alerts, recovery snapshots, backup/export controls, migration readiness, security hardening, endpoint permission review, access-surface audit, observability checks, operational runbooks, incident-response summaries, editorial curation rules, route overrides, source weighting controls, integration contracts, API catalogs, developer handoff documentation, guided research paths, multi-step route builders, admin query review, route improvement queues, correction workflows, and exports.
- * Version: 4.8.0
+ * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, correction triage, knowledge-gap review, governance controls, privacy summaries, retention policies, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, scheduled index maintenance, sitemap sync, health alerts, recovery snapshots, backup/export controls, migration readiness, security hardening, endpoint permission review, access-surface audit, observability checks, operational runbooks, incident-response summaries, editorial curation rules, route overrides, source weighting controls, integration contracts, API catalogs, developer handoff documentation, guided research paths, multi-step route builders, admin query review, route improvement queues, correction workflows, public documentation page generation, documentation exports, and release-ready page outlines.
+ * Version: 4.9.0
  * Author: Content Catalyst LLC / Tariq Ahmad
  * Author URI: https://sustainablecatalyst.com/
  * License: MIT
@@ -23,7 +23,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
     const MAINTENANCE_OPTION = 'sc_rl_ai_maintenance_status';
     const MAINTENANCE_HOOK = 'sc_rl_ai_index_maintenance_event';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const VERSION        = '4.8.0';
+    const VERSION        = '4.9.0';
 
     private static $instance = null;
 
@@ -236,6 +236,12 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         if ( 'query-review' === $mode || 'query-review-summary' === $mode || 'route-improvement' === $mode || 'improvement-queue' === $mode || 'admin-query-review' === $mode ) {
             if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V480_Query_Review' ) ) {
                 return Sustainable_Catalyst_Research_Librarian_AI_V480_Query_Review::render_public_summary( $atts );
+            }
+        }
+
+        if ( 'documentation' === $mode || 'documentation-summary' === $mode || 'docs' === $mode || 'docs-catalog' === $mode || 'public-documentation' === $mode || 'documentation-generator' === $mode ) {
+            if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V490_Documentation' ) ) {
+                return Sustainable_Catalyst_Research_Librarian_AI_V490_Documentation::render_public_summary( $atts );
             }
         }
         if ( 'guided-paths' === $mode || 'guided-paths-summary' === $mode || 'research-paths' === $mode || 'pathways' === $mode ) {
@@ -6903,6 +6909,304 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V480_Query_Review {
     }
 }
 
+
+
+/**
+ * v4.9.0 — Public Documentation Page Generator.
+ *
+ * Generates public-safe documentation outlines, page copy, shortcode inventories,
+ * endpoint summaries, and release-ready documentation exports for the Research Librarian.
+ */
+final class Sustainable_Catalyst_Research_Librarian_AI_V490_Documentation {
+    const VERSION = '4.9.0';
+    const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
+    const OPTION = 'sc_rl_ai_public_documentation_page_v490';
+
+    public static function init() {
+        add_action( 'admin_menu', array( __CLASS__, 'admin_menu' ) );
+        add_action( 'rest_api_init', array( __CLASS__, 'register_rest_routes' ) );
+        add_shortcode( 'sc_research_librarian_documentation_summary', array( __CLASS__, 'render_public_summary' ) );
+        add_shortcode( 'sc_research_librarian_docs_catalog', array( __CLASS__, 'render_catalog_summary' ) );
+        add_shortcode( 'sc_research_librarian_documentation_page', array( __CLASS__, 'render_generated_page' ) );
+    }
+
+    public static function admin_menu() {
+        add_options_page(
+            'Research Librarian Documentation',
+            'Research Librarian Documentation',
+            'manage_options',
+            'sc-research-librarian-documentation',
+            array( __CLASS__, 'render_admin_page' )
+        );
+    }
+
+    public static function register_rest_routes() {
+        register_rest_route( self::REST_NAMESPACE, '/documentation/status', array(
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => array( __CLASS__, 'rest_status' ),
+            'permission_callback' => '__return_true',
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/documentation/catalog', array(
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => array( __CLASS__, 'rest_catalog' ),
+            'permission_callback' => '__return_true',
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/documentation/page', array(
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => array( __CLASS__, 'rest_page' ),
+            'permission_callback' => '__return_true',
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/documentation/generate', array(
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => array( __CLASS__, 'rest_generate' ),
+            'permission_callback' => array( __CLASS__, 'can_manage_options' ),
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/documentation/export', array(
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => array( __CLASS__, 'rest_export' ),
+            'permission_callback' => array( __CLASS__, 'can_manage_options' ),
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/documentation/reset', array(
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => array( __CLASS__, 'rest_reset' ),
+            'permission_callback' => array( __CLASS__, 'can_manage_options' ),
+        ) );
+    }
+
+    public static function can_manage_options() {
+        return current_user_can( 'manage_options' );
+    }
+
+    public static function rest_status() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'documentation' => self::status() ), 200 );
+    }
+
+    public static function rest_catalog() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'catalog' => self::catalog(), 'shortcodes' => self::shortcodes() ), 200 );
+    }
+
+    public static function rest_page() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'page' => self::page_payload( false ) ), 200 );
+    }
+
+    public static function rest_generate() {
+        $payload = self::page_payload( true );
+        update_option( self::OPTION, $payload, false );
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'generated' => true, 'page' => $payload, 'status' => self::status() ), 200 );
+    }
+
+    public static function rest_export() {
+        return new WP_REST_Response( array(
+            'version' => self::VERSION,
+            'documentation' => self::status(),
+            'catalog' => self::catalog(),
+            'page' => self::page_payload( false ),
+            'shortcodes' => self::shortcodes(),
+            'endpoint_summary' => self::endpoint_summary(),
+            'exported_at_utc' => gmdate( 'c' ),
+            'boundary' => 'Public documentation exports exclude API keys, raw logs, private route sessions, and admin-only diagnostics.',
+        ), 200 );
+    }
+
+    public static function rest_reset() {
+        delete_option( self::OPTION );
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'reset' => true, 'status' => self::status() ), 200 );
+    }
+
+    public static function status() {
+        $stored = get_option( self::OPTION, array() );
+        $catalog = self::catalog();
+        return array(
+            'documentation_generator' => 'enabled',
+            'catalog_items' => count( $catalog ),
+            'public_page_sections' => count( self::sections() ),
+            'shortcode_count' => count( self::shortcodes() ),
+            'endpoint_groups' => count( self::endpoint_summary() ),
+            'has_generated_snapshot' => is_array( $stored ) && ! empty( $stored['generated_at_utc'] ),
+            'last_generated_utc' => is_array( $stored ) && ! empty( $stored['generated_at_utc'] ) ? $stored['generated_at_utc'] : '',
+            'public_safe' => true,
+            'admin_export_available' => true,
+        );
+    }
+
+    public static function catalog() {
+        return array(
+            array( 'id' => 'overview', 'title' => 'Research Librarian Overview', 'type' => 'public-page-section', 'audience' => 'visitor', 'summary' => 'Explains the Research Librarian as the routing and retrieval layer for Sustainable Catalyst.', 'recommended_location' => '/platform/research-librarian/' ),
+            array( 'id' => 'public_answer_ux', 'title' => 'Public Answer UX', 'type' => 'product-capability', 'audience' => 'visitor', 'summary' => 'Documents recommended route cards, source cards, confidence badges, reason chips, and route action center behavior.', 'recommended_location' => '/platform/research-librarian/#assistant' ),
+            array( 'id' => 'source_aware_retrieval', 'title' => 'Source-Aware Retrieval', 'type' => 'technical-summary', 'audience' => 'public-technical', 'summary' => 'Summarizes knowledge indexing, source matching, Gemini embeddings, keyword fallback, and grounded route recommendations.', 'recommended_location' => '/platform/research-librarian/#retrieval' ),
+            array( 'id' => 'guided_paths', 'title' => 'Guided Research Paths', 'type' => 'workflow', 'audience' => 'visitor', 'summary' => 'Explains quick, standard, and deep path builders with checkpoints and handoff targets.', 'recommended_location' => '/platform/research-librarian/#guided-paths' ),
+            array( 'id' => 'workbench_handoffs', 'title' => 'Workbench Handoffs', 'type' => 'integration', 'audience' => 'visitor', 'summary' => 'Explains when route answers should move into Workbench for calculation, graphing, symbolic review, or model inspection.', 'recommended_location' => '/modeling-analytics/workbench/' ),
+            array( 'id' => 'decision_studio_handoffs', 'title' => 'Decision Studio Handoffs', 'type' => 'integration', 'audience' => 'visitor', 'summary' => 'Explains when route answers should become Decision Packet seed objects for scenario, risk, source, and readiness review.', 'recommended_location' => '/platform/#decision-studio' ),
+            array( 'id' => 'boundaries', 'title' => 'Boundaries and Public-Safe Use', 'type' => 'governance', 'audience' => 'visitor', 'summary' => 'Documents what the assistant should and should not do, including professional advice boundaries and feature-gap routing.', 'recommended_location' => '/platform/methodology/' ),
+            array( 'id' => 'admin_operations', 'title' => 'Admin Operations', 'type' => 'admin-documentation', 'audience' => 'administrator', 'summary' => 'Summarizes index maintenance, embeddings, evaluation, query review, curation, security, observability, and recovery screens.', 'recommended_location' => 'Settings → Research Librarian' ),
+            array( 'id' => 'api_catalog', 'title' => 'API Catalog and Integration Contracts', 'type' => 'developer-documentation', 'audience' => 'developer', 'summary' => 'Documents public and admin REST endpoint groups, payload shapes, handoff contracts, and export boundaries.', 'recommended_location' => '/wp-json/sc-research-librarian-ai/v1/contracts/catalog' ),
+            array( 'id' => 'troubleshooting', 'title' => 'Setup and Troubleshooting', 'type' => 'operations', 'audience' => 'administrator', 'summary' => 'Covers API key checks, embedding diagnostics, maintenance warnings, evaluation failures, curation review, and recovery snapshots.', 'recommended_location' => 'Settings → Research Librarian Observability' ),
+        );
+    }
+
+    public static function sections() {
+        return array(
+            array( 'heading' => 'What the Research Librarian Does', 'body' => 'The Research Librarian is the source-aware routing layer for Sustainable Catalyst. It helps visitors decide whether they should begin with the Knowledge Library, Platform, Workbench, Decision Studio, a platform module, methodology, GitHub, support, or Feature Suggestions.' ),
+            array( 'heading' => 'How Answers Are Structured', 'body' => 'Public answers should show a recommended route, why the route fits, matched Sustainable Catalyst sources, confidence, ambiguity notes, next actions, and boundary language when needed.' ),
+            array( 'heading' => 'How Retrieval Works', 'body' => 'The system combines deterministic routing, a local knowledge index, keyword matching, source-aware recommendations, optional Gemini embeddings, route evaluation, curation overrides, and feedback-based improvement workflows.' ),
+            array( 'heading' => 'When to Use Workbench', 'body' => 'Workbench is the route for calculation, graphing, symbolic review, unit-aware analysis, formula tools, model inspection, engineering notes, and advanced domain calculators.' ),
+            array( 'heading' => 'When to Use Decision Studio', 'body' => 'Decision Studio is the route for comparing options, preserving assumptions, reviewing scenarios, importing module artifacts, checking readiness, and exporting auditable Decision Packets.' ),
+            array( 'heading' => 'Governance and Boundaries', 'body' => 'The Research Librarian supports navigation and learning. It does not provide legal, financial, investment, medical, tax, compliance, assurance, ESG/SDG certification, engineering, architecture, or professional advice.' ),
+            array( 'heading' => 'Admin and Operations', 'body' => 'Admin workflows include index rebuilding, embedding generation, retrieval evaluation, query review, feedback triage, curation, maintenance, recovery snapshots, security review, observability checks, and documentation exports.' ),
+        );
+    }
+
+    public static function endpoint_summary() {
+        return array(
+            'public_routing' => array( '/ask', '/routes', '/sources', '/grounded-route', '/route-note' ),
+            'retrieval' => array( '/index/summary', '/retrieval/status', '/retrieval/query' ),
+            'handoffs' => array( '/handoff/schema', '/handoff/prepare' ),
+            'paths' => array( '/paths/status', '/paths/catalog', '/paths/build', '/paths/save' ),
+            'documentation' => array( '/documentation/status', '/documentation/catalog', '/documentation/page' ),
+            'admin_only' => array( '/index/rebuild', '/index/export', '/index/embed', '/evaluation/run', '/review/queue', '/review/export', '/documentation/generate', '/documentation/export' ),
+        );
+    }
+
+    public static function shortcodes() {
+        return array(
+            '[sc_research_librarian title="Sustainable Catalyst Research Librarian"]',
+            '[sc_research_librarian mode="answer-ux" title="Research Librarian Public Answer UX"]',
+            '[sc_research_librarian mode="guided-paths" title="Research Librarian Guided Paths"]',
+            '[sc_research_librarian mode="path-builder" title="Research Librarian Path Builder"]',
+            '[sc_research_librarian mode="documentation-summary" title="Research Librarian Documentation"]',
+            '[sc_research_librarian_documentation_summary title="Research Librarian Documentation"]',
+            '[sc_research_librarian_docs_catalog title="Research Librarian Documentation Catalog"]',
+            '[sc_research_librarian_documentation_page title="Research Librarian Public Documentation"]',
+        );
+    }
+
+    public static function page_payload( $fresh = false ) {
+        $stored = get_option( self::OPTION, array() );
+        if ( ! $fresh && is_array( $stored ) && ! empty( $stored['generated_at_utc'] ) ) {
+            return $stored;
+        }
+        $sections = self::sections();
+        $html_parts = array();
+        $markdown_parts = array();
+        foreach ( $sections as $section ) {
+            $html_parts[] = '<section class="sc-rl-doc-section"><h2>' . esc_html( $section['heading'] ) . '</h2><p>' . esc_html( $section['body'] ) . '</p></section>';
+            $markdown_parts[] = '## ' . $section['heading'] . "\n\n" . $section['body'];
+        }
+        return array(
+            'title' => 'Sustainable Catalyst Research Librarian Documentation',
+            'slug' => 'research-librarian-documentation',
+            'seo_title' => 'Sustainable Catalyst Research Librarian: Source-Aware Routing and Guided Research Paths',
+            'excerpt' => 'Public documentation for the Sustainable Catalyst Research Librarian, including source-aware routing, public answer UX, guided research paths, Workbench and Decision Studio handoffs, governance boundaries, and admin operations.',
+            'generated_at_utc' => gmdate( 'c' ),
+            'sections' => $sections,
+            'catalog' => self::catalog(),
+            'shortcodes' => self::shortcodes(),
+            'endpoint_summary' => self::endpoint_summary(),
+            'html' => '<div class="sc-rl-public-doc-page">' . implode( "\n", $html_parts ) . '</div>',
+            'markdown' => "# Sustainable Catalyst Research Librarian Documentation\n\n" . implode( "\n\n", $markdown_parts ),
+            'public_safe' => true,
+        );
+    }
+
+    public static function render_admin_page() {
+        if ( ! current_user_can( 'manage_options' ) ) { return; }
+        $status = self::status();
+        $generate_url = rest_url( self::REST_NAMESPACE . '/documentation/generate' );
+        $export_url = rest_url( self::REST_NAMESPACE . '/documentation/export' );
+        $page = self::page_payload( false );
+        ?>
+        <div class="wrap sc-rl-admin-wrap">
+            <h1>Research Librarian Documentation</h1>
+            <p>Version <?php echo esc_html( self::VERSION ); ?> generates public-safe documentation copy, shortcode inventories, endpoint summaries, and release-ready documentation exports for the Research Librarian.</p>
+            <p>
+                <a class="button button-primary" href="<?php echo esc_url( $generate_url ); ?>" onclick="event.preventDefault(); fetch(this.href,{method:'POST',credentials:'same-origin',headers:{'X-WP-Nonce':wpApiSettings&&wpApiSettings.nonce?wpApiSettings.nonce:''}}).then(function(){location.reload();});">Generate Documentation Snapshot</a>
+                <a class="button" href="<?php echo esc_url( $export_url ); ?>">Export Documentation JSON</a>
+            </p>
+            <div class="sc-rl-admin-grid">
+                <div class="card"><h2><?php echo esc_html( absint( $status['catalog_items'] ) ); ?></h2><p>Catalog items</p></div>
+                <div class="card"><h2><?php echo esc_html( absint( $status['public_page_sections'] ) ); ?></h2><p>Page sections</p></div>
+                <div class="card"><h2><?php echo esc_html( absint( $status['shortcode_count'] ) ); ?></h2><p>Shortcodes</p></div>
+            </div>
+            <h2>Generated Page Outline</h2>
+            <table class="widefat striped"><tbody>
+                <tr><th>Title</th><td><?php echo esc_html( $page['title'] ); ?></td></tr>
+                <tr><th>Slug</th><td><code><?php echo esc_html( $page['slug'] ); ?></code></td></tr>
+                <tr><th>Generated</th><td><?php echo esc_html( $page['generated_at_utc'] ); ?></td></tr>
+                <tr><th>Public safe</th><td><?php echo esc_html( $page['public_safe'] ? 'yes' : 'no' ); ?></td></tr>
+            </tbody></table>
+            <h2>Documentation Catalog</h2>
+            <table class="widefat striped">
+                <thead><tr><th>Title</th><th>Type</th><th>Audience</th><th>Recommended Location</th></tr></thead>
+                <tbody>
+                    <?php foreach ( self::catalog() as $item ) : ?>
+                        <tr>
+                            <td><?php echo esc_html( $item['title'] ); ?></td>
+                            <td><?php echo esc_html( $item['type'] ); ?></td>
+                            <td><?php echo esc_html( $item['audience'] ); ?></td>
+                            <td><?php echo esc_html( $item['recommended_location'] ); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php
+    }
+
+    public static function render_public_summary( $atts = array() ) {
+        $atts = shortcode_atts( array( 'title' => 'Research Librarian Documentation' ), $atts, 'sc_research_librarian_documentation_summary' );
+        $status = self::status();
+        ob_start();
+        ?>
+        <section class="sc-rl-product sc-rl-documentation-summary" data-sc-rl-product="documentation-summary">
+            <p class="sc-rl-product__eyebrow">Public Documentation Generator</p>
+            <h2><?php echo esc_html( $atts['title'] ); ?></h2>
+            <p class="sc-rl-product__lede">The Documentation layer generates public-safe page copy, endpoint summaries, shortcode inventories, route documentation, and release-ready exports for the Research Librarian.</p>
+            <div class="sc-rl-product__grid">
+                <article><span><?php echo esc_html( absint( $status['catalog_items'] ) ); ?></span><strong>Catalog items</strong><p>Overview, retrieval, public answer UX, guided paths, handoffs, governance, admin operations, API contracts, and troubleshooting.</p></article>
+                <article><span><?php echo esc_html( absint( $status['public_page_sections'] ) ); ?></span><strong>Page sections</strong><p>Reusable public documentation sections for the Research Librarian page or a standalone documentation page.</p></article>
+                <article><span><?php echo esc_html( absint( $status['shortcode_count'] ) ); ?></span><strong>Shortcodes</strong><p>Public assistant, UX, guided path, path builder, and documentation shortcodes included in the documentation export.</p></article>
+                <article><span>Safe</span><strong>Public-safe exports</strong><p>Exports exclude API keys, raw logs, private route sessions, and admin-only diagnostics.</p></article>
+            </div>
+            <p class="sc-rl-boundary-note">Documentation is descriptive infrastructure. It does not expose private settings, keys, logs, or regulated conclusions.</p>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+
+    public static function render_catalog_summary( $atts = array() ) {
+        $atts = shortcode_atts( array( 'title' => 'Research Librarian Documentation Catalog' ), $atts, 'sc_research_librarian_docs_catalog' );
+        ob_start();
+        ?>
+        <section class="sc-rl-product sc-rl-docs-catalog" data-sc-rl-product="documentation-catalog">
+            <p class="sc-rl-product__eyebrow">Documentation Catalog</p>
+            <h2><?php echo esc_html( $atts['title'] ); ?></h2>
+            <div class="sc-rl-product__grid">
+                <?php foreach ( self::catalog() as $item ) : ?>
+                    <article><span><?php echo esc_html( $item['type'] ); ?></span><strong><?php echo esc_html( $item['title'] ); ?></strong><p><?php echo esc_html( $item['summary'] ); ?></p></article>
+                <?php endforeach; ?>
+            </div>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+
+    public static function render_generated_page( $atts = array() ) {
+        $atts = shortcode_atts( array( 'title' => 'Research Librarian Public Documentation' ), $atts, 'sc_research_librarian_documentation_page' );
+        $page = self::page_payload( false );
+        ob_start();
+        ?>
+        <section class="sc-rl-product sc-rl-generated-doc-page" data-sc-rl-product="documentation-page">
+            <p class="sc-rl-product__eyebrow">Generated Documentation</p>
+            <h2><?php echo esc_html( $atts['title'] ); ?></h2>
+            <p class="sc-rl-product__lede"><?php echo esc_html( $page['excerpt'] ); ?></p>
+            <?php echo wp_kses_post( $page['html'] ); ?>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+}
+
+Sustainable_Catalyst_Research_Librarian_AI_V490_Documentation::init();
 Sustainable_Catalyst_Research_Librarian_AI_V460_Answer_UX::init();
 Sustainable_Catalyst_Research_Librarian_AI_V480_Query_Review::init();
 Sustainable_Catalyst_Research_Librarian_AI_V470_Guided_Paths::init();

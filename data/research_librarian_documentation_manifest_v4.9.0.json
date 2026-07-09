@@ -1,0 +1,27 @@
+{
+  "version": "4.9.0",
+  "name": "Public Documentation Page Generator",
+  "features": [
+    "documentation catalog",
+    "generated public page payload",
+    "shortcode inventory",
+    "endpoint summary",
+    "admin documentation export",
+    "public-safe documentation summary"
+  ],
+  "endpoints": [
+    "/documentation/status",
+    "/documentation/catalog",
+    "/documentation/page",
+    "/documentation/generate",
+    "/documentation/export",
+    "/documentation/reset"
+  ],
+  "shortcodes": [
+    "[sc_research_librarian mode=\"documentation-summary\"]",
+    "[sc_research_librarian_documentation_summary]",
+    "[sc_research_librarian_docs_catalog]",
+    "[sc_research_librarian_documentation_page]"
+  ],
+  "public_safe": true
+}

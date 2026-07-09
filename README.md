@@ -1,54 +1,42 @@
-# Sustainable Catalyst Research Librarian
+# Sustainable Catalyst Research Librarian AI
 
-Current release: **v4.8.0 — Guided Research Paths and Multi-Step Route Builder**.
+Current version: **v4.9.0 — Public Documentation Page Generator**.
 
-The Research Librarian is the source-aware routing, indexing, retrieval, handoff, governance, operations, and guided-path layer for Sustainable Catalyst. It routes visitors to the right page, demo, article map, Workbench pathway, Decision Studio workflow, or feature suggestion route while preserving source context, confidence, feedback, governance, curation, integration contracts, and operations metadata.
+The Research Librarian is the source-aware routing, retrieval, guided-path, and documentation layer for Sustainable Catalyst. It combines deterministic routing, source-aware recommendations, a knowledge index, Gemini embeddings, public answer UX, guided research paths, handoff payloads, query review, governance, maintenance, recovery, security, observability, curation, integration contracts, and now public-safe documentation generation.
 
-## v4.8.0 focus
+## v4.9.0 highlights
 
-v4.8.0 adds guided research paths and a multi-step route builder. Instead of returning only one route card, the plugin can now build ordered paths with steps, checkpoints, route targets, handoff targets, confidence notes, and exportable path JSON.
+- Public documentation page generator
+- Documentation catalog
+- Generated HTML and Markdown documentation payloads
+- Shortcode inventory
+- Endpoint group summary
+- Admin Documentation dashboard
+- Admin-only documentation export
+- Public-safe documentation summary shortcode
 
-## New v4.8.0 shortcodes
-
-```text
-[sc_research_librarian mode="guided-paths" title="Research Librarian Guided Paths"]
-[sc_research_librarian mode="path-builder" title="Research Librarian Path Builder"]
-[sc_research_librarian_paths_summary title="Research Librarian Guided Paths"]
-[sc_research_librarian_path_builder title="Research Librarian Path Builder"]
-```
-
-## New v4.8.0 endpoints
+## Main shortcode
 
 ```text
-GET  /wp-json/sc-research-librarian-ai/v1/paths/status
-GET  /wp-json/sc-research-librarian-ai/v1/paths/catalog
-POST /wp-json/sc-research-librarian-ai/v1/paths/build
-POST /wp-json/sc-research-librarian-ai/v1/paths/save
-GET  /wp-json/sc-research-librarian-ai/v1/paths/logs
-GET  /wp-json/sc-research-librarian-ai/v1/paths/export
-POST /wp-json/sc-research-librarian-ai/v1/paths/reset-defaults
+[sc_research_librarian title="Sustainable Catalyst Research Librarian"]
 ```
 
-## Installation
+## Documentation shortcodes
 
-1. Upload and activate `sustainable-catalyst-research-librarian-ai-plugin-v4.8.0.zip`.
-2. Confirm plugin settings are preserved.
-3. Rebuild the knowledge index if needed.
-4. Regenerate embeddings if the index changed.
-5. Review `Settings → Research Librarian Paths` for guided-path templates and saved sessions.
+```text
+[sc_research_librarian mode="documentation-summary" title="Research Librarian Documentation"]
+[sc_research_librarian_documentation_summary title="Research Librarian Documentation"]
+[sc_research_librarian_docs_catalog title="Research Librarian Documentation Catalog"]
+[sc_research_librarian_documentation_page title="Research Librarian Public Documentation"]
+```
 
-## Boundary
+## Documentation endpoints
 
-Guided paths are route-planning and learning artifacts. They do not provide legal, financial, investment, medical, mental health, tax, engineering, architecture, compliance, assurance, ESG/SDG certification, or other professional advice.
-
-
-## v4.8.0 Rebase Note
-
-This release rebuilds guided research paths on top of the v4.6.0 public answer UX layer. It includes the polished public answer layout, source cards, confidence badges, Route Action Center, answer UX endpoints, guided path templates, and the multi-step route builder.
-
-
-## v4.8.0 — Admin Query Review and Route Improvement Workflow
-
-This release adds a review layer for route quality improvement. It ingests wrong-route feedback, missing-source reports, retrieval evaluation failures, low-confidence saved route sessions, and weak guided paths into an admin-only queue. Review items can be marked, exported, or converted into curation/source-index improvement work.
-
-New public/admin surfaces include `/review/status`, `/review/queue`, `/review/ingest`, `/review/mark`, `/review/correction`, `/review/export`, and `[sc_research_librarian_query_review_summary]`.
+```text
+GET  /wp-json/sc-research-librarian-ai/v1/documentation/status
+GET  /wp-json/sc-research-librarian-ai/v1/documentation/catalog
+GET  /wp-json/sc-research-librarian-ai/v1/documentation/page
+POST /wp-json/sc-research-librarian-ai/v1/documentation/generate
+GET  /wp-json/sc-research-librarian-ai/v1/documentation/export
+POST /wp-json/sc-research-librarian-ai/v1/documentation/reset
+```

@@ -1,5 +1,16 @@
 # Changelog
 
+## v4.9.0 — Public Documentation Page Generator
+
+- Added public-safe documentation generator.
+- Added documentation catalog for public, admin, and developer-facing Research Librarian surfaces.
+- Added generated public documentation page payload with HTML and Markdown outputs.
+- Added shortcode inventory and endpoint group summaries.
+- Added admin Documentation dashboard.
+- Added admin-only documentation export.
+- Added public documentation summary, docs catalog, and generated documentation page shortcodes.
+- Added documentation REST endpoints.
+
 ## v4.8.0 — Admin Query Review and Route Improvement Workflow
 
 - Added admin query review dashboard.
