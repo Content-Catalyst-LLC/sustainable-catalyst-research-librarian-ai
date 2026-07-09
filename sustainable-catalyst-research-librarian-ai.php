@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Sustainable Catalyst Research Librarian
  * Plugin URI: https://sustainablecatalyst.com/platform/research-librarian/
- * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, correction triage, knowledge-gap review, governance controls, privacy summaries, retention policies, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, scheduled index maintenance, sitemap sync, health alerts, recovery snapshots, backup/export controls, migration readiness, security hardening, endpoint permission review, access-surface audit, observability checks, operational runbooks, incident-response summaries, and exports.
- * Version: 4.3.0
+ * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, correction triage, knowledge-gap review, governance controls, privacy summaries, retention policies, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, scheduled index maintenance, sitemap sync, health alerts, recovery snapshots, backup/export controls, migration readiness, security hardening, endpoint permission review, access-surface audit, observability checks, operational runbooks, incident-response summaries, editorial curation rules, route overrides, source weighting controls, and exports.
+ * Version: 4.4.0
  * Author: Content Catalyst LLC / Tariq Ahmad
  * Author URI: https://sustainablecatalyst.com/
  * License: MIT
@@ -23,7 +23,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
     const MAINTENANCE_OPTION = 'sc_rl_ai_maintenance_status';
     const MAINTENANCE_HOOK = 'sc_rl_ai_index_maintenance_event';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const VERSION        = '4.3.0';
+    const VERSION        = '4.4.0';
 
     private static $instance = null;
 
@@ -214,6 +214,11 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         if ( 'observability' === $mode || 'observability-summary' === $mode || 'operations' === $mode || 'operations-summary' === $mode || 'runbook' === $mode || 'runbook-summary' === $mode ) {
             if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V430_Observability' ) ) {
                 return Sustainable_Catalyst_Research_Librarian_AI_V430_Observability::render_public_summary( $atts );
+            }
+        }
+        if ( 'curation' === $mode || 'curation-summary' === $mode || 'route-overrides' === $mode || 'source-weighting' === $mode || 'editorial-controls' === $mode ) {
+            if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V440_Curation' ) ) {
+                return Sustainable_Catalyst_Research_Librarian_AI_V440_Curation::render_public_summary( $atts );
             }
         }
         if ( 'recovery' === $mode || 'recovery-summary' === $mode || 'backup-summary' === $mode || 'snapshot-summary' === $mode ) {
@@ -848,6 +853,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'enterprise' => $this->enterprise_readiness_summary(),
             'release' => $this->release_audit_summary(),
             'recovery' => class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V410_Recovery' ) ? Sustainable_Catalyst_Research_Librarian_AI_V410_Recovery::status() : array(),
+            'curation' => class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V440_Curation' ) ? Sustainable_Catalyst_Research_Librarian_AI_V440_Curation::public_status() : array(),
         ), 200 );
     }
 
@@ -1561,6 +1567,9 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
     private function match_sources( $question, $route ) {
         $options = $this->get_options();
         $records = $this->knowledge_index_records();
+        if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V440_Curation' ) ) {
+            $records = Sustainable_Catalyst_Research_Librarian_AI_V440_Curation::apply_source_weights( $records, $question, $route );
+        }
         $terms = $this->normalize_terms( $question . ' ' . $route['title'] . ' ' . $route['category'] );
         $query_embedding = null;
         $semantic_enabled = $this->semantic_retrieval_enabled( $options );
@@ -3447,6 +3456,12 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
     }
 
     private function match_route( $q ) {
+        if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V440_Curation' ) ) {
+            $curated_route = Sustainable_Catalyst_Research_Librarian_AI_V440_Curation::match_override( $q, $this->routes() );
+            if ( is_array( $curated_route ) && ! empty( $curated_route['id'] ) ) {
+                return $curated_route;
+            }
+        }
         foreach ( $this->routes() as $route ) {
             foreach ( $route['keys'] as $key ) {
                 if ( false !== strpos( $q, $key ) ) {
@@ -5056,6 +5071,441 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V430_Observability {
     }
 }
 
+
+
+/**
+ * v4.4.0 — Editorial Curation, Route Overrides, and Source Weighting.
+ *
+ * This extension gives administrators a governance layer for routing behavior:
+ * route override rules, source weighting rules, blocked/boundary patterns, public
+ * curation summary, and admin-only curation export. It is intentionally
+ * lightweight: it modifies deterministic route selection and source priority
+ * without exposing secrets or visitor logs publicly.
+ */
+class Sustainable_Catalyst_Research_Librarian_AI_V440_Curation {
+    const VERSION = '4.4.0';
+    const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
+    const OPTION = 'sc_rl_ai_curation_rules';
+
+    public static function init() {
+        add_action( 'rest_api_init', array( __CLASS__, 'register_rest_routes' ) );
+        add_action( 'admin_menu', array( __CLASS__, 'register_admin_page' ) );
+        add_shortcode( 'sc_research_librarian_curation_summary', array( __CLASS__, 'render_public_summary' ) );
+        add_shortcode( 'sc_research_librarian_route_overrides_summary', array( __CLASS__, 'render_public_summary' ) );
+    }
+
+    public static function can_manage_options() {
+        return current_user_can( 'manage_options' );
+    }
+
+    public static function defaults() {
+        return array(
+            'route_overrides' => array(
+                array(
+                    'id' => 'default-workbench-analysis-route',
+                    'label' => 'Calculation, graphing, modeling, and formula questions route to Workbench',
+                    'route_id' => 'workbench',
+                    'triggers' => 'calculate, graph, equation, formula, model, units, symbolic, calculator, derivative, regression, simulation, plot',
+                    'priority' => 90,
+                    'status' => 'active',
+                    'note' => 'Editorial default: analysis tasks should start in Workbench rather than general navigation.',
+                ),
+                array(
+                    'id' => 'default-decision-studio-route',
+                    'label' => 'Decision brief, option comparison, and packet requests route to Decision Studio',
+                    'route_id' => 'decision-studio',
+                    'triggers' => 'decision packet, decision brief, compare options, tradeoff, readiness, audit, provenance, scenario comparison, export brief',
+                    'priority' => 90,
+                    'status' => 'active',
+                    'note' => 'Editorial default: synthesis and comparison work should start in Decision Studio.',
+                ),
+                array(
+                    'id' => 'default-feature-gap-route',
+                    'label' => 'Missing capability requests route to Feature Suggestions',
+                    'route_id' => 'feature-suggestions',
+                    'triggers' => 'missing feature, not covered, new module, unsupported, feature request, calculator request, bug, improvement',
+                    'priority' => 80,
+                    'status' => 'active',
+                    'note' => 'Editorial default: gaps should not be invented; route to open development.',
+                ),
+            ),
+            'source_weights' => array(
+                array(
+                    'id' => 'weight-workbench-page',
+                    'label' => 'Prioritize Workbench page for analytical questions',
+                    'route_id' => 'workbench',
+                    'url_contains' => 'workbench',
+                    'weight_delta' => 8,
+                    'status' => 'active',
+                    'note' => 'Boost canonical Workbench source records when the route is Workbench.',
+                ),
+                array(
+                    'id' => 'weight-decision-studio-page',
+                    'label' => 'Prioritize Decision Studio source for decision workflows',
+                    'route_id' => 'decision-studio',
+                    'url_contains' => 'decision-studio',
+                    'weight_delta' => 8,
+                    'status' => 'active',
+                    'note' => 'Boost canonical Decision Studio source records when the route is Decision Studio.',
+                ),
+            ),
+            'boundary_patterns' => array(
+                array(
+                    'id' => 'boundary-regulated-advice',
+                    'label' => 'Regulated advice boundary',
+                    'route_id' => 'methodology',
+                    'triggers' => 'legal advice, medical advice, investment advice, tax advice, certify sdg, certification, compliance conclusion, engineering approval',
+                    'priority' => 100,
+                    'status' => 'active',
+                    'note' => 'Boundary-sensitive prompts should route to methodology and preserve professional-advice limits.',
+                ),
+            ),
+            'last_updated_utc' => '',
+        );
+    }
+
+    public static function rules() {
+        $rules = get_option( self::OPTION, array() );
+        if ( ! is_array( $rules ) || empty( $rules ) ) {
+            $rules = self::defaults();
+            update_option( self::OPTION, $rules, false );
+        }
+        return wp_parse_args( $rules, self::defaults() );
+    }
+
+    public static function save_rules( $rules ) {
+        $rules = wp_parse_args( is_array( $rules ) ? $rules : array(), self::defaults() );
+        $rules['last_updated_utc'] = gmdate( 'c' );
+        update_option( self::OPTION, $rules, false );
+        return $rules;
+    }
+
+    public static function register_rest_routes() {
+        register_rest_route( self::REST_NAMESPACE, '/curation/status', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( __CLASS__, 'handle_status' ),
+            'permission_callback' => '__return_true',
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/curation/rules', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( __CLASS__, 'handle_rules' ),
+            'permission_callback' => array( __CLASS__, 'can_manage_options' ),
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/curation/export', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( __CLASS__, 'handle_export' ),
+            'permission_callback' => array( __CLASS__, 'can_manage_options' ),
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/curation/test', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array( __CLASS__, 'handle_test' ),
+            'permission_callback' => array( __CLASS__, 'can_manage_options' ),
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/curation/reset-defaults', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array( __CLASS__, 'handle_reset_defaults' ),
+            'permission_callback' => array( __CLASS__, 'can_manage_options' ),
+        ) );
+    }
+
+    public static function register_admin_page() {
+        add_options_page(
+            __( 'Research Librarian Curation', 'sustainable-catalyst-research-librarian-ai' ),
+            __( 'Research Librarian Curation', 'sustainable-catalyst-research-librarian-ai' ),
+            'manage_options',
+            'sc-research-librarian-ai-curation',
+            array( __CLASS__, 'render_admin_page' )
+        );
+    }
+
+    public static function render_public_summary( $atts = array() ) {
+        $atts = shortcode_atts( array( 'title' => 'Research Librarian Editorial Curation' ), $atts, 'sc_research_librarian_curation_summary' );
+        wp_enqueue_style( 'sc-research-librarian-ai', plugins_url( 'assets/sc-research-librarian-ai.css', __FILE__ ), array(), self::VERSION );
+        $status = self::public_status();
+        ob_start();
+        ?>
+        <section class="sc-rl-product" data-sc-rl-product="curation">
+            <p class="sc-rl-product__eyebrow">Editorial Curation Layer</p>
+            <h2><?php echo esc_html( $atts['title'] ); ?></h2>
+            <p class="sc-rl-product__lede">Editorial route overrides and source-weighting controls help keep Research Librarian recommendations aligned with Sustainable Catalyst’s public architecture instead of relying only on keyword or embedding scores.</p>
+            <div class="sc-rl-product__grid">
+                <article><span>Route overrides</span><strong><?php echo esc_html( absint( $status['active_route_overrides'] ) ); ?></strong><p>Active editorial rules that can steer questions to canonical routes.</p></article>
+                <article><span>Source weights</span><strong><?php echo esc_html( absint( $status['active_source_weights'] ) ); ?></strong><p>Active weighting rules that boost canonical source records.</p></article>
+                <article><span>Boundary rules</span><strong><?php echo esc_html( absint( $status['active_boundary_patterns'] ) ); ?></strong><p>Active rules for professional-advice and certification boundaries.</p></article>
+                <article><span>Last updated</span><strong><?php echo esc_html( $status['last_updated_utc'] ? $status['last_updated_utc'] : 'default' ); ?></strong><p>Admin-managed curation timestamp.</p></article>
+            </div>
+            <p class="sc-rl-boundary-note">Public-safe summary only. Full curation rules and test outputs are admin-only.</p>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+
+    public static function render_admin_page() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( esc_html__( 'You do not have permission to access this page.', 'sustainable-catalyst-research-librarian-ai' ) );
+        }
+        $notice = '';
+        if ( isset( $_POST['sc_rl_curation_action'] ) && check_admin_referer( 'sc_rl_curation_action', 'sc_rl_curation_nonce' ) ) {
+            $action = sanitize_key( wp_unslash( $_POST['sc_rl_curation_action'] ) );
+            $rules = self::rules();
+            if ( 'add_override' === $action ) {
+                $rules['route_overrides'][] = self::sanitize_route_override_from_post();
+                self::save_rules( $rules );
+                $notice = 'Route override saved.';
+            } elseif ( 'add_weight' === $action ) {
+                $rules['source_weights'][] = self::sanitize_source_weight_from_post();
+                self::save_rules( $rules );
+                $notice = 'Source weight saved.';
+            } elseif ( 'reset_defaults' === $action ) {
+                self::save_rules( self::defaults() );
+                $notice = 'Curation rules reset to defaults.';
+            }
+        }
+        $rules = self::rules();
+        $status = self::status();
+        ?>
+        <div class="wrap">
+            <h1><?php esc_html_e( 'Research Librarian Editorial Curation', 'sustainable-catalyst-research-librarian-ai' ); ?></h1>
+            <p><?php esc_html_e( 'Manage route override rules, canonical source weighting, and boundary patterns for source-aware routing. These controls supplement keyword and Gemini semantic retrieval without exposing API keys.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
+            <?php if ( $notice ) : ?><div class="notice notice-success is-dismissible"><p><?php echo esc_html( $notice ); ?></p></div><?php endif; ?>
+            <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0;max-width:1100px;">
+                <div class="postbox" style="padding:14px;"><strong style="font-size:22px;display:block;"><?php echo esc_html( absint( $status['active_route_overrides'] ) ); ?></strong><span><?php esc_html_e( 'Active route overrides', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                <div class="postbox" style="padding:14px;"><strong style="font-size:22px;display:block;"><?php echo esc_html( absint( $status['active_source_weights'] ) ); ?></strong><span><?php esc_html_e( 'Active source weights', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                <div class="postbox" style="padding:14px;"><strong style="font-size:22px;display:block;"><?php echo esc_html( absint( $status['active_boundary_patterns'] ) ); ?></strong><span><?php esc_html_e( 'Active boundary rules', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+                <div class="postbox" style="padding:14px;"><strong style="font-size:22px;display:block;"><?php echo esc_html( absint( $status['total_rules'] ) ); ?></strong><span><?php esc_html_e( 'Total rules', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
+            </div>
+            <form method="post" style="display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 22px;">
+                <?php wp_nonce_field( 'sc_rl_curation_action', 'sc_rl_curation_nonce' ); ?>
+                <button class="button" type="submit" name="sc_rl_curation_action" value="reset_defaults"><?php esc_html_e( 'Reset Default Curation Rules', 'sustainable-catalyst-research-librarian-ai' ); ?></button>
+                <a class="button" href="<?php echo esc_url( rest_url( self::REST_NAMESPACE . '/curation/export' ) ); ?>"><?php esc_html_e( 'Export Curation JSON', 'sustainable-catalyst-research-librarian-ai' ); ?></a>
+            </form>
+            <h2><?php esc_html_e( 'Add Route Override', 'sustainable-catalyst-research-librarian-ai' ); ?></h2>
+            <form method="post" class="postbox" style="padding:16px;max-width:1100px;">
+                <?php wp_nonce_field( 'sc_rl_curation_action', 'sc_rl_curation_nonce' ); ?>
+                <input type="hidden" name="sc_rl_curation_action" value="add_override" />
+                <p><label><?php esc_html_e( 'Label', 'sustainable-catalyst-research-librarian-ai' ); ?><br><input class="regular-text" name="label" /></label></p>
+                <p><label><?php esc_html_e( 'Route ID', 'sustainable-catalyst-research-librarian-ai' ); ?><br><input class="regular-text" name="route_id" placeholder="workbench" /></label></p>
+                <p><label><?php esc_html_e( 'Triggers, comma-separated', 'sustainable-catalyst-research-librarian-ai' ); ?><br><textarea class="large-text" rows="3" name="triggers" placeholder="calculate, graph, formula"></textarea></label></p>
+                <p><label><?php esc_html_e( 'Priority', 'sustainable-catalyst-research-librarian-ai' ); ?><br><input type="number" name="priority" value="50" min="0" max="100" /></label></p>
+                <p><label><?php esc_html_e( 'Note', 'sustainable-catalyst-research-librarian-ai' ); ?><br><textarea class="large-text" rows="2" name="note"></textarea></label></p>
+                <button class="button button-primary" type="submit"><?php esc_html_e( 'Add Route Override', 'sustainable-catalyst-research-librarian-ai' ); ?></button>
+            </form>
+            <h2><?php esc_html_e( 'Add Source Weight', 'sustainable-catalyst-research-librarian-ai' ); ?></h2>
+            <form method="post" class="postbox" style="padding:16px;max-width:1100px;">
+                <?php wp_nonce_field( 'sc_rl_curation_action', 'sc_rl_curation_nonce' ); ?>
+                <input type="hidden" name="sc_rl_curation_action" value="add_weight" />
+                <p><label><?php esc_html_e( 'Label', 'sustainable-catalyst-research-librarian-ai' ); ?><br><input class="regular-text" name="label" /></label></p>
+                <p><label><?php esc_html_e( 'Route ID', 'sustainable-catalyst-research-librarian-ai' ); ?><br><input class="regular-text" name="route_id" placeholder="decision-studio" /></label></p>
+                <p><label><?php esc_html_e( 'URL contains', 'sustainable-catalyst-research-librarian-ai' ); ?><br><input class="regular-text" name="url_contains" placeholder="/platform/" /></label></p>
+                <p><label><?php esc_html_e( 'Weight delta', 'sustainable-catalyst-research-librarian-ai' ); ?><br><input type="number" name="weight_delta" value="5" min="-25" max="25" /></label></p>
+                <p><label><?php esc_html_e( 'Note', 'sustainable-catalyst-research-librarian-ai' ); ?><br><textarea class="large-text" rows="2" name="note"></textarea></label></p>
+                <button class="button button-primary" type="submit"><?php esc_html_e( 'Add Source Weight', 'sustainable-catalyst-research-librarian-ai' ); ?></button>
+            </form>
+            <h2><?php esc_html_e( 'Active Route Overrides', 'sustainable-catalyst-research-librarian-ai' ); ?></h2>
+            <?php self::render_rules_table( $rules['route_overrides'], array( 'label', 'route_id', 'triggers', 'priority', 'status', 'note' ) ); ?>
+            <h2><?php esc_html_e( 'Active Source Weights', 'sustainable-catalyst-research-librarian-ai' ); ?></h2>
+            <?php self::render_rules_table( $rules['source_weights'], array( 'label', 'route_id', 'url_contains', 'weight_delta', 'status', 'note' ) ); ?>
+            <h2><?php esc_html_e( 'Boundary Patterns', 'sustainable-catalyst-research-librarian-ai' ); ?></h2>
+            <?php self::render_rules_table( $rules['boundary_patterns'], array( 'label', 'route_id', 'triggers', 'priority', 'status', 'note' ) ); ?>
+        </div>
+        <?php
+    }
+
+    private static function render_rules_table( $rows, $columns ) {
+        echo '<table class="widefat striped"><thead><tr>';
+        foreach ( $columns as $column ) {
+            echo '<th>' . esc_html( ucwords( str_replace( '_', ' ', $column ) ) ) . '</th>';
+        }
+        echo '</tr></thead><tbody>';
+        foreach ( is_array( $rows ) ? $rows : array() as $row ) {
+            echo '<tr>';
+            foreach ( $columns as $column ) {
+                echo '<td>' . esc_html( is_array( $row ) && isset( $row[ $column ] ) ? (string) $row[ $column ] : '' ) . '</td>';
+            }
+            echo '</tr>';
+        }
+        echo '</tbody></table>';
+    }
+
+    private static function sanitize_route_override_from_post() {
+        return array(
+            'id' => 'override-' . gmdate( 'YmdHis' ) . '-' . substr( md5( wp_json_encode( $_POST ) ), 0, 6 ),
+            'label' => isset( $_POST['label'] ) ? sanitize_text_field( wp_unslash( $_POST['label'] ) ) : 'Untitled route override',
+            'route_id' => isset( $_POST['route_id'] ) ? sanitize_key( wp_unslash( $_POST['route_id'] ) ) : 'platform',
+            'triggers' => isset( $_POST['triggers'] ) ? sanitize_textarea_field( wp_unslash( $_POST['triggers'] ) ) : '',
+            'priority' => isset( $_POST['priority'] ) ? absint( $_POST['priority'] ) : 50,
+            'status' => 'active',
+            'note' => isset( $_POST['note'] ) ? sanitize_textarea_field( wp_unslash( $_POST['note'] ) ) : '',
+        );
+    }
+
+    private static function sanitize_source_weight_from_post() {
+        return array(
+            'id' => 'weight-' . gmdate( 'YmdHis' ) . '-' . substr( md5( wp_json_encode( $_POST ) ), 0, 6 ),
+            'label' => isset( $_POST['label'] ) ? sanitize_text_field( wp_unslash( $_POST['label'] ) ) : 'Untitled source weight',
+            'route_id' => isset( $_POST['route_id'] ) ? sanitize_key( wp_unslash( $_POST['route_id'] ) ) : '',
+            'url_contains' => isset( $_POST['url_contains'] ) ? sanitize_text_field( wp_unslash( $_POST['url_contains'] ) ) : '',
+            'weight_delta' => isset( $_POST['weight_delta'] ) ? intval( $_POST['weight_delta'] ) : 5,
+            'status' => 'active',
+            'note' => isset( $_POST['note'] ) ? sanitize_textarea_field( wp_unslash( $_POST['note'] ) ) : '',
+        );
+    }
+
+    public static function handle_status() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'curation' => self::public_status() ), 200 );
+    }
+
+    public static function handle_rules() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'rules' => self::rules(), 'status' => self::status() ), 200 );
+    }
+
+    public static function handle_export() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'generated_utc' => gmdate( 'c' ), 'status' => self::status(), 'rules' => self::rules(), 'boundary' => 'Admin-only curation export. Does not include API keys.' ), 200 );
+    }
+
+    public static function handle_test( WP_REST_Request $request ) {
+        $params = $request->get_json_params();
+        $question = isset( $params['question'] ) ? sanitize_textarea_field( wp_unslash( $params['question'] ) ) : '';
+        $route = self::match_override( strtolower( $question ), self::route_catalog() );
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'question' => $question, 'matched_route' => $route, 'status' => self::status() ), 200 );
+    }
+
+    public static function handle_reset_defaults() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'rules' => self::save_rules( self::defaults() ), 'status' => self::status() ), 200 );
+    }
+
+    public static function match_override( $q, $routes ) {
+        $q = strtolower( (string) $q );
+        $rules = self::rules();
+        $candidates = array();
+        foreach ( array( 'boundary_patterns', 'route_overrides' ) as $bucket ) {
+            foreach ( isset( $rules[ $bucket ] ) && is_array( $rules[ $bucket ] ) ? $rules[ $bucket ] : array() as $rule ) {
+                if ( ! self::rule_active( $rule ) ) { continue; }
+                $score = self::trigger_score( $q, isset( $rule['triggers'] ) ? $rule['triggers'] : '' );
+                if ( $score <= 0 ) { continue; }
+                $rule['match_score'] = $score + ( isset( $rule['priority'] ) ? absint( $rule['priority'] ) : 0 );
+                $rule['rule_bucket'] = $bucket;
+                $candidates[] = $rule;
+            }
+        }
+        if ( empty( $candidates ) ) { return null; }
+        usort( $candidates, function( $a, $b ) { return $b['match_score'] <=> $a['match_score']; } );
+        $winner = $candidates[0];
+        foreach ( $routes as $route ) {
+            if ( isset( $route['id'] ) && isset( $winner['route_id'] ) && $route['id'] === $winner['route_id'] ) {
+                $route['curation_override'] = array(
+                    'id' => $winner['id'] ?? '',
+                    'label' => $winner['label'] ?? '',
+                    'match_score' => $winner['match_score'],
+                    'bucket' => $winner['rule_bucket'],
+                    'note' => $winner['note'] ?? '',
+                );
+                return $route;
+            }
+        }
+        return null;
+    }
+
+    public static function apply_source_weights( $records, $question, $route ) {
+        $rules = self::rules();
+        $weights = isset( $rules['source_weights'] ) && is_array( $rules['source_weights'] ) ? $rules['source_weights'] : array();
+        foreach ( $records as $idx => $record ) {
+            foreach ( $weights as $rule ) {
+                if ( ! self::rule_active( $rule ) ) { continue; }
+                if ( ! empty( $rule['route_id'] ) && isset( $route['id'] ) && $rule['route_id'] !== $route['id'] ) { continue; }
+                $url = strtolower( isset( $record['url'] ) ? $record['url'] : '' );
+                $needle = strtolower( isset( $rule['url_contains'] ) ? $rule['url_contains'] : '' );
+                if ( $needle && false === strpos( $url, $needle ) ) { continue; }
+                $delta = isset( $rule['weight_delta'] ) ? intval( $rule['weight_delta'] ) : 0;
+                $records[ $idx ]['priority'] = isset( $records[ $idx ]['priority'] ) ? intval( $records[ $idx ]['priority'] ) + $delta : $delta;
+                $records[ $idx ]['curation_weight_delta'] = isset( $records[ $idx ]['curation_weight_delta'] ) ? intval( $records[ $idx ]['curation_weight_delta'] ) + $delta : $delta;
+                $records[ $idx ]['curation_weight_rule'] = $rule['id'] ?? '';
+            }
+        }
+        return $records;
+    }
+
+    private static function rule_active( $rule ) {
+        return is_array( $rule ) && ( ! isset( $rule['status'] ) || 'active' === $rule['status'] );
+    }
+
+    private static function trigger_score( $q, $trigger_text ) {
+        $score = 0;
+        foreach ( self::split_triggers( $trigger_text ) as $trigger ) {
+            if ( false !== strpos( $q, $trigger ) ) {
+                $score += max( 10, strlen( $trigger ) );
+            }
+        }
+        return $score;
+    }
+
+    private static function split_triggers( $text ) {
+        $parts = preg_split( '/[,\n]+/', strtolower( (string) $text ) );
+        $triggers = array();
+        foreach ( $parts as $part ) {
+            $part = trim( preg_replace( '/\s+/', ' ', $part ) );
+            if ( strlen( $part ) >= 3 ) { $triggers[] = $part; }
+        }
+        return array_values( array_unique( $triggers ) );
+    }
+
+    public static function public_status() {
+        $status = self::status();
+        return array(
+            'version' => self::VERSION,
+            'active_route_overrides' => $status['active_route_overrides'],
+            'active_source_weights' => $status['active_source_weights'],
+            'active_boundary_patterns' => $status['active_boundary_patterns'],
+            'total_rules' => $status['total_rules'],
+            'last_updated_utc' => $status['last_updated_utc'],
+            'note' => 'Public-safe curation summary. Full rules are admin-only.',
+        );
+    }
+
+    public static function status() {
+        $rules = self::rules();
+        $route_overrides = self::active_count( $rules['route_overrides'] ?? array() );
+        $source_weights = self::active_count( $rules['source_weights'] ?? array() );
+        $boundary_patterns = self::active_count( $rules['boundary_patterns'] ?? array() );
+        return array(
+            'version' => self::VERSION,
+            'active_route_overrides' => $route_overrides,
+            'active_source_weights' => $source_weights,
+            'active_boundary_patterns' => $boundary_patterns,
+            'total_rules' => $route_overrides + $source_weights + $boundary_patterns,
+            'last_updated_utc' => isset( $rules['last_updated_utc'] ) ? $rules['last_updated_utc'] : '',
+            'review_flags' => self::review_flags( $rules ),
+        );
+    }
+
+    private static function active_count( $rows ) {
+        $count = 0;
+        foreach ( is_array( $rows ) ? $rows : array() as $row ) {
+            if ( self::rule_active( $row ) ) { $count++; }
+        }
+        return $count;
+    }
+
+    private static function review_flags( $rules ) {
+        $flags = array();
+        if ( empty( $rules['route_overrides'] ) ) { $flags[] = 'No route overrides configured.'; }
+        if ( empty( $rules['source_weights'] ) ) { $flags[] = 'No source weighting rules configured.'; }
+        if ( empty( $rules['boundary_patterns'] ) ) { $flags[] = 'No boundary patterns configured.'; }
+        return $flags;
+    }
+
+    private static function route_catalog() {
+        return array(
+            array( 'id' => 'platform', 'title' => 'Platform', 'url' => '/platform/' ),
+            array( 'id' => 'decision-studio', 'title' => 'Decision Studio', 'url' => '/platform/#decision-studio' ),
+            array( 'id' => 'workbench', 'title' => 'Workbench', 'url' => 'https://sustainablecatalyst.com/modeling-analytics/workbench/' ),
+            array( 'id' => 'feature-suggestions', 'title' => 'Feature Suggestions', 'url' => '/platform/feature-suggestions/' ),
+            array( 'id' => 'methodology', 'title' => 'Methodology', 'url' => '/platform/methodology/' ),
+        );
+    }
+}
+
+Sustainable_Catalyst_Research_Librarian_AI_V440_Curation::init();
 Sustainable_Catalyst_Research_Librarian_AI_V430_Observability::init();
 Sustainable_Catalyst_Research_Librarian_AI_V420_Security::init();
 Sustainable_Catalyst_Research_Librarian_AI_V410_Recovery::init();

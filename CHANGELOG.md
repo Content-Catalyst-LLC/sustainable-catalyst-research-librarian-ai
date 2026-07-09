@@ -1,5 +1,18 @@
 # Changelog
 
+## v4.4.0 — Editorial Curation, Route Overrides, and Source Weighting
+
+- Added route override rules.
+- Added source weighting rules.
+- Added boundary pattern rules.
+- Added admin curation dashboard.
+- Added public-safe curation summary shortcode.
+- Added admin-only curation rules/export endpoints.
+- Added curation test endpoint.
+- Integrated route overrides into deterministic route selection before keyword fallback.
+- Integrated source weighting into source-priority scoring before hybrid ranking.
+- Added v4.4.0 curation manifest and documentation.
+
 ## v4.3.0 — Observability, Operations Runbook, and Production Checks
 
 - Added operational readiness score.
