@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 4.7.1
+Stable tag: 4.8.0
 License: MIT
 
 A site-scoped Research Librarian for Sustainable Catalyst with source-aware routing, route notes, handoff payloads, saved route sessions, admin analytics, a knowledge indexer, and optional Gemini embeddings for hybrid retrieval, and security/access review tooling.
@@ -35,7 +35,7 @@ v4.7.1 adds guided research paths and a multi-step route builder so visitors can
 
 == Changelog ==
 
-= 4.7.1 =
+= 4.8.0 =
 * Adds guided research paths, multi-step route builder, path sessions, checkpoints, handoff targets, and exportable path JSON.
 
 = 4.5.0 =
@@ -83,7 +83,7 @@ v4.7.1 adds guided research paths and a multi-step route builder so visitors can
 
 == Changelog ==
 
-= 4.7.1 =
+= 4.8.0 =
 * Adds guided research paths, multi-step route builder, path sessions, checkpoints, handoff targets, and exportable path JSON.
 
 = 4.5.0 =
@@ -145,3 +145,9 @@ v4.7.1 adds guided research paths and a multi-step route builder so visitors can
 
 = 4.3.0 =
 * Added observability status, operational runbook endpoints, admin event logs, and production readiness checks.
+
+
+= 4.8.0 =
+* Added admin query review and route improvement workflow.
+* Added review queue ingestion from feedback, evaluation failures, route sessions, and guided paths.
+* Added review/correction REST endpoints and public-safe review summary shortcode.

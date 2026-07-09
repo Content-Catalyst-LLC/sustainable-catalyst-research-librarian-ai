@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Sustainable Catalyst Research Librarian
  * Plugin URI: https://sustainablecatalyst.com/platform/research-librarian/
- * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, correction triage, knowledge-gap review, governance controls, privacy summaries, retention policies, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, scheduled index maintenance, sitemap sync, health alerts, recovery snapshots, backup/export controls, migration readiness, security hardening, endpoint permission review, access-surface audit, observability checks, operational runbooks, incident-response summaries, editorial curation rules, route overrides, source weighting controls, integration contracts, API catalogs, developer handoff documentation, guided research paths, multi-step route builders, and exports.
- * Version: 4.7.1
+ * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, correction triage, knowledge-gap review, governance controls, privacy summaries, retention policies, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, scheduled index maintenance, sitemap sync, health alerts, recovery snapshots, backup/export controls, migration readiness, security hardening, endpoint permission review, access-surface audit, observability checks, operational runbooks, incident-response summaries, editorial curation rules, route overrides, source weighting controls, integration contracts, API catalogs, developer handoff documentation, guided research paths, multi-step route builders, admin query review, route improvement queues, correction workflows, and exports.
+ * Version: 4.8.0
  * Author: Content Catalyst LLC / Tariq Ahmad
  * Author URI: https://sustainablecatalyst.com/
  * License: MIT
@@ -23,7 +23,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
     const MAINTENANCE_OPTION = 'sc_rl_ai_maintenance_status';
     const MAINTENANCE_HOOK = 'sc_rl_ai_index_maintenance_event';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const VERSION        = '4.7.1';
+    const VERSION        = '4.8.0';
 
     private static $instance = null;
 
@@ -231,6 +231,11 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         if ( 'answer-ux' === $mode || 'answer-ui' === $mode || 'source-cards' === $mode || 'route-action-center' === $mode || 'public-answer' === $mode ) {
             if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V460_Answer_UX' ) ) {
                 return Sustainable_Catalyst_Research_Librarian_AI_V460_Answer_UX::render_public_summary( $atts );
+            }
+        }
+        if ( 'query-review' === $mode || 'query-review-summary' === $mode || 'route-improvement' === $mode || 'improvement-queue' === $mode || 'admin-query-review' === $mode ) {
+            if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V480_Query_Review' ) ) {
+                return Sustainable_Catalyst_Research_Librarian_AI_V480_Query_Review::render_public_summary( $atts );
             }
         }
         if ( 'guided-paths' === $mode || 'guided-paths-summary' === $mode || 'research-paths' === $mode || 'pathways' === $mode ) {
@@ -6506,7 +6511,400 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V460_Answer_UX {
     }
 }
 
+
+
+/**
+ * v4.8.0 — Admin Query Review and Route Improvement Workflow.
+ *
+ * Adds an admin review queue for low-confidence routes, wrong-route feedback,
+ * missing-source reports, evaluation failures, and saved route sessions that
+ * should be promoted into route curation or knowledge-index improvement work.
+ */
+final class Sustainable_Catalyst_Research_Librarian_AI_V480_Query_Review {
+    const VERSION = '4.8.0';
+    const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
+    const REVIEW_OPTION = 'sc_rl_ai_query_review_queue_v480';
+    const STATUS_OPTION = 'sc_rl_ai_query_review_status_v480';
+
+    public static function init() {
+        add_action( 'admin_menu', array( __CLASS__, 'admin_menu' ) );
+        add_action( 'rest_api_init', array( __CLASS__, 'register_rest_routes' ) );
+        add_shortcode( 'sc_research_librarian_query_review_summary', array( __CLASS__, 'render_public_summary' ) );
+        add_shortcode( 'sc_research_librarian_route_improvement_summary', array( __CLASS__, 'render_public_summary' ) );
+    }
+
+    public static function admin_menu() {
+        add_options_page(
+            'Research Librarian Query Review',
+            'Research Librarian Query Review',
+            'manage_options',
+            'sc-research-librarian-query-review',
+            array( __CLASS__, 'render_admin_page' )
+        );
+    }
+
+    public static function register_rest_routes() {
+        register_rest_route( self::REST_NAMESPACE, '/review/status', array(
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => array( __CLASS__, 'rest_status' ),
+            'permission_callback' => '__return_true',
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/review/queue', array(
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => array( __CLASS__, 'rest_queue' ),
+            'permission_callback' => array( __CLASS__, 'can_manage_options' ),
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/review/ingest', array(
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => array( __CLASS__, 'rest_ingest' ),
+            'permission_callback' => array( __CLASS__, 'can_manage_options' ),
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/review/mark', array(
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => array( __CLASS__, 'rest_mark' ),
+            'permission_callback' => array( __CLASS__, 'can_manage_options' ),
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/review/correction', array(
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => array( __CLASS__, 'rest_correction' ),
+            'permission_callback' => array( __CLASS__, 'can_manage_options' ),
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/review/export', array(
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => array( __CLASS__, 'rest_export' ),
+            'permission_callback' => array( __CLASS__, 'can_manage_options' ),
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/review/clear', array(
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => array( __CLASS__, 'rest_clear' ),
+            'permission_callback' => array( __CLASS__, 'can_manage_options' ),
+        ) );
+    }
+
+    public static function can_manage_options() {
+        return current_user_can( 'manage_options' );
+    }
+
+    public static function rest_status() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'review' => self::status( false ) ), 200 );
+    }
+
+    public static function rest_queue() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'review' => self::status( true ), 'queue' => self::queue() ), 200 );
+    }
+
+    public static function rest_export() {
+        return new WP_REST_Response( array(
+            'version' => self::VERSION,
+            'review' => self::status( true ),
+            'queue' => self::queue(),
+            'source_logs' => self::source_log_counts(),
+            'exported_at_utc' => gmdate( 'c' ),
+        ), 200 );
+    }
+
+    public static function rest_ingest( WP_REST_Request $request ) {
+        $created = self::ingest_review_candidates();
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'created' => $created, 'review' => self::status( true ), 'queue' => self::queue() ), 200 );
+    }
+
+    public static function rest_mark( WP_REST_Request $request ) {
+        $id = sanitize_text_field( $request->get_param( 'id' ) );
+        $status = sanitize_key( $request->get_param( 'status' ) );
+        $allowed = array( 'open', 'reviewed', 'accepted', 'rejected', 'deferred', 'converted_to_curation', 'converted_to_source_update' );
+        if ( ! in_array( $status, $allowed, true ) ) { $status = 'reviewed'; }
+        $note = sanitize_textarea_field( $request->get_param( 'note' ) );
+        $queue = self::queue();
+        $updated = false;
+        foreach ( $queue as &$item ) {
+            if ( isset( $item['id'] ) && $item['id'] === $id ) {
+                $item['status'] = $status;
+                $item['review_note'] = $note;
+                $item['reviewed_utc'] = gmdate( 'c' );
+                $updated = true;
+                break;
+            }
+        }
+        if ( $updated ) { self::save_queue( $queue ); }
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'updated' => $updated, 'review' => self::status( true ) ), $updated ? 200 : 404 );
+    }
+
+    public static function rest_correction( WP_REST_Request $request ) {
+        $query = sanitize_textarea_field( $request->get_param( 'query' ) );
+        $expected = sanitize_text_field( $request->get_param( 'expected_route' ) );
+        $observed = sanitize_text_field( $request->get_param( 'observed_route' ) );
+        $reason = sanitize_textarea_field( $request->get_param( 'reason' ) );
+        $item = self::normalize_item( array(
+            'source' => 'manual_correction',
+            'query' => $query,
+            'expected_route' => $expected,
+            'observed_route' => $observed,
+            'reason' => $reason,
+            'status' => 'open',
+            'priority' => 'high',
+            'suggested_action' => 'review route override, source weighting, or knowledge index metadata',
+            'created_utc' => gmdate( 'c' ),
+        ) );
+        $queue = self::queue();
+        array_unshift( $queue, $item );
+        self::save_queue( $queue );
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'created' => true, 'item' => $item, 'review' => self::status( true ) ), 200 );
+    }
+
+    public static function rest_clear() {
+        self::save_queue( array() );
+        update_option( self::STATUS_OPTION, array( 'last_cleared_utc' => gmdate( 'c' ) ), false );
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'cleared' => true, 'review' => self::status( true ) ), 200 );
+    }
+
+    public static function status( $include_admin = false ) {
+        $queue = self::queue();
+        $open = 0; $reviewed = 0; $high = 0; $by_source = array(); $by_action = array();
+        foreach ( $queue as $item ) {
+            $status = isset( $item['status'] ) ? $item['status'] : 'open';
+            if ( 'open' === $status ) { $open++; } else { $reviewed++; }
+            if ( isset( $item['priority'] ) && 'high' === $item['priority'] ) { $high++; }
+            $source = isset( $item['source'] ) ? $item['source'] : 'unknown';
+            $action = isset( $item['suggested_action'] ) ? $item['suggested_action'] : 'review';
+            $by_source[ $source ] = isset( $by_source[ $source ] ) ? $by_source[ $source ] + 1 : 1;
+            $by_action[ $action ] = isset( $by_action[ $action ] ) ? $by_action[ $action ] + 1 : 1;
+        }
+        arsort( $by_source );
+        arsort( $by_action );
+        $summary = array(
+            'enabled' => true,
+            'total_items' => count( $queue ),
+            'open_items' => $open,
+            'reviewed_items' => $reviewed,
+            'high_priority_items' => $high,
+            'source_counts' => $by_source,
+            'suggested_action_counts' => $by_action,
+            'source_log_counts' => self::source_log_counts(),
+            'workflow' => array( 'ingest', 'review', 'mark', 'convert_to_curation', 'convert_to_source_update', 'export' ),
+            'public_summary' => 'Query review turns failed, weak, or disputed route answers into a visible improvement queue for Sustainable Catalyst routing quality.',
+        );
+        if ( $include_admin ) {
+            $summary['recent_open_items'] = array_slice( array_values( array_filter( $queue, function( $item ) { return ( $item['status'] ?? 'open' ) === 'open'; } ) ), 0, 10 );
+        }
+        return $summary;
+    }
+
+    private static function ingest_review_candidates() {
+        $queue = self::queue();
+        $existing = array();
+        foreach ( $queue as $item ) { if ( isset( $item['fingerprint'] ) ) { $existing[ $item['fingerprint'] ] = true; } }
+        $candidates = array_merge(
+            self::items_from_feedback(),
+            self::items_from_evaluation(),
+            self::items_from_sessions(),
+            self::items_from_guided_paths()
+        );
+        $created = 0;
+        foreach ( $candidates as $candidate ) {
+            $item = self::normalize_item( $candidate );
+            if ( empty( $existing[ $item['fingerprint'] ] ) ) {
+                array_unshift( $queue, $item );
+                $existing[ $item['fingerprint'] ] = true;
+                $created++;
+            }
+        }
+        self::save_queue( $queue );
+        update_option( self::STATUS_OPTION, array( 'last_ingest_utc' => gmdate( 'c' ), 'last_created_count' => $created ), false );
+        return $created;
+    }
+
+    private static function items_from_feedback() {
+        $items = array();
+        foreach ( self::get_option_array( 'sc_rl_ai_feedback_log' ) as $feedback ) {
+            $type = isset( $feedback['type'] ) ? sanitize_key( $feedback['type'] ) : '';
+            $rating = isset( $feedback['rating'] ) ? sanitize_key( $feedback['rating'] ) : '';
+            $should_review = in_array( $type, array( 'wrong_route', 'missing_source', 'feature_gap', 'issue' ), true ) || in_array( $rating, array( 'issue', 'not_helpful', 'wrong_route' ), true );
+            if ( ! $should_review ) { continue; }
+            $items[] = array(
+                'source' => 'feedback',
+                'query' => $feedback['question'] ?? $feedback['query'] ?? $feedback['note'] ?? '',
+                'observed_route' => $feedback['route_id'] ?? $feedback['route'] ?? '',
+                'expected_route' => $feedback['expected_route'] ?? '',
+                'reason' => $feedback['note'] ?? $feedback['message'] ?? $type,
+                'priority' => in_array( $type, array( 'wrong_route', 'missing_source' ), true ) ? 'high' : 'medium',
+                'suggested_action' => 'review route override or source weighting',
+                'created_utc' => $feedback['created_utc'] ?? $feedback['submitted_utc'] ?? gmdate( 'c' ),
+            );
+        }
+        return $items;
+    }
+
+    private static function items_from_evaluation() {
+        $items = array();
+        foreach ( self::get_option_array( 'sc_rl_ai_evaluation_failure_log' ) as $log ) {
+            $failures = isset( $log['failures'] ) && is_array( $log['failures'] ) ? $log['failures'] : array();
+            foreach ( $failures as $failure ) {
+                $items[] = array(
+                    'source' => 'evaluation_failure',
+                    'query' => $failure['query'] ?? $failure['prompt'] ?? '',
+                    'expected_route' => $failure['expected_route'] ?? $failure['expected'] ?? '',
+                    'observed_route' => $failure['recommended_route'] ?? $failure['actual_route'] ?? $failure['actual'] ?? '',
+                    'reason' => $failure['reason'] ?? $failure['label'] ?? 'evaluation mismatch or low-confidence source match',
+                    'priority' => 'high',
+                    'suggested_action' => 'add evaluation case, route override, or source metadata correction',
+                    'created_utc' => $log['created_utc'] ?? $log['ran_utc'] ?? gmdate( 'c' ),
+                );
+            }
+        }
+        return $items;
+    }
+
+    private static function items_from_sessions() {
+        $items = array();
+        foreach ( self::get_option_array( 'sc_rl_ai_session_log' ) as $session ) {
+            $confidence = isset( $session['confidence'] ) ? strtolower( (string) $session['confidence'] ) : '';
+            $score = isset( $session['score'] ) ? floatval( $session['score'] ) : 0;
+            if ( ! in_array( $confidence, array( 'low', 'weak', 'unclear' ), true ) && $score >= 0.45 ) { continue; }
+            $items[] = array(
+                'source' => 'saved_session',
+                'query' => $session['question'] ?? $session['query'] ?? '',
+                'observed_route' => $session['route_id'] ?? $session['route'] ?? '',
+                'expected_route' => '',
+                'reason' => 'saved route session had low confidence or weak score',
+                'priority' => 'medium',
+                'suggested_action' => 'review query phrasing, route card, source coverage, and confidence thresholds',
+                'created_utc' => $session['created_utc'] ?? gmdate( 'c' ),
+            );
+        }
+        return $items;
+    }
+
+    private static function items_from_guided_paths() {
+        $items = array();
+        foreach ( self::get_option_array( 'sc_rl_ai_guided_path_logs' ) as $path ) {
+            $confidence = isset( $path['confidence'] ) ? strtolower( (string) $path['confidence'] ) : '';
+            if ( ! in_array( $confidence, array( 'low', 'medium-low', 'unclear' ), true ) ) { continue; }
+            $items[] = array(
+                'source' => 'guided_path',
+                'query' => $path['question'] ?? $path['goal'] ?? $path['query'] ?? '',
+                'observed_route' => $path['route_id'] ?? $path['path_id'] ?? '',
+                'expected_route' => '',
+                'reason' => 'guided path produced a low-confidence or unclear multi-step route',
+                'priority' => 'medium',
+                'suggested_action' => 'review path template, checkpoints, and handoff target',
+                'created_utc' => $path['created_utc'] ?? gmdate( 'c' ),
+            );
+        }
+        return $items;
+    }
+
+    private static function normalize_item( $raw ) {
+        $query = isset( $raw['query'] ) ? wp_strip_all_tags( (string) $raw['query'] ) : '';
+        $observed = isset( $raw['observed_route'] ) ? sanitize_text_field( $raw['observed_route'] ) : '';
+        $expected = isset( $raw['expected_route'] ) ? sanitize_text_field( $raw['expected_route'] ) : '';
+        $source = isset( $raw['source'] ) ? sanitize_key( $raw['source'] ) : 'manual';
+        $fingerprint = substr( hash( 'sha256', $source . '|' . $query . '|' . $observed . '|' . $expected ), 0, 20 );
+        return array(
+            'id' => 'review_' . $fingerprint,
+            'fingerprint' => $fingerprint,
+            'source' => $source,
+            'query' => $query,
+            'observed_route' => $observed,
+            'expected_route' => $expected,
+            'reason' => isset( $raw['reason'] ) ? sanitize_textarea_field( $raw['reason'] ) : '',
+            'priority' => isset( $raw['priority'] ) ? sanitize_key( $raw['priority'] ) : 'medium',
+            'suggested_action' => isset( $raw['suggested_action'] ) ? sanitize_text_field( $raw['suggested_action'] ) : 'review routing evidence',
+            'status' => isset( $raw['status'] ) ? sanitize_key( $raw['status'] ) : 'open',
+            'created_utc' => isset( $raw['created_utc'] ) ? sanitize_text_field( $raw['created_utc'] ) : gmdate( 'c' ),
+        );
+    }
+
+    private static function source_log_counts() {
+        return array(
+            'feedback_log' => count( self::get_option_array( 'sc_rl_ai_feedback_log' ) ),
+            'session_log' => count( self::get_option_array( 'sc_rl_ai_session_log' ) ),
+            'evaluation_failure_log' => count( self::get_option_array( 'sc_rl_ai_evaluation_failure_log' ) ),
+            'guided_path_log' => count( self::get_option_array( 'sc_rl_ai_guided_path_logs' ) ),
+        );
+    }
+
+    private static function queue() {
+        return self::get_option_array( self::REVIEW_OPTION );
+    }
+
+    private static function save_queue( $queue ) {
+        $queue = array_slice( array_values( is_array( $queue ) ? $queue : array() ), 0, 500 );
+        update_option( self::REVIEW_OPTION, $queue, false );
+    }
+
+    private static function get_option_array( $option ) {
+        $value = get_option( $option, array() );
+        return is_array( $value ) ? $value : array();
+    }
+
+    public static function render_admin_page() {
+        if ( ! current_user_can( 'manage_options' ) ) { return; }
+        $status = self::status( true );
+        $queue = self::queue();
+        $ingest_url = rest_url( self::REST_NAMESPACE . '/review/ingest' );
+        $export_url = rest_url( self::REST_NAMESPACE . '/review/export' );
+        ?>
+        <div class="wrap sc-rl-admin-wrap">
+            <h1>Research Librarian Query Review</h1>
+            <p>Version <?php echo esc_html( self::VERSION ); ?> turns feedback, evaluation failures, low-confidence saved sessions, and weak guided paths into an admin review queue for route improvement.</p>
+            <p>
+                <a class="button button-primary" href="<?php echo esc_url( $ingest_url ); ?>" onclick="event.preventDefault(); fetch(this.href,{method:'POST',credentials:'same-origin',headers:{'X-WP-Nonce':wpApiSettings&&wpApiSettings.nonce?wpApiSettings.nonce:''}}).then(function(){location.reload();});">Ingest Review Candidates</a>
+                <a class="button" href="<?php echo esc_url( $export_url ); ?>">Export Review Queue JSON</a>
+            </p>
+            <div class="sc-rl-admin-grid">
+                <div class="card"><h2><?php echo esc_html( absint( $status['total_items'] ) ); ?></h2><p>Total review items</p></div>
+                <div class="card"><h2><?php echo esc_html( absint( $status['open_items'] ) ); ?></h2><p>Open items</p></div>
+                <div class="card"><h2><?php echo esc_html( absint( $status['high_priority_items'] ) ); ?></h2><p>High priority</p></div>
+            </div>
+            <h2>Recent Review Queue</h2>
+            <table class="widefat striped">
+                <thead><tr><th>Priority</th><th>Source</th><th>Query</th><th>Observed</th><th>Expected</th><th>Status</th><th>Suggested action</th></tr></thead>
+                <tbody>
+                <?php if ( empty( $queue ) ) : ?>
+                    <tr><td colspan="7">No review items yet. Click Ingest Review Candidates after users have created sessions, feedback, or evaluation results.</td></tr>
+                <?php else : ?>
+                    <?php foreach ( array_slice( $queue, 0, 25 ) as $item ) : ?>
+                        <tr>
+                            <td><?php echo esc_html( $item['priority'] ?? 'medium' ); ?></td>
+                            <td><?php echo esc_html( $item['source'] ?? 'unknown' ); ?></td>
+                            <td><?php echo esc_html( wp_trim_words( $item['query'] ?? '', 18 ) ); ?></td>
+                            <td><?php echo esc_html( $item['observed_route'] ?? '' ); ?></td>
+                            <td><?php echo esc_html( $item['expected_route'] ?? '' ); ?></td>
+                            <td><?php echo esc_html( $item['status'] ?? 'open' ); ?></td>
+                            <td><?php echo esc_html( $item['suggested_action'] ?? 'review' ); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php
+    }
+
+    public static function render_public_summary( $atts = array() ) {
+        $atts = shortcode_atts( array( 'title' => 'Research Librarian Query Review' ), $atts, 'sc_research_librarian_query_review_summary' );
+        $status = self::status( false );
+        ob_start();
+        ?>
+        <section class="sc-rl-product sc-rl-query-review-summary" data-sc-rl-product="query-review-summary">
+            <p class="sc-rl-product__eyebrow">Route Improvement Workflow</p>
+            <h2><?php echo esc_html( $atts['title'] ); ?></h2>
+            <p class="sc-rl-product__lede">The Query Review layer turns failed, disputed, low-confidence, or weakly sourced route answers into an admin improvement queue so Sustainable Catalyst routing can be tuned over time.</p>
+            <div class="sc-rl-product__grid">
+                <article><span><?php echo esc_html( absint( $status['total_items'] ) ); ?></span><strong>Review items</strong><p>Admin-only queue items generated from feedback, evaluation failures, saved sessions, and guided path logs.</p></article>
+                <article><span><?php echo esc_html( absint( $status['open_items'] ) ); ?></span><strong>Open items</strong><p>Unreviewed prompts that may need route overrides, source weighting, metadata fixes, or new knowledge records.</p></article>
+                <article><span><?php echo esc_html( absint( $status['high_priority_items'] ) ); ?></span><strong>High priority</strong><p>Wrong-route, missing-source, or evaluation-mismatch cases that should be reviewed first.</p></article>
+                <article><span>Admin</span><strong>Improvement workflow</strong><p>Review items can be marked, exported, or converted into curation and source-index improvement work.</p></article>
+            </div>
+            <p class="sc-rl-boundary-note">Public summary only. Raw queries, feedback, and correction records remain admin-only.</p>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+}
+
 Sustainable_Catalyst_Research_Librarian_AI_V460_Answer_UX::init();
+Sustainable_Catalyst_Research_Librarian_AI_V480_Query_Review::init();
 Sustainable_Catalyst_Research_Librarian_AI_V470_Guided_Paths::init();
 Sustainable_Catalyst_Research_Librarian_AI_V450_Contracts::init();
 Sustainable_Catalyst_Research_Librarian_AI_V440_Curation::init();

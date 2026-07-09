@@ -621,3 +621,7 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+/* v4.8.0 query review summary */
+.sc-rl-query-review-summary .sc-rl-product__grid article span{font-weight:800;letter-spacing:.04em;text-transform:uppercase;}

@@ -1,3 +1,15 @@
+# Changelog
+
+## v4.8.0 — Admin Query Review and Route Improvement Workflow
+
+- Added admin query review dashboard.
+- Added review queue ingestion from feedback, evaluation failures, saved sessions, and guided path logs.
+- Added manual correction endpoint for expected-route and observed-route review records.
+- Added review status, queue, export, mark, clear, and ingest REST endpoints.
+- Added public-safe query review summary shortcode.
+- Added route-improvement workflow documentation and manifest.
+- Preserved v4.6.0 public answer UX and v4.7.1 guided paths.
+
 ## v4.7.1 — Guided Research Paths Rebased on Public Answer UX
 
 - Rebuilt v4.7.x on top of v4.6.0 Public Answer UX.
