@@ -3,16 +3,16 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 5.3.2
+Stable tag: 5.1.0
 License: MIT
 
-A site-scoped Research Librarian for Sustainable Catalyst with source-aware routing, Gemini retrieval, public answer UX, guided paths, route quality tuning, article path embeds, article map integration, handoff payloads, and enterprise-ready operations tooling.
+A site-scoped Research Librarian for Sustainable Catalyst with source-aware routing, route notes, handoff payloads, saved route sessions, admin analytics, a knowledge indexer, and optional Gemini embeddings for hybrid retrieval, and security/access review tooling.
 
 == Description ==
 
 The Research Librarian helps visitors choose the right Sustainable Catalyst route: Knowledge Library, Platform, Demos, Decision Studio, Workbench, Catalyst modules, Methodology, Feature Suggestions, or GitHub repositories.
 
-v5.3.0 adds on-page research path embeds and article map integration so long-form Sustainable Catalyst pages can route readers into Workbench, Decision Studio, module artifacts, or deeper library paths.
+v4.7.1 adds guided research paths and a multi-step route builder so visitors can move from a question into ordered Sustainable Catalyst workflows with steps, checkpoints, handoffs, and exportable path JSON.
 
 == Shortcodes ==
 
@@ -32,14 +32,8 @@ v5.3.0 adds on-page research path embeds and article map integration so long-for
 [sc_research_librarian_paths_summary]
 [sc_research_librarian_path_builder]
 [sc_research_librarian_security_summary]
-[sc_research_librarian_article_path_embed]
-[sc_research_librarian_article_map_summary]
-[sc_research_librarian_article_route_cards]
 
 == Changelog ==
-
-= 5.3.2 =
-* Added article path embeds, article map integration, contextual route templates, and article-map REST endpoints.
 
 = 4.9.1 =
 * Adds guided research paths, multi-step route builder, path sessions, checkpoints, handoff targets, and exportable path JSON.
@@ -88,9 +82,6 @@ v5.3.0 adds on-page research path embeds and article map integration so long-for
 
 
 == Changelog ==
-
-= 5.3.2 =
-* Added article path embeds, article map integration, contextual route templates, and article-map REST endpoints.
 
 = 4.9.1 =
 * Adds guided research paths, multi-step route builder, path sessions, checkpoints, handoff targets, and exportable path JSON.
@@ -169,9 +160,6 @@ v5.3.0 adds on-page research path embeds and article map integration so long-for
 
 == Changelog ==
 
-= 5.3.2 =
-* Added article path embeds, article map integration, contextual route templates, and article-map REST endpoints.
-
 = 5.0.0 =
 * Stable public release, launch checklist, and acceptance gate.
 * Public-safe readiness score and launch checklist shortcodes.
@@ -180,12 +168,3 @@ v5.3.0 adds on-page research path embeds and article map integration so long-for
 
 == v5.1.0 ==
 Live public experience QA, visitor prompt library, QA checklist, and UX calibration layer.
-
-= 5.3.2 =
-* Fixes activation conflicts caused by versioned plugin folder packaging and duplicate active copies.
-
-
-= 5.3.2 =
-* Added duplicate activation notice cleanup and stale active-plugin repair.
-* Added activation status and activation repair diagnostics.
-* Preserved v5.3.1 article-map features.
