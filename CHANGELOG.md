@@ -1,3 +1,15 @@
+# Changelog
+
+## v5.3.0 — On-Page Research Path Embeds and Article Map Integration
+
+- Added public-safe article path embeds.
+- Added article map integration summary shortcode.
+- Added related article route cards shortcode.
+- Added contextual article-to-route path builder.
+- Added Workbench, Decision Studio, module artifact, and Knowledge Library path templates.
+- Added Article Maps admin dashboard.
+- Added article-map status, catalog, build, and export REST endpoints.
+
 
 
 ## 5.2.0 — Public Route Quality Tuning and Source Card Ranking

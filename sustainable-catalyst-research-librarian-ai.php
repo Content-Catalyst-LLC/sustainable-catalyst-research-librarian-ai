@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Sustainable Catalyst Research Librarian
  * Plugin URI: https://sustainablecatalyst.com/platform/research-librarian/
- * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, correction triage, knowledge-gap review, governance controls, privacy summaries, retention policies, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, scheduled index maintenance, sitemap sync, health alerts, recovery snapshots, backup/export controls, migration readiness, security hardening, endpoint permission review, access-surface audit, observability checks, operational runbooks, incident-response summaries, editorial curation rules, route overrides, source weighting controls, integration contracts, API catalogs, developer handoff documentation, guided research paths, multi-step route builders, admin query review, route improvement queues, correction workflows, public documentation page generation, documentation exports, and release-ready page outlines, stable release checks, launch checklist, acceptance gate, live public experience QA, visitor prompt library, and production UX calibration, public route quality tuning, source-card ranking, prompt-to-route diagnostics, answer consistency checks, and route repair suggestions.
- * Version: 5.2.0
+ * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, correction triage, knowledge-gap review, governance controls, privacy summaries, retention policies, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, scheduled index maintenance, sitemap sync, health alerts, recovery snapshots, backup/export controls, migration readiness, security hardening, endpoint permission review, access-surface audit, observability checks, operational runbooks, incident-response summaries, editorial curation rules, route overrides, source weighting controls, integration contracts, API catalogs, developer handoff documentation, guided research paths, multi-step route builders, admin query review, route improvement queues, correction workflows, public documentation page generation, documentation exports, and release-ready page outlines, stable release checks, launch checklist, acceptance gate, live public experience QA, visitor prompt library, and production UX calibration, public route quality tuning, source-card ranking, prompt-to-route diagnostics, answer consistency checks, route repair suggestions, on-page research path embeds, and article map integration.
+ * Version: 5.3.0
  * Author: Content Catalyst LLC / Tariq Ahmad
  * Author URI: https://sustainablecatalyst.com/
  * License: MIT
@@ -23,7 +23,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
     const MAINTENANCE_OPTION = 'sc_rl_ai_maintenance_status';
     const MAINTENANCE_HOOK = 'sc_rl_ai_index_maintenance_event';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const VERSION        = '5.2.0';
+    const VERSION        = '5.3.0';
 
     private static $instance = null;
 
@@ -262,6 +262,11 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         if ( 'path-builder' === $mode || 'route-builder' === $mode || 'multi-step-builder' === $mode || 'guided-route-builder' === $mode ) {
             if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V470_Guided_Paths' ) ) {
                 return Sustainable_Catalyst_Research_Librarian_AI_V470_Guided_Paths::render_builder( $atts );
+            }
+        }
+        if ( 'article-paths' === $mode || 'article-path' === $mode || 'article-map' === $mode || 'article-map-summary' === $mode || 'research-path-embed' === $mode || 'on-page-path' === $mode ) {
+            if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V530_Article_Map_Embeds' ) ) {
+                return Sustainable_Catalyst_Research_Librarian_AI_V530_Article_Map_Embeds::render_article_path_embed( $atts );
             }
         }
         if ( 'recovery' === $mode || 'recovery-summary' === $mode || 'backup-summary' === $mode || 'snapshot-summary' === $mode ) {
@@ -8334,6 +8339,310 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V520_Route_Quality {
     }
 }
 
+
+
+/**
+ * v5.3.0 — On-Page Research Path Embeds and Article Map Integration.
+ *
+ * This layer makes the Research Librarian usable inside article maps and long-form pages.
+ * It provides public-safe article-path embeds, article map route catalogs, contextual path
+ * recommendations, and admin-visible integration status without exposing private logs or keys.
+ */
+final class Sustainable_Catalyst_Research_Librarian_AI_V530_Article_Map_Embeds {
+    const VERSION = '5.3.0';
+    const STATUS_OPTION = 'sc_rl_ai_article_map_status_v530';
+
+    public static function init() {
+        add_action( 'rest_api_init', array( __CLASS__, 'register_rest_routes' ) );
+        add_action( 'admin_menu', array( __CLASS__, 'register_admin_page' ) );
+        add_shortcode( 'sc_research_librarian_article_map_summary', array( __CLASS__, 'render_article_map_summary' ) );
+        add_shortcode( 'sc_research_librarian_article_path_embed', array( __CLASS__, 'render_article_path_embed' ) );
+        add_shortcode( 'sc_research_librarian_article_route_cards', array( __CLASS__, 'render_article_route_cards' ) );
+    }
+
+    public static function register_rest_routes() {
+        $ns = Sustainable_Catalyst_Research_Librarian_AI::REST_NAMESPACE;
+        register_rest_route( $ns, '/article-map/status', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( __CLASS__, 'handle_status' ),
+            'permission_callback' => '__return_true',
+        ) );
+        register_rest_route( $ns, '/article-map/catalog', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( __CLASS__, 'handle_catalog' ),
+            'permission_callback' => '__return_true',
+        ) );
+        register_rest_route( $ns, '/article-map/build', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array( __CLASS__, 'handle_build' ),
+            'permission_callback' => '__return_true',
+        ) );
+        register_rest_route( $ns, '/article-map/export', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( __CLASS__, 'handle_export' ),
+            'permission_callback' => array( __CLASS__, 'can_manage_options' ),
+        ) );
+    }
+
+    public static function can_manage_options() {
+        return current_user_can( 'manage_options' );
+    }
+
+    public static function templates() {
+        return array(
+            array(
+                'id' => 'orientation_to_article_map',
+                'label' => 'Orientation to article map',
+                'route_id' => 'knowledge-library',
+                'summary' => 'Start with the relevant article map, then move into linked methods, tools, and deeper learning paths.',
+                'signals' => array( 'learn', 'article map', 'series', 'library', 'overview', 'where should i start' ),
+                'steps' => array(
+                    array( 'label' => 'Open article map', 'action' => 'Review the article map, section order, and related library context.', 'target' => '/knowledge-libraries/' ),
+                    array( 'label' => 'Choose section', 'action' => 'Select the article cluster that best matches the question.', 'target' => '#article-map' ),
+                    array( 'label' => 'Route next', 'action' => 'Use the Research Librarian or related route cards to move into a demo, Workbench tool, or Decision Studio workflow.', 'target' => '/platform/research-librarian/' ),
+                ),
+            ),
+            array(
+                'id' => 'article_to_workbench',
+                'label' => 'Article to Workbench',
+                'route_id' => 'workbench',
+                'summary' => 'Use this path when the article question needs calculation, graphing, symbolic review, units, diagnostics, or model inspection.',
+                'signals' => array( 'calculate', 'graph', 'formula', 'equation', 'model', 'units', 'diagnostic', 'parameter', 'sensitivity' ),
+                'steps' => array(
+                    array( 'label' => 'Identify formula or model', 'action' => 'Extract the equation, assumption, variable, graph, or calculation need from the article.', 'target' => '#formula' ),
+                    array( 'label' => 'Open Workbench', 'action' => 'Run the calculator, symbolic review, graph, unit-aware calculation, or engineering note.', 'target' => 'https://sustainablecatalyst.com/modeling-analytics/workbench/' ),
+                    array( 'label' => 'Return result to context', 'action' => 'Use the output as an article note, route note, or Decision Studio handoff.', 'target' => '/platform/#decision-studio' ),
+                ),
+            ),
+            array(
+                'id' => 'article_to_decision_studio',
+                'label' => 'Article to Decision Studio',
+                'route_id' => 'decision-studio',
+                'summary' => 'Use this path when the article question needs option comparison, assumptions, tradeoffs, readiness review, or an exportable brief.',
+                'signals' => array( 'decision', 'brief', 'compare options', 'tradeoff', 'readiness', 'packet', 'scenario', 'assumptions' ),
+                'steps' => array(
+                    array( 'label' => 'Frame decision', 'action' => 'Turn the article question into a decision frame with assumptions and unresolved issues.', 'target' => '/platform/#decision-studio' ),
+                    array( 'label' => 'Attach sources', 'action' => 'Use article sources, route cards, Workbench outputs, and module artifacts as evidence.', 'target' => '/platform/research-librarian/' ),
+                    array( 'label' => 'Export Decision Packet', 'action' => 'Generate a structured Decision Packet or brief with traceable context.', 'target' => '/platform/#decision-studio' ),
+                ),
+            ),
+            array(
+                'id' => 'article_to_module',
+                'label' => 'Article to module artifact',
+                'route_id' => 'platform-demos',
+                'summary' => 'Use this path when an article question should become a Canvas, Data, Impact, Risk, Finance, or Grit artifact.',
+                'signals' => array( 'metrics', 'claim', 'impact', 'finance', 'data', 'baseline', 'target', 'risk', 'prototype', 'recovery' ),
+                'steps' => array(
+                    array( 'label' => 'Choose module', 'action' => 'Route to the best module for the article question: Canvas, Data, Analytics R, Global Impact, Narrative Risk, Finance, or Grit.', 'target' => '/platform/demos/' ),
+                    array( 'label' => 'Create artifact', 'action' => 'Use the demo to produce a structured artifact from the article context.', 'target' => '/platform/demos/' ),
+                    array( 'label' => 'Send forward', 'action' => 'Use the artifact in Decision Studio or as a source-aware route note.', 'target' => '/platform/#decision-studio' ),
+                ),
+            ),
+        );
+    }
+
+    public static function status( $refresh = false ) {
+        $stored = get_option( self::STATUS_OPTION, array() );
+        if ( $refresh || empty( $stored ) ) {
+            $templates = self::templates();
+            $stored = array(
+                'version' => self::VERSION,
+                'summary' => 'On-page research path embeds and article map integration are available.',
+                'template_count' => count( $templates ),
+                'shortcodes' => array(
+                    'sc_research_librarian_article_path_embed',
+                    'sc_research_librarian_article_map_summary',
+                    'sc_research_librarian_article_route_cards',
+                    'sc_research_librarian mode="article-paths"',
+                ),
+                'endpoint_count' => 4,
+                'public_features' => array( 'article path embeds', 'contextual route cards', 'article-map route catalog', 'Workbench and Decision Studio path targets', 'module artifact path targets' ),
+                'admin_features' => array( 'article-map status', 'catalog export', 'embed inventory', 'template review' ),
+                'last_status_utc' => gmdate( 'c' ),
+            );
+            update_option( self::STATUS_OPTION, $stored, false );
+        }
+        return $stored;
+    }
+
+    public static function build_path_for_question( $question = '', $context = '' ) {
+        $question = strtolower( sanitize_textarea_field( (string) $question ) );
+        $context = strtolower( sanitize_textarea_field( (string) $context ) );
+        $haystack = trim( $question . ' ' . $context );
+        $best = null;
+        $best_score = -1;
+        foreach ( self::templates() as $template ) {
+            $score = 0;
+            foreach ( $template['signals'] as $signal ) {
+                if ( false !== strpos( $haystack, strtolower( $signal ) ) ) {
+                    $score += 2;
+                }
+            }
+            if ( false !== strpos( $haystack, $template['route_id'] ) ) {
+                $score += 3;
+            }
+            if ( $score > $best_score ) {
+                $best = $template;
+                $best_score = $score;
+            }
+        }
+        if ( ! $best ) {
+            $best = self::templates()[0];
+        }
+        $confidence = $best_score >= 4 ? 'high' : ( $best_score >= 2 ? 'medium' : 'low' );
+        return array(
+            'version' => self::VERSION,
+            'question' => sanitize_textarea_field( $question ),
+            'context' => sanitize_textarea_field( $context ),
+            'path' => $best,
+            'confidence' => array( 'level' => $confidence, 'score' => max( 0, min( 100, 45 + ( $best_score * 12 ) ) ) ),
+            'embed_note' => 'This is a public-safe on-page research path. It does not expose private sessions, API keys, or admin-only logs.',
+            'generated_at_utc' => gmdate( 'c' ),
+        );
+    }
+
+    public static function handle_status() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'article_map' => self::status( false ) ), 200 );
+    }
+
+    public static function handle_catalog() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'templates' => self::templates(), 'status' => self::status( false ) ), 200 );
+    }
+
+    public static function handle_build( WP_REST_Request $request ) {
+        $question = sanitize_textarea_field( $request->get_param( 'question' ) );
+        $context = sanitize_textarea_field( $request->get_param( 'context' ) );
+        return new WP_REST_Response( self::build_path_for_question( $question, $context ), 200 );
+    }
+
+    public static function handle_export() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'status' => self::status( true ), 'templates' => self::templates(), 'exported_at_utc' => gmdate( 'c' ) ), 200 );
+    }
+
+    public static function register_admin_page() {
+        add_options_page(
+            'Research Librarian Article Maps',
+            'Research Librarian Article Maps',
+            'manage_options',
+            'sc-rl-article-maps',
+            array( __CLASS__, 'render_admin_page' )
+        );
+    }
+
+    public static function render_admin_page() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            return;
+        }
+        if ( isset( $_POST['sc_rl_v530_refresh'] ) && check_admin_referer( 'sc_rl_v530_refresh_action' ) ) {
+            self::status( true );
+            echo '<div class="notice notice-success"><p>Article map integration status refreshed.</p></div>';
+        }
+        $status = self::status( false );
+        $templates = self::templates();
+        ?>
+        <div class="wrap">
+            <h1>Research Librarian Article Maps</h1>
+            <p>v5.3.0 provides on-page research path embeds, contextual article route cards, and article-map integration for long-form Sustainable Catalyst pages.</p>
+            <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;max-width:1000px;">
+                <div class="postbox" style="padding:12px;"><strong style="font-size:22px;display:block;"><?php echo esc_html( absint( $status['template_count'] ) ); ?></strong><span>Path templates</span></div>
+                <div class="postbox" style="padding:12px;"><strong style="font-size:22px;display:block;"><?php echo esc_html( absint( count( $status['shortcodes'] ) ) ); ?></strong><span>Shortcodes</span></div>
+                <div class="postbox" style="padding:12px;"><strong style="font-size:22px;display:block;"><?php echo esc_html( absint( $status['endpoint_count'] ) ); ?></strong><span>Endpoints</span></div>
+                <div class="postbox" style="padding:12px;"><strong style="font-size:22px;display:block;">Safe</strong><span>Public embeds</span></div>
+            </div>
+            <form method="post" style="margin-top:16px;">
+                <?php wp_nonce_field( 'sc_rl_v530_refresh_action' ); ?>
+                <button type="submit" name="sc_rl_v530_refresh" class="button button-primary">Refresh Article Map Status</button>
+                <a class="button" href="<?php echo esc_url( rest_url( Sustainable_Catalyst_Research_Librarian_AI::REST_NAMESPACE . '/article-map/export' ) ); ?>">Export article-map catalog</a>
+            </form>
+            <h2>Path Templates</h2>
+            <table class="widefat striped"><thead><tr><th>ID</th><th>Route</th><th>Label</th><th>Summary</th><th>Steps</th></tr></thead><tbody>
+                <?php foreach ( $templates as $template ) : ?>
+                    <tr><td><code><?php echo esc_html( $template['id'] ); ?></code></td><td><code><?php echo esc_html( $template['route_id'] ); ?></code></td><td><?php echo esc_html( $template['label'] ); ?></td><td><?php echo esc_html( $template['summary'] ); ?></td><td><?php echo esc_html( absint( count( $template['steps'] ) ) ); ?></td></tr>
+                <?php endforeach; ?>
+            </tbody></table>
+            <h2>Recommended Article Shortcode</h2>
+            <p><code>[sc_research_librarian_article_path_embed title="Research Path" context="calculus systems modeling" question="I need to graph and analyze this formula"]</code></p>
+        </div>
+        <?php
+    }
+
+    public static function render_article_map_summary( $atts = array() ) {
+        $atts = shortcode_atts( array( 'title' => 'Research Librarian Article Map Integration' ), $atts, 'sc_research_librarian_article_map_summary' );
+        $status = self::status( false );
+        ob_start();
+        ?>
+        <section class="sc-rl-product sc-rl-article-map-summary" data-sc-rl-product="article-map-summary">
+            <p class="sc-rl-product__eyebrow">Article Map Integration</p>
+            <h2><?php echo esc_html( $atts['title'] ); ?></h2>
+            <p class="sc-rl-product__lede">Research Librarian v5.3.0 adds on-page research path embeds so Sustainable Catalyst articles and article maps can route readers into Workbench, Decision Studio, platform modules, or deeper library paths without leaving the article context.</p>
+            <div class="sc-rl-product__grid">
+                <article><span><?php echo esc_html( absint( $status['template_count'] ) ); ?></span><strong>Path templates</strong><p>Reusable article-to-route templates for library, Workbench, Decision Studio, and module artifact workflows.</p></article>
+                <article><span>Embed</span><strong>Article path cards</strong><p>Place compact route cards inside long-form articles, article maps, and research library pages.</p></article>
+                <article><span>Route</span><strong>Context-aware next step</strong><p>Use article context and visitor intent to recommend the next page, tool, or workflow.</p></article>
+                <article><span>Safe</span><strong>Public-safe output</strong><p>No private logs, API keys, or admin exports are exposed in public embeds.</p></article>
+            </div>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+
+    public static function render_article_route_cards( $atts = array() ) {
+        $atts = shortcode_atts( array( 'title' => 'Related Research Routes' ), $atts, 'sc_research_librarian_article_route_cards' );
+        $templates = self::templates();
+        ob_start();
+        ?>
+        <section class="sc-rl-product sc-rl-article-route-cards" data-sc-rl-product="article-route-cards">
+            <p class="sc-rl-product__eyebrow">Related Routes</p>
+            <h2><?php echo esc_html( $atts['title'] ); ?></h2>
+            <div class="sc-rl-product__grid">
+                <?php foreach ( $templates as $template ) : $first_step = $template['steps'][0]; ?>
+                    <article><span><?php echo esc_html( $template['route_id'] ); ?></span><strong><?php echo esc_html( $template['label'] ); ?></strong><p><?php echo esc_html( $template['summary'] ); ?></p><a href="<?php echo esc_url( $first_step['target'] ); ?>">Start route →</a></article>
+                <?php endforeach; ?>
+            </div>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+
+    public static function render_article_path_embed( $atts = array() ) {
+        $atts = shortcode_atts(
+            array(
+                'title' => 'Research Path',
+                'question' => '',
+                'context' => '',
+                'depth' => 'standard',
+            ),
+            $atts,
+            'sc_research_librarian_article_path_embed'
+        );
+        $path = self::build_path_for_question( $atts['question'], $atts['context'] );
+        $template = $path['path'];
+        ob_start();
+        ?>
+        <section class="sc-rl-product sc-rl-article-path-embed" data-sc-rl-product="article-path-embed" data-route="<?php echo esc_attr( $template['route_id'] ); ?>">
+            <p class="sc-rl-product__eyebrow">On-Page Research Path</p>
+            <h2><?php echo esc_html( $atts['title'] ); ?></h2>
+            <div class="sc-rl-path-card">
+                <div>
+                    <span class="sc-rl-path-card__route"><?php echo esc_html( $template['route_id'] ); ?></span>
+                    <h3><?php echo esc_html( $template['label'] ); ?></h3>
+                    <p><?php echo esc_html( $template['summary'] ); ?></p>
+                </div>
+                <strong class="sc-rl-confidence-badge"><?php echo esc_html( ucfirst( $path['confidence']['level'] ) ); ?> confidence</strong>
+            </div>
+            <div class="sc-rl-path-steps">
+                <?php foreach ( $template['steps'] as $step ) : ?>
+                    <article class="sc-rl-path-step"><h3><?php echo esc_html( $step['label'] ); ?></h3><p><?php echo esc_html( $step['action'] ); ?></p><a href="<?php echo esc_url( $step['target'] ); ?>">Open step →</a></article>
+                <?php endforeach; ?>
+            </div>
+            <p class="sc-rl-boundary-note">Public-safe route embed. Use the Research Librarian for source-aware routing, Workbench for calculations, and Decision Studio for structured decision packets.</p>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+}
+
+Sustainable_Catalyst_Research_Librarian_AI_V530_Article_Map_Embeds::init();
 Sustainable_Catalyst_Research_Librarian_AI_V520_Route_Quality::init();
 Sustainable_Catalyst_Research_Librarian_AI_V510_Live_UX::init();
 Sustainable_Catalyst_Research_Librarian_AI_V500_Stable_Release::init();

@@ -1,3 +1,22 @@
+# Sustainable Catalyst Research Librarian v5.3.0
+
+**On-Page Research Path Embeds and Article Map Integration**
+
+Research Librarian v5.3.0 adds public-safe article path embeds and article map route cards so Sustainable Catalyst long-form pages can route readers into the right next workflow without requiring the full assistant interface on every page.
+
+## Main v5.3.0 shortcodes
+
+```text
+[sc_research_librarian mode="article-paths" title="Research Path"]
+[sc_research_librarian_article_path_embed title="Research Path" context="calculus systems modeling" question="I need to graph and analyze this formula"]
+[sc_research_librarian_article_map_summary title="Research Librarian Article Map Integration"]
+[sc_research_librarian_article_route_cards title="Related Research Routes"]
+```
+
+## After activation
+
+Go to **Settings → Research Librarian Article Maps** and review the available path templates. Use the article path embed inside article maps, formula-heavy pages, and long research pages where a reader needs a next step into Workbench, Decision Studio, a module artifact, or the Knowledge Library.
+
 # Sustainable Catalyst Research Librarian v5.1.0
 
 **Live Public Experience QA, Prompt Library, and UX Calibration**
