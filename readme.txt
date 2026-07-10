@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 5.6.0
+Stable tag: 5.7.0
 License: MIT
 
 A site-scoped Research Librarian for Sustainable Catalyst with source-aware routing, Gemini retrieval, article-map embeds, Workbench and Decision Studio deep links, release-readiness diagnostics, recovery validation, and public release notes.
@@ -12,7 +12,7 @@ A site-scoped Research Librarian for Sustainable Catalyst with source-aware rout
 
 The Research Librarian helps visitors choose the right Sustainable Catalyst route: Knowledge Library, Platform, Demos, Decision Studio, Workbench, Catalyst modules, Methodology, Feature Suggestions, or GitHub repositories.
 
-v5.6.0 adds contextual Research Librarian ratings and issue reports, Feature Suggestions v3 handoffs, local queue fallback, receipt-protected status, duplicate protection, and privacy-minimized Site Intelligence events.
+v5.7.0 adds aggregate research-demand and knowledge-gap intelligence across saved routes, low-confidence sessions, feedback, evaluation failures, source coverage, and missing-tool signals.
 
 == Shortcodes ==
 
@@ -38,6 +38,15 @@ v5.6.0 adds contextual Research Librarian ratings and issue reports, Feature Sug
 
 == Changelog ==
 
+
+= 5.7.0 =
+* Added Research Demand and Knowledge-Gap Intelligence administration dashboard.
+* Added 30-day, 90-day, and all-time aggregate demand windows.
+* Added route demand, topic clusters, low-confidence routes, missing-source clusters, missing-tool clusters, and evaluation-failure signals.
+* Added advisory demand-and-coverage opportunity scoring with human-review boundaries.
+* Added protected demand report, refresh, and export REST endpoints.
+* Added optional privacy-thresholded public demand summary shortcode and endpoint.
+* Added aggregate Site Intelligence refresh events and a daily refresh schedule.
 
 = 5.6.0 =
 

@@ -1,0 +1,29 @@
+{
+  "product": "Sustainable Catalyst Research Librarian",
+  "version": "5.7.0",
+  "release": "Research Demand and Knowledge-Gap Intelligence",
+  "schema": "sc-research-demand-intelligence/1.0",
+  "capabilities": [
+    "aggregate demand windows",
+    "route and topic demand",
+    "low-confidence clusters",
+    "missing-source clusters",
+    "missing-tool clusters",
+    "source-coverage summaries",
+    "advisory opportunity scoring",
+    "Site Intelligence events",
+    "protected exports"
+  ],
+  "privacy": {
+    "public_summary_default": false,
+    "minimum_count_suppression": true,
+    "raw_conversations_public": false,
+    "scores_advisory": true
+  },
+  "rest_endpoints": [
+    "/intelligence/demand",
+    "/intelligence/demand/refresh",
+    "/intelligence/demand/export",
+    "/intelligence/demand/public"
+  ]
+}

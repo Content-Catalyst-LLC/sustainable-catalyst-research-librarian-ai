@@ -89,3 +89,5 @@ The Research Librarian 5.x public-experience roadmap is now complete. Future rel
 - Missing-source, missing-topic, missing-tool, and grounding feedback.
 - Feature Suggestions v3 handoff adapter and local queue fallback.
 - Receipt status, duplicate protection, administrator diagnostics, and Site Intelligence events.
+
+- **v5.7.0 — Research Demand and Knowledge-Gap Intelligence:** aggregate route demand, low-confidence clusters, coverage gaps, missing sources and tools, and advisory opportunities for Site Intelligence and editorial review.

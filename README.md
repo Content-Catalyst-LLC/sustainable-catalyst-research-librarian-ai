@@ -1,4 +1,4 @@
-# Sustainable Catalyst Research Librarian v5.6.0
+# Sustainable Catalyst Research Librarian v5.7.0
 
 
 Research Librarian v5.6.0 adds the full Feature Suggestions Feedback Bridge. Contextual route ratings, wrong-route reports, source-card issues, grounding concerns, missing topics, and missing-tool requests are retained in the Librarian queue, normalized for Feature Suggestions v3, published as privacy-minimized Site Intelligence events, protected against duplicate submissions, and assigned receipt-based status records.
@@ -211,3 +211,17 @@ The repository now includes a compatibility bridge for Feature Suggestions v3, S
 ## v5.4.0 — Decision Studio / Workbench Deep-Link Actions
 
 Adds public Route Action Center actions, typed `sc-research-handoff/1.1` payloads, 30-minute handoff tokens, destination resolution, fallback navigation, and shared platform events.
+
+
+## v5.7.0 Research Demand and Knowledge-Gap Intelligence
+
+The v5.7.0 layer aggregates saved route sessions, visitor feedback, Feature Suggestions bridge records, source coverage, low-confidence outcomes, guided-path demand, and evaluation failures into privacy-conscious demand and gap reports. It includes 30-day, 90-day, and all-time windows, advisory opportunity scoring, a protected JSON export, an administrator dashboard, optional thresholded public summaries, and aggregate Site Intelligence events. Raw conversations are not exposed publicly, and all opportunity recommendations remain subject to human review.
+
+Administrator endpoints:
+
+- `GET /wp-json/sc-research-librarian/v1/intelligence/demand`
+- `POST /wp-json/sc-research-librarian/v1/intelligence/demand/refresh`
+- `GET /wp-json/sc-research-librarian/v1/intelligence/demand/export`
+- `GET /wp-json/sc-research-librarian/v1/intelligence/demand/public` (only when enabled)
+
+Public shortcode: `[sc_research_demand_summary]` (disabled by default).

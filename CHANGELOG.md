@@ -1,5 +1,16 @@
 # Changelog
 
+## 5.7.0 — Research Demand and Knowledge-Gap Intelligence
+
+- Added aggregate demand intelligence across route sessions, guided paths, feedback records, Feature Suggestions bridge records, evaluation failures, and source coverage.
+- Added 30-day, 90-day, and all-time analysis windows.
+- Added high-demand routes, emerging topic clusters, low-confidence route clusters, missing-source clusters, missing-tool clusters, and prompt evaluation failure summaries.
+- Added advisory opportunity scoring that combines demand, confidence, source gaps, evaluation failures, and zero-source sessions.
+- Added an administrator dashboard, protected REST report and export endpoints, daily refresh scheduling, and a bounded audit log.
+- Added optional public aggregate summaries with minimum-count suppression; public summaries remain disabled by default.
+- Added privacy-minimized `librarian.demand_intelligence_refreshed` Site Intelligence events.
+- Preserved Feature Suggestions feedback bridging, deep-link actions, stable operations, route ranking, and article-map integrations.
+
 ## v5.6.0 — Feature Suggestions Feedback Bridge
 
 - Added contextual route ratings and detailed issue reporting.
