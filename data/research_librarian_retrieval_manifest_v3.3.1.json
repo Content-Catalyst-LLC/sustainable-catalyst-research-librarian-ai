@@ -1,0 +1,27 @@
+{
+  "version": "3.3.1",
+  "name": "Gemini Embedding Diagnostics and Request Format Fix",
+  "provider": "gemini",
+  "default_embedding_model": "gemini-embedding-001",
+  "retrieval_modes": [
+    "keyword-source",
+    "hybrid-gemini-embedding"
+  ],
+  "diagnostics": [
+    "single-record embedding test",
+    "HTTP status",
+    "Gemini error code",
+    "raw response excerpt",
+    "recommended next step"
+  ],
+  "endpoints": [
+    "/retrieval/status",
+    "/retrieval/diagnostics",
+    "/retrieval/test-embedding",
+    "/retrieval/query",
+    "/index/embed"
+  ],
+  "shortcodes": [
+    "[sc_research_librarian mode=\"retrieval-status\"]"
+  ]
+}

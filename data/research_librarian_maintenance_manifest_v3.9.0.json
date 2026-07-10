@@ -1,0 +1,22 @@
+{
+  "version": "3.9.0",
+  "title": "Scheduled Index Maintenance, Sitemap Sync, and Health Alerts",
+  "features": [
+    "scheduled_index_rebuilds",
+    "sitemap_url_sync",
+    "maintenance_status",
+    "health_alerts",
+    "manual_run",
+    "schedule_sync",
+    "maintenance_export",
+    "maintenance_summary_shortcode"
+  ],
+  "shortcodes": [
+    "[sc_research_librarian mode=\"maintenance-summary\" title=\"Research Librarian Index Maintenance\"]"
+  ],
+  "endpoints": [
+    "/maintenance/status",
+    "/maintenance/run",
+    "/maintenance/export"
+  ]
+}

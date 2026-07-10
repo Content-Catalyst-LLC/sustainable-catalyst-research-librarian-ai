@@ -1,0 +1,23 @@
+{
+  "product": "Sustainable Catalyst Research Librarian",
+  "version": "5.6.0",
+  "release": "Feature Suggestions Feedback Bridge",
+  "schema": "sc-librarian-feedback/1.0",
+  "capabilities": [
+    "contextual route ratings",
+    "route correction reports",
+    "source-card feedback",
+    "missing topic and tool reports",
+    "Feature Suggestions v3 adapter",
+    "local queue fallback",
+    "receipt-protected status",
+    "duplicate protection",
+    "Site Intelligence shared events"
+  ],
+  "privacy": {
+    "raw_conversations_shared": false,
+    "email_shared": false,
+    "ip_shared": false,
+    "api_keys_shared": false
+  }
+}

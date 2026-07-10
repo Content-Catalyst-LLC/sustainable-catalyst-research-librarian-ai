@@ -1,0 +1,20 @@
+{
+  "product": "Sustainable Catalyst Research Librarian",
+  "version": "5.3.3",
+  "release": "Pre-v5.4 Integration Bridge",
+  "event_schema": "sc-platform-event/1.0",
+  "handoff_schema": "sc-research-handoff/1.0",
+  "integrations": [
+    "Feature Suggestions v3 contextual feedback",
+    "Site Intelligence shared events",
+    "Workbench capability discovery",
+    "Decision Studio capability discovery"
+  ],
+  "privacy": {
+    "raw_conversations": false,
+    "email_addresses": false,
+    "ip_addresses": false,
+    "api_keys": false
+  },
+  "next_release": "5.4.0"
+}

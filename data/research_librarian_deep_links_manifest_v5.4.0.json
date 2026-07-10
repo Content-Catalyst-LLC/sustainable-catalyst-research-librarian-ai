@@ -1,0 +1,17 @@
+{
+  "product": "Sustainable Catalyst Research Librarian",
+  "version": "5.4.0",
+  "release": "Decision Studio / Workbench Deep-Link Actions",
+  "handoff_schema": "sc-research-handoff/1.1",
+  "event_schema": "sc-platform-event/1.0",
+  "destinations": ["workbench", "decision_studio"],
+  "workbench_actions": ["analyze", "calculate", "graph", "compare"],
+  "decision_studio_actions": ["brief", "assumptions", "tradeoffs", "scenario"],
+  "token_ttl_seconds": 1800,
+  "privacy": {
+    "raw_conversation_exported": false,
+    "personal_data_required": false,
+    "api_keys_exported": false
+  },
+  "human_review": true
+}

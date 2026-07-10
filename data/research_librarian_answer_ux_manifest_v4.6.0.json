@@ -1,0 +1,25 @@
+{
+  "version": "4.6.0",
+  "release": "Public Answer UX, Source Cards, and Route Action Center",
+  "features": [
+    "recommended_route_card",
+    "source_cards",
+    "confidence_badges",
+    "reason_code_chips",
+    "route_action_center",
+    "low_confidence_states",
+    "boundary_note_rendering"
+  ],
+  "shortcodes": [
+    "[sc_research_librarian mode=\"answer-ux\"]",
+    "[sc_research_librarian_answer_ux_summary]",
+    "[sc_research_librarian_route_action_center_summary]"
+  ],
+  "endpoints": [
+    "/answer-ux/status",
+    "/answer-ux/schema",
+    "/answer-ux/public-status",
+    "/answer-ux/export",
+    "/answer-ux/admin-export"
+  ]
+}

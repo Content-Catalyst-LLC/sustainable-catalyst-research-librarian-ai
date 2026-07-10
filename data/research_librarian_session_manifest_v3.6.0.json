@@ -1,0 +1,22 @@
+{
+  "version": "3.6.0",
+  "name": "Saved Route Sessions and Admin Analytics",
+  "features": [
+    "saved_route_sessions",
+    "assistant_save_session_button",
+    "admin_route_analytics",
+    "session_export",
+    "session_summary_shortcode",
+    "analytics_summary_shortcode"
+  ],
+  "endpoints": [
+    "/session/save",
+    "/session/logs",
+    "/session/export",
+    "/analytics/summary"
+  ],
+  "shortcodes": [
+    "[sc_research_librarian mode=\"session-summary\"]",
+    "[sc_research_librarian mode=\"analytics-summary\"]"
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "version": "4.5.0",
+  "title": "Integration Contracts, API Catalog, and Developer Handoffs",
+  "status": "active",
+  "contract_groups": [
+    "routing",
+    "source_records",
+    "retrieval",
+    "handoffs",
+    "governance",
+    "operations"
+  ],
+  "public_endpoints_added": [
+    "/contracts/status",
+    "/contracts/catalog",
+    "/developer/catalog"
+  ],
+  "admin_endpoints_added": [
+    "/contracts/export",
+    "/developer/export"
+  ],
+  "shortcodes_added": [
+    "[sc_research_librarian mode=\"contracts-summary\"]",
+    "[sc_research_librarian_contracts_summary]",
+    "[sc_research_librarian_api_catalog_summary]"
+  ],
+  "notes": "Documents public and admin integration surfaces without exposing secrets."
+}

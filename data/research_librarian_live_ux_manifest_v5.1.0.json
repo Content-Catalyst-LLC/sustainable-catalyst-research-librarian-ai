@@ -1,0 +1,24 @@
+{
+  "version": "5.1.0",
+  "name": "Live Public Experience QA, Prompt Library, and UX Calibration",
+  "focus": "Post-stable-release public experience testing for answer cards, source cards, guided paths, handoff actions, and boundary-safe routing.",
+  "new_endpoints": [
+    "/wp-json/sc-research-librarian-ai/v1/live-ux/status",
+    "/wp-json/sc-research-librarian-ai/v1/live-ux/prompts",
+    "/wp-json/sc-research-librarian-ai/v1/live-ux/checklist",
+    "/wp-json/sc-research-librarian-ai/v1/live-ux/run-qa",
+    "/wp-json/sc-research-librarian-ai/v1/live-ux/export"
+  ],
+  "new_shortcodes": [
+    "[sc_research_librarian mode=\"live-ux\" title=\"Research Librarian Live Public Experience\"]",
+    "[sc_research_librarian mode=\"prompt-library\" title=\"Research Librarian Prompt Library\"]",
+    "[sc_research_librarian_live_ux_summary title=\"Research Librarian Live Public Experience\"]",
+    "[sc_research_librarian_prompt_library title=\"Research Librarian Public Prompt Library\"]",
+    "[sc_research_librarian_live_qa_checklist title=\"Research Librarian Live QA Checklist\"]"
+  ],
+  "qa_prompts": 10,
+  "public_safe": true,
+  "admin_pages": [
+    "Settings \u2192 Research Librarian Live UX"
+  ]
+}

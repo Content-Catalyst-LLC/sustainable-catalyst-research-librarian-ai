@@ -1,0 +1,20 @@
+{
+  "version": "3.5.0",
+  "name": "Workbench and Decision Studio Handoff Payloads",
+  "targets": [
+    "workbench",
+    "decision_studio",
+    "module_artifact",
+    "feature_suggestion",
+    "knowledge_route"
+  ],
+  "endpoints": [
+    "/handoff/schema",
+    "/handoff/prepare",
+    "/handoff/logs",
+    "/handoff/export"
+  ],
+  "shortcodes": [
+    "[sc_research_librarian mode=\"handoff-summary\"]"
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "product": "Sustainable Catalyst Research Librarian",
+  "version": "5.5.0",
+  "release": "Stable Operations Polish and Release Notes",
+  "schema": "sc-rl-release-manifest/1.0",
+  "capabilities": [
+    "release readiness dashboard",
+    "daily operations validation",
+    "migration validation",
+    "duplicate activation checks",
+    "recovery asset validation",
+    "maintenance schedule checks",
+    "Workbench and Decision Studio integration health",
+    "administrator operations export",
+    "public release notes",
+    "privacy-minimized Site Intelligence events"
+  ],
+  "privacy": {
+    "raw_conversations_in_reports": false,
+    "api_keys_in_reports": false,
+    "email_in_reports": false,
+    "ip_addresses_in_reports": false
+  },
+  "human_controls": [
+    "release acknowledgement",
+    "manual readiness check",
+    "manual migration validation"
+  ]
+}
