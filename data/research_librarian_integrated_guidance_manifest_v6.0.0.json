@@ -1,0 +1,32 @@
+{
+  "product": "Sustainable Catalyst Research Librarian",
+  "version": "6.0.0",
+  "release": "Integrated Research Guidance Platform",
+  "schema": "sc-integrated-research-guidance/1.0",
+  "status": "stable",
+  "modules": [
+    "source-aware routing and retrieval",
+    "article-map research guidance",
+    "Workbench and Decision Studio deep-link actions",
+    "stable operations and release readiness",
+    "Feature Suggestions feedback bridge",
+    "research-demand and knowledge-gap intelligence",
+    "adaptive prompts and survey experiences",
+    "closed-loop route improvement"
+  ],
+  "public_shortcodes": [
+    "sc_research_guidance_platform",
+    "sc_research_guidance_journey"
+  ],
+  "rest_endpoints": [
+    "/platform/guidance/status",
+    "/platform/guidance/journey",
+    "/platform/guidance/export"
+  ],
+  "governance": {
+    "human_approval_required": true,
+    "raw_conversations_in_platform_events": false,
+    "required_personal_data": false,
+    "route_changes_regression_tested": true
+  }
+}

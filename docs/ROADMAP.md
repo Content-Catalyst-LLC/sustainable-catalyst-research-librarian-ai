@@ -93,3 +93,9 @@ The Research Librarian 5.x public-experience roadmap is now complete. Future rel
 - **v5.7.0 — Research Demand and Knowledge-Gap Intelligence:** aggregate route demand, low-confidence clusters, coverage gaps, missing sources and tools, and advisory opportunities for Site Intelligence and editorial review.
 
 - **v5.8.0 — Adaptive Prompt and Survey Experiences:** rule-based, consent-aware contextual prompts, survey triggers, frequency caps, Feature Suggestions handoffs, and aggregate experience analytics.
+
+## v6.0.0 — Integrated Research Guidance Platform — Complete
+
+- Unified source-aware routing, article-map guidance, platform actions, contextual feedback, research-demand intelligence, adaptive experiences, and closed-loop route improvement.
+- Added a platform command center, module readiness, unified capability discovery, public journey views, protected exports, and stable governance boundaries.
+- Established the stable `sc-integrated-research-guidance/1.0` major-release contract.

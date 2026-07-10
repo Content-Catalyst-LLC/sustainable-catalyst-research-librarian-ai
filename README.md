@@ -241,3 +241,21 @@ Public shortcode: `[sc_research_demand_summary]` (disabled by default).
 ## Closed-loop route improvement
 
 v5.9.0 converts reviewed feedback into versioned route-change proposals with deterministic before/after tests, regression gates, human approval, provenance, audit history, and rollback snapshots. Approved changes are applied through the existing editorial curation registry.
+
+## v6.0.0 — Integrated Research Guidance Platform
+
+Version 6.0.0 unifies the complete Research Librarian workflow: source-aware routing, article-map paths, Workbench and Decision Studio actions, Feature Suggestions feedback, demand and gap intelligence, adaptive survey experiences, and regression-protected route improvement.
+
+Public shortcodes:
+
+- `[sc_research_guidance_platform]`
+- `[sc_research_guidance_journey]`
+
+Administrator REST endpoints:
+
+- `GET /wp-json/sc-research-librarian/v1/platform/guidance/status`
+- `GET /wp-json/sc-research-librarian/v1/platform/guidance/export`
+
+Public journey endpoint:
+
+- `GET /wp-json/sc-research-librarian/v1/platform/guidance/journey`

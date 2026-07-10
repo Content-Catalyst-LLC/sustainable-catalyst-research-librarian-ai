@@ -418,3 +418,12 @@
 
 - Reframed Research Librarian as the routing layer for Sustainable Catalyst.
 - Added route map, landing mode, route note exports, and provider options.
+## 6.0.0 — Integrated Research Guidance Platform
+
+- Added an integrated platform command center spanning routing, article maps, deep-link actions, operations, feedback, demand intelligence, adaptive experiences, and closed-loop route improvement.
+- Added versioned platform and research-journey schemas.
+- Added public platform-summary and guidance-journey shortcodes.
+- Added protected platform status and snapshot exports plus a public journey endpoint.
+- Added unified capability discovery and module readiness reporting.
+- Added privacy-minimized platform health events and bounded administrative audit history.
+- Preserved human approval, regression protection, and privacy boundaries across every integrated module.

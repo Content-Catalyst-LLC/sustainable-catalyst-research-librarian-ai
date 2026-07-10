@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 5.9.0
+Stable tag: 6.0.0
 License: MIT
 
 A site-scoped Research Librarian for Sustainable Catalyst with source-aware routing, Gemini retrieval, article-map embeds, Workbench and Decision Studio deep links, release-readiness diagnostics, recovery validation, and public release notes.
@@ -37,6 +37,14 @@ v5.9.0 adds adaptive, consent-aware prompts and contextual survey experiences wi
 [sc_research_librarian_article_route_cards]
 
 == Changelog ==
+
+= 6.0.0 =
+* Added the Integrated Research Guidance Platform command center.
+* Unified routing, article maps, platform actions, feedback, demand intelligence, adaptive surveys, and closed-loop improvement.
+* Added public platform and journey shortcodes plus protected status and export endpoints.
+* Added versioned integrated-platform schemas and privacy-minimized health events.
+* Preserved human approval and regression protection across route changes.
+
 
 
 
