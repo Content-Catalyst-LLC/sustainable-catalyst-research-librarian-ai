@@ -625,3 +625,15 @@
 
 /* v4.8.0 query review summary */
 .sc-rl-query-review-summary .sc-rl-product__grid article span{font-weight:800;letter-spacing:.04em;text-transform:uppercase;}
+
+
+/* v5.1.0 — Live public experience QA */
+.sc-rl-live-ux-summary .sc-rl-product__grid article,
+.sc-rl-prompt-library .sc-rl-product__grid article,
+.sc-rl-live-qa-checklist .sc-rl-product__grid article {
+  border-top: 4px solid #111111;
+}
+
+.sc-rl-prompt-library .sc-rl-product__grid article p {
+  font-style: italic;
+}

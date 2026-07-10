@@ -1,3 +1,29 @@
+# Sustainable Catalyst Research Librarian v5.1.0
+
+**Live Public Experience QA, Prompt Library, and UX Calibration**
+
+Research Librarian v5.1.0 is a post-stable-release refinement build. It keeps the v5.0.0 stable public release layer and adds a live public experience QA dashboard, prompt library, QA checklist, and public-safe UX status views.
+
+## Main public shortcode
+
+```text
+[sc_research_librarian title="Sustainable Catalyst Research Librarian"]
+```
+
+## New v5.1.0 shortcodes
+
+```text
+[sc_research_librarian mode="live-ux" title="Research Librarian Live Public Experience"]
+[sc_research_librarian mode="prompt-library" title="Research Librarian Prompt Library"]
+[sc_research_librarian_live_ux_summary title="Research Librarian Live Public Experience"]
+[sc_research_librarian_prompt_library title="Research Librarian Public Prompt Library"]
+[sc_research_librarian_live_qa_checklist title="Research Librarian Live QA Checklist"]
+```
+
+## After activation
+
+Go to **Settings → Research Librarian Live UX** and click **Run Live UX QA**. Then test the public prompt library against the live page.
+
 # Sustainable Catalyst Research Librarian v5.0.0
 
 Stable public release layer for source-aware routing, Gemini retrieval, public answer UX, guided research paths, Workbench and Decision Studio handoffs, governance, security, observability, documentation, and release acceptance checks.

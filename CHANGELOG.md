@@ -1,5 +1,17 @@
 # Changelog
 
+## v5.1.0 — Live Public Experience QA, Prompt Library, and UX Calibration
+
+- Added live public experience QA status.
+- Added visitor prompt library for public route testing.
+- Added live QA checklist for answer cards, source cards, handoff actions, guided paths, mobile review, and boundary behavior.
+- Added admin Live UX dashboard.
+- Added public-safe Live UX summary shortcode.
+- Added prompt-library and live-QA shortcodes.
+- Added admin-only Live UX JSON export.
+- Added v5.1.0 documentation and manifest.
+
+
 ## v5.0.0 — Stable Public Release, Launch Checklist, and Acceptance Gate
 
 - Added stable public release readiness score.

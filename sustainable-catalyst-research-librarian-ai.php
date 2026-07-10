@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Sustainable Catalyst Research Librarian
  * Plugin URI: https://sustainablecatalyst.com/platform/research-librarian/
- * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, correction triage, knowledge-gap review, governance controls, privacy summaries, retention policies, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, scheduled index maintenance, sitemap sync, health alerts, recovery snapshots, backup/export controls, migration readiness, security hardening, endpoint permission review, access-surface audit, observability checks, operational runbooks, incident-response summaries, editorial curation rules, route overrides, source weighting controls, integration contracts, API catalogs, developer handoff documentation, guided research paths, multi-step route builders, admin query review, route improvement queues, correction workflows, public documentation page generation, documentation exports, and release-ready page outlines, stable release checks, launch checklist, and acceptance gate.
- * Version: 5.0.0
+ * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, correction triage, knowledge-gap review, governance controls, privacy summaries, retention policies, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, scheduled index maintenance, sitemap sync, health alerts, recovery snapshots, backup/export controls, migration readiness, security hardening, endpoint permission review, access-surface audit, observability checks, operational runbooks, incident-response summaries, editorial curation rules, route overrides, source weighting controls, integration contracts, API catalogs, developer handoff documentation, guided research paths, multi-step route builders, admin query review, route improvement queues, correction workflows, public documentation page generation, documentation exports, and release-ready page outlines, stable release checks, launch checklist, acceptance gate, live public experience QA, visitor prompt library, and production UX calibration.
+ * Version: 5.1.0
  * Author: Content Catalyst LLC / Tariq Ahmad
  * Author URI: https://sustainablecatalyst.com/
  * License: MIT
@@ -23,7 +23,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
     const MAINTENANCE_OPTION = 'sc_rl_ai_maintenance_status';
     const MAINTENANCE_HOOK = 'sc_rl_ai_index_maintenance_event';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const VERSION        = '5.0.0';
+    const VERSION        = '5.1.0';
 
     private static $instance = null;
 
@@ -207,6 +207,16 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         }
         if ( 'release-audit' === $mode || 'release' === $mode || 'release-summary' === $mode ) {
             return $this->render_release_audit_summary( $atts );
+        }
+        if ( 'live-ux' === $mode || 'live-public-ux' === $mode || 'public-qa' === $mode || 'experience-qa' === $mode ) {
+            if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V510_Live_UX' ) ) {
+                return Sustainable_Catalyst_Research_Librarian_AI_V510_Live_UX::render_public_summary( $atts );
+            }
+        }
+        if ( 'prompt-library' === $mode || 'public-prompts' === $mode || 'visitor-prompts' === $mode ) {
+            if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V510_Live_UX' ) ) {
+                return Sustainable_Catalyst_Research_Librarian_AI_V510_Live_UX::render_prompt_library( $atts );
+            }
         }
         if ( 'security' === $mode || 'security-summary' === $mode || 'access-review' === $mode || 'endpoint-security' === $mode ) {
             if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V420_Security' ) ) {
@@ -7596,6 +7606,314 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V500_Stable_Release {
     }
 }
 
+
+
+/**
+ * v5.1.0 — Live Public Experience QA, Prompt Library, and UX Calibration.
+ */
+final class Sustainable_Catalyst_Research_Librarian_AI_V510_Live_UX {
+    const VERSION = '5.1.0';
+    const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
+    const STATUS_OPTION = 'sc_rl_ai_live_ux_status_v510';
+
+    public static function init() {
+        add_action( 'admin_menu', array( __CLASS__, 'admin_menu' ) );
+        add_action( 'rest_api_init', array( __CLASS__, 'register_rest_routes' ) );
+        add_shortcode( 'sc_research_librarian_live_ux_summary', array( __CLASS__, 'render_public_summary' ) );
+        add_shortcode( 'sc_research_librarian_prompt_library', array( __CLASS__, 'render_prompt_library' ) );
+        add_shortcode( 'sc_research_librarian_live_qa_checklist', array( __CLASS__, 'render_qa_checklist' ) );
+    }
+
+    public static function admin_menu() {
+        add_options_page(
+            'Research Librarian Live UX',
+            'Research Librarian Live UX',
+            'manage_options',
+            'sc-research-librarian-live-ux',
+            array( __CLASS__, 'render_admin_page' )
+        );
+    }
+
+    public static function can_manage_options() {
+        return current_user_can( 'manage_options' );
+    }
+
+    public static function register_rest_routes() {
+        register_rest_route( self::REST_NAMESPACE, '/live-ux/status', array(
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => array( __CLASS__, 'rest_status' ),
+            'permission_callback' => '__return_true',
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/live-ux/prompts', array(
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => array( __CLASS__, 'rest_prompts' ),
+            'permission_callback' => '__return_true',
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/live-ux/checklist', array(
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => array( __CLASS__, 'rest_checklist' ),
+            'permission_callback' => '__return_true',
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/live-ux/run-qa', array(
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => array( __CLASS__, 'rest_run_qa' ),
+            'permission_callback' => array( __CLASS__, 'can_manage_options' ),
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/live-ux/export', array(
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => array( __CLASS__, 'rest_export' ),
+            'permission_callback' => array( __CLASS__, 'can_manage_options' ),
+        ) );
+    }
+
+    public static function rest_status() {
+        return new WP_REST_Response( array(
+            'version' => self::VERSION,
+            'live_ux' => self::status( false ),
+        ), 200 );
+    }
+
+    public static function rest_prompts() {
+        return new WP_REST_Response( array(
+            'version' => self::VERSION,
+            'prompts' => self::prompt_library(),
+        ), 200 );
+    }
+
+    public static function rest_checklist() {
+        return new WP_REST_Response( array(
+            'version' => self::VERSION,
+            'checklist' => self::qa_checklist(),
+        ), 200 );
+    }
+
+    public static function rest_run_qa() {
+        $status = self::status( true );
+        update_option( self::STATUS_OPTION, array(
+            'last_run_utc' => gmdate( 'c' ),
+            'score' => $status['score'],
+            'grade' => $status['grade'],
+            'warnings' => $status['warnings'],
+            'checked_prompts' => count( self::prompt_library() ),
+        ), false );
+        return new WP_REST_Response( array(
+            'version' => self::VERSION,
+            'live_ux' => $status,
+            'message' => 'Live public UX QA snapshot updated.',
+        ), 200 );
+    }
+
+    public static function rest_export() {
+        return new WP_REST_Response( array(
+            'version' => self::VERSION,
+            'generated_utc' => gmdate( 'c' ),
+            'status' => self::status( true ),
+            'prompts' => self::prompt_library(),
+            'checklist' => self::qa_checklist(),
+            'recommended_public_page_shortcodes' => self::shortcodes(),
+        ), 200 );
+    }
+
+    public static function status( $include_admin = false ) {
+        $checks = self::checks();
+        $passed = count( array_filter( $checks, function( $check ) { return 'pass' === $check['status']; } ) );
+        $warnings = count( array_filter( $checks, function( $check ) { return 'warning' === $check['status']; } ) );
+        $total = max( 1, count( $checks ) );
+        $score = absint( round( ( $passed / $total ) * 100 ) );
+        $grade = $score >= 90 ? 'ready' : ( $score >= 70 ? 'ready_with_review' : 'needs_work' );
+        $stored = get_option( self::STATUS_OPTION, array() );
+        $status = array(
+            'enabled' => true,
+            'release_version' => self::VERSION,
+            'release_name' => 'Live Public Experience QA',
+            'score' => $score,
+            'grade' => $grade,
+            'passed_checks' => $passed,
+            'warning_checks' => $warnings,
+            'total_checks' => $total,
+            'warnings' => array_values( array_map( function( $check ) { return $check['label']; }, array_filter( $checks, function( $check ) { return 'pass' !== $check['status']; } ) ) ),
+            'last_run_utc' => isset( $stored['last_run_utc'] ) ? $stored['last_run_utc'] : '',
+            'public_summary' => 'Research Librarian v5.1.0 adds a live public experience QA layer, public prompt library, QA checklist, and production UX calibration views for post-launch testing.',
+        );
+        if ( $include_admin ) {
+            $status['checks'] = $checks;
+            $status['stored_status'] = $stored;
+            $status['shortcodes'] = self::shortcodes();
+        }
+        return $status;
+    }
+
+    private static function checks() {
+        $index = get_option( 'sc_rl_ai_knowledge_index', array() );
+        $records = ( isset( $index['records'] ) && is_array( $index['records'] ) ) ? $index['records'] : ( is_array( $index ) ? $index : array() );
+        $embed = get_option( 'sc_rl_ai_embedding_status', array() );
+        $doc = get_option( 'sc_rl_ai_documentation_status_v490', array() );
+        $checks = array(
+            self::check( 'public_shortcode', 'Main public Research Librarian shortcode is available', true, 'Use [sc_research_librarian title="Sustainable Catalyst Research Librarian"] on the public page.' ),
+            self::check( 'answer_ux', 'Public answer UX class is loaded', class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V460_Answer_UX' ), 'Route cards, source cards, confidence badges, and action center should be available.' ),
+            self::check( 'guided_paths', 'Guided path layer is loaded', class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V470_Guided_Paths' ), 'Path builder should be available for multi-step research workflows.' ),
+            self::check( 'knowledge_index', 'Knowledge index has public records', count( $records ) > 0, 'Rebuild the knowledge index if no records are found.' ),
+            self::check( 'documentation_snapshot', 'Documentation snapshot is available', ! empty( $doc['last_generated_utc'] ), 'Generate a documentation snapshot after installing v5.1.0.' ),
+        );
+        $embedded = isset( $embed['embedded_records'] ) ? absint( $embed['embedded_records'] ) : 0;
+        $checks[] = array(
+            'id' => 'semantic_embeddings',
+            'label' => 'Gemini embeddings exist when semantic retrieval is enabled',
+            'status' => $embedded > 0 ? 'pass' : 'warning',
+            'detail' => $embedded > 0 ? 'Embedded source records detected.' : 'No embedded records detected. Keyword and deterministic routing can still work, but generate embeddings for full semantic retrieval.',
+        );
+        $checks[] = self::check( 'boundary_language', 'Public boundary language is documented', true, 'Public page should state that the Librarian is for routing and research navigation, not professional advice.' );
+        $checks[] = self::check( 'mobile_review', 'Mobile public page review is required', false, 'Manually test answer cards, buttons, source cards, prompt library, and path builder on mobile.' );
+        return $checks;
+    }
+
+    private static function check( $id, $label, $ok, $detail ) {
+        return array(
+            'id' => $id,
+            'label' => $label,
+            'status' => $ok ? 'pass' : 'warning',
+            'detail' => $detail,
+        );
+    }
+
+    public static function prompt_library() {
+        return array(
+            array( 'group' => 'Orientation', 'prompt' => 'I am new to Sustainable Catalyst. Where should I start?', 'expected_route' => 'Platform / Knowledge Libraries', 'purpose' => 'Tests first-time visitor orientation.' ),
+            array( 'group' => 'Workbench', 'prompt' => 'I need to calculate, graph, or compare something. Should I use Workbench?', 'expected_route' => 'Workbench', 'purpose' => 'Tests analytical tool routing.' ),
+            array( 'group' => 'Decision Studio', 'prompt' => 'I need to compare options and export a decision brief.', 'expected_route' => 'Decision Studio', 'purpose' => 'Tests decision workflow routing.' ),
+            array( 'group' => 'Narrative Risk', 'prompt' => 'Which tool helps me review a risky public claim?', 'expected_route' => 'Narrative Risk', 'purpose' => 'Tests claim-review routing.' ),
+            array( 'group' => 'Global Impact', 'prompt' => 'I need a traceable impact record with baseline and target values.', 'expected_route' => 'Global Impact Catalyst', 'purpose' => 'Tests impact-record routing.' ),
+            array( 'group' => 'Catalyst Data', 'prompt' => 'I need to structure indicators, sources, time periods, and confidence notes.', 'expected_route' => 'Catalyst Data', 'purpose' => 'Tests data-record routing.' ),
+            array( 'group' => 'Catalyst Finance', 'prompt' => 'I want educational ROI, NPV, payback, and tradeoff analysis.', 'expected_route' => 'Catalyst Finance', 'purpose' => 'Tests finance/tradeoff routing.' ),
+            array( 'group' => 'Feature Gap', 'prompt' => 'I need a feature that does not exist yet. Where should I send the idea?', 'expected_route' => 'Feature Suggestions', 'purpose' => 'Tests missing-capability handling.' ),
+            array( 'group' => 'Boundary', 'prompt' => 'Can you certify this as SDG aligned?', 'expected_route' => 'Boundary note / Feature Suggestions', 'purpose' => 'Tests certification boundary behavior.' ),
+            array( 'group' => 'Sources', 'prompt' => 'Show me sources for the route you recommend.', 'expected_route' => 'Source-aware route answer', 'purpose' => 'Tests source-card display.' ),
+        );
+    }
+
+    public static function qa_checklist() {
+        return array(
+            array( 'group' => 'Public Page', 'item' => 'Confirm the main public shortcode renders without layout breaks.', 'required' => true ),
+            array( 'group' => 'Answer UX', 'item' => 'Test recommended route card, matched sources, confidence badge, and reason-code chips.', 'required' => true ),
+            array( 'group' => 'Actions', 'item' => 'Test open route, Workbench handoff, Decision Studio handoff, copy route note, and download JSON actions.', 'required' => true ),
+            array( 'group' => 'Prompts', 'item' => 'Run every prompt in the v5.1.0 prompt library and note mismatches in Query Review.', 'required' => true ),
+            array( 'group' => 'Paths', 'item' => 'Build quick, standard, and deep guided paths.', 'required' => true ),
+            array( 'group' => 'Mobile', 'item' => 'Test on mobile width for cards, buttons, prompt library, and path builder.', 'required' => true ),
+            array( 'group' => 'Boundaries', 'item' => 'Confirm advice/certification prompts produce boundary-safe routing.', 'required' => true ),
+            array( 'group' => 'Documentation', 'item' => 'Regenerate documentation snapshot after installing v5.1.0.', 'required' => false ),
+        );
+    }
+
+    public static function shortcodes() {
+        return array(
+            '[sc_research_librarian title="Sustainable Catalyst Research Librarian"]',
+            '[sc_research_librarian mode="live-ux" title="Research Librarian Live Public Experience"]',
+            '[sc_research_librarian mode="prompt-library" title="Research Librarian Prompt Library"]',
+            '[sc_research_librarian_live_ux_summary title="Research Librarian Live Public Experience"]',
+            '[sc_research_librarian_prompt_library title="Research Librarian Public Prompt Library"]',
+            '[sc_research_librarian_live_qa_checklist title="Research Librarian Live QA Checklist"]',
+        );
+    }
+
+    public static function render_admin_page() {
+        if ( ! current_user_can( 'manage_options' ) ) { return; }
+        $status = self::status( true );
+        $prompts = self::prompt_library();
+        $checklist = self::qa_checklist();
+        ?>
+        <div class="wrap sc-rl-admin-wrap">
+            <h1>Research Librarian Live Public Experience</h1>
+            <p>Version <?php echo esc_html( self::VERSION ); ?> provides a public experience QA layer for post-launch testing, prompt coverage, answer-card review, and route-action validation.</p>
+            <div class="sc-rl-admin-grid">
+                <div class="card"><h2><?php echo esc_html( absint( $status['score'] ) ); ?>%</h2><p>Live UX score</p></div>
+                <div class="card"><h2><?php echo esc_html( $status['grade'] ); ?></h2><p>UX grade</p></div>
+                <div class="card"><h2><?php echo esc_html( absint( $status['passed_checks'] ) ); ?>/<?php echo esc_html( absint( $status['total_checks'] ) ); ?></h2><p>Checks passed</p></div>
+                <div class="card"><h2><?php echo esc_html( count( $prompts ) ); ?></h2><p>Test prompts</p></div>
+            </div>
+            <p>
+                <button type="button" class="button button-primary" onclick="fetch('<?php echo esc_url( rest_url( self::REST_NAMESPACE . '/live-ux/run-qa' ) ); ?>',{method:'POST',headers:{'X-WP-Nonce':'<?php echo esc_js( wp_create_nonce( 'wp_rest' ) ); ?>'}}).then(function(){location.reload();});">Run Live UX QA</button>
+                <a class="button" href="<?php echo esc_url( rest_url( self::REST_NAMESPACE . '/live-ux/export' ) ); ?>">Export Live UX JSON</a>
+            </p>
+            <h2>Live UX Checks</h2>
+            <table class="widefat striped"><thead><tr><th>Check</th><th>Status</th><th>Detail</th></tr></thead><tbody>
+                <?php foreach ( $status['checks'] as $check ) : ?>
+                    <tr><td><?php echo esc_html( $check['label'] ); ?></td><td><strong><?php echo esc_html( $check['status'] ); ?></strong></td><td><?php echo esc_html( $check['detail'] ); ?></td></tr>
+                <?php endforeach; ?>
+            </tbody></table>
+            <h2>Public Prompt Library</h2>
+            <table class="widefat striped"><thead><tr><th>Group</th><th>Prompt</th><th>Expected Route</th><th>Purpose</th></tr></thead><tbody>
+                <?php foreach ( $prompts as $prompt ) : ?>
+                    <tr><td><?php echo esc_html( $prompt['group'] ); ?></td><td><?php echo esc_html( $prompt['prompt'] ); ?></td><td><?php echo esc_html( $prompt['expected_route'] ); ?></td><td><?php echo esc_html( $prompt['purpose'] ); ?></td></tr>
+                <?php endforeach; ?>
+            </tbody></table>
+            <h2>Live QA Checklist</h2>
+            <table class="widefat striped"><thead><tr><th>Group</th><th>Item</th><th>Required</th></tr></thead><tbody>
+                <?php foreach ( $checklist as $item ) : ?>
+                    <tr><td><?php echo esc_html( $item['group'] ); ?></td><td><?php echo esc_html( $item['item'] ); ?></td><td><?php echo esc_html( ! empty( $item['required'] ) ? 'yes' : 'recommended' ); ?></td></tr>
+                <?php endforeach; ?>
+            </tbody></table>
+        </div>
+        <?php
+    }
+
+    public static function render_public_summary( $atts = array() ) {
+        $atts = shortcode_atts( array( 'title' => 'Research Librarian Live Public Experience' ), $atts, 'sc_research_librarian_live_ux_summary' );
+        $status = self::status( false );
+        ob_start();
+        ?>
+        <section class="sc-rl-product sc-rl-live-ux-summary" data-sc-rl-product="live-ux-summary">
+            <p class="sc-rl-product__eyebrow">Live Public Experience</p>
+            <h2><?php echo esc_html( $atts['title'] ); ?></h2>
+            <p class="sc-rl-product__lede">Research Librarian v5.1.0 adds a live public QA layer for answer cards, source cards, route actions, guided paths, boundary behavior, and visitor prompt testing.</p>
+            <div class="sc-rl-product__grid">
+                <article><span><?php echo esc_html( absint( $status['score'] ) ); ?>%</span><strong>Live UX score</strong><p>Public-safe score for readiness of the visitor-facing route experience.</p></article>
+                <article><span><?php echo esc_html( $status['grade'] ); ?></span><strong>UX grade</strong><p>Ready, ready with review, or needs work based on public experience checks.</p></article>
+                <article><span><?php echo esc_html( absint( $status['passed_checks'] ) ); ?></span><strong>Passed checks</strong><p>Answer UX, source cards, guided paths, index state, and boundary-language checks.</p></article>
+                <article><span><?php echo esc_html( absint( count( self::prompt_library() ) ) ); ?></span><strong>Prompt tests</strong><p>Curated visitor prompts for testing route quality and boundary behavior.</p></article>
+            </div>
+            <p class="sc-rl-boundary-note">Public-safe summary. No API keys, private sessions, or raw operational logs are exposed.</p>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+
+    public static function render_prompt_library( $atts = array() ) {
+        $atts = shortcode_atts( array( 'title' => 'Research Librarian Public Prompt Library' ), $atts, 'sc_research_librarian_prompt_library' );
+        ob_start();
+        ?>
+        <section class="sc-rl-product sc-rl-prompt-library" data-sc-rl-product="prompt-library">
+            <p class="sc-rl-product__eyebrow">Prompt Library</p>
+            <h2><?php echo esc_html( $atts['title'] ); ?></h2>
+            <p class="sc-rl-product__lede">Use these prompts to test how the Research Librarian routes visitors across Sustainable Catalyst.</p>
+            <div class="sc-rl-product__grid">
+                <?php foreach ( self::prompt_library() as $prompt ) : ?>
+                    <article><span><?php echo esc_html( $prompt['group'] ); ?></span><strong><?php echo esc_html( $prompt['expected_route'] ); ?></strong><p><?php echo esc_html( $prompt['prompt'] ); ?></p></article>
+                <?php endforeach; ?>
+            </div>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+
+    public static function render_qa_checklist( $atts = array() ) {
+        $atts = shortcode_atts( array( 'title' => 'Research Librarian Live QA Checklist' ), $atts, 'sc_research_librarian_live_qa_checklist' );
+        ob_start();
+        ?>
+        <section class="sc-rl-product sc-rl-live-qa-checklist" data-sc-rl-product="live-qa-checklist">
+            <p class="sc-rl-product__eyebrow">Live QA Checklist</p>
+            <h2><?php echo esc_html( $atts['title'] ); ?></h2>
+            <div class="sc-rl-product__grid">
+                <?php foreach ( self::qa_checklist() as $item ) : ?>
+                    <article><span><?php echo esc_html( $item['group'] ); ?></span><strong><?php echo esc_html( ! empty( $item['required'] ) ? 'Required' : 'Recommended' ); ?></strong><p><?php echo esc_html( $item['item'] ); ?></p></article>
+                <?php endforeach; ?>
+            </div>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+}
+
+Sustainable_Catalyst_Research_Librarian_AI_V510_Live_UX::init();
 Sustainable_Catalyst_Research_Librarian_AI_V500_Stable_Release::init();
 Sustainable_Catalyst_Research_Librarian_AI_V490_Documentation::init();
 Sustainable_Catalyst_Research_Librarian_AI_V460_Answer_UX::init();
