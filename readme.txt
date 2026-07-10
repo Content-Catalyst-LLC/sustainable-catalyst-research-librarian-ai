@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 5.3.0
+Stable tag: 5.3.1
 License: MIT
 
 A site-scoped Research Librarian for Sustainable Catalyst with source-aware routing, Gemini retrieval, public answer UX, guided paths, route quality tuning, article path embeds, article map integration, handoff payloads, and enterprise-ready operations tooling.
@@ -38,7 +38,7 @@ v5.3.0 adds on-page research path embeds and article map integration so long-for
 
 == Changelog ==
 
-= 5.3.0 =
+= 5.3.1 =
 * Added article path embeds, article map integration, contextual route templates, and article-map REST endpoints.
 
 = 4.9.1 =
@@ -89,7 +89,7 @@ v5.3.0 adds on-page research path embeds and article map integration so long-for
 
 == Changelog ==
 
-= 5.3.0 =
+= 5.3.1 =
 * Added article path embeds, article map integration, contextual route templates, and article-map REST endpoints.
 
 = 4.9.1 =
@@ -169,7 +169,7 @@ v5.3.0 adds on-page research path embeds and article map integration so long-for
 
 == Changelog ==
 
-= 5.3.0 =
+= 5.3.1 =
 * Added article path embeds, article map integration, contextual route templates, and article-map REST endpoints.
 
 = 5.0.0 =
@@ -180,3 +180,6 @@ v5.3.0 adds on-page research path embeds and article map integration so long-for
 
 == v5.1.0 ==
 Live public experience QA, visitor prompt library, QA checklist, and UX calibration layer.
+
+= 5.3.1 =
+* Fixes activation conflicts caused by versioned plugin folder packaging and duplicate active copies.

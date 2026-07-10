@@ -1,5 +1,12 @@
 # Changelog
 
+## v5.3.1 — Activation Fatal Guard and Stable Plugin Folder Fix
+
+- Repackages the WordPress plugin zip with the stable plugin folder slug `sustainable-catalyst-research-librarian-ai` instead of a versioned directory.
+- Adds a duplicate-active-copy guard to avoid a PHP fatal if an older versioned copy is still active.
+- Preserves all v5.3.0 article map integration features.
+- Recommended install path: deactivate older versioned plugin copies, delete them after confirming v5.3.1 is active, then upload v5.3.1.
+
 ## v5.3.0 — On-Page Research Path Embeds and Article Map Integration
 
 - Added public-safe article path embeds.

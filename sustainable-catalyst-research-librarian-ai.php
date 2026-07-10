@@ -3,7 +3,7 @@
  * Plugin Name: Sustainable Catalyst Research Librarian
  * Plugin URI: https://sustainablecatalyst.com/platform/research-librarian/
  * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, correction triage, knowledge-gap review, governance controls, privacy summaries, retention policies, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, scheduled index maintenance, sitemap sync, health alerts, recovery snapshots, backup/export controls, migration readiness, security hardening, endpoint permission review, access-surface audit, observability checks, operational runbooks, incident-response summaries, editorial curation rules, route overrides, source weighting controls, integration contracts, API catalogs, developer handoff documentation, guided research paths, multi-step route builders, admin query review, route improvement queues, correction workflows, public documentation page generation, documentation exports, and release-ready page outlines, stable release checks, launch checklist, acceptance gate, live public experience QA, visitor prompt library, and production UX calibration, public route quality tuning, source-card ranking, prompt-to-route diagnostics, answer consistency checks, route repair suggestions, on-page research path embeds, and article map integration.
- * Version: 5.3.0
+ * Version: 5.3.1
  * Author: Content Catalyst LLC / Tariq Ahmad
  * Author URI: https://sustainablecatalyst.com/
  * License: MIT
@@ -12,6 +12,13 @@
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
+}
+
+if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI', false ) ) {
+    add_action( 'admin_notices', function() {
+        echo '<div class="notice notice-error"><p><strong>Sustainable Catalyst Research Librarian:</strong> Another copy of this plugin is already active. Deactivate the older versioned copy, then activate this update.</p></div>';
+    } );
+    return;
 }
 
 final class Sustainable_Catalyst_Research_Librarian_AI {
@@ -23,7 +30,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
     const MAINTENANCE_OPTION = 'sc_rl_ai_maintenance_status';
     const MAINTENANCE_HOOK = 'sc_rl_ai_index_maintenance_event';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const VERSION        = '5.3.0';
+    const VERSION        = '5.3.1';
 
     private static $instance = null;
 

@@ -1,10 +1,10 @@
-# Sustainable Catalyst Research Librarian v5.3.0
+# Sustainable Catalyst Research Librarian v5.3.1
 
 **On-Page Research Path Embeds and Article Map Integration**
 
-Research Librarian v5.3.0 adds public-safe article path embeds and article map route cards so Sustainable Catalyst long-form pages can route readers into the right next workflow without requiring the full assistant interface on every page.
+Research Librarian v5.3.1 adds public-safe article path embeds and article map route cards so Sustainable Catalyst long-form pages can route readers into the right next workflow without requiring the full assistant interface on every page.
 
-## Main v5.3.0 shortcodes
+## Main v5.3.1 shortcodes
 
 ```text
 [sc_research_librarian mode="article-paths" title="Research Path"]
@@ -135,3 +135,8 @@ POST /wp-json/sc-research-librarian-ai/v1/quality/rank
 POST /wp-json/sc-research-librarian-ai/v1/quality/run-calibration
 GET  /wp-json/sc-research-librarian-ai/v1/quality/export
 ```
+
+
+## v5.3.1 activation note
+
+The v5.3.1 plugin zip uses the stable WordPress folder slug `sustainable-catalyst-research-librarian-ai`. If WordPress shows an activation fatal from a previous package, deactivate older versioned copies of the Research Librarian plugin first, then activate v5.3.1. The fatal is usually caused by two active copies declaring the same PHP class.
