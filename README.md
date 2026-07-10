@@ -1,4 +1,4 @@
-# Sustainable Catalyst Research Librarian v5.7.0
+# Sustainable Catalyst Research Librarian v5.8.0
 
 
 Research Librarian v5.6.0 adds the full Feature Suggestions Feedback Bridge. Contextual route ratings, wrong-route reports, source-card issues, grounding concerns, missing topics, and missing-tool requests are retained in the Librarian queue, normalized for Feature Suggestions v3, published as privacy-minimized Site Intelligence events, protected against duplicate submissions, and assigned receipt-based status records.
@@ -212,6 +212,18 @@ The repository now includes a compatibility bridge for Feature Suggestions v3, S
 
 Adds public Route Action Center actions, typed `sc-research-handoff/1.1` payloads, 30-minute handoff tokens, destination resolution, fallback navigation, and shared platform events.
 
+
+## v5.8.0 Adaptive Prompt and Survey Experiences
+
+The v5.8.0 layer adds a configurable rules engine for contextual prompts and surveys. Administrators can target low-confidence results, zero-source outcomes, route abandonment, completed paths, tool demand, and Workbench or Decision Studio handoffs. Experiences are consent-aware by default and include daily caps, cooldowns, and dismissal windows. Survey and feature-request actions can hand structured context to Feature Suggestions through `scfs_research_librarian_survey_handoff`, while custom consumers can use `sc_rl_adaptive_survey_handoff`. Site Intelligence receives privacy-minimized interaction events rather than response text.
+
+Shortcode:
+
+```text
+[sc_research_librarian_adaptive_experience trigger="low_confidence" route="infrastructure-resilience"]
+```
+
+Public endpoints evaluate and record experiences; administrator-only endpoints expose rule definitions and aggregate analytics.
 
 ## v5.7.0 Research Demand and Knowledge-Gap Intelligence
 

@@ -1,5 +1,15 @@
 # Changelog
 
+## 5.8.0 — Adaptive Prompt and Survey Experiences
+
+- Added versioned adaptive experience rules and administrator configuration.
+- Added contextual triggers for low confidence, zero sources, route abandonment, path completion, tool demand, and destination handoffs.
+- Added consent-aware evaluation, daily frequency caps, cooldown periods, and dismissal suppression.
+- Added Feature Suggestions survey handoffs and custom integration hooks.
+- Added bounded aggregate analytics and privacy-minimized Site Intelligence events.
+- Added public evaluation/response endpoints and administrator rules/analytics endpoints.
+- Added the `[sc_research_librarian_adaptive_experience]` shortcode.
+
 ## 5.7.0 — Research Demand and Knowledge-Gap Intelligence
 
 - Added aggregate demand intelligence across route sessions, guided paths, feedback records, Feature Suggestions bridge records, evaluation failures, and source coverage.

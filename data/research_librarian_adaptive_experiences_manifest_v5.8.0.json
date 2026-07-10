@@ -1,0 +1,26 @@
+{
+  "schema": "sc-research-librarian-release-manifest/1.0",
+  "version": "5.8.0",
+  "title": "Adaptive Prompt and Survey Experiences",
+  "capabilities": [
+    "rule-based contextual prompts",
+    "consent-aware evaluation",
+    "visitor frequency caps and dismissal windows",
+    "Feature Suggestions survey handoffs",
+    "aggregate experience analytics",
+    "privacy-minimized Site Intelligence events"
+  ],
+  "rest_endpoints": [
+    "POST /sc-research-librarian/v1/adaptive/evaluate",
+    "POST /sc-research-librarian/v1/adaptive/respond",
+    "GET /sc-research-librarian/v1/adaptive/rules",
+    "GET /sc-research-librarian/v1/adaptive/analytics"
+  ],
+  "shortcodes": ["[sc_research_librarian_adaptive_experience]"],
+  "governance": {
+    "require_consent_default": true,
+    "daily_cap_default": 2,
+    "raw_conversations_in_events": false,
+    "human_review_required": true
+  }
+}

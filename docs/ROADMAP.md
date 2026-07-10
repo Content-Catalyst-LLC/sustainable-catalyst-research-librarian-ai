@@ -91,3 +91,5 @@ The Research Librarian 5.x public-experience roadmap is now complete. Future rel
 - Receipt status, duplicate protection, administrator diagnostics, and Site Intelligence events.
 
 - **v5.7.0 — Research Demand and Knowledge-Gap Intelligence:** aggregate route demand, low-confidence clusters, coverage gaps, missing sources and tools, and advisory opportunities for Site Intelligence and editorial review.
+
+- **v5.8.0 — Adaptive Prompt and Survey Experiences:** rule-based, consent-aware contextual prompts, survey triggers, frequency caps, Feature Suggestions handoffs, and aggregate experience analytics.

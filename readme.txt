@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 5.7.0
+Stable tag: 5.8.0
 License: MIT
 
 A site-scoped Research Librarian for Sustainable Catalyst with source-aware routing, Gemini retrieval, article-map embeds, Workbench and Decision Studio deep links, release-readiness diagnostics, recovery validation, and public release notes.
@@ -12,7 +12,7 @@ A site-scoped Research Librarian for Sustainable Catalyst with source-aware rout
 
 The Research Librarian helps visitors choose the right Sustainable Catalyst route: Knowledge Library, Platform, Demos, Decision Studio, Workbench, Catalyst modules, Methodology, Feature Suggestions, or GitHub repositories.
 
-v5.7.0 adds aggregate research-demand and knowledge-gap intelligence across saved routes, low-confidence sessions, feedback, evaluation failures, source coverage, and missing-tool signals.
+v5.8.0 adds adaptive, consent-aware prompts and contextual survey experiences with rule-based targeting, frequency caps, Feature Suggestions handoffs, and aggregate analytics.
 
 == Shortcodes ==
 
@@ -38,6 +38,15 @@ v5.7.0 adds aggregate research-demand and knowledge-gap intelligence across save
 
 == Changelog ==
 
+
+
+= 5.8.0 =
+* Added rule-based adaptive prompt and survey experiences.
+* Added low-confidence, zero-source, route-abandonment, path-completion, tool-demand, and handoff triggers.
+* Added consent-aware evaluation, daily frequency caps, cooldowns, and dismissal suppression.
+* Added Feature Suggestions survey handoffs and custom integration filters/actions.
+* Added aggregate adaptive-experience analytics and privacy-minimized Site Intelligence events.
+* Added the [sc_research_librarian_adaptive_experience] shortcode and protected rules/analytics endpoints.
 
 = 5.7.0 =
 * Added Research Demand and Knowledge-Gap Intelligence administration dashboard.
