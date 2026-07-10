@@ -84,3 +84,35 @@ POST /wp-json/sc-research-librarian-ai/v1/documentation/reset
 ## v4.9.1 — Documentation Snapshot Visibility Fix
 
 This hotfix replaces the JavaScript-only documentation snapshot action with nonce-protected admin-post actions, adds visible success/reset notices, adds a generated documentation preview in the admin screen, and provides copy-ready Markdown plus a server-side JSON export.
+
+
+## v5.2.0 — Public Route Quality Tuning and Source Card Ranking
+
+This release adds a public route-quality layer for tuning the visitor-facing Research Librarian answer experience. It improves source-card ordering, prompt-to-route diagnostics, route repair suggestions, and calibration reporting.
+
+### Added
+
+- Route quality status endpoint
+- Source-card ranking endpoint
+- Admin route-quality calibration dashboard
+- Public route-quality summary shortcode
+- Public source-ranking summary shortcode
+- Dominant prompt signal detection
+- Broad-route demotion for specialized questions
+- Route repair suggestions for weak or mismatched answers
+
+### Shortcodes
+
+```text
+[sc_research_librarian_route_quality_summary title="Research Librarian Route Quality"]
+[sc_research_librarian_source_ranking_summary title="Research Librarian Source Card Ranking"]
+```
+
+### Endpoints
+
+```text
+GET  /wp-json/sc-research-librarian-ai/v1/quality/status
+POST /wp-json/sc-research-librarian-ai/v1/quality/rank
+POST /wp-json/sc-research-librarian-ai/v1/quality/run-calibration
+GET  /wp-json/sc-research-librarian-ai/v1/quality/export
+```

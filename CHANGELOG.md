@@ -1,3 +1,26 @@
+
+
+## 5.2.0 — Public Route Quality Tuning and Source Card Ranking
+
+### Added
+
+- Public route-quality tuning layer.
+- Source-card ranking rules for Workbench, Decision Studio, module, impact, data, finance, narrative risk, and platform queries.
+- Dominant prompt signal detection.
+- Route quality diagnostics inside grounded route notes.
+- Admin route-quality calibration dashboard.
+- Admin-only quality export endpoint.
+- Public-safe route-quality and source-ranking shortcodes.
+
+### Changed
+
+- Matched source cards are now re-ranked after keyword/semantic retrieval using route fit, prompt intent, source type, title/summary terms, and route specificity.
+- Health output now includes a public-safe route-quality status object.
+
+### Fixed
+
+- Specialized questions are less likely to show broad platform cards above Workbench, Decision Studio, or module-specific sources.
+
 # Changelog
 
 ## v5.1.0 — Live Public Experience QA, Prompt Library, and UX Calibration

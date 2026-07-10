@@ -637,3 +637,14 @@
 .sc-rl-prompt-library .sc-rl-product__grid article p {
   font-style: italic;
 }
+
+
+/* v5.2.0 Route Quality and Source Ranking */
+.sc-rl-route-quality-summary .sc-rl-product__grid article,
+.sc-rl-source-ranking-summary .sc-rl-product__grid article {
+  border-left: 4px solid #b00000;
+}
+.sc-rl-route-quality-summary .sc-rl-boundary-note {
+  font-size: 0.92rem;
+  opacity: 0.85;
+}

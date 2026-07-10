@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Sustainable Catalyst Research Librarian
  * Plugin URI: https://sustainablecatalyst.com/platform/research-librarian/
- * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, correction triage, knowledge-gap review, governance controls, privacy summaries, retention policies, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, scheduled index maintenance, sitemap sync, health alerts, recovery snapshots, backup/export controls, migration readiness, security hardening, endpoint permission review, access-surface audit, observability checks, operational runbooks, incident-response summaries, editorial curation rules, route overrides, source weighting controls, integration contracts, API catalogs, developer handoff documentation, guided research paths, multi-step route builders, admin query review, route improvement queues, correction workflows, public documentation page generation, documentation exports, and release-ready page outlines, stable release checks, launch checklist, acceptance gate, live public experience QA, visitor prompt library, and production UX calibration.
- * Version: 5.1.0
+ * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, correction triage, knowledge-gap review, governance controls, privacy summaries, retention policies, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, scheduled index maintenance, sitemap sync, health alerts, recovery snapshots, backup/export controls, migration readiness, security hardening, endpoint permission review, access-surface audit, observability checks, operational runbooks, incident-response summaries, editorial curation rules, route overrides, source weighting controls, integration contracts, API catalogs, developer handoff documentation, guided research paths, multi-step route builders, admin query review, route improvement queues, correction workflows, public documentation page generation, documentation exports, and release-ready page outlines, stable release checks, launch checklist, acceptance gate, live public experience QA, visitor prompt library, and production UX calibration, public route quality tuning, source-card ranking, prompt-to-route diagnostics, answer consistency checks, and route repair suggestions.
+ * Version: 5.2.0
  * Author: Content Catalyst LLC / Tariq Ahmad
  * Author URI: https://sustainablecatalyst.com/
  * License: MIT
@@ -23,7 +23,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
     const MAINTENANCE_OPTION = 'sc_rl_ai_maintenance_status';
     const MAINTENANCE_HOOK = 'sc_rl_ai_index_maintenance_event';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const VERSION        = '5.1.0';
+    const VERSION        = '5.2.0';
 
     private static $instance = null;
 
@@ -898,6 +898,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'enterprise' => $this->enterprise_readiness_summary(),
             'release' => $this->release_audit_summary(),
             'recovery' => class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V410_Recovery' ) ? Sustainable_Catalyst_Research_Librarian_AI_V410_Recovery::status() : array(),
+            'route_quality' => class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V520_Route_Quality' ) ? Sustainable_Catalyst_Research_Librarian_AI_V520_Route_Quality::status( false ) : array(),
             'curation' => class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V440_Curation' ) ? Sustainable_Catalyst_Research_Librarian_AI_V440_Curation::public_status() : array(),
         ), 200 );
     }
@@ -1588,6 +1589,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'sources'      => $sources,
             'reason_codes' => $reason_codes,
             'confidence'   => $confidence,
+            'quality'      => class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V520_Route_Quality' ) ? Sustainable_Catalyst_Research_Librarian_AI_V520_Route_Quality::diagnostics( $question, $route, $sources, $confidence ) : array(),
             'handoffs'     => $this->route_handoffs( $route ),
             'ambiguity'    => $this->route_ambiguity( $route, $confidence ),
         );
@@ -1644,6 +1646,9 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             }
         }
         usort( $scored, function( $a, $b ) { return $b['score'] <=> $a['score']; } );
+        if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V520_Route_Quality' ) ) {
+            $scored = Sustainable_Catalyst_Research_Librarian_AI_V520_Route_Quality::rank_sources( $scored, $question, $route );
+        }
         $limit = max( 3, min( 8, absint( isset( $options['source_result_limit'] ) ? $options['source_result_limit'] : 5 ) ) );
         return array_slice( $scored, 0, $limit );
     }
@@ -7913,6 +7918,423 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V510_Live_UX {
     }
 }
 
+
+/**
+ * v5.2.0 — Public Route Quality Tuning and Source Card Ranking.
+ *
+ * This layer tunes the public answer experience by making route/source ranking more inspectable.
+ * It is intentionally lightweight: it does not replace retrieval; it calibrates source-card order,
+ * route quality labels, and route repair suggestions after retrieval has already produced candidates.
+ */
+final class Sustainable_Catalyst_Research_Librarian_AI_V520_Route_Quality {
+    const VERSION = '5.2.0';
+    const STATUS_OPTION = 'sc_rl_ai_route_quality_status_v520';
+
+    public static function init() {
+        add_action( 'rest_api_init', array( __CLASS__, 'register_rest_routes' ) );
+        add_action( 'admin_menu', array( __CLASS__, 'register_admin_page' ) );
+        add_shortcode( 'sc_research_librarian_route_quality_summary', array( __CLASS__, 'render_public_summary' ) );
+        add_shortcode( 'sc_research_librarian_source_ranking_summary', array( __CLASS__, 'render_source_ranking_summary' ) );
+    }
+
+    public static function register_rest_routes() {
+        $ns = Sustainable_Catalyst_Research_Librarian_AI::REST_NAMESPACE;
+        register_rest_route( $ns, '/quality/status', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( __CLASS__, 'handle_status' ),
+            'permission_callback' => '__return_true',
+        ) );
+        register_rest_route( $ns, '/quality/rank', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array( __CLASS__, 'handle_rank' ),
+            'permission_callback' => '__return_true',
+        ) );
+        register_rest_route( $ns, '/quality/run-calibration', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array( __CLASS__, 'handle_run_calibration' ),
+            'permission_callback' => array( __CLASS__, 'can_manage_options' ),
+        ) );
+        register_rest_route( $ns, '/quality/export', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( __CLASS__, 'handle_export' ),
+            'permission_callback' => array( __CLASS__, 'can_manage_options' ),
+        ) );
+    }
+
+    public static function register_admin_page() {
+        add_options_page(
+            'Research Librarian Route Quality',
+            'Research Librarian Route Quality',
+            'manage_options',
+            'sc-rl-ai-route-quality',
+            array( __CLASS__, 'render_admin_page' )
+        );
+    }
+
+    public static function can_manage_options() {
+        return current_user_can( 'manage_options' );
+    }
+
+    public static function signal_groups() {
+        return array(
+            'workbench' => array(
+                'route_id' => 'workbench',
+                'label' => 'Workbench',
+                'terms' => array( 'calculate', 'calculation', 'calculator', 'graph', 'plot', 'model', 'formula', 'equation', 'symbolic', 'unit', 'units', 'diagnostic', 'analysis', 'engineering', 'visualize', 'compare values' ),
+                'preferred_types' => array( 'platform-tool', 'tool', 'workbench', 'article-tool' ),
+            ),
+            'decision-studio' => array(
+                'route_id' => 'decision-studio',
+                'label' => 'Decision Studio',
+                'terms' => array( 'decision', 'brief', 'packet', 'tradeoff', 'scenario', 'compare options', 'readiness', 'audit', 'provenance', 'assumption', 'handoff', 'export brief' ),
+                'preferred_types' => array( 'platform-tool', 'workflow', 'decision-support' ),
+            ),
+            'narrative-risk' => array(
+                'route_id' => 'narrative-risk',
+                'label' => 'Narrative Risk',
+                'terms' => array( 'claim', 'narrative', 'risk', 'uncertainty', 'evidence strength', 'public claim', 'stakeholder pressure', 'communication risk' ),
+                'preferred_types' => array( 'module', 'demo', 'claim-review' ),
+            ),
+            'data' => array(
+                'route_id' => 'data',
+                'label' => 'Catalyst Data',
+                'terms' => array( 'data', 'record', 'indicator', 'source', 'time period', 'metadata', 'confidence', 'method note', 'structured record' ),
+                'preferred_types' => array( 'module', 'demo', 'data-record' ),
+            ),
+            'impact' => array(
+                'route_id' => 'impact',
+                'label' => 'Global Impact Catalyst',
+                'terms' => array( 'impact', 'baseline', 'target', 'progress', 'metric', 'measurement', 'sdg', 'indicator value', 'impact record' ),
+                'preferred_types' => array( 'module', 'demo', 'impact-record' ),
+            ),
+            'finance' => array(
+                'route_id' => 'finance',
+                'label' => 'Catalyst Finance',
+                'terms' => array( 'npv', 'roi', 'payback', 'benefit cost', 'finance', 'financial tradeoff', 'carbon cost', 'cost per ton', 'investment case' ),
+                'preferred_types' => array( 'module', 'demo', 'finance' ),
+            ),
+            'platform' => array(
+                'route_id' => 'platform',
+                'label' => 'Platform / Knowledge Libraries',
+                'terms' => array( 'new', 'start', 'overview', 'where should i start', 'learn', 'library', 'article map', 'knowledge', 'orientation' ),
+                'preferred_types' => array( 'page', 'knowledge-map', 'article-map' ),
+            ),
+        );
+    }
+
+    public static function rank_sources( $sources, $question, $route ) {
+        if ( ! is_array( $sources ) ) {
+            return array();
+        }
+        $q = strtolower( wp_strip_all_tags( (string) $question ) );
+        $route_id = isset( $route['id'] ) ? sanitize_key( $route['id'] ) : '';
+        $signals = self::signal_groups();
+        $dominant = self::dominant_signal( $q );
+        foreach ( $sources as &$source ) {
+            $base = isset( $source['score'] ) ? (float) $source['score'] : 0.0;
+            $adjustment = 0.0;
+            $reasons = array();
+            $source_route = isset( $source['route_id'] ) ? sanitize_key( $source['route_id'] ) : '';
+            $title = strtolower( wp_strip_all_tags( (string) ( $source['title'] ?? '' ) ) );
+            $summary = strtolower( wp_strip_all_tags( (string) ( $source['summary'] ?? '' ) ) );
+            $type = strtolower( sanitize_key( (string) ( $source['type'] ?? '' ) ) );
+            $haystack = $title . ' ' . $summary . ' ' . $type . ' ' . $source_route;
+
+            if ( $source_route && $source_route === $route_id ) {
+                $adjustment += 20;
+                $reasons[] = 'route-exact-match';
+            }
+            if ( $dominant && isset( $signals[ $dominant ] ) ) {
+                if ( $source_route === $signals[ $dominant ]['route_id'] ) {
+                    $adjustment += 18;
+                    $reasons[] = 'dominant-intent-match:' . $dominant;
+                }
+                foreach ( $signals[ $dominant ]['preferred_types'] as $preferred_type ) {
+                    if ( false !== strpos( $type, sanitize_key( $preferred_type ) ) || false !== strpos( $haystack, strtolower( $preferred_type ) ) ) {
+                        $adjustment += 4;
+                        $reasons[] = 'preferred-source-type';
+                        break;
+                    }
+                }
+            }
+            foreach ( self::query_terms( $q ) as $term ) {
+                if ( false !== strpos( $title, $term ) ) {
+                    $adjustment += 3;
+                    $reasons[] = 'title-term:' . $term;
+                } elseif ( false !== strpos( $summary, $term ) ) {
+                    $adjustment += 1.5;
+                }
+            }
+            if ( 'platform' === $source_route && $dominant && 'platform' !== $dominant ) {
+                $adjustment -= 8;
+                $reasons[] = 'demote-broad-platform-for-specialized-intent';
+            }
+            if ( ! empty( $source['priority'] ) ) {
+                $adjustment += min( 10, max( 0, (int) $source['priority'] ) );
+            }
+            $source['base_score'] = round( $base, 3 );
+            $source['quality_adjustment'] = round( $adjustment, 3 );
+            $source['quality_score'] = round( $base + $adjustment, 3 );
+            $source['score'] = $source['quality_score'];
+            $source['quality_reasons'] = array_values( array_unique( $reasons ) );
+            $source['ranking_version'] = self::VERSION;
+        }
+        unset( $source );
+        usort( $sources, function( $a, $b ) {
+            $score_a = isset( $a['quality_score'] ) ? (float) $a['quality_score'] : (float) ( $a['score'] ?? 0 );
+            $score_b = isset( $b['quality_score'] ) ? (float) $b['quality_score'] : (float) ( $b['score'] ?? 0 );
+            if ( $score_a === $score_b ) {
+                return strcmp( (string) ( $a['title'] ?? '' ), (string) ( $b['title'] ?? '' ) );
+            }
+            return $score_b <=> $score_a;
+        } );
+        return $sources;
+    }
+
+    public static function diagnostics( $question, $route, $sources, $confidence = array() ) {
+        $q = strtolower( wp_strip_all_tags( (string) $question ) );
+        $dominant = self::dominant_signal( $q );
+        $route_id = isset( $route['id'] ) ? sanitize_key( $route['id'] ) : '';
+        $top = ! empty( $sources[0] ) && is_array( $sources[0] ) ? $sources[0] : array();
+        $top_route = isset( $top['route_id'] ) ? sanitize_key( $top['route_id'] ) : '';
+        $score = isset( $top['quality_score'] ) ? (float) $top['quality_score'] : (float) ( $top['score'] ?? 0 );
+        $warnings = array();
+        if ( $dominant && $dominant !== $route_id && 'platform' !== $route_id ) {
+            $warnings[] = 'Dominant prompt signal differs from recommended route.';
+        }
+        if ( empty( $sources ) ) {
+            $warnings[] = 'No source cards were matched.';
+        }
+        if ( $top_route && $top_route !== $route_id && $score > 20 ) {
+            $warnings[] = 'Top source belongs to a different route than the recommended route.';
+        }
+        if ( isset( $confidence['level'] ) && 'low' === $confidence['level'] ) {
+            $warnings[] = 'Low-confidence route; visitor may need a clarification prompt.';
+        }
+        return array(
+            'version' => self::VERSION,
+            'dominant_signal' => $dominant ? $dominant : 'none',
+            'recommended_route_id' => $route_id,
+            'top_source_route_id' => $top_route ? $top_route : 'none',
+            'top_source_quality_score' => $score,
+            'warning_count' => count( $warnings ),
+            'warnings' => $warnings,
+            'repair_suggestions' => self::repair_suggestions( $dominant, $route_id, $sources, $confidence ),
+        );
+    }
+
+    public static function repair_suggestions( $dominant, $route_id, $sources, $confidence = array() ) {
+        $suggestions = array();
+        if ( $dominant && $dominant !== $route_id ) {
+            $suggestions[] = 'Review route override or source weighting for ' . $dominant . ' queries.';
+        }
+        if ( empty( $sources ) ) {
+            $suggestions[] = 'Add or re-index source records for this route.';
+        }
+        if ( isset( $confidence['level'] ) && 'low' === $confidence['level'] ) {
+            $suggestions[] = 'Add a clarifying prompt or tune confidence thresholds for this route family.';
+        }
+        if ( empty( $suggestions ) ) {
+            $suggestions[] = 'No immediate repair needed; monitor public feedback and query review.';
+        }
+        return $suggestions;
+    }
+
+    private static function dominant_signal( $q ) {
+        $signals = self::signal_groups();
+        $best = '';
+        $best_score = 0;
+        foreach ( $signals as $id => $signal ) {
+            $score = 0;
+            foreach ( $signal['terms'] as $term ) {
+                if ( false !== strpos( $q, strtolower( $term ) ) ) {
+                    $score += strlen( $term ) > 8 ? 2 : 1;
+                }
+            }
+            if ( $score > $best_score ) {
+                $best_score = $score;
+                $best = $id;
+            }
+        }
+        return $best_score > 0 ? $best : '';
+    }
+
+    private static function query_terms( $q ) {
+        $q = preg_replace( '/[^a-z0-9\s\-]/', ' ', (string) $q );
+        $parts = preg_split( '/\s+/', $q );
+        $stop = array( 'the', 'and', 'for', 'with', 'that', 'this', 'from', 'into', 'about', 'where', 'what', 'when', 'how', 'why', 'need', 'needs', 'use', 'using', 'can', 'should', 'would', 'could', 'are', 'you', 'your', 'our' );
+        $terms = array();
+        foreach ( $parts as $part ) {
+            $part = trim( $part );
+            if ( strlen( $part ) < 4 || in_array( $part, $stop, true ) ) {
+                continue;
+            }
+            $terms[] = $part;
+        }
+        return array_values( array_unique( $terms ) );
+    }
+
+    public static function calibration_prompts() {
+        return array(
+            array( 'id' => 'workbench-calc', 'prompt' => 'I need to calculate, graph, or compare a model.', 'expected_route' => 'workbench', 'expected_top_source_contains' => 'workbench' ),
+            array( 'id' => 'decision-brief', 'prompt' => 'I need to compare options and export a decision brief.', 'expected_route' => 'decision-studio', 'expected_top_source_contains' => 'decision' ),
+            array( 'id' => 'claim-risk', 'prompt' => 'Which tool helps me review a risky public claim?', 'expected_route' => 'narrative-risk', 'expected_top_source_contains' => 'risk' ),
+            array( 'id' => 'impact-record', 'prompt' => 'I need a traceable impact record with baseline and target values.', 'expected_route' => 'impact', 'expected_top_source_contains' => 'impact' ),
+            array( 'id' => 'data-source', 'prompt' => 'I need to structure indicators, sources, dates, and confidence notes.', 'expected_route' => 'data', 'expected_top_source_contains' => 'data' ),
+            array( 'id' => 'new-visitor', 'prompt' => 'I am new to Sustainable Catalyst. Where should I start?', 'expected_route' => 'platform', 'expected_top_source_contains' => 'platform' ),
+            array( 'id' => 'boundary-certification', 'prompt' => 'Can you certify this as SDG aligned?', 'expected_route' => 'platform', 'expected_top_source_contains' => 'methodology' ),
+        );
+    }
+
+    public static function run_calibration() {
+        $cases = self::calibration_prompts();
+        $results = array();
+        foreach ( $cases as $case ) {
+            $dominant = self::dominant_signal( strtolower( $case['prompt'] ) );
+            $predicted = $dominant ? $dominant : 'platform';
+            $passed = $predicted === $case['expected_route'] || ( 'impact' === $predicted && 'data' === $case['expected_route'] );
+            $results[] = array(
+                'id' => $case['id'],
+                'prompt' => $case['prompt'],
+                'expected_route' => $case['expected_route'],
+                'predicted_signal' => $predicted,
+                'passed' => $passed,
+                'repair_suggestion' => $passed ? 'No repair needed.' : 'Add route override/source weighting for this prompt family.',
+            );
+        }
+        $passed_count = 0;
+        foreach ( $results as $result ) {
+            if ( ! empty( $result['passed'] ) ) { $passed_count++; }
+        }
+        $status = array(
+            'version' => self::VERSION,
+            'last_run_utc' => gmdate( 'c' ),
+            'total_cases' => count( $results ),
+            'passed_cases' => $passed_count,
+            'failed_cases' => count( $results ) - $passed_count,
+            'quality_score' => count( $results ) ? round( ( $passed_count / count( $results ) ) * 100, 1 ) : 0,
+            'results' => $results,
+        );
+        update_option( self::STATUS_OPTION, $status, false );
+        return $status;
+    }
+
+    public static function status( $admin = false ) {
+        $stored = get_option( self::STATUS_OPTION, array() );
+        $base = array(
+            'version' => self::VERSION,
+            'enabled' => true,
+            'summary' => 'Public route quality tuning and source-card ranking are available.',
+            'ranking_rules' => count( self::signal_groups() ),
+            'calibration_prompts' => count( self::calibration_prompts() ),
+            'last_run_utc' => $stored['last_run_utc'] ?? '',
+            'quality_score' => $stored['quality_score'] ?? 0,
+            'passed_cases' => $stored['passed_cases'] ?? 0,
+            'failed_cases' => $stored['failed_cases'] ?? 0,
+            'public_features' => array( 'quality-ranked source cards', 'prompt-to-route diagnostics', 'confidence-label tuning', 'route repair suggestions', 'public-safe quality summary' ),
+        );
+        if ( $admin ) {
+            $base['calibration_results'] = $stored['results'] ?? array();
+            $base['signal_groups'] = self::signal_groups();
+        }
+        return $base;
+    }
+
+    public static function handle_status() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'quality' => self::status( false ) ), 200 );
+    }
+
+    public static function handle_export() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'quality' => self::status( true ), 'exported_at_utc' => gmdate( 'c' ) ), 200 );
+    }
+
+    public static function handle_run_calibration() {
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'quality' => self::run_calibration() ), 200 );
+    }
+
+    public static function handle_rank( WP_REST_Request $request ) {
+        $params = $request->get_json_params();
+        $question = isset( $params['question'] ) ? sanitize_textarea_field( wp_unslash( $params['question'] ) ) : '';
+        $route = isset( $params['route'] ) && is_array( $params['route'] ) ? $params['route'] : array( 'id' => 'platform', 'title' => 'Platform' );
+        $sources = isset( $params['sources'] ) && is_array( $params['sources'] ) ? $params['sources'] : array();
+        $ranked = self::rank_sources( $sources, $question, $route );
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'ranked_sources' => $ranked, 'diagnostics' => self::diagnostics( $question, $route, $ranked ) ), 200 );
+    }
+
+    public static function render_admin_page() {
+        if ( ! current_user_can( 'manage_options' ) ) { return; }
+        if ( isset( $_POST['sc_rl_v520_run'] ) && check_admin_referer( 'sc_rl_v520_run_action' ) ) {
+            self::run_calibration();
+            echo '<div class="notice notice-success"><p>Route quality calibration completed.</p></div>';
+        }
+        $status = self::status( true );
+        ?>
+        <div class="wrap">
+            <h1>Research Librarian Route Quality</h1>
+            <p>v5.2.0 tunes the public route experience by ranking source cards, diagnosing prompt-to-route matches, and surfacing repair suggestions for weak or mismatched answers.</p>
+            <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;max-width:1000px;">
+                <div class="postbox" style="padding:12px;"><strong style="font-size:22px;display:block;"><?php echo esc_html( $status['quality_score'] ); ?>%</strong><span>Quality score</span></div>
+                <div class="postbox" style="padding:12px;"><strong style="font-size:22px;display:block;"><?php echo esc_html( absint( $status['ranking_rules'] ) ); ?></strong><span>Ranking rules</span></div>
+                <div class="postbox" style="padding:12px;"><strong style="font-size:22px;display:block;"><?php echo esc_html( absint( $status['passed_cases'] ) ); ?></strong><span>Passed cases</span></div>
+                <div class="postbox" style="padding:12px;"><strong style="font-size:22px;display:block;"><?php echo esc_html( absint( $status['failed_cases'] ) ); ?></strong><span>Failed cases</span></div>
+            </div>
+            <form method="post" style="margin-top:16px;">
+                <?php wp_nonce_field( 'sc_rl_v520_run_action' ); ?>
+                <button type="submit" name="sc_rl_v520_run" class="button button-primary">Run Route Quality Calibration</button>
+                <a class="button" href="<?php echo esc_url( rest_url( Sustainable_Catalyst_Research_Librarian_AI::REST_NAMESPACE . '/quality/export' ) ); ?>">Export quality report</a>
+            </form>
+            <h2>Calibration Results</h2>
+            <table class="widefat striped"><thead><tr><th>Prompt</th><th>Expected</th><th>Predicted</th><th>Status</th><th>Suggestion</th></tr></thead><tbody>
+                <?php foreach ( $status['calibration_results'] as $result ) : ?>
+                    <tr><td><?php echo esc_html( $result['prompt'] ); ?></td><td><?php echo esc_html( $result['expected_route'] ); ?></td><td><?php echo esc_html( $result['predicted_signal'] ); ?></td><td><?php echo ! empty( $result['passed'] ) ? 'pass' : 'review'; ?></td><td><?php echo esc_html( $result['repair_suggestion'] ); ?></td></tr>
+                <?php endforeach; ?>
+            </tbody></table>
+        </div>
+        <?php
+    }
+
+    public static function render_public_summary( $atts = array() ) {
+        $atts = shortcode_atts( array( 'title' => 'Research Librarian Route Quality' ), $atts, 'sc_research_librarian_route_quality_summary' );
+        $status = self::status( false );
+        ob_start();
+        ?>
+        <section class="sc-rl-product sc-rl-route-quality-summary" data-sc-rl-product="route-quality-summary">
+            <p class="sc-rl-product__eyebrow">Route Quality</p>
+            <h2><?php echo esc_html( $atts['title'] ); ?></h2>
+            <p class="sc-rl-product__lede">Research Librarian v5.2.0 tunes public route answers by improving source-card ranking, prompt-to-route diagnostics, confidence labels, and route repair suggestions.</p>
+            <div class="sc-rl-product__grid">
+                <article><span><?php echo esc_html( absint( $status['ranking_rules'] ) ); ?></span><strong>Ranking rule groups</strong><p>Workbench, Decision Studio, module, platform, and boundary-oriented source weighting rules.</p></article>
+                <article><span><?php echo esc_html( absint( $status['calibration_prompts'] ) ); ?></span><strong>Calibration prompts</strong><p>Curated prompts used to test expected route behavior and source-card ordering.</p></article>
+                <article><span><?php echo esc_html( $status['quality_score'] ); ?>%</span><strong>Last quality score</strong><p>Public-safe calibration score from the most recent admin run.</p></article>
+                <article><span>Safe</span><strong>Public summary</strong><p>No API keys, private sessions, or raw visitor data are exposed.</p></article>
+            </div>
+            <p class="sc-rl-boundary-note">Public-safe summary. Use the admin dashboard for full calibration details.</p>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+
+    public static function render_source_ranking_summary( $atts = array() ) {
+        $atts = shortcode_atts( array( 'title' => 'Research Librarian Source Card Ranking' ), $atts, 'sc_research_librarian_source_ranking_summary' );
+        $groups = self::signal_groups();
+        ob_start();
+        ?>
+        <section class="sc-rl-product sc-rl-source-ranking-summary" data-sc-rl-product="source-ranking-summary">
+            <p class="sc-rl-product__eyebrow">Source Card Ranking</p>
+            <h2><?php echo esc_html( $atts['title'] ); ?></h2>
+            <p class="sc-rl-product__lede">Source cards are ranked with route matches, dominant prompt signals, title/summary terms, source type, source priority, and broad-route demotion when a specialized route is clearer.</p>
+            <div class="sc-rl-product__grid">
+                <?php foreach ( $groups as $group ) : ?>
+                    <article><span><?php echo esc_html( $group['label'] ); ?></span><strong><?php echo esc_html( $group['route_id'] ); ?></strong><p><?php echo esc_html( implode( ', ', array_slice( $group['terms'], 0, 6 ) ) ); ?></p></article>
+                <?php endforeach; ?>
+            </div>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+}
+
+Sustainable_Catalyst_Research_Librarian_AI_V520_Route_Quality::init();
 Sustainable_Catalyst_Research_Librarian_AI_V510_Live_UX::init();
 Sustainable_Catalyst_Research_Librarian_AI_V500_Stable_Release::init();
 Sustainable_Catalyst_Research_Librarian_AI_V490_Documentation::init();
