@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 5.8.0
+Stable tag: 5.9.0
 License: MIT
 
 A site-scoped Research Librarian for Sustainable Catalyst with source-aware routing, Gemini retrieval, article-map embeds, Workbench and Decision Studio deep links, release-readiness diagnostics, recovery validation, and public release notes.
@@ -12,7 +12,7 @@ A site-scoped Research Librarian for Sustainable Catalyst with source-aware rout
 
 The Research Librarian helps visitors choose the right Sustainable Catalyst route: Knowledge Library, Platform, Demos, Decision Studio, Workbench, Catalyst modules, Methodology, Feature Suggestions, or GitHub repositories.
 
-v5.8.0 adds adaptive, consent-aware prompts and contextual survey experiences with rule-based targeting, frequency caps, Feature Suggestions handoffs, and aggregate analytics.
+v5.9.0 adds adaptive, consent-aware prompts and contextual survey experiences with rule-based targeting, frequency caps, Feature Suggestions handoffs, and aggregate analytics.
 
 == Shortcodes ==
 
@@ -40,7 +40,7 @@ v5.8.0 adds adaptive, consent-aware prompts and contextual survey experiences wi
 
 
 
-= 5.8.0 =
+= 5.9.0 =
 * Added rule-based adaptive prompt and survey experiences.
 * Added low-confidence, zero-source, route-abandonment, path-completion, tool-demand, and handoff triggers.
 * Added consent-aware evaluation, daily frequency caps, cooldowns, and dismissal suppression.
@@ -228,3 +228,7 @@ Live public experience QA, visitor prompt library, QA checklist, and UX calibrat
 
 = 5.4.0 =
 * Added public Workbench and Decision Studio deep-link actions with typed, time-limited handoffs and safe fallback navigation.
+
+## Closed-loop route improvement
+
+v5.9.0 converts reviewed feedback into versioned route-change proposals with deterministic before/after tests, regression gates, human approval, provenance, audit history, and rollback snapshots. Approved changes are applied through the existing editorial curation registry.

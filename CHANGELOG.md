@@ -1,5 +1,16 @@
 # Changelog
 
+## 5.9.0 — Closed-Loop Route Improvement
+
+- Added versioned feedback-to-route improvement proposals.
+- Added deterministic before-and-after route evaluation.
+- Added configurable regression pass-rate and minimum-evidence gates.
+- Added human-only approval and rejection workflow.
+- Applied approved changes through the existing editorial curation registry.
+- Added provenance records, audit history, and rollback snapshots.
+- Added administrator REST endpoints and privacy-safe Site Intelligence events.
+- Preserved v5.8 adaptive prompts, v5.7 demand intelligence, v5.6 feedback bridge, v5.5 operations, and v5.4 deep links.
+
 ## 5.8.0 — Adaptive Prompt and Survey Experiences
 
 - Added versioned adaptive experience rules and administrator configuration.

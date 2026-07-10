@@ -1,0 +1,30 @@
+{
+  "product": "Sustainable Catalyst Research Librarian",
+  "version": "5.9.0",
+  "release": "Closed-Loop Route Improvement",
+  "schema": "sc-route-improvement-proposal/1.0",
+  "capabilities": [
+    "feedback-to-route review",
+    "versioned improvement proposals",
+    "before-and-after route evaluation",
+    "regression pass-rate gates",
+    "human approval requirements",
+    "curation-registry application",
+    "change provenance",
+    "rollback snapshots",
+    "privacy-minimized Site Intelligence events",
+    "administrator exports"
+  ],
+  "events": [
+    "librarian.route_improvement_evaluated",
+    "librarian.route_improvement_applied",
+    "librarian.route_improvement_rolled_back"
+  ],
+  "rest_endpoints": [
+    "GET /wp-json/sc-research-librarian/v1/route-improvements",
+    "GET /wp-json/sc-research-librarian/v1/route-improvements/{id}",
+    "POST /wp-json/sc-research-librarian/v1/route-improvements/{id}/evaluate",
+    "GET /wp-json/sc-research-librarian/v1/route-improvements/export"
+  ],
+  "governance": "No route change is applied without administrator approval and a passing regression evaluation. Feedback, public ratings, and AI classifications are advisory evidence only."
+}
