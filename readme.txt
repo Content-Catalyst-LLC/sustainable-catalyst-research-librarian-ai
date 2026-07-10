@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 4.9.0
+Stable tag: 5.0.0
 License: MIT
 
 A site-scoped Research Librarian for Sustainable Catalyst with source-aware routing, route notes, handoff payloads, saved route sessions, admin analytics, a knowledge indexer, and optional Gemini embeddings for hybrid retrieval, and security/access review tooling.
@@ -35,7 +35,7 @@ v4.7.1 adds guided research paths and a multi-step route builder so visitors can
 
 == Changelog ==
 
-= 4.9.0 =
+= 4.9.1 =
 * Adds guided research paths, multi-step route builder, path sessions, checkpoints, handoff targets, and exportable path JSON.
 
 = 4.5.0 =
@@ -83,7 +83,7 @@ v4.7.1 adds guided research paths and a multi-step route builder so visitors can
 
 == Changelog ==
 
-= 4.9.0 =
+= 4.9.1 =
 * Adds guided research paths, multi-step route builder, path sessions, checkpoints, handoff targets, and exportable path JSON.
 
 = 4.5.0 =
@@ -147,7 +147,20 @@ v4.7.1 adds guided research paths and a multi-step route builder so visitors can
 * Added observability status, operational runbook endpoints, admin event logs, and production readiness checks.
 
 
-= 4.9.0 =
+= 4.9.1 =
 * Added admin query review and route improvement workflow.
 * Added review queue ingestion from feedback, evaluation failures, route sessions, and guided paths.
 * Added review/correction REST endpoints and public-safe review summary shortcode.
+
+= 4.9.1 =
+* Fixed documentation snapshot generation so the admin action visibly saves and refreshes the snapshot.
+* Added nonce-protected admin-post fallback actions for generate, export, and reset.
+* Added admin success/reset notices, generated documentation preview, and copy-ready Markdown output.
+
+
+== Changelog ==
+
+= 5.0.0 =
+* Stable public release, launch checklist, and acceptance gate.
+* Public-safe readiness score and launch checklist shortcodes.
+* Admin acceptance runner and release export.

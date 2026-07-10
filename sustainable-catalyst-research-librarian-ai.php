@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Sustainable Catalyst Research Librarian
  * Plugin URI: https://sustainablecatalyst.com/platform/research-librarian/
- * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, correction triage, knowledge-gap review, governance controls, privacy summaries, retention policies, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, scheduled index maintenance, sitemap sync, health alerts, recovery snapshots, backup/export controls, migration readiness, security hardening, endpoint permission review, access-surface audit, observability checks, operational runbooks, incident-response summaries, editorial curation rules, route overrides, source weighting controls, integration contracts, API catalogs, developer handoff documentation, guided research paths, multi-step route builders, admin query review, route improvement queues, correction workflows, public documentation page generation, documentation exports, and release-ready page outlines.
- * Version: 4.9.0
+ * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, correction triage, knowledge-gap review, governance controls, privacy summaries, retention policies, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, scheduled index maintenance, sitemap sync, health alerts, recovery snapshots, backup/export controls, migration readiness, security hardening, endpoint permission review, access-surface audit, observability checks, operational runbooks, incident-response summaries, editorial curation rules, route overrides, source weighting controls, integration contracts, API catalogs, developer handoff documentation, guided research paths, multi-step route builders, admin query review, route improvement queues, correction workflows, public documentation page generation, documentation exports, and release-ready page outlines, stable release checks, launch checklist, and acceptance gate.
+ * Version: 5.0.0
  * Author: Content Catalyst LLC / Tariq Ahmad
  * Author URI: https://sustainablecatalyst.com/
  * License: MIT
@@ -23,7 +23,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
     const MAINTENANCE_OPTION = 'sc_rl_ai_maintenance_status';
     const MAINTENANCE_HOOK = 'sc_rl_ai_index_maintenance_event';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const VERSION        = '4.9.0';
+    const VERSION        = '5.0.0';
 
     private static $instance = null;
 
@@ -6912,18 +6912,21 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V480_Query_Review {
 
 
 /**
- * v4.9.0 — Public Documentation Page Generator.
+ * v4.9.1 — Documentation Snapshot Visibility Fix.
  *
  * Generates public-safe documentation outlines, page copy, shortcode inventories,
  * endpoint summaries, and release-ready documentation exports for the Research Librarian.
  */
 final class Sustainable_Catalyst_Research_Librarian_AI_V490_Documentation {
-    const VERSION = '4.9.0';
+    const VERSION = '4.9.1';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const OPTION = 'sc_rl_ai_public_documentation_page_v490';
+    const OPTION = 'sc_rl_ai_public_documentation_page_v491';
 
     public static function init() {
         add_action( 'admin_menu', array( __CLASS__, 'admin_menu' ) );
+        add_action( 'admin_post_sc_rl_ai_documentation_generate', array( __CLASS__, 'handle_generate_snapshot' ) );
+        add_action( 'admin_post_sc_rl_ai_documentation_reset', array( __CLASS__, 'handle_reset_snapshot' ) );
+        add_action( 'admin_post_sc_rl_ai_documentation_export', array( __CLASS__, 'handle_export_snapshot' ) );
         add_action( 'rest_api_init', array( __CLASS__, 'register_rest_routes' ) );
         add_shortcode( 'sc_research_librarian_documentation_summary', array( __CLASS__, 'render_public_summary' ) );
         add_shortcode( 'sc_research_librarian_docs_catalog', array( __CLASS__, 'render_catalog_summary' ) );
@@ -6992,11 +6995,11 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V490_Documentation {
     public static function rest_generate() {
         $payload = self::page_payload( true );
         update_option( self::OPTION, $payload, false );
-        return new WP_REST_Response( array( 'version' => self::VERSION, 'generated' => true, 'page' => $payload, 'status' => self::status() ), 200 );
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'generated' => true, 'message' => 'Documentation snapshot generated and saved.', 'page' => $payload, 'status' => self::status() ), 200 );
     }
 
-    public static function rest_export() {
-        return new WP_REST_Response( array(
+    public static function export_payload() {
+        return array(
             'version' => self::VERSION,
             'documentation' => self::status(),
             'catalog' => self::catalog(),
@@ -7005,7 +7008,60 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V490_Documentation {
             'endpoint_summary' => self::endpoint_summary(),
             'exported_at_utc' => gmdate( 'c' ),
             'boundary' => 'Public documentation exports exclude API keys, raw logs, private route sessions, and admin-only diagnostics.',
-        ), 200 );
+        );
+    }
+
+    public static function rest_export() {
+        return new WP_REST_Response( self::export_payload(), 200 );
+    }
+
+    public static function handle_generate_snapshot() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( esc_html__( 'You are not allowed to generate documentation snapshots.', 'sustainable-catalyst-research-librarian-ai' ) );
+        }
+        check_admin_referer( 'sc_rl_ai_documentation_generate' );
+        $payload = self::page_payload( true );
+        update_option( self::OPTION, $payload, false );
+        $redirect = add_query_arg(
+            array(
+                'page' => 'sc-research-librarian-documentation',
+                'sc_rl_doc_generated' => '1',
+                'sc_rl_doc_ts' => rawurlencode( $payload['generated_at_utc'] ),
+            ),
+            admin_url( 'options-general.php' )
+        );
+        wp_safe_redirect( $redirect );
+        exit;
+    }
+
+    public static function handle_reset_snapshot() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( esc_html__( 'You are not allowed to reset documentation snapshots.', 'sustainable-catalyst-research-librarian-ai' ) );
+        }
+        check_admin_referer( 'sc_rl_ai_documentation_reset' );
+        delete_option( self::OPTION );
+        $redirect = add_query_arg(
+            array(
+                'page' => 'sc-research-librarian-documentation',
+                'sc_rl_doc_reset' => '1',
+            ),
+            admin_url( 'options-general.php' )
+        );
+        wp_safe_redirect( $redirect );
+        exit;
+    }
+
+    public static function handle_export_snapshot() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( esc_html__( 'You are not allowed to export documentation snapshots.', 'sustainable-catalyst-research-librarian-ai' ) );
+        }
+        check_admin_referer( 'sc_rl_ai_documentation_export' );
+        $filename = 'research-librarian-documentation-snapshot-v' . self::VERSION . '-' . gmdate( 'Ymd-His' ) . '.json';
+        nocache_headers();
+        header( 'Content-Type: application/json; charset=utf-8' );
+        header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
+        echo wp_json_encode( self::export_payload(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
+        exit;
     }
 
     public static function rest_reset() {
@@ -7111,21 +7167,45 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V490_Documentation {
     public static function render_admin_page() {
         if ( ! current_user_can( 'manage_options' ) ) { return; }
         $status = self::status();
-        $generate_url = rest_url( self::REST_NAMESPACE . '/documentation/generate' );
-        $export_url = rest_url( self::REST_NAMESPACE . '/documentation/export' );
         $page = self::page_payload( false );
+        $generate_action = admin_url( 'admin-post.php' );
+        $export_action = admin_url( 'admin-post.php' );
+        $reset_action = admin_url( 'admin-post.php' );
+        $generated_notice = isset( $_GET['sc_rl_doc_generated'] ) ? sanitize_text_field( wp_unslash( $_GET['sc_rl_doc_generated'] ) ) : '';
+        $reset_notice = isset( $_GET['sc_rl_doc_reset'] ) ? sanitize_text_field( wp_unslash( $_GET['sc_rl_doc_reset'] ) ) : '';
         ?>
         <div class="wrap sc-rl-admin-wrap">
             <h1>Research Librarian Documentation</h1>
             <p>Version <?php echo esc_html( self::VERSION ); ?> generates public-safe documentation copy, shortcode inventories, endpoint summaries, and release-ready documentation exports for the Research Librarian.</p>
-            <p>
-                <a class="button button-primary" href="<?php echo esc_url( $generate_url ); ?>" onclick="event.preventDefault(); fetch(this.href,{method:'POST',credentials:'same-origin',headers:{'X-WP-Nonce':wpApiSettings&&wpApiSettings.nonce?wpApiSettings.nonce:''}}).then(function(){location.reload();});">Generate Documentation Snapshot</a>
-                <a class="button" href="<?php echo esc_url( $export_url ); ?>">Export Documentation JSON</a>
-            </p>
+            <?php if ( '1' === $generated_notice ) : ?>
+                <div class="notice notice-success is-dismissible"><p><strong>Documentation snapshot generated.</strong> Last generated: <?php echo esc_html( $status['last_generated_utc'] ); ?>.</p></div>
+            <?php endif; ?>
+            <?php if ( '1' === $reset_notice ) : ?>
+                <div class="notice notice-warning is-dismissible"><p><strong>Documentation snapshot reset.</strong> The generated public page now uses a fresh in-memory preview until the next snapshot is created.</p></div>
+            <?php endif; ?>
+
+            <div class="sc-rl-admin-actions" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:16px 0;">
+                <form method="post" action="<?php echo esc_url( $generate_action ); ?>">
+                    <?php wp_nonce_field( 'sc_rl_ai_documentation_generate' ); ?>
+                    <input type="hidden" name="action" value="sc_rl_ai_documentation_generate" />
+                    <button type="submit" class="button button-primary">Generate Documentation Snapshot</button>
+                </form>
+                <form method="post" action="<?php echo esc_url( $export_action ); ?>">
+                    <?php wp_nonce_field( 'sc_rl_ai_documentation_export' ); ?>
+                    <input type="hidden" name="action" value="sc_rl_ai_documentation_export" />
+                    <button type="submit" class="button">Export Documentation JSON</button>
+                </form>
+                <form method="post" action="<?php echo esc_url( $reset_action ); ?>" onsubmit="return confirm('Reset the stored documentation snapshot?');">
+                    <?php wp_nonce_field( 'sc_rl_ai_documentation_reset' ); ?>
+                    <input type="hidden" name="action" value="sc_rl_ai_documentation_reset" />
+                    <button type="submit" class="button">Reset Snapshot</button>
+                </form>
+            </div>
             <div class="sc-rl-admin-grid">
                 <div class="card"><h2><?php echo esc_html( absint( $status['catalog_items'] ) ); ?></h2><p>Catalog items</p></div>
                 <div class="card"><h2><?php echo esc_html( absint( $status['public_page_sections'] ) ); ?></h2><p>Page sections</p></div>
                 <div class="card"><h2><?php echo esc_html( absint( $status['shortcode_count'] ) ); ?></h2><p>Shortcodes</p></div>
+                <div class="card"><h2><?php echo esc_html( $status['has_generated_snapshot'] ? 'Yes' : 'No' ); ?></h2><p>Snapshot stored</p></div>
             </div>
             <h2>Generated Page Outline</h2>
             <table class="widefat striped"><tbody>
@@ -7134,6 +7214,17 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V490_Documentation {
                 <tr><th>Generated</th><td><?php echo esc_html( $page['generated_at_utc'] ); ?></td></tr>
                 <tr><th>Public safe</th><td><?php echo esc_html( $page['public_safe'] ? 'yes' : 'no' ); ?></td></tr>
             </tbody></table>
+
+            <h2>Generated Documentation Preview</h2>
+            <p>This preview updates after a snapshot is generated. Use the shortcode below on a public documentation page if desired.</p>
+            <p><code>[sc_research_librarian_documentation_page title="Research Librarian Public Documentation"]</code></p>
+            <div class="sc-rl-generated-doc-preview" style="background:#fff;border:1px solid #ccd0d4;padding:16px;margin:12px 0;max-width:1100px;">
+                <?php echo wp_kses_post( $page['html'] ); ?>
+            </div>
+
+            <h2>Copy-Ready Markdown</h2>
+            <textarea class="large-text code" rows="12" readonly><?php echo esc_textarea( $page['markdown'] ); ?></textarea>
+
             <h2>Documentation Catalog</h2>
             <table class="widefat striped">
                 <thead><tr><th>Title</th><th>Type</th><th>Audience</th><th>Recommended Location</th></tr></thead>
@@ -7206,6 +7297,306 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V490_Documentation {
     }
 }
 
+
+
+/**
+ * v5.0.0 Stable Public Release, Launch Checklist, and Acceptance Gate.
+ *
+ * This layer intentionally stays public-safe. It does not expose keys, raw logs,
+ * private questions, or sensitive operational detail. It aggregates readiness
+ * signals already produced by the plugin and gives admins a final launch gate.
+ */
+final class Sustainable_Catalyst_Research_Librarian_AI_V500_Stable_Release {
+    const VERSION = '5.0.0';
+    const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
+    const STATUS_OPTION = 'sc_rl_ai_stable_release_status_v500';
+
+    public static function init() {
+        add_action( 'admin_menu', array( __CLASS__, 'admin_menu' ) );
+        add_action( 'rest_api_init', array( __CLASS__, 'register_rest_routes' ) );
+        add_shortcode( 'sc_research_librarian_stable_release_summary', array( __CLASS__, 'render_public_summary' ) );
+        add_shortcode( 'sc_research_librarian_launch_checklist', array( __CLASS__, 'render_launch_checklist' ) );
+    }
+
+    public static function admin_menu() {
+        add_options_page(
+            'Research Librarian Stable Release',
+            'Research Librarian Stable Release',
+            'manage_options',
+            'sc-research-librarian-stable-release',
+            array( __CLASS__, 'render_admin_page' )
+        );
+    }
+
+    public static function can_manage_options() {
+        return current_user_can( 'manage_options' );
+    }
+
+    public static function register_rest_routes() {
+        register_rest_route( self::REST_NAMESPACE, '/stable-release/status', array(
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => array( __CLASS__, 'rest_status' ),
+            'permission_callback' => '__return_true',
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/stable-release/checklist', array(
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => array( __CLASS__, 'rest_checklist' ),
+            'permission_callback' => '__return_true',
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/stable-release/run-acceptance', array(
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => array( __CLASS__, 'rest_run_acceptance' ),
+            'permission_callback' => array( __CLASS__, 'can_manage_options' ),
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/stable-release/export', array(
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => array( __CLASS__, 'rest_export' ),
+            'permission_callback' => array( __CLASS__, 'can_manage_options' ),
+        ) );
+    }
+
+    public static function rest_status() {
+        return new WP_REST_Response( array(
+            'version' => self::VERSION,
+            'stable_release' => self::status( false ),
+        ), 200 );
+    }
+
+    public static function rest_checklist() {
+        return new WP_REST_Response( array(
+            'version' => self::VERSION,
+            'checklist' => self::checklist( false ),
+        ), 200 );
+    }
+
+    public static function rest_run_acceptance() {
+        $status = self::status( true );
+        update_option( self::STATUS_OPTION, array(
+            'last_acceptance_run_utc' => gmdate( 'c' ),
+            'last_score' => $status['score'],
+            'last_gate' => $status['gate'],
+            'last_open_warnings' => $status['open_warnings'],
+        ), false );
+        return new WP_REST_Response( array(
+            'version' => self::VERSION,
+            'ran' => true,
+            'stable_release' => self::status( true ),
+        ), 200 );
+    }
+
+    public static function rest_export() {
+        return new WP_REST_Response( array(
+            'version' => self::VERSION,
+            'stable_release' => self::status( true ),
+            'checklist' => self::checklist( true ),
+            'endpoint_inventory' => self::endpoint_inventory(),
+            'shortcode_inventory' => self::shortcode_inventory(),
+            'release_notes' => self::release_notes(),
+            'exported_at_utc' => gmdate( 'c' ),
+            'public_safe' => true,
+        ), 200 );
+    }
+
+    public static function status( $include_admin = false ) {
+        $signals = self::signals();
+        $total = count( $signals );
+        $passed = 0; $warnings = 0; $blocking = 0;
+        foreach ( $signals as $signal ) {
+            if ( 'pass' === $signal['status'] ) { $passed++; }
+            if ( 'warning' === $signal['status'] ) { $warnings++; }
+            if ( 'blocker' === $signal['status'] ) { $blocking++; }
+        }
+        $score = $total > 0 ? (int) round( ( $passed / $total ) * 100 ) : 0;
+        $gate = 'ready';
+        if ( $blocking > 0 ) { $gate = 'blocked'; }
+        elseif ( $warnings > 0 || $score < 85 ) { $gate = 'ready_with_warnings'; }
+        $stored = get_option( self::STATUS_OPTION, array() );
+        $summary = array(
+            'enabled' => true,
+            'release_name' => 'Stable Public Release',
+            'release_version' => self::VERSION,
+            'score' => $score,
+            'gate' => $gate,
+            'passed_checks' => $passed,
+            'warning_checks' => $warnings,
+            'blocking_checks' => $blocking,
+            'total_checks' => $total,
+            'open_warnings' => array_values( array_map( function( $signal ) { return $signal['label']; }, array_filter( $signals, function( $signal ) { return 'pass' !== $signal['status']; } ) ) ),
+            'last_acceptance_run_utc' => isset( $stored['last_acceptance_run_utc'] ) ? $stored['last_acceptance_run_utc'] : '',
+            'public_summary' => 'Research Librarian v5.0.0 is the stable public release gate for source-aware routing, Gemini retrieval, public answer UX, guided paths, handoffs, governance, security, observability, documentation, and operational readiness.',
+        );
+        if ( $include_admin ) {
+            $summary['signals'] = $signals;
+            $summary['stored_acceptance'] = $stored;
+            $summary['release_notes'] = self::release_notes();
+        }
+        return $summary;
+    }
+
+    private static function signals() {
+        $index = get_option( 'sc_rl_ai_knowledge_index', array() );
+        $records = ( isset( $index['records'] ) && is_array( $index['records'] ) ) ? $index['records'] : ( is_array( $index ) ? $index : array() );
+        $embed = get_option( 'sc_rl_ai_embedding_status', array() );
+        $doc = get_option( 'sc_rl_ai_documentation_status_v490', array() );
+        $signals = array(
+            self::signal( 'core_version', 'Core plugin version is v5.0.0', true, 'Stable release header and runtime version have been advanced to 5.0.0.' ),
+            self::signal( 'knowledge_index', 'Knowledge index has records', count( $records ) > 0, 'Index records are required for source-aware routing.' ),
+            self::signal( 'routing_sources', 'Route and source manifests are present', file_exists( plugin_dir_path( __FILE__ ) . 'data/research_librarian_routes_v3.1.0.json' ) && file_exists( plugin_dir_path( __FILE__ ) . 'data/research_librarian_sources_v3.1.0.json' ), 'Seed route and source manifests support deterministic fallback and grounding.' ),
+            self::signal( 'public_answer_ux', 'Public answer UX layer is present', class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V460_Answer_UX' ), 'Route cards, source cards, confidence badges, and route actions are available.' ),
+            self::signal( 'guided_paths', 'Guided paths layer is present', class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V470_Guided_Paths' ), 'Multi-step route builders and path templates are available.' ),
+            self::signal( 'handoffs', 'Workbench and Decision Studio handoff layer is present', file_exists( plugin_dir_path( __FILE__ ) . 'data/research_librarian_handoff_manifest_v3.5.0.json' ), 'Handoff payload contracts are available for downstream tools.' ),
+            self::signal( 'security', 'Security review layer is present', class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V420_Security' ), 'Endpoint classification and secret-safe diagnostics are available.' ),
+            self::signal( 'governance', 'Governance and retention layer is present', file_exists( plugin_dir_path( __FILE__ ) . 'data/research_librarian_governance_manifest_v3.8.0.json' ), 'Privacy posture, retention, and export boundaries are documented.' ),
+            self::signal( 'observability', 'Observability and runbook layer is present', class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V430_Observability' ), 'Production checks and runbook summaries are available.' ),
+            self::signal( 'documentation', 'Documentation snapshot system is present', class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V490_Documentation' ), 'Public documentation can be generated and previewed.' ),
+        );
+        $embedded = isset( $embed['embedded_records'] ) ? absint( $embed['embedded_records'] ) : 0;
+        $signals[] = array(
+            'id' => 'semantic_retrieval',
+            'label' => 'Gemini embedding coverage is available when configured',
+            'status' => $embedded > 0 ? 'pass' : 'warning',
+            'detail' => $embedded > 0 ? 'Embedding records exist for hybrid semantic retrieval.' : 'No embedded records detected. Deterministic and keyword/source routing can still operate, but semantic retrieval should be generated for full production readiness.',
+        );
+        $signals[] = array(
+            'id' => 'documentation_snapshot',
+            'label' => 'Documentation snapshot has been generated',
+            'status' => ! empty( $doc['last_generated_utc'] ) ? 'pass' : 'warning',
+            'detail' => ! empty( $doc['last_generated_utc'] ) ? 'Documentation snapshot generated at ' . $doc['last_generated_utc'] . '.' : 'Generate a documentation snapshot before final public launch.',
+        );
+        return $signals;
+    }
+
+    private static function signal( $id, $label, $ok, $detail ) {
+        return array(
+            'id' => $id,
+            'label' => $label,
+            'status' => $ok ? 'pass' : 'blocker',
+            'detail' => $detail,
+        );
+    }
+
+    public static function checklist( $include_admin = false ) {
+        $items = array(
+            array( 'group' => 'Index', 'item' => 'Rebuild the knowledge index after installing v5.0.0.', 'owner' => 'Admin', 'required' => true ),
+            array( 'group' => 'Retrieval', 'item' => 'Run single Gemini embedding test, then generate embeddings in batches if Gemini is enabled.', 'owner' => 'Admin', 'required' => false ),
+            array( 'group' => 'Evaluation', 'item' => 'Run retrieval evaluation and review weak or mismatched routes.', 'owner' => 'Admin', 'required' => true ),
+            array( 'group' => 'UX', 'item' => 'Test public answer card, source cards, confidence badge, and route action center on mobile and desktop.', 'owner' => 'Admin', 'required' => true ),
+            array( 'group' => 'Guided Paths', 'item' => 'Build one quick, one standard, and one deep guided path from the public page.', 'owner' => 'Admin', 'required' => true ),
+            array( 'group' => 'Handoffs', 'item' => 'Download Workbench and Decision Studio handoff JSON from a route response.', 'owner' => 'Admin', 'required' => true ),
+            array( 'group' => 'Governance', 'item' => 'Confirm export redaction, retention settings, and public boundary notes.', 'owner' => 'Admin', 'required' => true ),
+            array( 'group' => 'Security', 'item' => 'Run Security Audit and confirm API keys are never exposed in public endpoints or page HTML.', 'owner' => 'Admin', 'required' => true ),
+            array( 'group' => 'Operations', 'item' => 'Run Observability Checks and create a Recovery Snapshot.', 'owner' => 'Admin', 'required' => true ),
+            array( 'group' => 'Documentation', 'item' => 'Generate Documentation Snapshot and review the public documentation preview.', 'owner' => 'Admin', 'required' => true ),
+        );
+        return array(
+            'version' => self::VERSION,
+            'items' => $items,
+            'required_count' => count( array_filter( $items, function( $item ) { return ! empty( $item['required'] ); } ) ),
+            'public_safe' => true,
+        );
+    }
+
+    public static function endpoint_inventory() {
+        return array(
+            '/stable-release/status' => 'Public-safe stable release status.',
+            '/stable-release/checklist' => 'Public-safe launch checklist.',
+            '/stable-release/run-acceptance' => 'Admin-only acceptance check runner.',
+            '/stable-release/export' => 'Admin-only release export.',
+        );
+    }
+
+    public static function shortcode_inventory() {
+        return array(
+            '[sc_research_librarian_stable_release_summary title="Research Librarian Stable Release"]',
+            '[sc_research_librarian_launch_checklist title="Research Librarian Launch Checklist"]',
+        );
+    }
+
+    public static function release_notes() {
+        return array(
+            'Stable public release gate for Research Librarian infrastructure.',
+            'Aggregates readiness checks across index, retrieval, public UX, guided paths, handoffs, governance, security, observability, and documentation.',
+            'Adds public-safe release status and launch checklist shortcodes.',
+            'Adds admin-only acceptance run and release export endpoints.',
+            'Does not expose API keys, raw private logs, or sensitive route-session contents.',
+        );
+    }
+
+    public static function render_admin_page() {
+        if ( ! current_user_can( 'manage_options' ) ) { return; }
+        $status = self::status( true );
+        $checklist = self::checklist( true );
+        ?>
+        <div class="wrap sc-rl-admin-wrap">
+            <h1>Research Librarian Stable Release</h1>
+            <p>Version <?php echo esc_html( self::VERSION ); ?> provides the stable public release gate for Research Librarian launch readiness.</p>
+            <div class="sc-rl-admin-grid">
+                <div class="card"><h2><?php echo esc_html( absint( $status['score'] ) ); ?>%</h2><p>Release readiness score</p></div>
+                <div class="card"><h2><?php echo esc_html( $status['gate'] ); ?></h2><p>Release gate</p></div>
+                <div class="card"><h2><?php echo esc_html( absint( $status['passed_checks'] ) ); ?>/<?php echo esc_html( absint( $status['total_checks'] ) ); ?></h2><p>Checks passed</p></div>
+                <div class="card"><h2><?php echo esc_html( absint( $status['warning_checks'] + $status['blocking_checks'] ) ); ?></h2><p>Open warnings/blockers</p></div>
+            </div>
+            <p>
+                <button type="button" class="button button-primary" onclick="fetch('<?php echo esc_url( rest_url( self::REST_NAMESPACE . '/stable-release/run-acceptance' ) ); ?>',{method:'POST',headers:{'X-WP-Nonce':'<?php echo esc_js( wp_create_nonce( 'wp_rest' ) ); ?>'}}).then(function(){location.reload();});">Run Acceptance Gate</button>
+                <a class="button" href="<?php echo esc_url( rest_url( self::REST_NAMESPACE . '/stable-release/export' ) ); ?>">Export Release JSON</a>
+            </p>
+            <h2>Readiness Signals</h2>
+            <table class="widefat striped"><thead><tr><th>Signal</th><th>Status</th><th>Detail</th></tr></thead><tbody>
+                <?php foreach ( $status['signals'] as $signal ) : ?>
+                    <tr><td><?php echo esc_html( $signal['label'] ); ?></td><td><strong><?php echo esc_html( $signal['status'] ); ?></strong></td><td><?php echo esc_html( $signal['detail'] ); ?></td></tr>
+                <?php endforeach; ?>
+            </tbody></table>
+            <h2>Launch Checklist</h2>
+            <table class="widefat striped"><thead><tr><th>Group</th><th>Item</th><th>Required</th></tr></thead><tbody>
+                <?php foreach ( $checklist['items'] as $item ) : ?>
+                    <tr><td><?php echo esc_html( $item['group'] ); ?></td><td><?php echo esc_html( $item['item'] ); ?></td><td><?php echo esc_html( ! empty( $item['required'] ) ? 'yes' : 'recommended' ); ?></td></tr>
+                <?php endforeach; ?>
+            </tbody></table>
+        </div>
+        <?php
+    }
+
+    public static function render_public_summary( $atts = array() ) {
+        $atts = shortcode_atts( array( 'title' => 'Research Librarian Stable Release' ), $atts, 'sc_research_librarian_stable_release_summary' );
+        $status = self::status( false );
+        ob_start();
+        ?>
+        <section class="sc-rl-product sc-rl-stable-release-summary" data-sc-rl-product="stable-release-summary">
+            <p class="sc-rl-product__eyebrow">Stable Public Release</p>
+            <h2><?php echo esc_html( $atts['title'] ); ?></h2>
+            <p class="sc-rl-product__lede">Research Librarian v5.0.0 packages source-aware routing, Gemini retrieval, public answer UX, guided paths, handoffs, governance, security, observability, documentation, and launch-readiness checks into a stable public release gate.</p>
+            <div class="sc-rl-product__grid">
+                <article><span><?php echo esc_html( absint( $status['score'] ) ); ?>%</span><strong>Readiness score</strong><p>Aggregate public-safe readiness score across core infrastructure checks.</p></article>
+                <article><span><?php echo esc_html( $status['gate'] ); ?></span><strong>Release gate</strong><p>Gate status: ready, ready with warnings, or blocked.</p></article>
+                <article><span><?php echo esc_html( absint( $status['passed_checks'] ) ); ?></span><strong>Passed checks</strong><p>Core index, UX, path, handoff, governance, security, observability, and documentation checks.</p></article>
+                <article><span><?php echo esc_html( absint( $status['warning_checks'] + $status['blocking_checks'] ) ); ?></span><strong>Open warnings</strong><p>Remaining launch checks that need review before public promotion.</p></article>
+            </div>
+            <p class="sc-rl-boundary-note">This summary is public-safe. It does not reveal API keys, private logs, raw route sessions, or sensitive operational details.</p>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+
+    public static function render_launch_checklist( $atts = array() ) {
+        $atts = shortcode_atts( array( 'title' => 'Research Librarian Launch Checklist' ), $atts, 'sc_research_librarian_launch_checklist' );
+        $checklist = self::checklist( false );
+        ob_start();
+        ?>
+        <section class="sc-rl-product sc-rl-launch-checklist" data-sc-rl-product="launch-checklist">
+            <p class="sc-rl-product__eyebrow">Launch Checklist</p>
+            <h2><?php echo esc_html( $atts['title'] ); ?></h2>
+            <div class="sc-rl-product__grid">
+                <?php foreach ( $checklist['items'] as $item ) : ?>
+                    <article><span><?php echo esc_html( $item['group'] ); ?></span><strong><?php echo esc_html( ! empty( $item['required'] ) ? 'Required' : 'Recommended' ); ?></strong><p><?php echo esc_html( $item['item'] ); ?></p></article>
+                <?php endforeach; ?>
+            </div>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+}
+
+Sustainable_Catalyst_Research_Librarian_AI_V500_Stable_Release::init();
 Sustainable_Catalyst_Research_Librarian_AI_V490_Documentation::init();
 Sustainable_Catalyst_Research_Librarian_AI_V460_Answer_UX::init();
 Sustainable_Catalyst_Research_Librarian_AI_V480_Query_Review::init();

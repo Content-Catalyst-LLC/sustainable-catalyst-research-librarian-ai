@@ -1,5 +1,25 @@
 # Changelog
 
+## v5.0.0 — Stable Public Release, Launch Checklist, and Acceptance Gate
+
+- Added stable public release readiness score.
+- Added launch checklist and acceptance gate.
+- Added admin-only release export.
+- Added public-safe stable release and launch checklist shortcodes.
+- Added v5.0.0 manifest and release documentation.
+
+
+## v4.9.1 — Documentation Snapshot Visibility Fix
+
+- Replaced the JavaScript-only Generate Documentation Snapshot action with nonce-protected `admin-post.php` actions.
+- Added visible admin success and reset notices.
+- Added a Generated Documentation Preview panel to confirm that snapshot generation changed the stored page payload.
+- Added copy-ready Markdown output inside the Documentation admin page.
+- Added server-side documentation JSON export through an admin-post action so export works without relying on REST nonce JavaScript.
+- Preserved the public documentation REST endpoints and shortcodes from v4.9.0.
+
+# Changelog
+
 ## v4.9.0 — Public Documentation Page Generator
 
 - Added public-safe documentation generator.
