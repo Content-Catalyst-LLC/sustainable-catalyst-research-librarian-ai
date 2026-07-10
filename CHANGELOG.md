@@ -1,5 +1,15 @@
 # Changelog
 
+## v5.3.2 — Duplicate Activation Notice Cleanup and Stale Active Plugin Repair
+
+- Added duplicate active-plugin path detection.
+- Added stale missing plugin record detection.
+- Added nonce-protected one-click repair action from the admin notice.
+- Added exact plugin path display inside the duplicate/stale activation notice.
+- Added admin-only activation status and repair REST endpoints.
+- Reduced the activation guard from a hard error-style nag to an actionable repair notice.
+- Preserved the v5.3.1 article-map features and stable plugin folder packaging.
+
 ## v5.3.1 — Activation Fatal Guard and Stable Plugin Folder Fix
 
 - Repackages the WordPress plugin zip with the stable plugin folder slug `sustainable-catalyst-research-librarian-ai` instead of a versioned directory.

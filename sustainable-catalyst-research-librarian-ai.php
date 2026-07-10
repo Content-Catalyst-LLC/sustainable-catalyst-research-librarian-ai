@@ -3,7 +3,7 @@
  * Plugin Name: Sustainable Catalyst Research Librarian
  * Plugin URI: https://sustainablecatalyst.com/platform/research-librarian/
  * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, correction triage, knowledge-gap review, governance controls, privacy summaries, retention policies, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, scheduled index maintenance, sitemap sync, health alerts, recovery snapshots, backup/export controls, migration readiness, security hardening, endpoint permission review, access-surface audit, observability checks, operational runbooks, incident-response summaries, editorial curation rules, route overrides, source weighting controls, integration contracts, API catalogs, developer handoff documentation, guided research paths, multi-step route builders, admin query review, route improvement queues, correction workflows, public documentation page generation, documentation exports, and release-ready page outlines, stable release checks, launch checklist, acceptance gate, live public experience QA, visitor prompt library, and production UX calibration, public route quality tuning, source-card ranking, prompt-to-route diagnostics, answer consistency checks, route repair suggestions, on-page research path embeds, and article map integration.
- * Version: 5.3.1
+ * Version: 5.3.2
  * Author: Content Catalyst LLC / Tariq Ahmad
  * Author URI: https://sustainablecatalyst.com/
  * License: MIT
@@ -14,9 +14,213 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+if ( ! function_exists( 'sc_rl_ai_is_research_librarian_plugin_path' ) ) {
+    function sc_rl_ai_is_research_librarian_plugin_path( $path ) {
+        $path = (string) $path;
+        return false !== stripos( $path, 'sustainable-catalyst-research-librarian-ai' ) || false !== stripos( $path, 'research-librarian' );
+    }
+}
+
+if ( ! function_exists( 'sc_rl_ai_plugin_file_exists' ) ) {
+    function sc_rl_ai_plugin_file_exists( $path ) {
+        return is_string( $path ) && '' !== $path && file_exists( WP_PLUGIN_DIR . '/' . $path );
+    }
+}
+
+if ( ! function_exists( 'sc_rl_ai_plugin_version_for_path' ) ) {
+    function sc_rl_ai_plugin_version_for_path( $path ) {
+        $file = WP_PLUGIN_DIR . '/' . $path;
+        if ( ! file_exists( $file ) ) {
+            return '';
+        }
+        if ( ! function_exists( 'get_plugin_data' ) && file_exists( ABSPATH . 'wp-admin/includes/plugin.php' ) ) {
+            require_once ABSPATH . 'wp-admin/includes/plugin.php';
+        }
+        if ( function_exists( 'get_plugin_data' ) ) {
+            $data = get_plugin_data( $file, false, false );
+            return isset( $data['Version'] ) ? (string) $data['Version'] : '';
+        }
+        $contents = file_get_contents( $file, false, null, 0, 4096 );
+        if ( preg_match( '/^\s*\*\s*Version:\s*(.+)$/mi', (string) $contents, $m ) ) {
+            return trim( $m[1] );
+        }
+        return '';
+    }
+}
+
+if ( ! function_exists( 'sc_rl_ai_current_active_plugin_rows' ) ) {
+    function sc_rl_ai_current_active_plugin_rows( $current_file = '' ) {
+        $active  = (array) get_option( 'active_plugins', array() );
+        $current = $current_file ? plugin_basename( $current_file ) : '';
+        $rows    = array();
+        foreach ( $active as $path ) {
+            if ( ! sc_rl_ai_is_research_librarian_plugin_path( $path ) ) {
+                continue;
+            }
+            $rows[] = array(
+                'path'        => $path,
+                'exists'      => sc_rl_ai_plugin_file_exists( $path ),
+                'version'     => sc_rl_ai_plugin_version_for_path( $path ),
+                'is_current'  => $current && $path === $current,
+            );
+        }
+        return $rows;
+    }
+}
+
+if ( ! function_exists( 'sc_rl_ai_duplicate_activation_status' ) ) {
+    function sc_rl_ai_duplicate_activation_status( $current_file = '' ) {
+        $rows        = sc_rl_ai_current_active_plugin_rows( $current_file );
+        $active_rows = array_values( array_filter( $rows, function( $row ) { return ! empty( $row['exists'] ); } ) );
+        $stale_rows  = array_values( array_filter( $rows, function( $row ) { return empty( $row['exists'] ); } ) );
+        $current     = $current_file ? plugin_basename( $current_file ) : '';
+        $loaded_path = '';
+        if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI', false ) ) {
+            try {
+                $reflection  = new ReflectionClass( 'Sustainable_Catalyst_Research_Librarian_AI' );
+                $loaded_file = $reflection->getFileName();
+                if ( $loaded_file ) {
+                    $loaded_path = plugin_basename( $loaded_file );
+                }
+            } catch ( Exception $e ) {
+                $loaded_path = '';
+            }
+        }
+        return array(
+            'ok'                 => count( $active_rows ) <= 1 && count( $stale_rows ) === 0,
+            'current_plugin_path'=> $current,
+            'loaded_class_path'  => $loaded_path,
+            'active_count'       => count( $active_rows ),
+            'stale_count'        => count( $stale_rows ),
+            'duplicate_count'    => max( 0, count( $active_rows ) - 1 ),
+            'rows'               => $rows,
+            'recommended_action' => count( $active_rows ) > 1 || count( $stale_rows ) > 0 ? 'Run stale active-plugin repair and keep the current Research Librarian plugin path.' : 'No duplicate active-plugin entries detected.',
+        );
+    }
+}
+
+if ( ! function_exists( 'sc_rl_ai_select_preferred_active_plugin_path' ) ) {
+    function sc_rl_ai_select_preferred_active_plugin_path( $current_file = '' ) {
+        $current = $current_file ? plugin_basename( $current_file ) : '';
+        if ( $current && sc_rl_ai_plugin_file_exists( $current ) ) {
+            return $current;
+        }
+        $rows = sc_rl_ai_current_active_plugin_rows( $current_file );
+        $best = '';
+        $best_version = '0.0.0';
+        foreach ( $rows as $row ) {
+            if ( empty( $row['exists'] ) ) {
+                continue;
+            }
+            $version = $row['version'] ? $row['version'] : '0.0.0';
+            if ( ! $best || version_compare( $version, $best_version, '>' ) ) {
+                $best = $row['path'];
+                $best_version = $version;
+            }
+        }
+        return $best;
+    }
+}
+
+if ( ! function_exists( 'sc_rl_ai_repair_duplicate_activation_entries' ) ) {
+    function sc_rl_ai_repair_duplicate_activation_entries( $current_file = '' ) {
+        if ( ! current_user_can( 'activate_plugins' ) && ! current_user_can( 'manage_options' ) ) {
+            return array( 'ok' => false, 'error' => 'permission_denied' );
+        }
+        $active    = (array) get_option( 'active_plugins', array() );
+        $preferred = sc_rl_ai_select_preferred_active_plugin_path( $current_file );
+        $kept      = array();
+        $removed   = array();
+        $kept_research_librarian = false;
+
+        foreach ( $active as $path ) {
+            if ( ! sc_rl_ai_is_research_librarian_plugin_path( $path ) ) {
+                $kept[] = $path;
+                continue;
+            }
+            $exists = sc_rl_ai_plugin_file_exists( $path );
+            if ( ! $exists ) {
+                $removed[] = array( 'path' => $path, 'reason' => 'stale_missing_file' );
+                continue;
+            }
+            if ( $preferred && $path === $preferred && ! $kept_research_librarian ) {
+                $kept[] = $path;
+                $kept_research_librarian = true;
+                continue;
+            }
+            if ( ! $preferred && ! $kept_research_librarian ) {
+                $kept[] = $path;
+                $kept_research_librarian = true;
+                continue;
+            }
+            $removed[] = array( 'path' => $path, 'reason' => 'duplicate_research_librarian_copy' );
+        }
+
+        if ( $preferred && ! $kept_research_librarian && sc_rl_ai_plugin_file_exists( $preferred ) ) {
+            $kept[] = $preferred;
+            $kept_research_librarian = true;
+        }
+
+        $kept = array_values( array_unique( $kept ) );
+        update_option( 'active_plugins', $kept );
+
+        return array(
+            'ok'             => true,
+            'preferred_path' => $preferred,
+            'kept'           => $kept,
+            'removed'        => $removed,
+            'status'         => sc_rl_ai_duplicate_activation_status( $current_file ),
+        );
+    }
+}
+
+if ( ! function_exists( 'sc_rl_ai_handle_duplicate_activation_repair' ) ) {
+    function sc_rl_ai_handle_duplicate_activation_repair() {
+        if ( ! current_user_can( 'activate_plugins' ) && ! current_user_can( 'manage_options' ) ) {
+            wp_die( esc_html__( 'You do not have permission to repair plugin activation entries.', 'sustainable-catalyst-research-librarian-ai' ) );
+        }
+        check_admin_referer( 'sc_rl_ai_repair_duplicates' );
+        $result = sc_rl_ai_repair_duplicate_activation_entries( __FILE__ );
+        $redirect = add_query_arg(
+            array(
+                'sc_rl_ai_repair' => ! empty( $result['ok'] ) ? 'success' : 'failed',
+                'removed'         => isset( $result['removed'] ) ? count( $result['removed'] ) : 0,
+            ),
+            admin_url( 'plugins.php' )
+        );
+        wp_safe_redirect( $redirect );
+        exit;
+    }
+}
+add_action( 'admin_post_sc_rl_ai_repair_duplicates', 'sc_rl_ai_handle_duplicate_activation_repair' );
+
+if ( ! function_exists( 'sc_rl_ai_render_duplicate_activation_notice' ) ) {
+    function sc_rl_ai_render_duplicate_activation_notice( $current_file = '' ) {
+        if ( ! is_admin() || ( ! current_user_can( 'activate_plugins' ) && ! current_user_can( 'manage_options' ) ) ) {
+            return;
+        }
+        $status = sc_rl_ai_duplicate_activation_status( $current_file ? $current_file : __FILE__ );
+        if ( ! empty( $status['ok'] ) ) {
+            return;
+        }
+        $repair_url = wp_nonce_url( admin_url( 'admin-post.php?action=sc_rl_ai_repair_duplicates' ), 'sc_rl_ai_repair_duplicates' );
+        echo '<div class="notice notice-warning"><p><strong>Sustainable Catalyst Research Librarian:</strong> Duplicate or stale active-plugin entries were detected. This can cause activation nags or missing REST routes.</p>';
+        echo '<p><a class="button button-primary" href="' . esc_url( $repair_url ) . '">Repair Research Librarian activation entries</a></p>';
+        if ( ! empty( $status['rows'] ) ) {
+            echo '<details><summary>Detected plugin paths</summary><ul>';
+            foreach ( $status['rows'] as $row ) {
+                $label = $row['path'] . ' — ' . ( $row['exists'] ? 'file exists' : 'missing/stale' ) . ( $row['version'] ? ' — v' . $row['version'] : '' );
+                echo '<li><code>' . esc_html( $label ) . '</code></li>';
+            }
+            echo '</ul></details>';
+        }
+        echo '</div>';
+    }
+}
+
 if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI', false ) ) {
     add_action( 'admin_notices', function() {
-        echo '<div class="notice notice-error"><p><strong>Sustainable Catalyst Research Librarian:</strong> Another copy of this plugin is already active. Deactivate the older versioned copy, then activate this update.</p></div>';
+        sc_rl_ai_render_duplicate_activation_notice( __FILE__ );
     } );
     return;
 }
@@ -30,7 +234,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
     const MAINTENANCE_OPTION = 'sc_rl_ai_maintenance_status';
     const MAINTENANCE_HOOK = 'sc_rl_ai_index_maintenance_event';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const VERSION        = '5.3.1';
+    const VERSION        = '5.3.2';
 
     private static $instance = null;
 
@@ -46,6 +250,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
         add_action( 'rest_api_init', array( $this, 'register_rest_routes' ) );
         add_action( 'admin_menu', array( $this, 'register_admin_page' ) );
         add_action( 'admin_init', array( $this, 'register_settings' ) );
+        add_action( 'admin_notices', array( $this, 'render_activation_repair_notice' ) );
         add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), array( $this, 'add_settings_link' ) );
         add_filter( 'cron_schedules', array( $this, 'register_cron_schedules' ) );
         add_action( self::MAINTENANCE_HOOK, array( $this, 'run_scheduled_index_maintenance' ) );
@@ -890,6 +1095,37 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'callback'            => array( $this, 'handle_health_request' ),
             'permission_callback' => '__return_true',
         ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/activation/status', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'handle_activation_status_request' ),
+            'permission_callback' => array( $this, 'can_manage_options' ),
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/activation/repair', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array( $this, 'handle_activation_repair_request' ),
+            'permission_callback' => array( $this, 'can_manage_options' ),
+        ) );
+    }
+
+    public function handle_activation_status_request() {
+        return new WP_REST_Response( array_merge( array( 'version' => self::VERSION ), sc_rl_ai_duplicate_activation_status( __FILE__ ) ), 200 );
+    }
+
+    public function handle_activation_repair_request() {
+        return new WP_REST_Response( array_merge( array( 'version' => self::VERSION ), sc_rl_ai_repair_duplicate_activation_entries( __FILE__ ) ), 200 );
+    }
+
+    public function render_activation_repair_notice() {
+        sc_rl_ai_render_duplicate_activation_notice( __FILE__ );
+        if ( ! is_admin() || ! isset( $_GET['sc_rl_ai_repair'] ) ) {
+            return;
+        }
+        if ( 'success' === sanitize_key( wp_unslash( $_GET['sc_rl_ai_repair'] ) ) ) {
+            $removed = isset( $_GET['removed'] ) ? absint( $_GET['removed'] ) : 0;
+            echo '<div class="notice notice-success is-dismissible"><p><strong>Sustainable Catalyst Research Librarian:</strong> activation entries repaired. Removed ' . esc_html( $removed ) . ' stale or duplicate entry/entries. Reload Plugins, then confirm the Research Librarian REST health endpoint.</p></div>';
+        }
     }
 
     public function handle_health_request() {

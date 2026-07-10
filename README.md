@@ -1,10 +1,10 @@
-# Sustainable Catalyst Research Librarian v5.3.1
+# Sustainable Catalyst Research Librarian v5.3.2
 
 **On-Page Research Path Embeds and Article Map Integration**
 
-Research Librarian v5.3.1 adds public-safe article path embeds and article map route cards so Sustainable Catalyst long-form pages can route readers into the right next workflow without requiring the full assistant interface on every page.
+Research Librarian v5.3.2 adds public-safe article path embeds and article map route cards so Sustainable Catalyst long-form pages can route readers into the right next workflow without requiring the full assistant interface on every page.
 
-## Main v5.3.1 shortcodes
+## Main v5.3.2 shortcodes
 
 ```text
 [sc_research_librarian mode="article-paths" title="Research Path"]
@@ -137,6 +137,23 @@ GET  /wp-json/sc-research-librarian-ai/v1/quality/export
 ```
 
 
-## v5.3.1 activation note
+## v5.3.2 activation note
 
-The v5.3.1 plugin zip uses the stable WordPress folder slug `sustainable-catalyst-research-librarian-ai`. If WordPress shows an activation fatal from a previous package, deactivate older versioned copies of the Research Librarian plugin first, then activate v5.3.1. The fatal is usually caused by two active copies declaring the same PHP class.
+The v5.3.2 plugin zip uses the stable WordPress folder slug `sustainable-catalyst-research-librarian-ai`. If WordPress shows an activation fatal from a previous package, deactivate older versioned copies of the Research Librarian plugin first, then activate v5.3.2. The fatal is usually caused by two active copies declaring the same PHP class.
+
+
+## v5.3.2 Activation Repair
+
+v5.3.2 adds a repair layer for stale or duplicate WordPress activation records. If WordPress shows a duplicate-copy notice after an older Research Librarian folder was deleted, use the repair button shown in the admin notice. The repair removes missing or duplicate Research Librarian entries from `active_plugins` while preserving the current stable plugin folder.
+
+Verification endpoint:
+
+```text
+/wp-json/sc-research-librarian-ai/v1/health
+```
+
+Admin-only diagnostics:
+
+```text
+/wp-json/sc-research-librarian-ai/v1/activation/status
+```
