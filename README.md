@@ -1,3 +1,22 @@
+# Sustainable Catalyst Research Librarian v5.3.2
+
+**On-Page Research Path Embeds and Article Map Integration**
+
+Research Librarian v5.3.2 adds public-safe article path embeds and article map route cards so Sustainable Catalyst long-form pages can route readers into the right next workflow without requiring the full assistant interface on every page.
+
+## Main v5.3.2 shortcodes
+
+```text
+[sc_research_librarian mode="article-paths" title="Research Path"]
+[sc_research_librarian_article_path_embed title="Research Path" context="calculus systems modeling" question="I need to graph and analyze this formula"]
+[sc_research_librarian_article_map_summary title="Research Librarian Article Map Integration"]
+[sc_research_librarian_article_route_cards title="Related Research Routes"]
+```
+
+## After activation
+
+Go to **Settings → Research Librarian Article Maps** and review the available path templates. Use the article path embed inside article maps, formula-heavy pages, and long research pages where a reader needs a next step into Workbench, Decision Studio, a module artifact, or the Knowledge Library.
+
 # Sustainable Catalyst Research Librarian v5.1.0
 
 **Live Public Experience QA, Prompt Library, and UX Calibration**
@@ -84,3 +103,57 @@ POST /wp-json/sc-research-librarian-ai/v1/documentation/reset
 ## v4.9.1 — Documentation Snapshot Visibility Fix
 
 This hotfix replaces the JavaScript-only documentation snapshot action with nonce-protected admin-post actions, adds visible success/reset notices, adds a generated documentation preview in the admin screen, and provides copy-ready Markdown plus a server-side JSON export.
+
+
+## v5.2.0 — Public Route Quality Tuning and Source Card Ranking
+
+This release adds a public route-quality layer for tuning the visitor-facing Research Librarian answer experience. It improves source-card ordering, prompt-to-route diagnostics, route repair suggestions, and calibration reporting.
+
+### Added
+
+- Route quality status endpoint
+- Source-card ranking endpoint
+- Admin route-quality calibration dashboard
+- Public route-quality summary shortcode
+- Public source-ranking summary shortcode
+- Dominant prompt signal detection
+- Broad-route demotion for specialized questions
+- Route repair suggestions for weak or mismatched answers
+
+### Shortcodes
+
+```text
+[sc_research_librarian_route_quality_summary title="Research Librarian Route Quality"]
+[sc_research_librarian_source_ranking_summary title="Research Librarian Source Card Ranking"]
+```
+
+### Endpoints
+
+```text
+GET  /wp-json/sc-research-librarian-ai/v1/quality/status
+POST /wp-json/sc-research-librarian-ai/v1/quality/rank
+POST /wp-json/sc-research-librarian-ai/v1/quality/run-calibration
+GET  /wp-json/sc-research-librarian-ai/v1/quality/export
+```
+
+
+## v5.3.2 activation note
+
+The v5.3.2 plugin zip uses the stable WordPress folder slug `sustainable-catalyst-research-librarian-ai`. If WordPress shows an activation fatal from a previous package, deactivate older versioned copies of the Research Librarian plugin first, then activate v5.3.2. The fatal is usually caused by two active copies declaring the same PHP class.
+
+
+## v5.3.2 Activation Repair
+
+v5.3.2 adds a repair layer for stale or duplicate WordPress activation records. If WordPress shows a duplicate-copy notice after an older Research Librarian folder was deleted, use the repair button shown in the admin notice. The repair removes missing or duplicate Research Librarian entries from `active_plugins` while preserving the current stable plugin folder.
+
+Verification endpoint:
+
+```text
+/wp-json/sc-research-librarian-ai/v1/health
+```
+
+Admin-only diagnostics:
+
+```text
+/wp-json/sc-research-librarian-ai/v1/activation/status
+```

@@ -637,3 +637,58 @@
 .sc-rl-prompt-library .sc-rl-product__grid article p {
   font-style: italic;
 }
+
+
+/* v5.2.0 Route Quality and Source Ranking */
+.sc-rl-route-quality-summary .sc-rl-product__grid article,
+.sc-rl-source-ranking-summary .sc-rl-product__grid article {
+  border-left: 4px solid #b00000;
+}
+.sc-rl-route-quality-summary .sc-rl-boundary-note {
+  font-size: 0.92rem;
+  opacity: 0.85;
+}
+
+
+/* v5.3.0 — Article map integration and on-page research path embeds */
+.sc-rl-article-map-summary .sc-rl-product__grid article,
+.sc-rl-article-route-cards .sc-rl-product__grid article,
+.sc-rl-article-path-embed {
+  border-left: 4px solid #111111;
+}
+.sc-rl-path-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1rem;
+  align-items: start;
+  border: 1px solid rgba(0,0,0,.12);
+  border-radius: 18px;
+  padding: 1rem;
+  background: #fffdf9;
+  margin: 1rem 0;
+}
+.sc-rl-path-card h3 { margin: .2rem 0 .4rem; }
+.sc-rl-path-card__route {
+  display: inline-flex;
+  font-size: .76rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-weight: 800;
+  color: #b00000;
+}
+.sc-rl-confidence-badge {
+  border: 1px solid #111;
+  border-radius: 999px;
+  padding: .35rem .65rem;
+  font-size: .78rem;
+  white-space: nowrap;
+  background: #fff;
+}
+.sc-rl-article-route-cards a,
+.sc-rl-article-path-embed a {
+  color: #b00000;
+  font-weight: 800;
+}
+@media (max-width: 800px) {
+  .sc-rl-path-card { grid-template-columns: 1fr; }
+}

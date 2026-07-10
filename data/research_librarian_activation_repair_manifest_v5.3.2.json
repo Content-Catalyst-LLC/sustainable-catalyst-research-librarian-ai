@@ -1,0 +1,25 @@
+{
+  "version": "5.3.2",
+  "label": "Duplicate Activation Notice Cleanup and Stale Active Plugin Repair",
+  "purpose": "Repair stale active_plugins records, clean duplicate Research Librarian activation paths, preserve the stable plugin folder, and restore REST route registration after duplicate-copy conflicts.",
+  "features": [
+    "Duplicate active plugin path detection",
+    "Stale missing plugin file detection",
+    "One-click admin-post repair action",
+    "Admin activation status REST endpoint",
+    "Admin activation repair REST endpoint",
+    "Exact detected plugin path display",
+    "Less aggressive duplicate notice",
+    "Preserves the current stable plugin folder path"
+  ],
+  "new_endpoints": [
+    "/wp-json/sc-research-librarian-ai/v1/activation/status",
+    "/wp-json/sc-research-librarian-ai/v1/activation/repair"
+  ],
+  "recommended_sequence": [
+    "Upload and activate v5.3.2",
+    "Click the repair button if a duplicate/stale activation notice appears",
+    "Reload Plugins",
+    "Confirm /wp-json/sc-research-librarian-ai/v1/health returns version 5.3.2"
+  ]
+}

@@ -1,5 +1,57 @@
 # Changelog
 
+## v5.3.2 — Duplicate Activation Notice Cleanup and Stale Active Plugin Repair
+
+- Added duplicate active-plugin path detection.
+- Added stale missing plugin record detection.
+- Added nonce-protected one-click repair action from the admin notice.
+- Added exact plugin path display inside the duplicate/stale activation notice.
+- Added admin-only activation status and repair REST endpoints.
+- Reduced the activation guard from a hard error-style nag to an actionable repair notice.
+- Preserved the v5.3.1 article-map features and stable plugin folder packaging.
+
+## v5.3.1 — Activation Fatal Guard and Stable Plugin Folder Fix
+
+- Repackages the WordPress plugin zip with the stable plugin folder slug `sustainable-catalyst-research-librarian-ai` instead of a versioned directory.
+- Adds a duplicate-active-copy guard to avoid a PHP fatal if an older versioned copy is still active.
+- Preserves all v5.3.0 article map integration features.
+- Recommended install path: deactivate older versioned plugin copies, delete them after confirming v5.3.1 is active, then upload v5.3.1.
+
+## v5.3.0 — On-Page Research Path Embeds and Article Map Integration
+
+- Added public-safe article path embeds.
+- Added article map integration summary shortcode.
+- Added related article route cards shortcode.
+- Added contextual article-to-route path builder.
+- Added Workbench, Decision Studio, module artifact, and Knowledge Library path templates.
+- Added Article Maps admin dashboard.
+- Added article-map status, catalog, build, and export REST endpoints.
+
+
+
+## 5.2.0 — Public Route Quality Tuning and Source Card Ranking
+
+### Added
+
+- Public route-quality tuning layer.
+- Source-card ranking rules for Workbench, Decision Studio, module, impact, data, finance, narrative risk, and platform queries.
+- Dominant prompt signal detection.
+- Route quality diagnostics inside grounded route notes.
+- Admin route-quality calibration dashboard.
+- Admin-only quality export endpoint.
+- Public-safe route-quality and source-ranking shortcodes.
+
+### Changed
+
+- Matched source cards are now re-ranked after keyword/semantic retrieval using route fit, prompt intent, source type, title/summary terms, and route specificity.
+- Health output now includes a public-safe route-quality status object.
+
+### Fixed
+
+- Specialized questions are less likely to show broad platform cards above Workbench, Decision Studio, or module-specific sources.
+
+# Changelog
+
 ## v5.1.0 — Live Public Experience QA, Prompt Library, and UX Calibration
 
 - Added live public experience QA status.
