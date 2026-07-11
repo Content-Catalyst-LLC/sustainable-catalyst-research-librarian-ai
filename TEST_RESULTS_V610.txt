@@ -1,0 +1,23 @@
+RESEARCH LIBRARIAN AI v6.1.0 TEST RESULTS
+
+PHP syntax: passed (11 PHP files)
+JavaScript syntax: passed
+JSON validation: passed (42 JSON files)
+Secret scan: passed
+Backup-artifact scan: passed
+Collision-safe bootstrap: passed
+Public shortcodes: passed
+AI REST routes: passed
+Top-level admin menu: passed
+WordPress Settings cleanup: passed
+Provider submenu: passed
+Pakistan route: country-intelligence
+Pakistan ISO alpha-3: PAK
+Pakistan URL: /platform/site-intelligence/country-intelligence/?country=PAK
+Climate dashboard route: site-intelligence
+Provider/static contract: 20 passed, 0 failed
+Country registry: 249 records
+Archive integrity: passed during release packaging
+
+LIVE PROVIDER TEST
+No user API key was included in the build environment. Complete the final live test in WordPress at Research Librarian AI > AI Provider > Test AI Connection.

@@ -4,7 +4,7 @@
  */
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
-final class SC_RL_V540_Deep_Links {
+final class SC_RL6_V540_Deep_Links {
     const VERSION = '5.4.0';
     const REST_NAMESPACE = 'sc-research-librarian/v1';
     const EVENT_SCHEMA = 'sc-platform-event/1.0';

@@ -4,7 +4,7 @@
  */
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
-final class SC_RL_V550_Stable_Operations {
+final class SC_RL6_V550_Stable_Operations {
     const VERSION = '5.5.0';
     const REST_NAMESPACE = 'sc-research-librarian/v1';
     const OPTION_KEY = 'sc_rl_v550_operations';
@@ -123,11 +123,11 @@ final class SC_RL_V550_Stable_Operations {
         $checks[] = self::check( 'database_ready', 'WordPress database connection', ! empty( $wpdb->dbh ), 'Database connection is available.' );
         $upload = wp_upload_dir();
         $checks[] = self::check( 'uploads_writable', 'Writable uploads directory', empty( $upload['error'] ) && wp_is_writable( $upload['basedir'] ), empty( $upload['error'] ) ? 'Uploads directory is writable.' : (string) $upload['error'] );
-        $duplicate = function_exists( 'sc_rl_ai_duplicate_activation_status' ) ? sc_rl_ai_duplicate_activation_status( dirname( __DIR__ ) . '/sustainable-catalyst-research-librarian-ai.php' ) : array( 'ok' => true );
+        $duplicate = function_exists( 'sc_rl6_duplicate_activation_status' ) ? sc_rl6_duplicate_activation_status( dirname( __DIR__ ) . '/sustainable-catalyst-research-librarian-ai.php' ) : array( 'ok' => true );
         $checks[] = self::check( 'single_active_copy', 'Single active Research Librarian copy', ! empty( $duplicate['ok'] ), ! empty( $duplicate['ok'] ) ? 'No duplicate active-plugin entries detected.' : 'Duplicate or stale active-plugin entries require repair.' );
         $checks[] = self::check( 'daily_operations_check', 'Scheduled operations check', (bool) wp_next_scheduled( self::CHECK_HOOK ), wp_next_scheduled( self::CHECK_HOOK ) ? 'Daily operations check is scheduled.' : 'Daily operations check is not scheduled.' );
 
-        $maintenance_hook = defined( 'Sustainable_Catalyst_Research_Librarian_AI::MAINTENANCE_HOOK' ) ? constant( 'Sustainable_Catalyst_Research_Librarian_AI::MAINTENANCE_HOOK' ) : 'sc_rl_ai_index_maintenance';
+        $maintenance_hook = defined( 'SC_RL6_Core::MAINTENANCE_HOOK' ) ? constant( 'SC_RL6_Core::MAINTENANCE_HOOK' ) : 'sc_rl_ai_index_maintenance';
         $checks[] = self::check( 'maintenance_schedule', 'Index maintenance schedule reviewed', (bool) wp_next_scheduled( $maintenance_hook ), wp_next_scheduled( $maintenance_hook ) ? 'Index maintenance is scheduled.' : 'Index maintenance is not scheduled; enable it after confirming production settings.', 'recommended' );
 
         $caps = apply_filters( 'sc_rl_integration_capabilities', array() );

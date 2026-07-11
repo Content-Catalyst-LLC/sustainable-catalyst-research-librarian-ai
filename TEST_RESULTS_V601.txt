@@ -1,0 +1,21 @@
+{
+    "v6_core_loaded": true,
+    "legacy_class_detected": true,
+    "missing_shortcodes": [],
+    "settings_filter_registered": true,
+    "settings_page_registered": true,
+    "settings_option_registered": true,
+    "settings_link_rendered": true,
+    "admin_menu_registered": true,
+    "admin_init_registered": true,
+    "rest_registered": true
+}
+No syntax errors detected in /mnt/data/rl_v601_repo/sustainable-catalyst-research-librarian-ai/includes/class-sc-rl-v540-deep-links.php
+No syntax errors detected in /mnt/data/rl_v601_repo/sustainable-catalyst-research-librarian-ai/includes/class-sc-rl-v550-stable-operations.php
+No syntax errors detected in /mnt/data/rl_v601_repo/sustainable-catalyst-research-librarian-ai/includes/class-sc-rl-v560-feature-suggestions-bridge.php
+No syntax errors detected in /mnt/data/rl_v601_repo/sustainable-catalyst-research-librarian-ai/includes/class-sc-rl-v570-research-demand-intelligence.php
+No syntax errors detected in /mnt/data/rl_v601_repo/sustainable-catalyst-research-librarian-ai/includes/class-sc-rl-v580-adaptive-prompt-surveys.php
+No syntax errors detected in /mnt/data/rl_v601_repo/sustainable-catalyst-research-librarian-ai/includes/class-sc-rl-v590-closed-loop-route-improvement.php
+No syntax errors detected in /mnt/data/rl_v601_repo/sustainable-catalyst-research-librarian-ai/includes/class-sc-rl-v600-integrated-research-guidance-platform.php
+No syntax errors detected in /mnt/data/rl_v601_repo/sustainable-catalyst-research-librarian-ai/sustainable-catalyst-research-librarian-ai.php
+No syntax errors detected in /mnt/data/rl_v601_repo/sustainable-catalyst-research-librarian-ai/tests/bootstrap-registration-test.php

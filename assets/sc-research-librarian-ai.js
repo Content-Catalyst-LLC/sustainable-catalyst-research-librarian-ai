@@ -241,6 +241,7 @@
 
   function init(root) {
     var endpoint = root.getAttribute('data-endpoint');
+    var aiStatusEndpoint = root.getAttribute('data-ai-status-endpoint');
     var routesEndpoint = root.getAttribute('data-routes-endpoint');
     var sessionEndpoint = root.getAttribute('data-session-endpoint');
     var feedbackEndpoint = root.getAttribute('data-feedback-endpoint');
@@ -258,6 +259,9 @@
     var feedbackIssue = root.querySelector('[data-sc-rl-feedback-issue]');
     var answer = root.querySelector('[data-sc-rl-answer]');
     var status = root.querySelector('[data-sc-rl-status]');
+    var health = root.querySelector('[data-sc-rl-ai-health]');
+    var healthLabel = root.querySelector('[data-sc-rl-ai-health-label]');
+    var healthDetail = root.querySelector('[data-sc-rl-ai-health-detail]');
     var honeypot = root.querySelector('.sc-rl-ai__hp');
     var examples = root.querySelectorAll('[data-sc-rl-example]');
     var routeSummary = root.querySelector('[data-sc-rl-route-summary]');
@@ -266,8 +270,52 @@
     var latest = null;
 
     function setStatus(text, state) {
-      status.textContent = text;
+      if (status) status.textContent = text;
       root.setAttribute('data-state', state || 'ready');
+    }
+
+    function formatHealthTime(value) {
+      if (!value) return '';
+      var parsed = new Date(value);
+      return isNaN(parsed.getTime()) ? String(value) : parsed.toLocaleString();
+    }
+
+    function renderHealth(payload) {
+      if (!health || !healthLabel || !healthDetail || !payload) return;
+      var state = String(payload.state || 'not-tested');
+      var provider = String(payload.provider || 'disabled');
+      var model = String(payload.model || '');
+      var detail = '';
+      root.setAttribute('data-ai-health', state);
+      health.setAttribute('data-ai-health-state', state);
+      healthLabel.textContent = payload.label || 'AI status unavailable';
+      if (state === 'online') {
+        detail = (provider !== 'disabled' ? provider.charAt(0).toUpperCase() + provider.slice(1) : 'AI') + (model ? ' · ' + model : '');
+        if (payload.semantic_retrieval) detail += ' · ' + payload.semantic_retrieval;
+        if (payload.indexed_records !== undefined) detail += ' · ' + payload.indexed_records + ' indexed records';
+        if (payload.last_success_utc) detail += ' · last success ' + formatHealthTime(payload.last_success_utc);
+      } else if (state === 'offline') {
+        detail = 'Provider request failed · verified fallback routing active';
+        if (payload.last_failure_utc) detail += ' · checked ' + formatHealthTime(payload.last_failure_utc);
+      } else if (state === 'not-configured') {
+        detail = 'No live provider is configured · country-aware deterministic routing remains active';
+      } else if (state === 'hidden') {
+        detail = 'Verified fallback routing remains available.';
+      } else {
+        detail = (provider !== 'disabled' ? provider.charAt(0).toUpperCase() + provider.slice(1) : 'AI') + (model ? ' · ' + model : '') + ' · run an administrator connection test';
+      }
+      healthDetail.textContent = detail;
+    }
+
+    function loadHealth() {
+      if (!aiStatusEndpoint) return;
+      fetch(aiStatusEndpoint, { credentials: 'same-origin' })
+        .then(function (response) { return response.json().then(function (data) { if (!response.ok) throw new Error('AI status unavailable'); return data; }); })
+        .then(renderHealth)
+        .catch(function () {
+          renderHealth({ state: 'offline', label: 'AI Status Unavailable', provider: 'disabled', fallback_active: true });
+          if (healthDetail) healthDetail.textContent = 'The status endpoint could not be reached · verified fallback routing may still be available.';
+        });
     }
 
     function ask(question) {
@@ -298,7 +346,14 @@
         })
         .then(function (data) {
           latest = data;
-          setStatus(data.source || 'Ready', 'ready');
+          if (data.ai_status) renderHealth(data.ai_status);
+          if (data.ai_used) {
+            setStatus('AI answer', 'ready');
+          } else if (data.source === 'boundary') {
+            setStatus('Boundary guidance', 'ready');
+          } else {
+            setStatus('Verified fallback', data.ai_status && data.ai_status.state === 'offline' ? 'error' : 'ready');
+          }
           var renderedAnswer = renderMarkdownLite(data.answer || 'No answer was returned. Try the Platform or Feature Suggestions route.');
           answer.innerHTML = renderedAnswer;
           renderAnswerUx(answerUx, data, renderedAnswer);
@@ -306,8 +361,8 @@
         })
         .catch(function (error) {
           latest = null;
-          setStatus('Fallback', 'error');
-          answer.innerHTML = renderMarkdownLite('The Research Librarian endpoint could not be reached.\n\n**Best starting points**\n- [Platform](/platform/)\n- [Platform Demos](/platform/demos/)\n- [Workbench](https://sustainablecatalyst.com/modeling-analytics/workbench/)\n- [Decision Studio](/platform/#decision-studio)\n- [Feature Suggestions](/platform/feature-suggestions/)\n\n' + error.message);
+          setStatus('Endpoint unavailable', 'error');
+          answer.innerHTML = renderMarkdownLite('The Research Librarian WordPress endpoint could not be reached. This is separate from the AI provider status.\n\n**Best starting points**\n- [Site Intelligence](/platform/site-intelligence/)\n- [Platform](/platform/)\n- [Platform Demos](/platform/demos/)\n- [Workbench](https://sustainablecatalyst.com/modeling-analytics/workbench/)\n- [Decision Studio](/platform/decision-studio/)\n- [Feature Suggestions](/platform/feature-suggestions/)\n\n' + error.message);
         })
         .finally(function () { submit.disabled = false; });
     }
@@ -319,7 +374,7 @@
     clear.addEventListener('click', function () {
       textarea.value = '';
       latest = null;
-      setStatus('Ready', 'ready');
+      setStatus('Ready for a question', 'ready');
       answer.innerHTML = '<p>Ask a question or choose an example. The librarian will recommend a route, explain why it fits, show related links, and produce an exportable route note and structured handoff payload.</p>';
       if (routeSummary) { routeSummary.hidden = true; routeSummary.innerHTML = ''; }
       if (answerUx) { answerUx.hidden = true; answerUx.innerHTML = ''; }
@@ -554,6 +609,8 @@
         ask(textarea.value);
       });
     });
+
+    loadHealth();
 
     if (routeStrip && routesEndpoint) {
       fetch(routesEndpoint, { credentials: 'same-origin' })

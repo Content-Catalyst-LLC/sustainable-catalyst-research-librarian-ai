@@ -3,14 +3,14 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 6.0.0
+Stable tag: 6.1.0
 License: MIT
 
-A site-scoped Research Librarian for Sustainable Catalyst with source-aware routing, Gemini retrieval, article-map embeds, Workbench and Decision Studio deep links, release-readiness diagnostics, recovery validation, and public release notes.
+An AI-powered, site-scoped Research Librarian for Sustainable Catalyst with live provider status, country-aware Site Intelligence routing, source-aware retrieval, verified fallback routing, and a consolidated WordPress administration center.
 
 == Description ==
 
-The Research Librarian helps visitors choose the right Sustainable Catalyst route: Knowledge Library, Platform, Demos, Decision Studio, Workbench, Catalyst modules, Methodology, Feature Suggestions, or GitHub repositories.
+Research Librarian AI interprets visitor questions, identifies countries and workflow intent, retrieves Sustainable Catalyst context, and recommends the strongest route across the Knowledge Library, Site Intelligence, Workbench, Decision Studio, modules, methodology, Feature Suggestions, and repositories.
 
 v5.9.0 adds adaptive, consent-aware prompts and contextual survey experiences with rule-based targeting, frequency caps, Feature Suggestions handoffs, and aggregate analytics.
 
@@ -37,6 +37,26 @@ v5.9.0 adds adaptive, consent-aware prompts and contextual survey experiences wi
 [sc_research_librarian_article_route_cards]
 
 == Changelog ==
+
+= 6.1.0 =
+* Restored the live AI provider as the primary public experience with visible operational status.
+* Added administrator provider tests, exact error diagnostics, latency and success/failure history, and Gemini model discovery.
+* Added country recognition and first-class Site Intelligence routing, including Pakistan to PAK Country Intelligence.
+* Replaced first-match fallback routing with weighted route selection.
+* Added Site Intelligence, Country Intelligence, Cross-Domain Comparison, Dashboard Studio, Sources and Methodology, and Public Observatories source records.
+* Added a dedicated top-level Research Librarian AI menu and removed the module list from WordPress Settings.
+* Added public AI status and administrator AI test/model REST endpoints.
+* Updated Gemini authentication, system instructions, model normalization, timeout handling, and structured provider errors.
+
+
+= 6.0.1 =
+* Removed the self-detecting class guard that prevented v6.0.0 from bootstrapping.
+* Added a collision-safe v6 bootstrap with unique internal class and helper names.
+* Restored Settings links, admin pages, and shortcodes when a legacy Research Librarian class is loaded first.
+* Added a visible legacy-class source notice with reflected file and version information.
+* Raised core shortcode, REST, settings, and admin registration priority so v6 remains authoritative.
+* Tightened duplicate-plugin detection so the diagnostics plugin is not misclassified as a Research Librarian copy.
+
 
 = 6.0.0 =
 * Added the Integrated Research Guidance Platform command center.

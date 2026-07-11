@@ -1,4 +1,25 @@
-# Sustainable Catalyst Research Librarian v5.9.0
+# Sustainable Catalyst Research Librarian AI v6.1.0
+
+
+## v6.1.0 — Live AI Restoration and Admin Consolidation
+
+Version 6.1.0 restores the live AI provider as the primary public experience, adds public-safe operational status and administrator diagnostics, recognizes countries such as Pakistan, routes geographic evidence questions into Site Intelligence, and consolidates Research Librarian administration under its own top-level WordPress menu.
+
+### Highlights
+
+- Visible AI Online, Offline, Not Configured, and Not Yet Tested states
+- Exact administrator provider errors, HTTP status, transport status, latency, and last-success records
+- Gemini model discovery and one-click connection testing
+- Country recognition using a 249-record ISO registry
+- Pakistan → Country Intelligence → `PAK` routing
+- Site Intelligence, Dashboard Studio, Cross-Domain Comparison, Sources and Methodology, and Public Observatories as first-class routes
+- Weighted deterministic routing instead of first-match keyword selection
+- Dedicated Research Librarian AI admin folder with consolidated subpages
+- Public AI status, admin AI test, and admin model-list REST endpoints
+- Gemini header authentication, system instructions, model normalization, and configurable timeout
+- Regression tests for bootstrap, shortcodes, REST routes, menu consolidation, Pakistan routing, and climate-dashboard routing
+
+See `docs/V610_LIVE_AI_RESTORATION_ADMIN_CONSOLIDATION.md`.
 
 
 Research Librarian v5.6.0 adds the full Feature Suggestions Feedback Bridge. Contextual route ratings, wrong-route reports, source-card issues, grounding concerns, missing topics, and missing-tool requests are retained in the Librarian queue, normalized for Feature Suggestions v3, published as privacy-minimized Site Intelligence events, protected against duplicate submissions, and assigned receipt-based status records.
@@ -22,7 +43,7 @@ Research Librarian v5.5.0 completes the public 5.x roadmap with release-readines
 
 ## v5.5.0 operations
 
-- Open **Settings → Research Librarian Operations**.
+- Open **Research Librarian AI → Operations**.
 - Run the readiness checks and review required versus recommended findings.
 - Validate migrations after upgrading.
 - Confirm recovery assets, index maintenance, and destination availability.
@@ -60,7 +81,7 @@ GET /wp-json/sc-research-librarian/v1/operations/release-notes
 
 ## After activation
 
-Go to **Settings → Research Librarian Article Maps** and review the available path templates. Use the article path embed inside article maps, formula-heavy pages, and long research pages where a reader needs a next step into Workbench, Decision Studio, a module artifact, or the Knowledge Library.
+Go to **Research Librarian AI → Advanced → Article Map Embeds** and review the available path templates. Use the article path embed inside article maps, formula-heavy pages, and long research pages where a reader needs a next step into Workbench, Decision Studio, a module artifact, or the Knowledge Library.
 
 # Sustainable Catalyst Research Librarian v5.1.0
 
@@ -86,7 +107,7 @@ Research Librarian v5.1.0 is a post-stable-release refinement build. It keeps th
 
 ## After activation
 
-Go to **Settings → Research Librarian Live UX** and click **Run Live UX QA**. Then test the public prompt library against the live page.
+Go to **Research Librarian AI → Advanced → Live Public Experience QA** and click **Run Live UX QA**. Then test the public prompt library against the live page.
 
 # Sustainable Catalyst Research Librarian v5.0.0
 
@@ -241,6 +262,10 @@ Public shortcode: `[sc_research_demand_summary]` (disabled by default).
 ## Closed-loop route improvement
 
 v5.9.0 converts reviewed feedback into versioned route-change proposals with deterministic before/after tests, regression gates, human approval, provenance, audit history, and rollback snapshots. Approved changes are applied through the existing editorial curation registry.
+
+## v6.0.1 — WordPress Bootstrap Registration Repair
+
+Version 6.0.1 fixes the silent bootstrap failure that allowed WordPress to display the plugin as active while preventing Settings pages, shortcodes, REST routes, and module initializers from registering. The repair removes the self-detecting class guard, uses collision-safe v6 internal names, preserves backward compatibility, and includes a standalone regression test.
 
 ## v6.0.0 — Integrated Research Guidance Platform
 

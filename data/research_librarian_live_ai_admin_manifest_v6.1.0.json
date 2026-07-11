@@ -1,0 +1,98 @@
+{
+  "schema": "sc-research-librarian-live-ai-admin/1.0",
+  "version": "6.1.0",
+  "release": "Live AI Restoration and Admin Consolidation",
+  "public_experience": {
+    "identity": "Research Librarian AI",
+    "status_states": [
+      "online",
+      "offline",
+      "not-configured",
+      "not-tested",
+      "hidden"
+    ],
+    "fallback_is_explicit": true,
+    "provider_errors_public_safe": true
+  },
+  "rest_endpoints": [
+    {
+      "method": "GET",
+      "path": "/wp-json/sc-research-librarian-ai/v1/ai/status",
+      "access": "public-safe"
+    },
+    {
+      "method": "POST",
+      "path": "/wp-json/sc-research-librarian-ai/v1/ai/test",
+      "access": "administrator"
+    },
+    {
+      "method": "GET",
+      "path": "/wp-json/sc-research-librarian-ai/v1/ai/models",
+      "access": "administrator"
+    }
+  ],
+  "admin_menu": {
+    "top_level": "Research Librarian AI",
+    "items": [
+      "Dashboard",
+      "AI Provider",
+      "Index & Settings",
+      "Routes & Sources",
+      "Guided Paths",
+      "Feedback & Learning",
+      "Operations",
+      "Advanced"
+    ],
+    "removes_research_librarian_items_from_general_settings": true
+  },
+  "routing": {
+    "country_registry": "research_librarian_countries_v6.1.0.json",
+    "country_count": 249,
+    "country_detection_precedes_keyword_routing": true,
+    "fallback_strategy": "weighted-specificity",
+    "site_intelligence_routes": [
+      "site-intelligence",
+      "country-intelligence",
+      "cross-domain-comparison",
+      "dashboard-studio",
+      "site-intelligence-methodology",
+      "public-observatories"
+    ],
+    "acceptance_examples": [
+      {
+        "query": "What Sustainable Catalyst resources should I use to research climate and infrastructure in Pakistan?",
+        "route_id": "country-intelligence",
+        "country_alpha3": "PAK"
+      },
+      {
+        "query": "Show me a climate dashboard with public indicators and Earth observation data.",
+        "route_id": "site-intelligence"
+      }
+    ]
+  },
+  "provider_operations": {
+    "providers": [
+      "gemini",
+      "openai",
+      "disabled"
+    ],
+    "connection_test": true,
+    "last_success": true,
+    "last_failure": true,
+    "latency_ms": true,
+    "http_status": true,
+    "transport_error": true,
+    "gemini_model_discovery": true,
+    "configurable_timeout_seconds": {
+      "minimum": 10,
+      "maximum": 60
+    }
+  },
+  "governance": {
+    "keys_server_side": true,
+    "exact_errors_admin_only": true,
+    "ai_advisory": true,
+    "fallback_does_not_claim_to_be_ai": true,
+    "human_review_preserved": true
+  }
+}

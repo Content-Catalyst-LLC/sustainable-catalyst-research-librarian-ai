@@ -1,5 +1,32 @@
 # Changelog
 
+## 6.1.0 — Live AI Restoration and Admin Consolidation
+
+- Restored live Gemini/OpenAI generation as the clearly identified primary assistant path.
+- Added public-safe AI provider status and administrator-only connection diagnostics.
+- Added last-success, last-failure, latency, HTTP-status, and transport-error records.
+- Added administrator Gemini generate-content model discovery.
+- Added ISO country recognition with country-aware Site Intelligence routes.
+- Added Pakistan-to-PAK Country Intelligence regression coverage.
+- Added Site Intelligence source records and Dashboard Studio, Workbench, and Decision Studio handoffs.
+- Replaced first-match keyword fallback with weighted route scoring.
+- Added the dedicated Research Librarian AI WordPress menu and consolidated specialized tools under Advanced.
+- Removed Research Librarian module links from the general WordPress Settings menu.
+- Updated Gemini requests to use server-side header authentication, system instructions, normalized model names, and configurable timeouts.
+- Added `/ai/status`, `/ai/test`, and `/ai/models` REST endpoints.
+- Preserved collision-safe v6.0.1 bootstrap behavior, governed learning, retrieval, paths, handoffs, feedback, and operational capabilities.
+
+## 6.0.1 — WordPress Bootstrap Registration Repair
+
+- Removed a self-detecting class guard that caused v6.0.0 to return before bootstrap on every request.
+- Replaced collision-prone internal PHP class names with v6-specific names.
+- Replaced collision-prone bootstrap helper function names with v6-specific names.
+- Preserved the historic main class name through a compatibility alias only when it is unclaimed.
+- Ensured settings, shortcodes, REST routes, and admin pages register even when a legacy class loads first.
+- Added an administrator notice that identifies the legacy class file and version.
+- Prevented the read-only diagnostics plugin from being classified as a duplicate Research Librarian installation.
+- Raised the main v6 registration priority to make the current plugin authoritative.
+
 ## 5.9.0 — Closed-Loop Route Improvement
 
 - Added versioned feedback-to-route improvement proposals.

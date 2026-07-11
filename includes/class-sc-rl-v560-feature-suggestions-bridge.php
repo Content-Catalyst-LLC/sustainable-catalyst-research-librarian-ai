@@ -4,7 +4,7 @@
  */
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
-final class SC_RL_V560_Feature_Suggestions_Bridge {
+final class SC_RL6_V560_Feature_Suggestions_Bridge {
     const VERSION = '5.6.0';
     const REST_NAMESPACE = 'sc-research-librarian/v1';
     const EVENT_SCHEMA = 'sc-platform-event/1.0';

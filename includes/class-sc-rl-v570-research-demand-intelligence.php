@@ -4,7 +4,7 @@
  */
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
-final class SC_RL_V570_Research_Demand_Intelligence {
+final class SC_RL6_V570_Research_Demand_Intelligence {
     const VERSION = '5.7.0';
     const REST_NAMESPACE = 'sc-research-librarian/v1';
     const EVENT_SCHEMA = 'sc-platform-event/1.0';

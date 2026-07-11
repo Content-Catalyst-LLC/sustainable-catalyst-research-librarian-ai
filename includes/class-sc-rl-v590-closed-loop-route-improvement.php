@@ -4,7 +4,7 @@
  */
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
-final class SC_RL_V590_Closed_Loop_Route_Improvement {
+final class SC_RL6_V590_Closed_Loop_Route_Improvement {
     const VERSION = '5.9.0';
     const REST_NAMESPACE = 'sc-research-librarian/v1';
     const PROPOSAL_SCHEMA = 'sc-route-improvement-proposal/1.0';
@@ -90,11 +90,11 @@ final class SC_RL_V590_Closed_Loop_Route_Improvement {
     }
 
     private static function route_for_prompt( $prompt, $rules = null ) {
-        if ( ! class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V440_Curation' ) ) { return ''; }
-        $current = get_option( Sustainable_Catalyst_Research_Librarian_AI_V440_Curation::OPTION, array() );
-        if ( is_array( $rules ) ) { update_option( Sustainable_Catalyst_Research_Librarian_AI_V440_Curation::OPTION, $rules, false ); }
-        $route = Sustainable_Catalyst_Research_Librarian_AI_V440_Curation::match_override( strtolower( (string) $prompt ), self::route_catalog() );
-        if ( is_array( $rules ) ) { update_option( Sustainable_Catalyst_Research_Librarian_AI_V440_Curation::OPTION, $current, false ); }
+        if ( ! class_exists( 'SC_RL6_V440_Curation' ) ) { return ''; }
+        $current = get_option( SC_RL6_V440_Curation::OPTION, array() );
+        if ( is_array( $rules ) ) { update_option( SC_RL6_V440_Curation::OPTION, $rules, false ); }
+        $route = SC_RL6_V440_Curation::match_override( strtolower( (string) $prompt ), self::route_catalog() );
+        if ( is_array( $rules ) ) { update_option( SC_RL6_V440_Curation::OPTION, $current, false ); }
         return is_array( $route ) ? sanitize_key( $route['id'] ?? '' ) : '';
     }
 
@@ -130,7 +130,7 @@ final class SC_RL_V590_Closed_Loop_Route_Improvement {
     }
 
     private static function evaluate( $proposal ) {
-        $current_rules = Sustainable_Catalyst_Research_Librarian_AI_V440_Curation::rules();
+        $current_rules = SC_RL6_V440_Curation::rules();
         $candidate_rules = $current_rules;
         $candidate_rules['route_overrides'][] = self::proposed_rule( $proposal );
         $tests = is_array( $proposal['tests'] ?? null ) ? $proposal['tests'] : array();
@@ -243,10 +243,10 @@ final class SC_RL_V590_Closed_Loop_Route_Improvement {
                     if ( empty( $evaluation['eligible'] ) ) {
                         $notice = 'Approval blocked because regression tests did not meet the required pass rate.';
                     } else {
-                        $rules = Sustainable_Catalyst_Research_Librarian_AI_V440_Curation::rules();
+                        $rules = SC_RL6_V440_Curation::rules();
                         $snapshot = self::save_snapshot( $id, $rules );
                         $rules['route_overrides'][] = self::proposed_rule( $proposal );
-                        Sustainable_Catalyst_Research_Librarian_AI_V440_Curation::save_rules( $rules );
+                        SC_RL6_V440_Curation::save_rules( $rules );
                         $proposal['evaluation'] = $evaluation; $proposal['status'] = 'applied'; $proposal['snapshot_id'] = $snapshot;
                         $proposal['approved_at_utc'] = gmdate( 'c' ); $proposal['approved_by'] = get_current_user_id(); $proposal['updated_at_utc'] = gmdate( 'c' );
                         $rows[$index] = $proposal; self::save_rows( self::PROPOSALS_OPTION, $rows );
@@ -260,7 +260,7 @@ final class SC_RL_V590_Closed_Loop_Route_Improvement {
                 } elseif ( 'rollback' === $action && ! empty( $proposal['snapshot_id'] ) ) {
                     foreach ( self::rows( self::SNAPSHOTS_OPTION ) as $snapshot ) {
                         if ( ( $snapshot['snapshot_id'] ?? '' ) === $proposal['snapshot_id'] ) {
-                            Sustainable_Catalyst_Research_Librarian_AI_V440_Curation::save_rules( $snapshot['rules'] );
+                            SC_RL6_V440_Curation::save_rules( $snapshot['rules'] );
                             $proposal['status'] = 'rolled_back'; $proposal['rolled_back_at_utc'] = gmdate( 'c' ); $proposal['updated_at_utc'] = gmdate( 'c' ); $rows[$index] = $proposal; self::save_rows( self::PROPOSALS_OPTION, $rows );
                             self::audit( 'proposal_rolled_back', array( 'proposal_id'=>$id, 'snapshot_id'=>$proposal['snapshot_id'] ) );
                             self::publish_event( 'librarian.route_improvement_rolled_back', array( 'proposal_id'=>$id, 'route_id'=>$proposal['proposed_route'] ) );

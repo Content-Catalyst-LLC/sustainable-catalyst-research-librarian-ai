@@ -1,0 +1,49 @@
+{
+  "plugin": "Sustainable Catalyst Research Librarian",
+  "version": "6.0.1",
+  "patch": "collision-safe-bootstrap",
+  "core_patch_required": false,
+  "core_inspection_result": "No Research Librarian class definition, include, remove_shortcode call, or active-plugin manipulation found in Platform Core WordPress plugin.",
+  "main_shortcodes": [
+    "sustainable_catalyst_research_librarian_ai",
+    "sc_research_librarian",
+    "sc_research_guidance_platform",
+    "sc_research_guidance_journey"
+  ],
+  "class_renames": {
+    "Sustainable_Catalyst_Research_Librarian_AI": "SC_RL6_Core",
+    "Sustainable_Catalyst_Research_Librarian_AI_V410_Recovery": "SC_RL6_V410_Recovery",
+    "Sustainable_Catalyst_Research_Librarian_AI_V420_Security": "SC_RL6_V420_Security",
+    "Sustainable_Catalyst_Research_Librarian_AI_V430_Observability": "SC_RL6_V430_Observability",
+    "Sustainable_Catalyst_Research_Librarian_AI_V440_Curation": "SC_RL6_V440_Curation",
+    "Sustainable_Catalyst_Research_Librarian_AI_V450_Contracts": "SC_RL6_V450_Contracts",
+    "Sustainable_Catalyst_Research_Librarian_AI_V460_Answer_UX": "SC_RL6_V460_Answer_UX",
+    "Sustainable_Catalyst_Research_Librarian_AI_V470_Guided_Paths": "SC_RL6_V470_Guided_Paths",
+    "Sustainable_Catalyst_Research_Librarian_AI_V480_Query_Review": "SC_RL6_V480_Query_Review",
+    "Sustainable_Catalyst_Research_Librarian_AI_V490_Documentation": "SC_RL6_V490_Documentation",
+    "Sustainable_Catalyst_Research_Librarian_AI_V500_Stable_Release": "SC_RL6_V500_Stable_Release",
+    "Sustainable_Catalyst_Research_Librarian_AI_V510_Live_UX": "SC_RL6_V510_Live_UX",
+    "Sustainable_Catalyst_Research_Librarian_AI_V520_Route_Quality": "SC_RL6_V520_Route_Quality",
+    "Sustainable_Catalyst_Research_Librarian_AI_V530_Article_Map_Embeds": "SC_RL6_V530_Article_Map_Embeds",
+    "SC_RL_V540_Deep_Links": "SC_RL6_V540_Deep_Links",
+    "SC_RL_V550_Stable_Operations": "SC_RL6_V550_Stable_Operations",
+    "SC_RL_V560_Feature_Suggestions_Bridge": "SC_RL6_V560_Feature_Suggestions_Bridge",
+    "SC_RL_V570_Research_Demand_Intelligence": "SC_RL6_V570_Research_Demand_Intelligence",
+    "SC_RL_V580_Adaptive_Prompt_Surveys": "SC_RL6_V580_Adaptive_Prompt_Surveys",
+    "SC_RL_V590_Closed_Loop_Route_Improvement": "SC_RL6_V590_Closed_Loop_Route_Improvement",
+    "SC_RL_V600_Integrated_Research_Guidance_Platform": "SC_RL6_V600_Integrated_Research_Guidance_Platform"
+  },
+  "function_renames": {
+    "sc_rl_ai_is_research_librarian_plugin_path": "sc_rl6_is_research_librarian_plugin_path",
+    "sc_rl_ai_plugin_file_exists": "sc_rl6_plugin_file_exists",
+    "sc_rl_ai_plugin_version_for_path": "sc_rl6_plugin_version_for_path",
+    "sc_rl_ai_current_active_plugin_rows": "sc_rl6_current_active_plugin_rows",
+    "sc_rl_ai_duplicate_activation_status": "sc_rl6_duplicate_activation_status",
+    "sc_rl_ai_select_preferred_active_plugin_path": "sc_rl6_select_preferred_active_plugin_path",
+    "sc_rl_ai_repair_duplicate_activation_entries": "sc_rl6_repair_duplicate_activation_entries",
+    "sc_rl_ai_handle_duplicate_activation_repair": "sc_rl6_handle_duplicate_activation_repair",
+    "sc_rl_ai_render_duplicate_activation_notice": "sc_rl6_render_duplicate_activation_notice"
+  },
+  "confirmed_root_cause": "The v6.0.0 entry file checked class_exists() for a class declared later in the same file. PHP reported the class as present, so the file returned before registering settings, shortcodes, REST routes, or module initializers.",
+  "self_guard_removed": true
+}

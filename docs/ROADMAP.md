@@ -1,3 +1,21 @@
+## v6.1.0 — Live AI Restoration and Admin Consolidation — Complete
+
+- Live AI operational status and provider diagnostics
+- Country-aware Site Intelligence routing
+- Pakistan / PAK regression test
+- Weighted deterministic fallback routing
+- Dedicated Research Librarian AI admin menu
+- Consolidated Settings screens
+- AI status, connection-test, and model-list endpoints
+- Gemini request hardening and configurable timeouts
+
+## v6.0.1 — WordPress Bootstrap Registration Repair — Complete
+
+- Removed the self-detecting class guard that stopped v6.0.0 on every request.
+- Restored Settings links, admin pages, shortcodes, REST routes, and module initializers.
+- Added collision-safe internal class/function names and a bootstrap regression test.
+- Confirmed Platform Core does not define or suppress Research Librarian.
+
 # Research Librarian Roadmap
 
 ## Completed

@@ -4,7 +4,7 @@
  */
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
-final class SC_RL_V580_Adaptive_Prompt_Surveys {
+final class SC_RL6_V580_Adaptive_Prompt_Surveys {
     const VERSION = '5.8.0';
     const REST_NAMESPACE = 'sc-research-librarian/v1';
     const RULE_SCHEMA = 'sc-adaptive-experience-rule/1.0';
@@ -217,7 +217,7 @@ final class SC_RL_V580_Adaptive_Prompt_Surveys {
         );
         $result = apply_filters( 'sc_rl_adaptive_survey_handoff', array(), $payload );
         do_action( 'scfs_research_librarian_survey_handoff', $payload );
-        if ( 'inline_feedback' === $rule['experience_type'] && class_exists( 'SC_RL_V560_Feature_Suggestions_Bridge' ) ) {
+        if ( 'inline_feedback' === $rule['experience_type'] && class_exists( 'SC_RL6_V560_Feature_Suggestions_Bridge' ) ) {
             do_action( 'sc_rl_v580_inline_feedback', $payload );
         }
         return is_array( $result ) ? $result : array();

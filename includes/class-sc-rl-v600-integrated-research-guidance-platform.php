@@ -4,7 +4,7 @@
  */
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
-final class SC_RL_V600_Integrated_Research_Guidance_Platform {
+final class SC_RL6_V600_Integrated_Research_Guidance_Platform {
     const VERSION = '6.0.0';
     const REST_NAMESPACE = 'sc-research-librarian/v1';
     const PLATFORM_SCHEMA = 'sc-integrated-research-guidance/1.0';
@@ -55,43 +55,43 @@ final class SC_RL_V600_Integrated_Research_Guidance_Platform {
         $modules = array(
             'routing_retrieval' => array(
                 'label' => 'Source-aware routing and retrieval',
-                'available' => class_exists( 'Sustainable_Catalyst_Research_Librarian_AI' ),
-                'version' => defined( 'Sustainable_Catalyst_Research_Librarian_AI::VERSION' ) ? Sustainable_Catalyst_Research_Librarian_AI::VERSION : self::VERSION,
+                'available' => class_exists( 'SC_RL6_Core' ),
+                'version' => defined( 'SC_RL6_Core::VERSION' ) ? SC_RL6_Core::VERSION : self::VERSION,
             ),
             'article_maps' => array(
                 'label' => 'Article-map research guidance',
-                'available' => class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V530_Article_Map_Embeds' ),
+                'available' => class_exists( 'SC_RL6_V530_Article_Map_Embeds' ),
                 'version' => '5.3.x',
             ),
             'deep_links' => array(
                 'label' => 'Workbench and Decision Studio actions',
-                'available' => class_exists( 'SC_RL_V540_Deep_Links' ),
+                'available' => class_exists( 'SC_RL6_V540_Deep_Links' ),
                 'version' => '5.4.0',
             ),
             'operations' => array(
                 'label' => 'Stable operations and release readiness',
-                'available' => class_exists( 'SC_RL_V550_Stable_Operations' ),
+                'available' => class_exists( 'SC_RL6_V550_Stable_Operations' ),
                 'version' => '5.5.0',
             ),
             'feedback_bridge' => array(
                 'label' => 'Feature Suggestions feedback bridge',
-                'available' => class_exists( 'SC_RL_V560_Feature_Suggestions_Bridge' ),
+                'available' => class_exists( 'SC_RL6_V560_Feature_Suggestions_Bridge' ),
                 'version' => '5.6.0',
                 'records' => self::option_count( 'sc_rl_v560_bridge_records' ),
             ),
             'demand_intelligence' => array(
                 'label' => 'Research demand and knowledge-gap intelligence',
-                'available' => class_exists( 'SC_RL_V570_Research_Demand_Intelligence' ),
+                'available' => class_exists( 'SC_RL6_V570_Research_Demand_Intelligence' ),
                 'version' => '5.7.0',
             ),
             'adaptive_experiences' => array(
                 'label' => 'Adaptive prompts and surveys',
-                'available' => class_exists( 'SC_RL_V580_Adaptive_Prompt_Surveys' ),
+                'available' => class_exists( 'SC_RL6_V580_Adaptive_Prompt_Surveys' ),
                 'version' => '5.8.0',
             ),
             'closed_loop_improvement' => array(
                 'label' => 'Closed-loop route improvement',
-                'available' => class_exists( 'SC_RL_V590_Closed_Loop_Route_Improvement' ),
+                'available' => class_exists( 'SC_RL6_V590_Closed_Loop_Route_Improvement' ),
                 'version' => '5.9.0',
                 'proposals' => self::option_count( 'sc_rl_v590_route_improvement_proposals' ),
             ),

@@ -717,3 +717,55 @@
 /* v5.6.0 Feature Suggestions feedback bridge */
 .sc-rl-feedback-bridge-status { margin-block: 1.5rem; }
 .sc-rl-ai[data-state="ready"] [data-sc-rl-status] { overflow-wrap: anywhere; }
+
+/* v6.1.0 — live AI status */
+.sc-rl-ai__health {
+  display: grid;
+  gap: .2rem;
+  margin-top: .35rem;
+  max-width: 44rem;
+}
+.sc-rl-ai__health strong {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  font-size: .82rem;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+}
+.sc-rl-ai__health strong::before {
+  content: "";
+  width: .62rem;
+  height: .62rem;
+  border-radius: 50%;
+  background: #777;
+  box-shadow: 0 0 0 3px rgba(0,0,0,.06);
+  flex: 0 0 auto;
+}
+.sc-rl-ai__health span {
+  color: #555;
+  font-size: .82rem;
+  line-height: 1.45;
+}
+.sc-rl-ai[data-ai-health="online"] .sc-rl-ai__health strong::before {
+  background: #197a35;
+}
+.sc-rl-ai[data-ai-health="offline"] .sc-rl-ai__health strong::before {
+  background: #b00000;
+}
+.sc-rl-ai[data-ai-health="not-configured"] .sc-rl-ai__health strong::before,
+.sc-rl-ai[data-ai-health="not-tested"] .sc-rl-ai__health strong::before {
+  background: #9a6a00;
+}
+.sc-rl-ai[data-ai-health="offline"] .sc-rl-ai__health strong {
+  color: #8b0000;
+}
+@media (max-width: 700px) {
+  .sc-rl-ai__answer-header {
+    align-items: flex-start;
+    gap: .75rem;
+  }
+  .sc-rl-ai__health span {
+    font-size: .76rem;
+  }
+}

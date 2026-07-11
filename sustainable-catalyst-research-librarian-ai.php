@@ -1,9 +1,9 @@
 <?php
 /**
- * Plugin Name: Sustainable Catalyst Research Librarian
+ * Plugin Name: Sustainable Catalyst Research Librarian AI
  * Plugin URI: https://sustainablecatalyst.com/platform/research-librarian/
- * Description: Site-scoped routing and retrieval layer for Sustainable Catalyst with source-aware recommendations, a knowledge indexer, Gemini retrieval backend with embeddings, protected key persistence, retrieval evaluation tests, confidence tuning, failure logs, structured Workbench and Decision Studio handoff payloads, saved route sessions, admin analytics, visitor feedback, correction triage, knowledge-gap review, governance controls, privacy summaries, retention policies, admin crawl dashboard, grounded route notes, AI-assisted answers, deterministic fallback, scheduled index maintenance, sitemap sync, health alerts, recovery snapshots, backup/export controls, migration readiness, security hardening, endpoint permission review, access-surface audit, observability checks, operational runbooks, incident-response summaries, editorial curation rules, route overrides, source weighting controls, integration contracts, API catalogs, developer handoff documentation, guided research paths, multi-step route builders, admin query review, route improvement queues, correction workflows, public documentation page generation, documentation exports, and release-ready page outlines, stable release checks, launch checklist, acceptance gate, live public experience QA, visitor prompt library, and production UX calibration, public route quality tuning, source-card ranking, prompt-to-route diagnostics, answer consistency checks, route repair suggestions, on-page research path embeds, and article map integration, Decision Studio and Workbench deep-link actions, stable operations diagnostics, migration validation, recovery checks, integration health, public release notes, Feature Suggestions feedback bridging, research-demand analytics, knowledge-gap intelligence, adaptive prompts, contextual survey experiences, closed-loop route improvement, regression-protected route corrections, change provenance, rollback controls, and an integrated research guidance command layer that unifies the complete source-to-action-to-feedback-to-improvement workflow.
- * Version: 6.0.0
+ * Description: AI-powered, site-scoped research guidance for Sustainable Catalyst with live provider status, country-aware Site Intelligence routing, source-aware retrieval, guided paths, typed platform handoffs, governed feedback, and verified deterministic fallback.
+ * Version: 6.1.0
  * Author: Content Catalyst LLC / Tariq Ahmad
  * Author URI: https://sustainablecatalyst.com/
  * License: MIT
@@ -14,21 +14,21 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-if ( ! function_exists( 'sc_rl_ai_is_research_librarian_plugin_path' ) ) {
-    function sc_rl_ai_is_research_librarian_plugin_path( $path ) {
-        $path = (string) $path;
-        return false !== stripos( $path, 'sustainable-catalyst-research-librarian-ai' ) || false !== stripos( $path, 'research-librarian' );
+if ( ! function_exists( 'sc_rl6_is_research_librarian_plugin_path' ) ) {
+    function sc_rl6_is_research_librarian_plugin_path( $path ) {
+        $path = str_replace( '\\', '/', (string) $path );
+        return 'sustainable-catalyst-research-librarian-ai.php' === basename( $path );
     }
 }
 
-if ( ! function_exists( 'sc_rl_ai_plugin_file_exists' ) ) {
-    function sc_rl_ai_plugin_file_exists( $path ) {
+if ( ! function_exists( 'sc_rl6_plugin_file_exists' ) ) {
+    function sc_rl6_plugin_file_exists( $path ) {
         return is_string( $path ) && '' !== $path && file_exists( WP_PLUGIN_DIR . '/' . $path );
     }
 }
 
-if ( ! function_exists( 'sc_rl_ai_plugin_version_for_path' ) ) {
-    function sc_rl_ai_plugin_version_for_path( $path ) {
+if ( ! function_exists( 'sc_rl6_plugin_version_for_path' ) ) {
+    function sc_rl6_plugin_version_for_path( $path ) {
         $file = WP_PLUGIN_DIR . '/' . $path;
         if ( ! file_exists( $file ) ) {
             return '';
@@ -48,19 +48,19 @@ if ( ! function_exists( 'sc_rl_ai_plugin_version_for_path' ) ) {
     }
 }
 
-if ( ! function_exists( 'sc_rl_ai_current_active_plugin_rows' ) ) {
-    function sc_rl_ai_current_active_plugin_rows( $current_file = '' ) {
+if ( ! function_exists( 'sc_rl6_current_active_plugin_rows' ) ) {
+    function sc_rl6_current_active_plugin_rows( $current_file = '' ) {
         $active  = (array) get_option( 'active_plugins', array() );
         $current = $current_file ? plugin_basename( $current_file ) : '';
         $rows    = array();
         foreach ( $active as $path ) {
-            if ( ! sc_rl_ai_is_research_librarian_plugin_path( $path ) ) {
+            if ( ! sc_rl6_is_research_librarian_plugin_path( $path ) ) {
                 continue;
             }
             $rows[] = array(
                 'path'        => $path,
-                'exists'      => sc_rl_ai_plugin_file_exists( $path ),
-                'version'     => sc_rl_ai_plugin_version_for_path( $path ),
+                'exists'      => sc_rl6_plugin_file_exists( $path ),
+                'version'     => sc_rl6_plugin_version_for_path( $path ),
                 'is_current'  => $current && $path === $current,
             );
         }
@@ -68,16 +68,16 @@ if ( ! function_exists( 'sc_rl_ai_current_active_plugin_rows' ) ) {
     }
 }
 
-if ( ! function_exists( 'sc_rl_ai_duplicate_activation_status' ) ) {
-    function sc_rl_ai_duplicate_activation_status( $current_file = '' ) {
-        $rows        = sc_rl_ai_current_active_plugin_rows( $current_file );
+if ( ! function_exists( 'sc_rl6_duplicate_activation_status' ) ) {
+    function sc_rl6_duplicate_activation_status( $current_file = '' ) {
+        $rows        = sc_rl6_current_active_plugin_rows( $current_file );
         $active_rows = array_values( array_filter( $rows, function( $row ) { return ! empty( $row['exists'] ); } ) );
         $stale_rows  = array_values( array_filter( $rows, function( $row ) { return empty( $row['exists'] ); } ) );
         $current     = $current_file ? plugin_basename( $current_file ) : '';
         $loaded_path = '';
-        if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI', false ) ) {
+        if ( class_exists( 'SC_RL6_Core', false ) ) {
             try {
-                $reflection  = new ReflectionClass( 'Sustainable_Catalyst_Research_Librarian_AI' );
+                $reflection  = new ReflectionClass( 'SC_RL6_Core' );
                 $loaded_file = $reflection->getFileName();
                 if ( $loaded_file ) {
                     $loaded_path = plugin_basename( $loaded_file );
@@ -99,13 +99,13 @@ if ( ! function_exists( 'sc_rl_ai_duplicate_activation_status' ) ) {
     }
 }
 
-if ( ! function_exists( 'sc_rl_ai_select_preferred_active_plugin_path' ) ) {
-    function sc_rl_ai_select_preferred_active_plugin_path( $current_file = '' ) {
+if ( ! function_exists( 'sc_rl6_select_preferred_active_plugin_path' ) ) {
+    function sc_rl6_select_preferred_active_plugin_path( $current_file = '' ) {
         $current = $current_file ? plugin_basename( $current_file ) : '';
-        if ( $current && sc_rl_ai_plugin_file_exists( $current ) ) {
+        if ( $current && sc_rl6_plugin_file_exists( $current ) ) {
             return $current;
         }
-        $rows = sc_rl_ai_current_active_plugin_rows( $current_file );
+        $rows = sc_rl6_current_active_plugin_rows( $current_file );
         $best = '';
         $best_version = '0.0.0';
         foreach ( $rows as $row ) {
@@ -122,23 +122,23 @@ if ( ! function_exists( 'sc_rl_ai_select_preferred_active_plugin_path' ) ) {
     }
 }
 
-if ( ! function_exists( 'sc_rl_ai_repair_duplicate_activation_entries' ) ) {
-    function sc_rl_ai_repair_duplicate_activation_entries( $current_file = '' ) {
+if ( ! function_exists( 'sc_rl6_repair_duplicate_activation_entries' ) ) {
+    function sc_rl6_repair_duplicate_activation_entries( $current_file = '' ) {
         if ( ! current_user_can( 'activate_plugins' ) && ! current_user_can( 'manage_options' ) ) {
             return array( 'ok' => false, 'error' => 'permission_denied' );
         }
         $active    = (array) get_option( 'active_plugins', array() );
-        $preferred = sc_rl_ai_select_preferred_active_plugin_path( $current_file );
+        $preferred = sc_rl6_select_preferred_active_plugin_path( $current_file );
         $kept      = array();
         $removed   = array();
         $kept_research_librarian = false;
 
         foreach ( $active as $path ) {
-            if ( ! sc_rl_ai_is_research_librarian_plugin_path( $path ) ) {
+            if ( ! sc_rl6_is_research_librarian_plugin_path( $path ) ) {
                 $kept[] = $path;
                 continue;
             }
-            $exists = sc_rl_ai_plugin_file_exists( $path );
+            $exists = sc_rl6_plugin_file_exists( $path );
             if ( ! $exists ) {
                 $removed[] = array( 'path' => $path, 'reason' => 'stale_missing_file' );
                 continue;
@@ -156,7 +156,7 @@ if ( ! function_exists( 'sc_rl_ai_repair_duplicate_activation_entries' ) ) {
             $removed[] = array( 'path' => $path, 'reason' => 'duplicate_research_librarian_copy' );
         }
 
-        if ( $preferred && ! $kept_research_librarian && sc_rl_ai_plugin_file_exists( $preferred ) ) {
+        if ( $preferred && ! $kept_research_librarian && sc_rl6_plugin_file_exists( $preferred ) ) {
             $kept[] = $preferred;
             $kept_research_librarian = true;
         }
@@ -169,18 +169,18 @@ if ( ! function_exists( 'sc_rl_ai_repair_duplicate_activation_entries' ) ) {
             'preferred_path' => $preferred,
             'kept'           => $kept,
             'removed'        => $removed,
-            'status'         => sc_rl_ai_duplicate_activation_status( $current_file ),
+            'status'         => sc_rl6_duplicate_activation_status( $current_file ),
         );
     }
 }
 
-if ( ! function_exists( 'sc_rl_ai_handle_duplicate_activation_repair' ) ) {
-    function sc_rl_ai_handle_duplicate_activation_repair() {
+if ( ! function_exists( 'sc_rl6_handle_duplicate_activation_repair' ) ) {
+    function sc_rl6_handle_duplicate_activation_repair() {
         if ( ! current_user_can( 'activate_plugins' ) && ! current_user_can( 'manage_options' ) ) {
             wp_die( esc_html__( 'You do not have permission to repair plugin activation entries.', 'sustainable-catalyst-research-librarian-ai' ) );
         }
         check_admin_referer( 'sc_rl_ai_repair_duplicates' );
-        $result = sc_rl_ai_repair_duplicate_activation_entries( __FILE__ );
+        $result = sc_rl6_repair_duplicate_activation_entries( __FILE__ );
         $redirect = add_query_arg(
             array(
                 'sc_rl_ai_repair' => ! empty( $result['ok'] ) ? 'success' : 'failed',
@@ -192,14 +192,14 @@ if ( ! function_exists( 'sc_rl_ai_handle_duplicate_activation_repair' ) ) {
         exit;
     }
 }
-add_action( 'admin_post_sc_rl_ai_repair_duplicates', 'sc_rl_ai_handle_duplicate_activation_repair' );
+add_action( 'admin_post_sc_rl_ai_repair_duplicates', 'sc_rl6_handle_duplicate_activation_repair' );
 
-if ( ! function_exists( 'sc_rl_ai_render_duplicate_activation_notice' ) ) {
-    function sc_rl_ai_render_duplicate_activation_notice( $current_file = '' ) {
+if ( ! function_exists( 'sc_rl6_render_duplicate_activation_notice' ) ) {
+    function sc_rl6_render_duplicate_activation_notice( $current_file = '' ) {
         if ( ! is_admin() || ( ! current_user_can( 'activate_plugins' ) && ! current_user_can( 'manage_options' ) ) ) {
             return;
         }
-        $status = sc_rl_ai_duplicate_activation_status( $current_file ? $current_file : __FILE__ );
+        $status = sc_rl6_duplicate_activation_status( $current_file ? $current_file : __FILE__ );
         if ( ! empty( $status['ok'] ) ) {
             return;
         }
@@ -218,14 +218,53 @@ if ( ! function_exists( 'sc_rl_ai_render_duplicate_activation_notice' ) ) {
     }
 }
 
-if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI', false ) ) {
-    add_action( 'admin_notices', function() {
-        sc_rl_ai_render_duplicate_activation_notice( __FILE__ );
-    } );
-    return;
+if ( ! defined( 'SC_RL6_LEGACY_CLASS_WAS_PRESENT' ) ) {
+    define( 'SC_RL6_LEGACY_CLASS_WAS_PRESENT', class_exists( 'Sustainable_Catalyst_Research_Librarian_AI', false ) );
 }
 
-final class Sustainable_Catalyst_Research_Librarian_AI {
+if ( ! function_exists( 'sc_rl6_legacy_class_status' ) ) {
+    function sc_rl6_legacy_class_status() {
+        $status = array(
+            'present' => (bool) SC_RL6_LEGACY_CLASS_WAS_PRESENT,
+            'file'    => '',
+            'version' => '',
+        );
+        if ( ! $status['present'] ) {
+            return $status;
+        }
+        try {
+            $reflection = new ReflectionClass( 'Sustainable_Catalyst_Research_Librarian_AI' );
+            $status['file'] = (string) $reflection->getFileName();
+            if ( $reflection->hasConstant( 'VERSION' ) ) {
+                $status['version'] = (string) $reflection->getConstant( 'VERSION' );
+            }
+        } catch ( Throwable $e ) {
+            $status['file'] = 'Reflection failed: ' . $e->getMessage();
+        }
+        return $status;
+    }
+}
+
+if ( ! function_exists( 'sc_rl6_render_legacy_class_notice' ) ) {
+    function sc_rl6_render_legacy_class_notice() {
+        if ( ! is_admin() || ! current_user_can( 'manage_options' ) || ! SC_RL6_LEGACY_CLASS_WAS_PRESENT ) {
+            return;
+        }
+        $status = sc_rl6_legacy_class_status();
+        echo '<div class="notice notice-warning"><p><strong>Research Librarian AI v6.1.0 compatibility mode:</strong> A legacy Research Librarian class was already loaded before the current plugin. The v6.1.0 collision-safe bootstrap is active, so settings and shortcodes remain available.</p>';
+        if ( ! empty( $status['file'] ) ) {
+            echo '<p>Legacy class file: <code>' . esc_html( $status['file'] ) . '</code>';
+            if ( ! empty( $status['version'] ) ) {
+                echo ' — version <code>' . esc_html( $status['version'] ) . '</code>';
+            }
+            echo '</p>';
+        }
+        echo '<p>Remove the legacy duplicate, network plugin, or must-use copy after confirming the active v6.1.0 plugin is working.</p></div>';
+    }
+}
+add_action( 'admin_notices', 'sc_rl6_render_legacy_class_notice' );
+
+final class SC_RL6_Core {
     const OPTION_NAME    = 'sc_rl_ai_options';
     const INDEX_OPTION   = 'sc_rl_ai_knowledge_index';
     const EMBED_OPTION   = 'sc_rl_ai_embedding_status';
@@ -233,8 +272,9 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
     const HANDOFF_OPTION = 'sc_rl_ai_handoff_status';
     const MAINTENANCE_OPTION = 'sc_rl_ai_maintenance_status';
     const MAINTENANCE_HOOK = 'sc_rl_ai_index_maintenance_event';
+    const AI_STATUS_OPTION = 'sc_rl_ai_live_provider_status';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const VERSION        = '6.0.0';
+    const VERSION        = '6.1.0';
 
     private static $instance = null;
 
@@ -246,10 +286,10 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
     }
 
     private function __construct() {
-        add_action( 'init', array( $this, 'register_shortcodes' ) );
-        add_action( 'rest_api_init', array( $this, 'register_rest_routes' ) );
-        add_action( 'admin_menu', array( $this, 'register_admin_page' ) );
-        add_action( 'admin_init', array( $this, 'register_settings' ) );
+        add_action( 'init', array( $this, 'register_shortcodes' ), 99 );
+        add_action( 'rest_api_init', array( $this, 'register_rest_routes' ), 99 );
+        add_action( 'admin_menu', array( $this, 'register_admin_page' ), 99 );
+        add_action( 'admin_init', array( $this, 'register_settings' ), 99 );
         add_action( 'admin_notices', array( $this, 'render_activation_repair_notice' ) );
         add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), array( $this, 'add_settings_link' ) );
         add_filter( 'cron_schedules', array( $this, 'register_cron_schedules' ) );
@@ -272,6 +312,8 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
     public static function defaults() {
         return array(
             'provider'                => 'disabled',
+            'public_ai_status_enabled' => '1',
+            'ai_request_timeout'       => 30,
             'openai_api_key'          => '',
             'openai_key_fingerprint'  => '',
             'openai_model'            => 'gpt-5.5',
@@ -324,7 +366,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI {
     }
 
     public static function default_system_instructions() {
-        return "You are the Sustainable Catalyst Research Librarian, a site-scoped routing and research navigation assistant for Sustainable Catalyst, an open knowledge lab by Tariq Ahmad / Content Catalyst.\n\nYour task is not to be a general chatbot. Help visitors choose the right Sustainable Catalyst route: Knowledge Library, Workbench, Decision Studio, Platform Demos, Catalyst Canvas, Catalyst Data, Analytics R, Global Impact Catalyst, Narrative Risk, Catalyst Finance, Catalyst Grit, methodology, GitHub repositories, consulting, support, or feature suggestions.\n\nAnswer shape:
+        return "You are the Sustainable Catalyst Research Librarian AI, a site-scoped research guidance assistant for Sustainable Catalyst, an open knowledge lab by Tariq Ahmad / Content Catalyst.\n\nYour task is not to be a general chatbot. Interpret the visitor's question, identify entities and intended output, retrieve the strongest Sustainable Catalyst context, and recommend the best route. Available route families include the Open Knowledge Library, Site Intelligence, Country Intelligence, Cross-Domain Comparison, Dashboard Studio, Sources and Methodology, Public Observatories, Workbench, Decision Studio, Platform Demos, Catalyst Canvas, Catalyst Data, Analytics R, Global Impact Catalyst, Narrative Risk, Catalyst Finance, Catalyst Grit, methodology, GitHub repositories, consulting, support, and Feature Suggestions. Country questions should begin with Site Intelligence and Country Intelligence rather than defaulting to the broad Platform route.\n\nAnswer shape:
 1. What the visitor appears to need
 2. Recommended route
 3. Why this route fits
@@ -354,8 +396,8 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
     }
 
     public function add_settings_link( $links ) {
-        $url = admin_url( 'options-general.php?page=sc-research-librarian-ai' );
-        $links[] = '<a href="' . esc_url( $url ) . '">' . esc_html__( 'Settings', 'sustainable-catalyst-research-librarian-ai' ) . '</a>';
+        $url = admin_url( 'admin.php?page=sc-research-librarian-ai' );
+        $links[] = '<a href="' . esc_url( $url ) . '">' . esc_html__( 'Dashboard', 'sustainable-catalyst-research-librarian-ai' ) . '</a>';
         return $links;
     }
 
@@ -421,69 +463,69 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             return $this->render_release_audit_summary( $atts );
         }
         if ( 'live-ux' === $mode || 'live-public-ux' === $mode || 'public-qa' === $mode || 'experience-qa' === $mode ) {
-            if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V510_Live_UX' ) ) {
-                return Sustainable_Catalyst_Research_Librarian_AI_V510_Live_UX::render_public_summary( $atts );
+            if ( class_exists( 'SC_RL6_V510_Live_UX' ) ) {
+                return SC_RL6_V510_Live_UX::render_public_summary( $atts );
             }
         }
         if ( 'prompt-library' === $mode || 'public-prompts' === $mode || 'visitor-prompts' === $mode ) {
-            if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V510_Live_UX' ) ) {
-                return Sustainable_Catalyst_Research_Librarian_AI_V510_Live_UX::render_prompt_library( $atts );
+            if ( class_exists( 'SC_RL6_V510_Live_UX' ) ) {
+                return SC_RL6_V510_Live_UX::render_prompt_library( $atts );
             }
         }
         if ( 'security' === $mode || 'security-summary' === $mode || 'access-review' === $mode || 'endpoint-security' === $mode ) {
-            if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V420_Security' ) ) {
-                return Sustainable_Catalyst_Research_Librarian_AI_V420_Security::render_public_summary( $atts );
+            if ( class_exists( 'SC_RL6_V420_Security' ) ) {
+                return SC_RL6_V420_Security::render_public_summary( $atts );
             }
         }
         if ( 'observability' === $mode || 'observability-summary' === $mode || 'operations' === $mode || 'operations-summary' === $mode || 'runbook' === $mode || 'runbook-summary' === $mode ) {
-            if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V430_Observability' ) ) {
-                return Sustainable_Catalyst_Research_Librarian_AI_V430_Observability::render_public_summary( $atts );
+            if ( class_exists( 'SC_RL6_V430_Observability' ) ) {
+                return SC_RL6_V430_Observability::render_public_summary( $atts );
             }
         }
         if ( 'curation' === $mode || 'curation-summary' === $mode || 'route-overrides' === $mode || 'source-weighting' === $mode || 'editorial-controls' === $mode ) {
-            if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V440_Curation' ) ) {
-                return Sustainable_Catalyst_Research_Librarian_AI_V440_Curation::render_public_summary( $atts );
+            if ( class_exists( 'SC_RL6_V440_Curation' ) ) {
+                return SC_RL6_V440_Curation::render_public_summary( $atts );
             }
         }
         if ( 'contracts' === $mode || 'contracts-summary' === $mode || 'api-catalog' === $mode || 'developer-handoffs' === $mode || 'integration-contracts' === $mode ) {
-            if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V450_Contracts' ) ) {
-                return Sustainable_Catalyst_Research_Librarian_AI_V450_Contracts::render_public_summary( $atts );
+            if ( class_exists( 'SC_RL6_V450_Contracts' ) ) {
+                return SC_RL6_V450_Contracts::render_public_summary( $atts );
             }
         }
         if ( 'answer-ux' === $mode || 'answer-ui' === $mode || 'source-cards' === $mode || 'route-action-center' === $mode || 'public-answer' === $mode ) {
-            if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V460_Answer_UX' ) ) {
-                return Sustainable_Catalyst_Research_Librarian_AI_V460_Answer_UX::render_public_summary( $atts );
+            if ( class_exists( 'SC_RL6_V460_Answer_UX' ) ) {
+                return SC_RL6_V460_Answer_UX::render_public_summary( $atts );
             }
         }
         if ( 'query-review' === $mode || 'query-review-summary' === $mode || 'route-improvement' === $mode || 'improvement-queue' === $mode || 'admin-query-review' === $mode ) {
-            if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V480_Query_Review' ) ) {
-                return Sustainable_Catalyst_Research_Librarian_AI_V480_Query_Review::render_public_summary( $atts );
+            if ( class_exists( 'SC_RL6_V480_Query_Review' ) ) {
+                return SC_RL6_V480_Query_Review::render_public_summary( $atts );
             }
         }
 
         if ( 'documentation' === $mode || 'documentation-summary' === $mode || 'docs' === $mode || 'docs-catalog' === $mode || 'public-documentation' === $mode || 'documentation-generator' === $mode ) {
-            if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V490_Documentation' ) ) {
-                return Sustainable_Catalyst_Research_Librarian_AI_V490_Documentation::render_public_summary( $atts );
+            if ( class_exists( 'SC_RL6_V490_Documentation' ) ) {
+                return SC_RL6_V490_Documentation::render_public_summary( $atts );
             }
         }
         if ( 'guided-paths' === $mode || 'guided-paths-summary' === $mode || 'research-paths' === $mode || 'pathways' === $mode ) {
-            if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V470_Guided_Paths' ) ) {
-                return Sustainable_Catalyst_Research_Librarian_AI_V470_Guided_Paths::render_public_summary( $atts );
+            if ( class_exists( 'SC_RL6_V470_Guided_Paths' ) ) {
+                return SC_RL6_V470_Guided_Paths::render_public_summary( $atts );
             }
         }
         if ( 'path-builder' === $mode || 'route-builder' === $mode || 'multi-step-builder' === $mode || 'guided-route-builder' === $mode ) {
-            if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V470_Guided_Paths' ) ) {
-                return Sustainable_Catalyst_Research_Librarian_AI_V470_Guided_Paths::render_builder( $atts );
+            if ( class_exists( 'SC_RL6_V470_Guided_Paths' ) ) {
+                return SC_RL6_V470_Guided_Paths::render_builder( $atts );
             }
         }
         if ( 'article-paths' === $mode || 'article-path' === $mode || 'article-map' === $mode || 'article-map-summary' === $mode || 'research-path-embed' === $mode || 'on-page-path' === $mode ) {
-            if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V530_Article_Map_Embeds' ) ) {
-                return Sustainable_Catalyst_Research_Librarian_AI_V530_Article_Map_Embeds::render_article_path_embed( $atts );
+            if ( class_exists( 'SC_RL6_V530_Article_Map_Embeds' ) ) {
+                return SC_RL6_V530_Article_Map_Embeds::render_article_path_embed( $atts );
             }
         }
         if ( 'recovery' === $mode || 'recovery-summary' === $mode || 'backup-summary' === $mode || 'snapshot-summary' === $mode ) {
-            if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V410_Recovery' ) ) {
-                return Sustainable_Catalyst_Research_Librarian_AI_V410_Recovery::render_public_summary( $atts );
+            if ( class_exists( 'SC_RL6_V410_Recovery' ) ) {
+                return SC_RL6_V410_Recovery::render_public_summary( $atts );
             }
         }
         return $this->render_assistant( $atts );
@@ -736,20 +778,21 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         $feedback_endpoint = rest_url( self::REST_NAMESPACE . '/feedback/submit' );
         $feedback_bridge_endpoint = rest_url( 'sc-research-librarian/v1/feedback/bridge' );
         $ux_endpoint = rest_url( self::REST_NAMESPACE . '/answer-ux/status' );
+        $ai_status_endpoint = rest_url( self::REST_NAMESPACE . '/ai/status' );
         $nonce = wp_create_nonce( 'wp_rest' );
         $compact = ( 'compact' === sanitize_key( $atts['display'] ) || 'compact' === sanitize_key( $atts['mode'] ) );
 
         ob_start();
         ?>
-        <section id="<?php echo esc_attr( $root_id ); ?>" class="sc-rl-ai<?php echo $compact ? ' sc-rl-ai--compact' : ''; ?>" data-endpoint="<?php echo esc_url( $endpoint ); ?>" data-routes-endpoint="<?php echo esc_url( $routes_endpoint ); ?>" data-note-endpoint="<?php echo esc_url( $note_endpoint ); ?>" data-handoff-endpoint="<?php echo esc_url( $handoff_endpoint ); ?>" data-deep-link-endpoint="<?php echo esc_url( $deep_link_endpoint ); ?>" data-session-endpoint="<?php echo esc_url( $session_endpoint ); ?>" data-feedback-endpoint="<?php echo esc_url( $feedback_endpoint ); ?>" data-feedback-bridge-endpoint="<?php echo esc_url( $feedback_bridge_endpoint ); ?>" data-ux-endpoint="<?php echo esc_url( $ux_endpoint ); ?>" data-nonce="<?php echo esc_attr( $nonce ); ?>">
+        <section id="<?php echo esc_attr( $root_id ); ?>" class="sc-rl-ai<?php echo $compact ? ' sc-rl-ai--compact' : ''; ?>" data-endpoint="<?php echo esc_url( $endpoint ); ?>" data-routes-endpoint="<?php echo esc_url( $routes_endpoint ); ?>" data-note-endpoint="<?php echo esc_url( $note_endpoint ); ?>" data-handoff-endpoint="<?php echo esc_url( $handoff_endpoint ); ?>" data-deep-link-endpoint="<?php echo esc_url( $deep_link_endpoint ); ?>" data-session-endpoint="<?php echo esc_url( $session_endpoint ); ?>" data-feedback-endpoint="<?php echo esc_url( $feedback_endpoint ); ?>" data-feedback-bridge-endpoint="<?php echo esc_url( $feedback_bridge_endpoint ); ?>" data-ux-endpoint="<?php echo esc_url( $ux_endpoint ); ?>" data-ai-status-endpoint="<?php echo esc_url( $ai_status_endpoint ); ?>" data-nonce="<?php echo esc_attr( $nonce ); ?>">
             <div class="sc-rl-ai__shell">
                 <div class="sc-rl-ai__card sc-rl-ai__ask-card">
-                    <p class="sc-rl-ai__eyebrow">Sustainable Catalyst Research Librarian</p>
+                    <p class="sc-rl-ai__eyebrow">AI-Powered Research Guidance</p>
                     <h2 class="sc-rl-ai__title"><?php echo esc_html( $atts['title'] ); ?></h2>
-                    <p class="sc-rl-ai__intro">Ask where to start, which module fits, how Workbench and Decision Studio connect, or how to turn a question into a route through the Sustainable Catalyst platform.</p>
+                    <p class="sc-rl-ai__intro">Ask about a country, topic, source, calculation, dashboard, research path, or decision workflow. Research Librarian AI interprets the request, retrieves relevant Sustainable Catalyst context, and recommends the strongest route.</p>
 
                     <label class="sc-rl-ai__label" for="<?php echo esc_attr( $root_id ); ?>-question">Question or goal</label>
-                    <textarea class="sc-rl-ai__textarea" id="<?php echo esc_attr( $root_id ); ?>-question" rows="5" maxlength="1400" placeholder="Example: I need to compare sustainability options, document evidence, and produce an auditable brief. Where should I start?"></textarea>
+                    <textarea class="sc-rl-ai__textarea" id="<?php echo esc_attr( $root_id ); ?>-question" rows="5" maxlength="1400" placeholder="Example: What Sustainable Catalyst resources should I use to research climate, infrastructure, and development in Pakistan?"></textarea>
                     <input type="text" class="sc-rl-ai__hp" value="" tabindex="-1" autocomplete="off" aria-hidden="true" />
 
                     <div class="sc-rl-ai__actions">
@@ -768,13 +811,20 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                         <button type="button" data-sc-rl-example="I need to calculate, graph, or inspect a formula. Which tool should I use?">Calculation</button>
                         <button type="button" data-sc-rl-example="I need to create a traceable data or evidence record. Where should I go?">Evidence record</button>
                         <button type="button" data-sc-rl-example="I need to review a claim, uncertainty, and narrative risk. Which module fits?">Claim review</button>
+                        <button type="button" data-sc-rl-example="What Sustainable Catalyst resources should I use to research climate, infrastructure, and development in Pakistan?">Country research</button>
                         <button type="button" data-sc-rl-example="I am new to Sustainable Catalyst. What is the best route through the platform?">New visitor</button>
                     </div>
                 </div>
 
                 <div class="sc-rl-ai__card sc-rl-ai__answer-card" aria-live="polite">
                     <div class="sc-rl-ai__answer-header">
-                        <p class="sc-rl-ai__eyebrow">Route note</p>
+                        <div>
+                            <p class="sc-rl-ai__eyebrow">Research Librarian AI</p>
+                            <div class="sc-rl-ai__health" data-sc-rl-ai-health>
+                                <strong data-sc-rl-ai-health-label>Checking AI…</strong>
+                                <span data-sc-rl-ai-health-detail>Verifying provider, model, retrieval, and index status.</span>
+                            </div>
+                        </div>
                         <span class="sc-rl-ai__status" data-sc-rl-status>Ready</span>
                     </div>
                     <div class="sc-rl-ai__answer" data-sc-rl-answer>
@@ -841,6 +891,25 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'callback'            => array( $this, 'handle_ask_request' ),
             'permission_callback' => '__return_true',
             'args'                => array( 'question' => array( 'required' => true, 'type' => 'string', 'sanitize_callback' => 'sanitize_textarea_field' ) ),
+        ) );
+
+
+        register_rest_route( self::REST_NAMESPACE, '/ai/status', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'handle_ai_status_request' ),
+            'permission_callback' => '__return_true',
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/ai/test', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array( $this, 'handle_ai_test_request' ),
+            'permission_callback' => array( $this, 'can_manage_options' ),
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/ai/models', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'handle_ai_models_request' ),
+            'permission_callback' => array( $this, 'can_manage_options' ),
         ) );
 
         register_rest_route( self::REST_NAMESPACE, '/routes', array(
@@ -1112,15 +1181,15 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
     }
 
     public function handle_activation_status_request() {
-        return new WP_REST_Response( array_merge( array( 'version' => self::VERSION ), sc_rl_ai_duplicate_activation_status( __FILE__ ) ), 200 );
+        return new WP_REST_Response( array_merge( array( 'version' => self::VERSION ), sc_rl6_duplicate_activation_status( __FILE__ ) ), 200 );
     }
 
     public function handle_activation_repair_request() {
-        return new WP_REST_Response( array_merge( array( 'version' => self::VERSION ), sc_rl_ai_repair_duplicate_activation_entries( __FILE__ ) ), 200 );
+        return new WP_REST_Response( array_merge( array( 'version' => self::VERSION ), sc_rl6_repair_duplicate_activation_entries( __FILE__ ) ), 200 );
     }
 
     public function render_activation_repair_notice() {
-        sc_rl_ai_render_duplicate_activation_notice( __FILE__ );
+        sc_rl6_render_duplicate_activation_notice( __FILE__ );
         if ( ! is_admin() || ! isset( $_GET['sc_rl_ai_repair'] ) ) {
             return;
         }
@@ -1147,9 +1216,9 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'maintenance' => $this->maintenance_summary(),
             'enterprise' => $this->enterprise_readiness_summary(),
             'release' => $this->release_audit_summary(),
-            'recovery' => class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V410_Recovery' ) ? Sustainable_Catalyst_Research_Librarian_AI_V410_Recovery::status() : array(),
-            'route_quality' => class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V520_Route_Quality' ) ? Sustainable_Catalyst_Research_Librarian_AI_V520_Route_Quality::status( false ) : array(),
-            'curation' => class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V440_Curation' ) ? Sustainable_Catalyst_Research_Librarian_AI_V440_Curation::public_status() : array(),
+            'recovery' => class_exists( 'SC_RL6_V410_Recovery' ) ? SC_RL6_V410_Recovery::status() : array(),
+            'route_quality' => class_exists( 'SC_RL6_V520_Route_Quality' ) ? SC_RL6_V520_Route_Quality::status( false ) : array(),
+            'curation' => class_exists( 'SC_RL6_V440_Curation' ) ? SC_RL6_V440_Curation::public_status() : array(),
         ), 200 );
     }
 
@@ -1411,7 +1480,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         if ( '' === trim( $query ) ) {
             return new WP_Error( 'sc_rl_ai_empty_query', __( 'Please enter a retrieval query.', 'sustainable-catalyst-research-librarian-ai' ), array( 'status' => 400 ) );
         }
-        $route = $this->match_route( strtolower( $query ) );
+        $route = $this->resolve_route( $query );
         $matches = $this->match_sources( $query, $route );
         return new WP_REST_Response( array( 'version' => self::VERSION, 'query' => $query, 'route' => $route, 'matches' => $matches, 'retrieval' => $this->retrieval_status() ), 200 );
     }
@@ -1482,7 +1551,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         }
         $params = $request->get_json_params();
         $question = isset( $params['question'] ) ? sanitize_textarea_field( wp_unslash( $params['question'] ) ) : '';
-        $route = $this->match_route( strtolower( $question ) );
+        $route = $this->resolve_route( $question );
         $grounding = $this->grounding_context( $question, $route );
         return new WP_REST_Response( array( 'route' => $route, 'grounding' => $grounding, 'route_note' => $this->build_route_note( $question, $route, 'grounded-route', $grounding ) ), 200 );
     }
@@ -1495,7 +1564,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
 
         $params = $request->get_json_params();
         $question = isset( $params['question'] ) ? sanitize_textarea_field( wp_unslash( $params['question'] ) ) : '';
-        $route = $this->match_route( strtolower( $question ) );
+        $route = $this->resolve_route( $question );
         $grounding = $this->grounding_context( $question, $route );
         $note = $this->build_route_note( $question, $route, 'manual', $grounding );
         return new WP_REST_Response( $note, 200 );
@@ -1510,9 +1579,17 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         $params = $request->get_json_params();
         $honeypot = isset( $params['hp'] ) ? sanitize_text_field( wp_unslash( $params['hp'] ) ) : '';
         if ( '' !== $honeypot ) {
-            $route = $this->match_route( 'general' );
-            $grounding = $this->grounding_context( 'general', $route );
-            return new WP_REST_Response( array( 'answer' => $this->fallback_response( 'general', $grounding ), 'source' => 'fallback', 'route' => $route, 'grounding' => $grounding, 'route_note' => $this->build_route_note( 'general', $route, 'fallback', $grounding ) ), 200 );
+            $route = $this->resolve_route( 'general platform orientation' );
+            $grounding = $this->grounding_context( 'general platform orientation', $route );
+            return new WP_REST_Response( array(
+                'answer' => $this->fallback_response( 'general platform orientation', $grounding ),
+                'source' => 'fallback',
+                'ai_used' => false,
+                'ai_status' => $this->ai_status_snapshot( true ),
+                'route' => $route,
+                'grounding' => $grounding,
+                'route_note' => $this->build_route_note( 'general platform orientation', $route, 'fallback', $grounding ),
+            ), 200 );
         }
 
         $question = isset( $params['question'] ) ? trim( sanitize_textarea_field( wp_unslash( $params['question'] ) ) ) : '';
@@ -1527,25 +1604,64 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         }
 
         $boundary = $this->boundary_response_if_needed( $question );
-        $route = $this->match_route( strtolower( $question ) );
+        $route = $this->resolve_route( $question );
         $grounding = $this->grounding_context( $question, $route );
         if ( $boundary ) {
-            return new WP_REST_Response( array( 'answer' => $boundary, 'source' => 'boundary', 'route' => $route, 'grounding' => $grounding, 'route_note' => $this->build_route_note( $question, $route, 'boundary', $grounding ) ), 200 );
+            return new WP_REST_Response( array(
+                'answer' => $boundary,
+                'source' => 'boundary',
+                'ai_used' => false,
+                'ai_status' => $this->ai_status_snapshot( true ),
+                'route' => $route,
+                'grounding' => $grounding,
+                'route_note' => $this->build_route_note( $question, $route, 'boundary', $grounding ),
+            ), 200 );
         }
 
         $provider = $this->configured_provider( $options );
         if ( 'disabled' === $provider ) {
-            return new WP_REST_Response( array( 'answer' => $this->fallback_response( $question, $grounding ), 'source' => 'fallback', 'route' => $route, 'grounding' => $grounding, 'route_note' => $this->build_route_note( $question, $route, 'fallback', $grounding ) ), 200 );
+            return new WP_REST_Response( array(
+                'answer' => $this->fallback_response( $question, $grounding ),
+                'source' => 'fallback',
+                'ai_used' => false,
+                'ai_status' => $this->ai_status_snapshot( true ),
+                'route' => $route,
+                'grounding' => $grounding,
+                'route_note' => $this->build_route_note( $question, $route, 'fallback', $grounding ),
+            ), 200 );
         }
 
+        $started = microtime( true );
         $ai_answer = $this->call_ai( $question, $options, $provider, $grounding );
+        $latency_ms = max( 0, (int) round( ( microtime( true ) - $started ) * 1000 ) );
         if ( is_wp_error( $ai_answer ) ) {
-            $fallback = "The AI route is temporarily unavailable, so I am using the deterministic route system.\n\n" . $this->fallback_response( $question );
-            return new WP_REST_Response( array( 'answer' => $fallback, 'source' => 'fallback', 'error' => $ai_answer->get_error_message(), 'route' => $route, 'route_note' => $this->build_route_note( $question, $route, 'fallback' ) ), 200 );
+            $this->record_ai_failure( $provider, $options, $ai_answer, $latency_ms );
+            $fallback = "The AI provider is temporarily unavailable. Verified site routing is still active.\n\n" . $this->fallback_response( $question, $grounding );
+            return new WP_REST_Response( array(
+                'answer' => $fallback,
+                'source' => 'fallback',
+                'ai_used' => false,
+                'provider' => $provider,
+                'public_error' => $this->public_ai_error_message( $ai_answer ),
+                'ai_status' => $this->ai_status_snapshot( true ),
+                'route' => $route,
+                'grounding' => $grounding,
+                'route_note' => $this->build_route_note( $question, $route, 'fallback', $grounding ),
+            ), 200 );
         }
 
+        $this->record_ai_success( $provider, $options, $latency_ms );
         $ai_answer = $this->append_grounding_footer( $ai_answer, $grounding );
-        return new WP_REST_Response( array( 'answer' => $ai_answer, 'source' => $provider, 'route' => $route, 'grounding' => $grounding, 'route_note' => $this->build_route_note( $question, $route, $provider, $grounding ) ), 200 );
+        return new WP_REST_Response( array(
+            'answer' => $ai_answer,
+            'source' => $provider,
+            'provider' => $provider,
+            'ai_used' => true,
+            'ai_status' => $this->ai_status_snapshot( true ),
+            'route' => $route,
+            'grounding' => $grounding,
+            'route_note' => $this->build_route_note( $question, $route, $provider, $grounding ),
+        ), 200 );
     }
 
     private function configured_provider( $options ) {
@@ -1557,6 +1673,224 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             return 'gemini';
         }
         return 'disabled';
+    }
+
+    public function admin_options_snapshot() {
+        $options = $this->get_options();
+        unset( $options['gemini_api_key'], $options['openai_api_key'] );
+        return $options;
+    }
+
+    public function save_ai_provider_settings( $input ) {
+        $old = $this->get_options();
+        $input = is_array( $input ) ? $input : array();
+        $merged = array_merge( $old, $input );
+        if ( ! isset( $input['gemini_api_key_new'] ) ) {
+            $merged['gemini_api_key_new'] = '';
+        }
+        if ( ! isset( $input['openai_api_key_new'] ) ) {
+            $merged['openai_api_key_new'] = '';
+        }
+        $saved = $this->sanitize_options( $merged );
+        update_option( self::OPTION_NAME, $saved, false );
+        return $this->admin_options_snapshot();
+    }
+
+    public function ai_status_snapshot( $public = true ) {
+        $options = $this->get_options();
+        $provider = $this->configured_provider( $options );
+        $stored = get_option( self::AI_STATUS_OPTION, array() );
+        $stored = is_array( $stored ) ? $stored : array();
+        $retrieval = $this->retrieval_status();
+        $index_summary = $this->knowledge_index_summary( $this->knowledge_index_records() );
+        $configured_model = 'gemini' === $provider ? ( $options['gemini_model'] ?? '' ) : ( 'openai' === $provider ? ( $options['openai_model'] ?? '' ) : '' );
+
+        if ( 'disabled' === $provider ) {
+            $state = 'not-configured';
+            $label = 'AI Not Configured';
+        } elseif ( ! empty( $stored['last_success_utc'] ) && ( empty( $stored['last_failure_utc'] ) || $stored['last_success_utc'] >= $stored['last_failure_utc'] ) ) {
+            $state = 'online';
+            $label = 'AI Online';
+        } elseif ( ! empty( $stored['last_failure_utc'] ) ) {
+            $state = 'offline';
+            $label = 'AI Temporarily Offline';
+        } else {
+            $state = 'not-tested';
+            $label = 'AI Configured — Not Yet Tested';
+        }
+
+        $snapshot = array(
+            'version' => self::VERSION,
+            'state' => $state,
+            'label' => $label,
+            'provider' => $provider,
+            'configured' => 'disabled' !== $provider,
+            'model' => $configured_model,
+            'fallback_active' => true,
+            'last_success_utc' => $stored['last_success_utc'] ?? '',
+            'last_failure_utc' => $stored['last_failure_utc'] ?? '',
+            'last_checked_utc' => $stored['last_checked_utc'] ?? '',
+            'latency_ms' => absint( $stored['latency_ms'] ?? 0 ),
+            'semantic_retrieval' => ! empty( $retrieval['semantic_enabled'] ) ? 'online' : 'keyword-only',
+            'embedded_records' => absint( $retrieval['embedded_records'] ?? 0 ),
+            'indexed_records' => absint( $index_summary['total_records'] ?? 0 ),
+        );
+        if ( ! $public ) {
+            $snapshot['last_error_code'] = $stored['last_error_code'] ?? '';
+            $snapshot['last_error_message'] = $stored['last_error_message'] ?? '';
+            $snapshot['last_http_status'] = absint( $stored['last_http_status'] ?? 0 );
+            $snapshot['transport_error'] = $stored['transport_error'] ?? '';
+            $snapshot['key_fingerprint'] = 'gemini' === $provider ? ( $options['gemini_key_fingerprint'] ?? '' ) : ( $options['openai_key_fingerprint'] ?? '' );
+        }
+        return $snapshot;
+    }
+
+    private function record_ai_success( $provider, $options, $latency_ms ) {
+        $model = 'gemini' === $provider ? ( $options['gemini_model'] ?? '' ) : ( $options['openai_model'] ?? '' );
+        $status = get_option( self::AI_STATUS_OPTION, array() );
+        $status = is_array( $status ) ? $status : array();
+        $status = array_merge( $status, array(
+            'provider' => $provider,
+            'model' => $model,
+            'last_checked_utc' => gmdate( 'c' ),
+            'last_success_utc' => gmdate( 'c' ),
+            'latency_ms' => absint( $latency_ms ),
+            'last_error_code' => '',
+            'last_error_message' => '',
+            'last_http_status' => 0,
+            'transport_error' => '',
+        ) );
+        update_option( self::AI_STATUS_OPTION, $status, false );
+    }
+
+    private function record_ai_failure( $provider, $options, $error, $latency_ms ) {
+        $data = is_wp_error( $error ) ? $error->get_error_data() : array();
+        $data = is_array( $data ) ? $data : array();
+        $model = 'gemini' === $provider ? ( $options['gemini_model'] ?? '' ) : ( $options['openai_model'] ?? '' );
+        $status = get_option( self::AI_STATUS_OPTION, array() );
+        $status = is_array( $status ) ? $status : array();
+        $status = array_merge( $status, array(
+            'provider' => $provider,
+            'model' => $model,
+            'last_checked_utc' => gmdate( 'c' ),
+            'last_failure_utc' => gmdate( 'c' ),
+            'latency_ms' => absint( $latency_ms ),
+            'last_error_code' => is_wp_error( $error ) ? $error->get_error_code() : 'unknown_error',
+            'last_error_message' => is_wp_error( $error ) ? sanitize_text_field( $error->get_error_message() ) : 'Unknown provider failure.',
+            'last_http_status' => absint( $data['http_status'] ?? 0 ),
+            'transport_error' => sanitize_text_field( $data['transport_error'] ?? '' ),
+        ) );
+        update_option( self::AI_STATUS_OPTION, $status, false );
+    }
+
+    private function public_ai_error_message( $error ) {
+        if ( ! is_wp_error( $error ) ) {
+            return 'The configured AI provider could not complete the request.';
+        }
+        $data = $error->get_error_data();
+        $status = is_array( $data ) ? absint( $data['http_status'] ?? 0 ) : 0;
+        if ( 401 === $status || 403 === $status ) {
+            return 'The AI provider rejected its server-side credentials. An administrator must review the provider settings.';
+        }
+        if ( 404 === $status ) {
+            return 'The configured AI model or endpoint was not found. An administrator must review the selected model.';
+        }
+        if ( 429 === $status ) {
+            return 'The AI provider is rate-limited or its quota is unavailable. Verified fallback routing is active.';
+        }
+        if ( $status >= 500 ) {
+            return 'The AI provider is experiencing a temporary service error. Verified fallback routing is active.';
+        }
+        if ( false !== strpos( $error->get_error_code(), 'http_request_failed' ) || false !== strpos( $error->get_error_code(), 'transport' ) ) {
+            return 'WordPress could not reach the AI provider. Verified fallback routing is active.';
+        }
+        return 'The configured AI provider could not complete the request. Verified fallback routing is active.';
+    }
+
+    public function handle_ai_status_request() {
+        $options = $this->get_options();
+        if ( empty( $options['public_ai_status_enabled'] ) || '1' !== (string) $options['public_ai_status_enabled'] ) {
+            return new WP_REST_Response( array( 'version' => self::VERSION, 'state' => 'hidden', 'label' => 'AI status hidden', 'fallback_active' => true ), 200 );
+        }
+        return new WP_REST_Response( $this->ai_status_snapshot( true ), 200 );
+    }
+
+    public function handle_ai_test_request() {
+        $result = $this->test_ai_provider_connection();
+        if ( is_wp_error( $result ) ) {
+            return $result;
+        }
+        return new WP_REST_Response( $result, 200 );
+    }
+
+    public function handle_ai_models_request() {
+        $options = $this->get_options();
+        $provider = $this->configured_provider( $options );
+        if ( 'gemini' !== $provider ) {
+            return new WP_REST_Response( array( 'version' => self::VERSION, 'provider' => $provider, 'models' => array(), 'message' => 'Gemini must be configured to list Gemini models.' ), 200 );
+        }
+        $models = $this->list_gemini_models( $options );
+        if ( is_wp_error( $models ) ) {
+            return $models;
+        }
+        return new WP_REST_Response( array( 'version' => self::VERSION, 'provider' => 'gemini', 'models' => $models ), 200 );
+    }
+
+    public function test_ai_provider_connection() {
+        $options = $this->get_options();
+        $provider = $this->configured_provider( $options );
+        if ( 'disabled' === $provider ) {
+            return new WP_Error( 'sc_rl_ai_not_configured', 'Configure a provider, API key, and model before testing.', array( 'status' => 400 ) );
+        }
+        $question = 'Connection test: respond with exactly "Research Librarian AI online".';
+        $route = $this->resolve_route( 'Sustainable Catalyst platform orientation' );
+        $grounding = $this->grounding_context( $question, $route );
+        $started = microtime( true );
+        $result = $this->call_ai( $question, $options, $provider, $grounding );
+        $latency_ms = max( 0, (int) round( ( microtime( true ) - $started ) * 1000 ) );
+        if ( is_wp_error( $result ) ) {
+            $this->record_ai_failure( $provider, $options, $result, $latency_ms );
+            $data = $result->get_error_data();
+            $status = is_array( $data ) && ! empty( $data['http_status'] ) ? absint( $data['http_status'] ) : 502;
+            return new WP_Error( $result->get_error_code(), $result->get_error_message(), array_merge( is_array( $data ) ? $data : array(), array( 'status' => $status, 'snapshot' => $this->ai_status_snapshot( false ) ) ) );
+        }
+        $this->record_ai_success( $provider, $options, $latency_ms );
+        return array( 'ok' => true, 'message' => 'AI provider connection succeeded.', 'provider' => $provider, 'response_excerpt' => substr( $result, 0, 240 ), 'status' => $this->ai_status_snapshot( false ) );
+    }
+
+    private function list_gemini_models( $options ) {
+        $api_key = trim( $options['gemini_api_key'] ?? '' );
+        if ( '' === $api_key ) {
+            return new WP_Error( 'sc_rl_ai_gemini_key_missing', 'Gemini API key is missing.', array( 'status' => 400 ) );
+        }
+        $response = wp_remote_get( 'https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000', array(
+            'headers' => array( 'X-goog-api-key' => $api_key, 'Accept' => 'application/json' ),
+            'timeout' => max( 10, min( 60, absint( $options['ai_request_timeout'] ?? 30 ) ) ),
+        ) );
+        if ( is_wp_error( $response ) ) {
+            return new WP_Error( 'sc_rl_ai_gemini_models_transport', $response->get_error_message(), array( 'status' => 502, 'transport_error' => $response->get_error_code() ) );
+        }
+        $code = wp_remote_retrieve_response_code( $response );
+        $data = json_decode( wp_remote_retrieve_body( $response ), true );
+        if ( $code < 200 || $code >= 300 ) {
+            $message = isset( $data['error']['message'] ) ? sanitize_text_field( $data['error']['message'] ) : 'Gemini model listing failed.';
+            return new WP_Error( 'sc_rl_ai_gemini_models_error', $message, array( 'status' => $code, 'http_status' => $code ) );
+        }
+        $models = array();
+        foreach ( (array) ( $data['models'] ?? array() ) as $model ) {
+            $methods = isset( $model['supportedGenerationMethods'] ) && is_array( $model['supportedGenerationMethods'] ) ? $model['supportedGenerationMethods'] : array();
+            if ( ! in_array( 'generateContent', $methods, true ) ) {
+                continue;
+            }
+            $models[] = array(
+                'name' => preg_replace( '#^models/#', '', sanitize_text_field( $model['name'] ?? '' ) ),
+                'display_name' => sanitize_text_field( $model['displayName'] ?? '' ),
+                'description' => sanitize_text_field( $model['description'] ?? '' ),
+                'input_token_limit' => absint( $model['inputTokenLimit'] ?? 0 ),
+                'output_token_limit' => absint( $model['outputTokenLimit'] ?? 0 ),
+            );
+        }
+        return $models;
     }
 
     private function check_rate_limit( $limit ) {
@@ -1668,8 +2002,9 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         $vector_store_id = sanitize_text_field( $options['openai_vector_store_id'] );
         $max_results = max( 1, min( 20, absint( $options['max_file_search_results'] ) ) );
         $max_output_tokens = max( 150, min( 4000, absint( $options['max_output_tokens'] ) ) );
+        $timeout = max( 10, min( 60, absint( $options['ai_request_timeout'] ?? 30 ) ) );
         $instructions = $this->build_instructions( $options, $grounding );
-        $input = "Visitor question:\n" . $question . "\n\nAnswer as the Sustainable Catalyst Research Librarian. Use Markdown links. Do not request confidential information. If the requested route does not exist, route to /platform/feature-suggestions/.";
+        $input = "Visitor question:\n" . $question . "\n\nAnswer as the Sustainable Catalyst Research Librarian AI. Use Markdown links. Do not request confidential information. If the requested route does not exist, route to /platform/feature-suggestions/.";
 
         $body = array(
             'model'             => $model,
@@ -1683,21 +2018,21 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         $response = wp_remote_post( 'https://api.openai.com/v1/responses', array(
             'headers' => array( 'Authorization' => 'Bearer ' . $api_key, 'Content-Type' => 'application/json' ),
             'body'    => wp_json_encode( $body ),
-            'timeout' => 30,
+            'timeout' => $timeout,
         ) );
         if ( is_wp_error( $response ) ) {
-            return $response;
+            return new WP_Error( 'sc_rl_ai_openai_transport', $response->get_error_message(), array( 'http_status' => 0, 'transport_error' => $response->get_error_code(), 'provider' => 'openai', 'model' => $model ) );
         }
         $code = wp_remote_retrieve_response_code( $response );
         $raw = wp_remote_retrieve_body( $response );
         $data = json_decode( $raw, true );
         if ( $code < 200 || $code >= 300 ) {
             $message = isset( $data['error']['message'] ) ? $data['error']['message'] : 'OpenAI request failed.';
-            return new WP_Error( 'sc_rl_ai_openai_error', sanitize_text_field( $message ) );
+            return new WP_Error( 'sc_rl_ai_openai_error', sanitize_text_field( $message ), array( 'http_status' => $code, 'provider' => 'openai', 'model' => $model ) );
         }
         $text = $this->extract_openai_text( $data );
         if ( '' === trim( $text ) ) {
-            return new WP_Error( 'sc_rl_ai_empty_ai_response', __( 'The AI response did not include readable text.', 'sustainable-catalyst-research-librarian-ai' ) );
+            return new WP_Error( 'sc_rl_ai_empty_ai_response', __( 'The AI response did not include readable text.', 'sustainable-catalyst-research-librarian-ai' ), array( 'http_status' => $code, 'provider' => 'openai', 'model' => $model ) );
         }
         return trim( wp_strip_all_tags( $text, false ) );
     }
@@ -1725,26 +2060,32 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
 
     private function call_gemini( $question, $options, $grounding = array() ) {
         $api_key = trim( $options['gemini_api_key'] );
-        $model = sanitize_text_field( $options['gemini_model'] );
+        $model = preg_replace( '#^models/#', '', sanitize_text_field( $options['gemini_model'] ) );
         $max_output_tokens = max( 150, min( 4000, absint( $options['max_output_tokens'] ) ) );
         $temperature = is_numeric( $options['temperature'] ) ? (float) $options['temperature'] : 0.2;
+        $timeout = max( 10, min( 60, absint( $options['ai_request_timeout'] ?? 30 ) ) );
         $instructions = $this->build_instructions( $options, $grounding );
-        $prompt = $instructions . "\n\nVisitor question:\n" . $question . "\n\nAnswer as the Sustainable Catalyst Research Librarian using concise Markdown links.";
-        $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . rawurlencode( $model ) . ':generateContent?key=' . rawurlencode( $api_key );
+        $prompt = "Visitor question:\n" . $question . "\n\nAnswer as the Sustainable Catalyst Research Librarian AI using concise Markdown links and only the supplied Sustainable Catalyst routes and sources.";
+        $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . rawurlencode( $model ) . ':generateContent';
         $body = array(
+            'systemInstruction' => array( 'parts' => array( array( 'text' => $instructions ) ) ),
             'contents' => array( array( 'role' => 'user', 'parts' => array( array( 'text' => $prompt ) ) ) ),
             'generationConfig' => array( 'maxOutputTokens' => $max_output_tokens, 'temperature' => $temperature ),
         );
-        $response = wp_remote_post( $url, array( 'headers' => array( 'Content-Type' => 'application/json' ), 'body' => wp_json_encode( $body ), 'timeout' => 30 ) );
+        $response = wp_remote_post( $url, array(
+            'headers' => array( 'Content-Type' => 'application/json', 'X-goog-api-key' => $api_key ),
+            'body' => wp_json_encode( $body ),
+            'timeout' => $timeout,
+        ) );
         if ( is_wp_error( $response ) ) {
-            return $response;
+            return new WP_Error( 'sc_rl_ai_gemini_transport', $response->get_error_message(), array( 'http_status' => 0, 'transport_error' => $response->get_error_code(), 'provider' => 'gemini', 'model' => $model ) );
         }
         $code = wp_remote_retrieve_response_code( $response );
         $raw = wp_remote_retrieve_body( $response );
         $data = json_decode( $raw, true );
         if ( $code < 200 || $code >= 300 ) {
             $message = isset( $data['error']['message'] ) ? $data['error']['message'] : 'Gemini request failed.';
-            return new WP_Error( 'sc_rl_ai_gemini_error', sanitize_text_field( $message ) );
+            return new WP_Error( 'sc_rl_ai_gemini_error', sanitize_text_field( $message ), array( 'http_status' => $code, 'provider' => 'gemini', 'model' => $model ) );
         }
         $parts = array();
         if ( isset( $data['candidates'][0]['content']['parts'] ) && is_array( $data['candidates'][0]['content']['parts'] ) ) {
@@ -1756,13 +2097,14 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         }
         $text = implode( "\n\n", $parts );
         if ( '' === trim( $text ) ) {
-            return new WP_Error( 'sc_rl_ai_empty_gemini_response', __( 'The Gemini response did not include readable text.', 'sustainable-catalyst-research-librarian-ai' ) );
+            $finish = sanitize_text_field( $data['candidates'][0]['finishReason'] ?? '' );
+            return new WP_Error( 'sc_rl_ai_empty_gemini_response', __( 'The Gemini response did not include readable text.', 'sustainable-catalyst-research-librarian-ai' ), array( 'http_status' => $code, 'provider' => 'gemini', 'model' => $model, 'finish_reason' => $finish ) );
         }
         return trim( wp_strip_all_tags( $text, false ) );
     }
 
     private function fallback_response( $question, $grounding = array() ) {
-        $route = $this->match_route( strtolower( $question ) );
+        $route = $this->resolve_route( $question );
         $answer = "**What you seem to be trying to do**\n" . $route['intent'] . "\n\n";
         $answer .= "**Best starting point**\n[" . $route['title'] . "](" . $route['url'] . ")\n\n";
         $answer .= "**Why this route fits**\n" . $route['why'] . "\n\n";
@@ -1839,7 +2181,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'sources'      => $sources,
             'reason_codes' => $reason_codes,
             'confidence'   => $confidence,
-            'quality'      => class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V520_Route_Quality' ) ? Sustainable_Catalyst_Research_Librarian_AI_V520_Route_Quality::diagnostics( $question, $route, $sources, $confidence ) : array(),
+            'quality'      => class_exists( 'SC_RL6_V520_Route_Quality' ) ? SC_RL6_V520_Route_Quality::diagnostics( $question, $route, $sources, $confidence ) : array(),
             'handoffs'     => $this->route_handoffs( $route ),
             'ambiguity'    => $this->route_ambiguity( $route, $confidence ),
         );
@@ -1864,8 +2206,8 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
     private function match_sources( $question, $route ) {
         $options = $this->get_options();
         $records = $this->knowledge_index_records();
-        if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V440_Curation' ) ) {
-            $records = Sustainable_Catalyst_Research_Librarian_AI_V440_Curation::apply_source_weights( $records, $question, $route );
+        if ( class_exists( 'SC_RL6_V440_Curation' ) ) {
+            $records = SC_RL6_V440_Curation::apply_source_weights( $records, $question, $route );
         }
         $terms = $this->normalize_terms( $question . ' ' . $route['title'] . ' ' . $route['category'] );
         $query_embedding = null;
@@ -1896,8 +2238,8 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             }
         }
         usort( $scored, function( $a, $b ) { return $b['score'] <=> $a['score']; } );
-        if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V520_Route_Quality' ) ) {
-            $scored = Sustainable_Catalyst_Research_Librarian_AI_V520_Route_Quality::rank_sources( $scored, $question, $route );
+        if ( class_exists( 'SC_RL6_V520_Route_Quality' ) ) {
+            $scored = SC_RL6_V520_Route_Quality::rank_sources( $scored, $question, $route );
         }
         $limit = max( 3, min( 8, absint( isset( $options['source_result_limit'] ) ? $options['source_result_limit'] : 5 ) ) );
         return array_slice( $scored, 0, $limit );
@@ -1920,6 +2262,9 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
     private function reason_codes( $question, $route, $sources ) {
         $codes = array();
         $q = strtolower( $question );
+        if ( ! empty( $route['matched_country']['alpha3'] ) ) {
+            $codes[] = 'country:' . strtolower( $route['matched_country']['alpha3'] );
+        }
         foreach ( $route['keys'] as $key ) {
             if ( false !== strpos( $q, $key ) ) {
                 $codes[] = 'keyword:' . $key;
@@ -1946,6 +2291,9 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             }
         }
         $score = min( 100, ( $keyword_hits * 18 ) + ( min( $top, 30 ) * 2 ) + ( count( $sources ) * 3 ) );
+        if ( ! empty( $route['matched_country']['alpha3'] ) ) {
+            $score = max( $score, 88 );
+        }
         $level = 'low';
         $options = $this->get_options();
         $high_threshold = max( 50, min( 95, absint( $options['eval_high_confidence_threshold'] ?? 75 ) ) );
@@ -1989,6 +2337,13 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                 array( 'id' => 'demos', 'label' => 'Platform Demos', 'url' => '/platform/demos/', 'reason' => 'Use to create module artifacts before synthesizing a packet.' ),
             );
         }
+        if ( in_array( $id, array( 'site-intelligence', 'country-intelligence' ), true ) ) {
+            return array(
+                array( 'id' => 'dashboard-studio', 'label' => 'Dashboard Studio', 'url' => '/platform/site-intelligence/dashboard-studio/', 'reason' => 'Use to continue into country, comparison, Earth observation, event, thematic, source, briefing, or observatory workspaces.' ),
+                array( 'id' => 'workbench', 'label' => 'Workbench', 'url' => 'https://sustainablecatalyst.com/modeling-analytics/workbench/', 'reason' => 'Use when public evidence needs calculation, graphing, modeling, diagnostics, or sensitivity analysis.' ),
+                array( 'id' => 'decision-studio', 'label' => 'Decision Studio', 'url' => '/platform/decision-studio/', 'reason' => 'Use when sources, assumptions, scenarios, tradeoffs, and unresolved issues must become a reviewable Decision Packet.' ),
+            );
+        }
         if ( 'workbench' === $id ) {
             return array(
                 array( 'id' => 'decision-studio', 'label' => 'Decision Studio', 'url' => '/platform/#decision-studio', 'reason' => 'Use when calculator results need to become part of a broader Decision Packet.' ),
@@ -2020,7 +2375,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         if ( '' === trim( $question ) ) {
             return new WP_Error( 'sc_rl_ai_empty_question', __( 'Please enter a question before preparing a handoff.', 'sustainable-catalyst-research-librarian-ai' ), array( 'status' => 400 ) );
         }
-        $route = $this->match_route( strtolower( $question ) );
+        $route = $this->resolve_route( $question );
         $grounding = $this->grounding_context( $question, $route );
         $payload = $this->build_handoff_payload( $question, $route, 'handoff-prepare', $grounding );
         $this->append_handoff_log( $payload );
@@ -2048,7 +2403,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             if ( '' === trim( $question ) ) {
                 return new WP_Error( 'sc_rl_ai_empty_session', __( 'Please generate a route note before saving a session.', 'sustainable-catalyst-research-librarian-ai' ), array( 'status' => 400 ) );
             }
-            $route = $this->match_route( strtolower( $question ) );
+            $route = $this->resolve_route( $question );
             $grounding = $this->grounding_context( $question, $route );
             $note = $this->build_route_note( $question, $route, 'session-save', $grounding );
         }
@@ -2877,7 +3232,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                 'x-goog-api-key' => $api_key,
             ),
             'body' => wp_json_encode( $body ),
-            'timeout' => 30,
+            'timeout' => max( 10, min( 60, absint( $options['ai_request_timeout'] ?? 30 ) ) ),
         ) );
         if ( is_wp_error( $response ) ) {
             $response->add_data( array( 'http_status' => 0, 'endpoint_model' => $endpoint_model, 'request_model' => $request_model ), 'sc_rl_ai_gemini_embedding_transport' );
@@ -3195,9 +3550,14 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
     private function knowledge_index_records() {
         $index = $this->knowledge_index();
         $records = isset( $index['records'] ) && is_array( $index['records'] ) ? $index['records'] : array();
-        if ( count( $records ) < count( $this->source_records() ) ) {
-            $records = array_merge( $this->source_records(), $records );
-        }
+
+        // Always prepend the current release's first-party source registry. This
+        // makes newly added canonical routes (for example Site Intelligence and
+        // Country Intelligence) available immediately after an upgrade, even
+        // when a larger saved index already exists. Dedupe keeps these current
+        // canonical records authoritative while preserving indexed site content.
+        $records = array_merge( $this->source_records(), $records );
+
         return $this->dedupe_index_records( $records );
     }
 
@@ -3417,6 +3777,8 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             array( 'id' => 'recovery-grit', 'prompt' => 'I need to track pressure, energy, support, recovery actions, and next steps after a setback.', 'expected_routes' => array( 'grit' ), 'category' => 'human-systems' ),
             array( 'id' => 'missing-feature', 'prompt' => 'I need a capability that does not exist yet. Where should I send the idea?', 'expected_routes' => array( 'feature-suggestions' ), 'category' => 'open-development' ),
             array( 'id' => 'methodology-boundary', 'prompt' => 'Where can I read about assumptions, traceability, responsible AI, and evidence boundaries?', 'expected_routes' => array( 'methodology' ), 'category' => 'methodology' ),
+            array( 'id' => 'pakistan-country-intelligence', 'prompt' => 'I want to research Pakistan across climate, infrastructure, development, and governance.', 'expected_routes' => array( 'country-intelligence' ), 'category' => 'country-intelligence' ),
+            array( 'id' => 'climate-dashboard', 'prompt' => 'Where can I find live climate dashboards, Earth observation, and public environmental indicators?', 'expected_routes' => array( 'site-intelligence' ), 'category' => 'site-intelligence' ),
         );
     }
 
@@ -3479,7 +3841,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
     }
 
     private function evaluate_retrieval_query( $prompt, $expected_routes = array(), $case_id = 'manual' ) {
-        $route = $this->match_route( strtolower( $prompt ) );
+        $route = $this->resolve_route( $prompt );
         $grounding = $this->grounding_context( $prompt, $route );
         $sources = isset( $grounding['sources'] ) && is_array( $grounding['sources'] ) ? $grounding['sources'] : array();
         $confidence = isset( $grounding['confidence'] ) && is_array( $grounding['confidence'] ) ? $grounding['confidence'] : array( 'level' => 'low', 'score' => 0, 'explanation' => 'No confidence data returned.' );
@@ -3734,8 +4096,105 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         );
     }
 
+    public function resolve_route( $question ) {
+        return $this->match_route( (string) $question );
+    }
+
+    private function country_registry() {
+        static $countries = null;
+        if ( null !== $countries ) {
+            return $countries;
+        }
+        $countries = array();
+        $path = plugin_dir_path( __FILE__ ) . 'data/research_librarian_countries_v6.1.0.json';
+        if ( is_readable( $path ) ) {
+            $decoded = json_decode( file_get_contents( $path ), true );
+            if ( is_array( $decoded ) && isset( $decoded['countries'] ) && is_array( $decoded['countries'] ) ) {
+                $countries = $decoded['countries'];
+            }
+        }
+        if ( empty( $countries ) ) {
+            $countries = array(
+                array( 'name' => 'Pakistan', 'alpha2' => 'PK', 'alpha3' => 'PAK', 'aliases' => array( 'Pakistan', 'Islamic Republic of Pakistan' ) ),
+                array( 'name' => 'United States', 'alpha2' => 'US', 'alpha3' => 'USA', 'aliases' => array( 'United States', 'United States of America', 'USA', 'U.S.' ) ),
+                array( 'name' => 'United Kingdom', 'alpha2' => 'GB', 'alpha3' => 'GBR', 'aliases' => array( 'United Kingdom', 'UK', 'Great Britain' ) ),
+            );
+        }
+        return $countries;
+    }
+
+    private function normalize_country_text( $text ) {
+        $text = strtolower( wp_strip_all_tags( (string) $text ) );
+        $text = str_replace( array( '’', "'", '.', ',', '/', '_', '-' ), ' ', $text );
+        $text = preg_replace( '/[^a-z0-9\s]/', ' ', $text );
+        return ' ' . trim( preg_replace( '/\s+/', ' ', $text ) ) . ' ';
+    }
+
+    private function detect_country( $question ) {
+        $normalized = $this->normalize_country_text( $question );
+        $raw = (string) $question;
+        $best = null;
+        $best_length = 0;
+        foreach ( $this->country_registry() as $country ) {
+            $aliases = isset( $country['aliases'] ) && is_array( $country['aliases'] ) ? $country['aliases'] : array();
+            $aliases[] = $country['name'] ?? '';
+            foreach ( array_unique( array_filter( $aliases ) ) as $alias ) {
+                $alias_norm = trim( $this->normalize_country_text( $alias ) );
+                if ( strlen( $alias_norm ) < 3 ) {
+                    continue;
+                }
+                if ( false !== strpos( $normalized, ' ' . $alias_norm . ' ' ) && strlen( $alias_norm ) > $best_length ) {
+                    $best = $country;
+                    $best_length = strlen( $alias_norm );
+                }
+            }
+            $alpha3 = strtoupper( sanitize_text_field( $country['alpha3'] ?? '' ) );
+            if ( strlen( $alpha3 ) === 3 && preg_match( '/(?:^|[^A-Z])' . preg_quote( $alpha3, '/' ) . '(?:$|[^A-Z])/', $raw ) && $best_length < 3 ) {
+                $best = $country;
+                $best_length = 3;
+            }
+            $alpha2 = strtoupper( sanitize_text_field( $country['alpha2'] ?? '' ) );
+            if ( strlen( $alpha2 ) === 2 && preg_match( '/(?:^|[^A-Z])' . preg_quote( $alpha2, '/' ) . '(?:$|[^A-Z])/', $raw ) && $best_length < 2 ) {
+                $best = $country;
+                $best_length = 2;
+            }
+        }
+        return $best;
+    }
+
+    private function country_route( $country ) {
+        $name = sanitize_text_field( $country['name'] ?? 'Country' );
+        $alpha3 = strtoupper( sanitize_text_field( $country['alpha3'] ?? '' ) );
+        return array(
+            'id' => 'country-intelligence',
+            'category' => 'Country research',
+            'title' => $name . ' Country Intelligence',
+            'url' => '/platform/site-intelligence/country-intelligence/?country=' . rawurlencode( $alpha3 ),
+            'description' => 'Source-aware country research across environmental, development, infrastructure, humanitarian, human-security, economic, and institutional evidence.',
+            'keys' => array( strtolower( $name ), strtolower( $alpha3 ), 'country intelligence', 'country profile', 'country research' ),
+            'intent' => 'You are researching ' . $name . ' and need a country-specific public-evidence starting point.',
+            'why' => 'Country Intelligence is designed for source-aware geographic research and preserves reporting periods, source context, freshness, missing values, and methodological limits.',
+            'platform_fit' => 'It is the country-specific layer inside Site Intelligence and can continue into Dashboard Studio, Cross-Domain Comparison, Workbench analysis, or Decision Studio.',
+            'next_step' => 'Open the ' . $name . ' profile, review its source and freshness notes, then narrow the question to climate, infrastructure, development, governance, humanitarian conditions, economics, or another supported domain.',
+            'related' => array(
+                'Site Intelligence' => '/platform/site-intelligence/',
+                'Dashboard Studio' => '/platform/site-intelligence/dashboard-studio/',
+                'Cross-Domain Comparison' => '/platform/site-intelligence/cross-domain-comparison/',
+                'Sources + Methodology' => '/platform/site-intelligence/source-methodology/',
+                'Public Observatories' => '/platform/site-intelligence/public-observatories/',
+            ),
+            'matched_country' => array( 'name' => $name, 'alpha2' => $country['alpha2'] ?? '', 'alpha3' => $alpha3 ),
+        );
+    }
+
     private function source_records() {
         return array(
+            array( 'id' => 'site-intelligence', 'route_id' => 'site-intelligence', 'type' => 'public-evidence-platform', 'title' => 'Site Intelligence', 'url' => '/platform/site-intelligence/', 'summary' => 'Public observatory for country intelligence, comparison, Earth observation, live events, thematic dashboards, source transparency, briefing exports, and auditable evidence workflows.', 'topics' => array( 'site intelligence', 'country', 'public evidence', 'dashboard', 'map', 'earth observation', 'climate', 'events', 'indicators' ), 'priority' => 8 ),
+            array( 'id' => 'country-intelligence', 'route_id' => 'country-intelligence', 'type' => 'country-research-workspace', 'title' => 'Country Intelligence', 'url' => '/platform/site-intelligence/country-intelligence/', 'summary' => 'Source-aware country profiles across environmental, development, infrastructure, humanitarian, human-security, economic, and institutional evidence.', 'topics' => array( 'country intelligence', 'country profile', 'geography', 'development', 'infrastructure', 'governance', 'humanitarian' ), 'priority' => 9 ),
+            array( 'id' => 'cross-domain-comparison', 'route_id' => 'site-intelligence', 'type' => 'comparison-workspace', 'title' => 'Cross-Domain Comparison', 'url' => '/platform/site-intelligence/cross-domain-comparison/', 'summary' => 'Compare countries while preserving units, definitions, reporting periods, missing values, source methods, and methodological compatibility.', 'topics' => array( 'compare countries', 'cross-domain comparison', 'reporting period', 'units', 'method compatibility' ), 'priority' => 8 ),
+            array( 'id' => 'dashboard-studio', 'route_id' => 'site-intelligence', 'type' => 'dashboard-workspace', 'title' => 'Dashboard Studio', 'url' => '/platform/site-intelligence/dashboard-studio/', 'summary' => 'Routes country research, comparisons, Earth observation, live events, thematic analysis, briefings, saved views, sources, and observatory workflows.', 'topics' => array( 'dashboard studio', 'dashboard', 'earth observation', 'live events', 'briefing', 'saved views' ), 'priority' => 8 ),
+            array( 'id' => 'site-intelligence-methodology', 'route_id' => 'site-intelligence', 'type' => 'source-methodology', 'title' => 'Site Intelligence Sources and Methodology', 'url' => '/platform/site-intelligence/source-methodology/', 'summary' => 'Source publishers, connector state, coverage, freshness, transformation rules, fallback behavior, and interpretation limits.', 'topics' => array( 'sources', 'methodology', 'freshness', 'connector', 'coverage', 'transformation' ), 'priority' => 8 ),
+            array( 'id' => 'public-observatories', 'route_id' => 'site-intelligence', 'type' => 'public-observatory', 'title' => 'Public Observatories', 'url' => '/platform/site-intelligence/public-observatories/', 'summary' => 'Evidence ledgers, source-method-artifact lineage, release history, verification levels, canonical digests, and public audit packets.', 'topics' => array( 'public observatory', 'evidence ledger', 'lineage', 'audit packet', 'verification' ), 'priority' => 8 ),
             array( 'id' => 'platform', 'route_id' => 'platform', 'type' => 'architecture-page', 'title' => 'Platform', 'url' => '/platform/', 'summary' => 'Architecture page connecting Decision Studio, Workbench, modules, methodology, demos, and open development.', 'topics' => array( 'platform', 'architecture', 'decision studio', 'workbench', 'modules' ), 'priority' => 5 ),
             array( 'id' => 'demos', 'route_id' => 'demos', 'type' => 'demo-hub', 'title' => 'Platform Demos', 'url' => '/platform/demos/', 'summary' => 'Workflow demo hub for Canvas, Data, Analytics R, Global Impact, Narrative Risk, Finance, Grit, Workbench, and Decision Studio.', 'topics' => array( 'demos', 'workflow', 'modules', 'artifacts' ), 'priority' => 5 ),
             array( 'id' => 'research-librarian', 'route_id' => 'platform', 'type' => 'routing-page', 'title' => 'Research Librarian', 'url' => '/platform/research-librarian/', 'summary' => 'Site-scoped routing assistant for choosing Sustainable Catalyst pages, modules, tools, repositories, and workflows.', 'topics' => array( 'routing', 'assistant', 'research librarian', 'navigation' ), 'priority' => 4 ),
@@ -3756,20 +4215,42 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
     }
 
     private function match_route( $q ) {
-        if ( class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V440_Curation' ) ) {
-            $curated_route = Sustainable_Catalyst_Research_Librarian_AI_V440_Curation::match_override( $q, $this->routes() );
+        $question = trim( (string) $q );
+        $normalized = strtolower( wp_strip_all_tags( $question ) );
+        $country = $this->detect_country( $question );
+        if ( is_array( $country ) ) {
+            return $this->country_route( $country );
+        }
+        if ( class_exists( 'SC_RL6_V440_Curation' ) ) {
+            $curated_route = SC_RL6_V440_Curation::match_override( $normalized, $this->routes() );
             if ( is_array( $curated_route ) && ! empty( $curated_route['id'] ) ) {
                 return $curated_route;
             }
         }
+        $best = null;
+        $best_score = 0;
         foreach ( $this->routes() as $route ) {
+            $score = 0;
             foreach ( $route['keys'] as $key ) {
-                if ( false !== strpos( $q, $key ) ) {
-                    return $route;
+                $key = strtolower( trim( (string) $key ) );
+                if ( '' === $key || false === strpos( $normalized, $key ) ) {
+                    continue;
+                }
+                $word_count = max( 1, count( preg_split( '/\s+/', $key ) ) );
+                $score += ( $word_count * 12 ) + min( 20, strlen( $key ) );
+                if ( $normalized === $key ) {
+                    $score += 20;
                 }
             }
+            if ( 'platform' === $route['id'] && $score > 0 ) {
+                $score -= 8;
+            }
+            if ( $score > $best_score ) {
+                $best = $route;
+                $best_score = $score;
+            }
         }
-        return $this->route_by_id( 'platform' );
+        return $best ? $best : $this->route_by_id( 'platform' );
     }
 
     private function route_by_id( $id ) {
@@ -3784,6 +4265,26 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
 
     private function routes() {
         return array(
+            array(
+                'id' => 'site-intelligence', 'category' => 'Public evidence', 'title' => 'Site Intelligence', 'url' => '/platform/site-intelligence/',
+                'description' => 'Public observatory for country intelligence, comparison, Earth observation, live events, thematic dashboards, source transparency, briefings, and auditable evidence workflows.',
+                'keys' => array( 'site intelligence', 'country data', 'country dashboard', 'public evidence', 'earth observation', 'satellite data', 'climate dashboard', 'live events', 'thematic dashboard', 'public indicator', 'indicators', 'map', 'geographic', 'geospatial', 'compare countries', 'country comparison', 'nasa', 'climate data' ),
+                'intent' => 'You need public, geographic, country, environmental, event, indicator, or source-aware evidence.',
+                'why' => 'Site Intelligence is the evidence layer for country profiles, comparison, maps, Earth observation, live events, indicators, dashboards, sources, briefings, and public observatory records.',
+                'platform_fit' => 'Research Librarian routes evidence questions here before Workbench performs deeper analysis or Decision Studio assembles a reviewable decision packet.',
+                'next_step' => 'Open Site Intelligence and choose Country Intelligence, Cross-Domain Comparison, Dashboard Studio, Sources and Methodology, or Public Observatories.',
+                'related' => array( 'Country Intelligence' => '/platform/site-intelligence/country-intelligence/', 'Dashboard Studio' => '/platform/site-intelligence/dashboard-studio/', 'Sources + Methodology' => '/platform/site-intelligence/source-methodology/', 'Public Observatories' => '/platform/site-intelligence/public-observatories/' ),
+            ),
+            array(
+                'id' => 'country-intelligence', 'category' => 'Country research', 'title' => 'Country Intelligence', 'url' => '/platform/site-intelligence/country-intelligence/',
+                'description' => 'Source-aware country profiles across environmental, development, infrastructure, humanitarian, human-security, economic, and institutional evidence.',
+                'keys' => array( 'country intelligence', 'country profile', 'country research', 'about a country', 'one country', 'national profile' ),
+                'intent' => 'You need a source-aware profile for a specific country.',
+                'why' => 'Country Intelligence preserves domain context, units, source identity, reporting periods, freshness, missing values, and methodological limits.',
+                'platform_fit' => 'It is the country-specific entry point inside Site Intelligence and can continue to comparison, Workbench, or Decision Studio.',
+                'next_step' => 'Name the country and the domain you want to investigate, then review the profile and its source notes.',
+                'related' => array( 'Site Intelligence' => '/platform/site-intelligence/', 'Cross-Domain Comparison' => '/platform/site-intelligence/cross-domain-comparison/', 'Sources + Methodology' => '/platform/site-intelligence/source-methodology/' ),
+            ),
             array(
                 'id' => 'decision-studio', 'category' => 'Decision support', 'title' => 'Sustainable Catalyst Decision Studio', 'url' => '/platform/#decision-studio',
                 'description' => 'Decision Packet workspace for sustainability briefs, scenario comparison, artifact imports, audit/provenance, readiness review, exports, and Workbench handoffs.',
@@ -3928,7 +4429,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
     }
 
     public function register_admin_page() {
-        add_options_page( __( 'Research Librarian', 'sustainable-catalyst-research-librarian-ai' ), __( 'Research Librarian', 'sustainable-catalyst-research-librarian-ai' ), 'manage_options', 'sc-research-librarian-ai', array( $this, 'render_admin_page' ) );
+        // v6.1.0 consolidates administration under the dedicated Research Librarian AI menu.
     }
 
     public function register_settings() {
@@ -3936,6 +4437,8 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         add_settings_section( 'sc_rl_ai_main', __( 'Provider and Routing Settings', 'sustainable-catalyst-research-librarian-ai' ), array( $this, 'settings_section_intro' ), 'sc-research-librarian-ai' );
         $fields = array(
             'provider' => __( 'AI Provider', 'sustainable-catalyst-research-librarian-ai' ),
+            'public_ai_status_enabled' => __( 'Show Public AI Status', 'sustainable-catalyst-research-librarian-ai' ),
+            'ai_request_timeout' => __( 'AI Request Timeout (seconds)', 'sustainable-catalyst-research-librarian-ai' ),
             'gemini_api_key' => __( 'Gemini API Key', 'sustainable-catalyst-research-librarian-ai' ),
             'gemini_model' => __( 'Gemini Model', 'sustainable-catalyst-research-librarian-ai' ),
             'embeddings_provider' => __( 'Embeddings Provider', 'sustainable-catalyst-research-librarian-ai' ),
@@ -3988,6 +4491,8 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         }
         return array(
             'provider'                => $provider,
+            'public_ai_status_enabled' => ( isset( $input['public_ai_status_enabled'] ) && '1' === (string) wp_unslash( $input['public_ai_status_enabled'] ) ) ? '1' : '0',
+            'ai_request_timeout'       => max( 10, min( 60, absint( isset( $input['ai_request_timeout'] ) ? $input['ai_request_timeout'] : self::defaults()['ai_request_timeout'] ) ) ),
             'gemini_api_key'          => $this->sanitize_secret_field( $input, 'gemini_api_key', $old['gemini_api_key'] ),
             'gemini_key_fingerprint'  => $this->secret_fingerprint_hash_for_options( $this->sanitize_secret_field( $input, 'gemini_api_key', $old['gemini_api_key'] ) ),
             'gemini_model'            => isset( $input['gemini_model'] ) ? sanitize_text_field( wp_unslash( $input['gemini_model'] ) ) : self::defaults()['gemini_model'],
@@ -4067,7 +4572,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
     }
 
     public function settings_section_intro() {
-        echo '<p>' . esc_html__( 'The Research Librarian is site-scoped routing infrastructure. It can run entirely in deterministic fallback mode, use Gemini/OpenAI server-side for richer route explanations, and use optional Gemini embeddings for semantic retrieval over the Sustainable Catalyst knowledge index. API keys are not exposed to JavaScript.', 'sustainable-catalyst-research-librarian-ai' ) . '</p>';
+        echo '<p>' . esc_html__( 'Research Librarian AI is a site-scoped research guidance system. It uses Gemini or OpenAI server-side for grounded route explanations, optional Gemini embeddings for semantic retrieval, country-aware Site Intelligence routing, and a verified deterministic fallback when the provider is unavailable. API keys are not exposed to JavaScript.', 'sustainable-catalyst-research-librarian-ai' ) . '</p>';
         echo '<p><code>[sustainable_catalyst_research_librarian_ai]</code> <code>[sc_research_librarian mode="landing"]</code> <code>[sc_research_librarian mode="route-map"]</code> <code>[sc_research_librarian mode="index-summary"]</code> <code>[sc_research_librarian mode="retrieval-status"]</code> <code>[sc_research_librarian mode="evaluation-summary"]</code> <code>[sc_research_librarian mode="handoff-summary"]</code> <code>[sc_research_librarian mode="session-summary"]</code> <code>[sc_research_librarian mode="analytics-summary"]</code> <code>[sc_research_librarian mode="feedback-summary"]</code></p>';
     }
 
@@ -4108,6 +4613,9 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                 echo '<label><input type="checkbox" name="' . esc_attr( $name ) . '" value="1" ' . checked( $options[ $field ], '1', false ) . ' /> ' . esc_html__( 'Skip records that already have embeddings for the selected model. Recommended.', 'sustainable-catalyst-research-librarian-ai' ) . '</label>';
                 echo '<p class="description">' . esc_html__( 'This makes the embedding job resumable and prevents a later failure from destroying existing semantic coverage.', 'sustainable-catalyst-research-librarian-ai' ) . '</p>';
                 break;
+            case 'public_ai_status_enabled':
+                echo '<label><input type="checkbox" name="' . esc_attr( $name ) . '" value="1" ' . checked( $options[ $field ], '1', false ) . ' /> ' . esc_html__( 'Display provider availability, fallback state, retrieval mode, and last-success information on the public assistant.', 'sustainable-catalyst-research-librarian-ai' ) . '</label>';
+                break;
             case 'maintenance_auto_rebuild_enabled':
             case 'maintenance_include_sitemap_urls':
             case 'maintenance_auto_embed_after_rebuild':
@@ -4126,6 +4634,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             case 'system_instructions':
                 echo '<textarea class="large-text code" rows="14" name="' . esc_attr( $name ) . '">' . esc_textarea( $options[ $field ] ) . '</textarea>';
                 break;
+            case 'ai_request_timeout':
             case 'max_file_search_results':
             case 'max_output_tokens':
             case 'rate_limit':
@@ -4389,7 +4898,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
  * v4.1.0 companion layer: index snapshots, backup/export controls, and recovery readiness.
  * Kept as a companion class so it can be maintained without disrupting the core routing class.
  */
-final class Sustainable_Catalyst_Research_Librarian_AI_V410_Recovery {
+final class SC_RL6_V410_Recovery {
     const OPTION_NAME = 'sc_rl_ai_recovery_snapshots';
     const INDEX_OPTION = 'sc_rl_ai_knowledge_index';
     const EMBED_OPTION = 'sc_rl_ai_embedding_status';
@@ -4723,7 +5232,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V410_Recovery {
  * or admin exports through public endpoints. It summarizes the access surface and
  * gives administrators a repeatable release/security review before public use.
  */
-final class Sustainable_Catalyst_Research_Librarian_AI_V420_Security {
+final class SC_RL6_V420_Security {
     const OPTION_NAME = 'sc_rl_ai_security_audit_status';
     const MAIN_OPTIONS = 'sc_rl_ai_options';
     const INDEX_OPTION = 'sc_rl_ai_knowledge_index';
@@ -5026,7 +5535,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V420_Security {
 /**
  * v4.3.0 Observability, operational runbooks, and production checks.
  */
-final class Sustainable_Catalyst_Research_Librarian_AI_V430_Observability {
+final class SC_RL6_V430_Observability {
     const VERSION = '4.3.0';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
     const MAIN_OPTIONS = 'sc_rl_ai_options';
@@ -5382,7 +5891,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V430_Observability {
  * lightweight: it modifies deterministic route selection and source priority
  * without exposing secrets or visitor logs publicly.
  */
-class Sustainable_Catalyst_Research_Librarian_AI_V440_Curation {
+class SC_RL6_V440_Curation {
     const VERSION = '4.4.0';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
     const OPTION = 'sc_rl_ai_curation_rules';
@@ -5816,7 +6325,7 @@ class Sustainable_Catalyst_Research_Librarian_AI_V440_Curation {
  * checkpoints, and an exportable path session. It is intentionally route-only:
  * it does not certify outcomes or replace professional review.
  */
-final class Sustainable_Catalyst_Research_Librarian_AI_V470_Guided_Paths {
+final class SC_RL6_V470_Guided_Paths {
     const VERSION = '4.7.1';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
     const LOG_OPTION = 'sc_rl_ai_guided_path_logs';
@@ -6344,7 +6853,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V470_Guided_Paths {
  * This layer documents the Research Librarian integration surface so the plugin
  * can be treated as infrastructure rather than only a public assistant widget.
  */
-final class Sustainable_Catalyst_Research_Librarian_AI_V450_Contracts {
+final class SC_RL6_V450_Contracts {
     const VERSION = '4.5.0';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
 
@@ -6653,9 +7162,9 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V450_Contracts {
     }
 }
 
-final class Sustainable_Catalyst_Research_Librarian_AI_V460_Answer_UX {
+final class SC_RL6_V460_Answer_UX {
     const VERSION = '4.7.1';
-    const REST_NAMESPACE = Sustainable_Catalyst_Research_Librarian_AI::REST_NAMESPACE;
+    const REST_NAMESPACE = SC_RL6_Core::REST_NAMESPACE;
 
     public static function init() {
         add_shortcode( 'sc_research_librarian_answer_ux_summary', array( __CLASS__, 'render_public_summary' ) );
@@ -6791,7 +7300,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V460_Answer_UX {
  * missing-source reports, evaluation failures, and saved route sessions that
  * should be promoted into route curation or knowledge-index improvement work.
  */
-final class Sustainable_Catalyst_Research_Librarian_AI_V480_Query_Review {
+final class SC_RL6_V480_Query_Review {
     const VERSION = '4.8.0';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
     const REVIEW_OPTION = 'sc_rl_ai_query_review_queue_v480';
@@ -7182,7 +7691,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V480_Query_Review {
  * Generates public-safe documentation outlines, page copy, shortcode inventories,
  * endpoint summaries, and release-ready documentation exports for the Research Librarian.
  */
-final class Sustainable_Catalyst_Research_Librarian_AI_V490_Documentation {
+final class SC_RL6_V490_Documentation {
     const VERSION = '4.9.1';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
     const OPTION = 'sc_rl_ai_public_documentation_page_v491';
@@ -7571,7 +8080,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V490_Documentation {
  * private questions, or sensitive operational detail. It aggregates readiness
  * signals already produced by the plugin and gives admins a final launch gate.
  */
-final class Sustainable_Catalyst_Research_Librarian_AI_V500_Stable_Release {
+final class SC_RL6_V500_Stable_Release {
     const VERSION = '5.0.0';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
     const STATUS_OPTION = 'sc_rl_ai_stable_release_status_v500';
@@ -7707,13 +8216,13 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V500_Stable_Release {
             self::signal( 'core_version', 'Core plugin version is v5.0.0', true, 'Stable release header and runtime version have been advanced to 5.0.0.' ),
             self::signal( 'knowledge_index', 'Knowledge index has records', count( $records ) > 0, 'Index records are required for source-aware routing.' ),
             self::signal( 'routing_sources', 'Route and source manifests are present', file_exists( plugin_dir_path( __FILE__ ) . 'data/research_librarian_routes_v3.1.0.json' ) && file_exists( plugin_dir_path( __FILE__ ) . 'data/research_librarian_sources_v3.1.0.json' ), 'Seed route and source manifests support deterministic fallback and grounding.' ),
-            self::signal( 'public_answer_ux', 'Public answer UX layer is present', class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V460_Answer_UX' ), 'Route cards, source cards, confidence badges, and route actions are available.' ),
-            self::signal( 'guided_paths', 'Guided paths layer is present', class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V470_Guided_Paths' ), 'Multi-step route builders and path templates are available.' ),
+            self::signal( 'public_answer_ux', 'Public answer UX layer is present', class_exists( 'SC_RL6_V460_Answer_UX' ), 'Route cards, source cards, confidence badges, and route actions are available.' ),
+            self::signal( 'guided_paths', 'Guided paths layer is present', class_exists( 'SC_RL6_V470_Guided_Paths' ), 'Multi-step route builders and path templates are available.' ),
             self::signal( 'handoffs', 'Workbench and Decision Studio handoff layer is present', file_exists( plugin_dir_path( __FILE__ ) . 'data/research_librarian_handoff_manifest_v3.5.0.json' ), 'Handoff payload contracts are available for downstream tools.' ),
-            self::signal( 'security', 'Security review layer is present', class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V420_Security' ), 'Endpoint classification and secret-safe diagnostics are available.' ),
+            self::signal( 'security', 'Security review layer is present', class_exists( 'SC_RL6_V420_Security' ), 'Endpoint classification and secret-safe diagnostics are available.' ),
             self::signal( 'governance', 'Governance and retention layer is present', file_exists( plugin_dir_path( __FILE__ ) . 'data/research_librarian_governance_manifest_v3.8.0.json' ), 'Privacy posture, retention, and export boundaries are documented.' ),
-            self::signal( 'observability', 'Observability and runbook layer is present', class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V430_Observability' ), 'Production checks and runbook summaries are available.' ),
-            self::signal( 'documentation', 'Documentation snapshot system is present', class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V490_Documentation' ), 'Public documentation can be generated and previewed.' ),
+            self::signal( 'observability', 'Observability and runbook layer is present', class_exists( 'SC_RL6_V430_Observability' ), 'Production checks and runbook summaries are available.' ),
+            self::signal( 'documentation', 'Documentation snapshot system is present', class_exists( 'SC_RL6_V490_Documentation' ), 'Public documentation can be generated and previewed.' ),
         );
         $embedded = isset( $embed['embedded_records'] ) ? absint( $embed['embedded_records'] ) : 0;
         $signals[] = array(
@@ -7866,7 +8375,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V500_Stable_Release {
 /**
  * v5.1.0 — Live Public Experience QA, Prompt Library, and UX Calibration.
  */
-final class Sustainable_Catalyst_Research_Librarian_AI_V510_Live_UX {
+final class SC_RL6_V510_Live_UX {
     const VERSION = '5.1.0';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
     const STATUS_OPTION = 'sc_rl_ai_live_ux_status_v510';
@@ -8005,8 +8514,8 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V510_Live_UX {
         $doc = get_option( 'sc_rl_ai_documentation_status_v490', array() );
         $checks = array(
             self::check( 'public_shortcode', 'Main public Research Librarian shortcode is available', true, 'Use [sc_research_librarian title="Sustainable Catalyst Research Librarian"] on the public page.' ),
-            self::check( 'answer_ux', 'Public answer UX class is loaded', class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V460_Answer_UX' ), 'Route cards, source cards, confidence badges, and action center should be available.' ),
-            self::check( 'guided_paths', 'Guided path layer is loaded', class_exists( 'Sustainable_Catalyst_Research_Librarian_AI_V470_Guided_Paths' ), 'Path builder should be available for multi-step research workflows.' ),
+            self::check( 'answer_ux', 'Public answer UX class is loaded', class_exists( 'SC_RL6_V460_Answer_UX' ), 'Route cards, source cards, confidence badges, and action center should be available.' ),
+            self::check( 'guided_paths', 'Guided path layer is loaded', class_exists( 'SC_RL6_V470_Guided_Paths' ), 'Path builder should be available for multi-step research workflows.' ),
             self::check( 'knowledge_index', 'Knowledge index has public records', count( $records ) > 0, 'Rebuild the knowledge index if no records are found.' ),
             self::check( 'documentation_snapshot', 'Documentation snapshot is available', ! empty( $doc['last_generated_utc'] ), 'Generate a documentation snapshot after installing v5.1.0.' ),
         );
@@ -8176,7 +8685,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V510_Live_UX {
  * It is intentionally lightweight: it does not replace retrieval; it calibrates source-card order,
  * route quality labels, and route repair suggestions after retrieval has already produced candidates.
  */
-final class Sustainable_Catalyst_Research_Librarian_AI_V520_Route_Quality {
+final class SC_RL6_V520_Route_Quality {
     const VERSION = '5.2.0';
     const STATUS_OPTION = 'sc_rl_ai_route_quality_status_v520';
 
@@ -8188,7 +8697,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V520_Route_Quality {
     }
 
     public static function register_rest_routes() {
-        $ns = Sustainable_Catalyst_Research_Librarian_AI::REST_NAMESPACE;
+        $ns = SC_RL6_Core::REST_NAMESPACE;
         register_rest_route( $ns, '/quality/status', array(
             'methods'             => WP_REST_Server::READABLE,
             'callback'            => array( __CLASS__, 'handle_status' ),
@@ -8531,7 +9040,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V520_Route_Quality {
             <form method="post" style="margin-top:16px;">
                 <?php wp_nonce_field( 'sc_rl_v520_run_action' ); ?>
                 <button type="submit" name="sc_rl_v520_run" class="button button-primary">Run Route Quality Calibration</button>
-                <a class="button" href="<?php echo esc_url( rest_url( Sustainable_Catalyst_Research_Librarian_AI::REST_NAMESPACE . '/quality/export' ) ); ?>">Export quality report</a>
+                <a class="button" href="<?php echo esc_url( rest_url( SC_RL6_Core::REST_NAMESPACE . '/quality/export' ) ); ?>">Export quality report</a>
             </form>
             <h2>Calibration Results</h2>
             <table class="widefat striped"><thead><tr><th>Prompt</th><th>Expected</th><th>Predicted</th><th>Status</th><th>Suggestion</th></tr></thead><tbody>
@@ -8593,7 +9102,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V520_Route_Quality {
  * It provides public-safe article-path embeds, article map route catalogs, contextual path
  * recommendations, and admin-visible integration status without exposing private logs or keys.
  */
-final class Sustainable_Catalyst_Research_Librarian_AI_V530_Article_Map_Embeds {
+final class SC_RL6_V530_Article_Map_Embeds {
     const VERSION = '5.3.0';
     const STATUS_OPTION = 'sc_rl_ai_article_map_status_v530';
 
@@ -8606,7 +9115,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V530_Article_Map_Embeds {
     }
 
     public static function register_rest_routes() {
-        $ns = Sustainable_Catalyst_Research_Librarian_AI::REST_NAMESPACE;
+        $ns = SC_RL6_Core::REST_NAMESPACE;
         register_rest_route( $ns, '/article-map/status', array(
             'methods'             => WP_REST_Server::READABLE,
             'callback'            => array( __CLASS__, 'handle_status' ),
@@ -8797,7 +9306,7 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V530_Article_Map_Embeds {
             <form method="post" style="margin-top:16px;">
                 <?php wp_nonce_field( 'sc_rl_v530_refresh_action' ); ?>
                 <button type="submit" name="sc_rl_v530_refresh" class="button button-primary">Refresh Article Map Status</button>
-                <a class="button" href="<?php echo esc_url( rest_url( Sustainable_Catalyst_Research_Librarian_AI::REST_NAMESPACE . '/article-map/export' ) ); ?>">Export article-map catalog</a>
+                <a class="button" href="<?php echo esc_url( rest_url( SC_RL6_Core::REST_NAMESPACE . '/article-map/export' ) ); ?>">Export article-map catalog</a>
             </form>
             <h2>Path Templates</h2>
             <table class="widefat striped"><thead><tr><th>ID</th><th>Route</th><th>Label</th><th>Summary</th><th>Steps</th></tr></thead><tbody>
@@ -8888,36 +9397,44 @@ final class Sustainable_Catalyst_Research_Librarian_AI_V530_Article_Map_Embeds {
 }
 
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-sc-rl-v540-deep-links.php';
-SC_RL_V540_Deep_Links::init();
+SC_RL6_V540_Deep_Links::init();
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-sc-rl-v550-stable-operations.php';
-SC_RL_V550_Stable_Operations::init();
+SC_RL6_V550_Stable_Operations::init();
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-sc-rl-v560-feature-suggestions-bridge.php';
-SC_RL_V560_Feature_Suggestions_Bridge::init();
+SC_RL6_V560_Feature_Suggestions_Bridge::init();
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-sc-rl-v570-research-demand-intelligence.php';
-SC_RL_V570_Research_Demand_Intelligence::init();
+SC_RL6_V570_Research_Demand_Intelligence::init();
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-sc-rl-v580-adaptive-prompt-surveys.php';
-SC_RL_V580_Adaptive_Prompt_Surveys::init();
+SC_RL6_V580_Adaptive_Prompt_Surveys::init();
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-sc-rl-v590-closed-loop-route-improvement.php';
-SC_RL_V590_Closed_Loop_Route_Improvement::init();
+SC_RL6_V590_Closed_Loop_Route_Improvement::init();
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-sc-rl-v600-integrated-research-guidance-platform.php';
-SC_RL_V600_Integrated_Research_Guidance_Platform::init();
+SC_RL6_V600_Integrated_Research_Guidance_Platform::init();
+require_once plugin_dir_path( __FILE__ ) . 'includes/class-sc-rl-v610-live-ai-admin.php';
+SC_RL6_V610_Live_AI_Admin::init();
 
-Sustainable_Catalyst_Research_Librarian_AI_V530_Article_Map_Embeds::init();
-Sustainable_Catalyst_Research_Librarian_AI_V520_Route_Quality::init();
-Sustainable_Catalyst_Research_Librarian_AI_V510_Live_UX::init();
-Sustainable_Catalyst_Research_Librarian_AI_V500_Stable_Release::init();
-Sustainable_Catalyst_Research_Librarian_AI_V490_Documentation::init();
-Sustainable_Catalyst_Research_Librarian_AI_V460_Answer_UX::init();
-Sustainable_Catalyst_Research_Librarian_AI_V480_Query_Review::init();
-Sustainable_Catalyst_Research_Librarian_AI_V470_Guided_Paths::init();
-Sustainable_Catalyst_Research_Librarian_AI_V450_Contracts::init();
-Sustainable_Catalyst_Research_Librarian_AI_V440_Curation::init();
-Sustainable_Catalyst_Research_Librarian_AI_V430_Observability::init();
-Sustainable_Catalyst_Research_Librarian_AI_V420_Security::init();
-Sustainable_Catalyst_Research_Librarian_AI_V410_Recovery::init();
+SC_RL6_V530_Article_Map_Embeds::init();
+SC_RL6_V520_Route_Quality::init();
+SC_RL6_V510_Live_UX::init();
+SC_RL6_V500_Stable_Release::init();
+SC_RL6_V490_Documentation::init();
+SC_RL6_V460_Answer_UX::init();
+SC_RL6_V480_Query_Review::init();
+SC_RL6_V470_Guided_Paths::init();
+SC_RL6_V450_Contracts::init();
+SC_RL6_V440_Curation::init();
+SC_RL6_V430_Observability::init();
+SC_RL6_V420_Security::init();
+SC_RL6_V410_Recovery::init();
 
-register_activation_hook( __FILE__, array( 'Sustainable_Catalyst_Research_Librarian_AI', 'activate' ) );
-register_activation_hook( __FILE__, array( 'SC_RL_V550_Stable_Operations', 'activate' ) );
-register_deactivation_hook( __FILE__, array( 'Sustainable_Catalyst_Research_Librarian_AI', 'deactivate' ) );
-register_deactivation_hook( __FILE__, array( 'SC_RL_V550_Stable_Operations', 'deactivate' ) );
-Sustainable_Catalyst_Research_Librarian_AI::instance();
+register_activation_hook( __FILE__, array( 'SC_RL6_Core', 'activate' ) );
+register_activation_hook( __FILE__, array( 'SC_RL6_V550_Stable_Operations', 'activate' ) );
+register_deactivation_hook( __FILE__, array( 'SC_RL6_Core', 'deactivate' ) );
+register_deactivation_hook( __FILE__, array( 'SC_RL6_V550_Stable_Operations', 'deactivate' ) );
+SC_RL6_Core::instance();
+
+// Preserve the historic public class name when no legacy implementation already owns it.
+if ( ! class_exists( 'Sustainable_Catalyst_Research_Librarian_AI', false ) ) {
+    class_alias( 'SC_RL6_Core', 'Sustainable_Catalyst_Research_Librarian_AI' );
+}
+
