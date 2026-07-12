@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: sustainable-catalyst-research-librarian-ai
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.12
+      - key: SC_RL_ENVIRONMENT
+        value: production
+      - key: SC_RL_AI_PROVIDER
+        value: gemini
+      - key: SC_RL_GEMINI_MODEL
+        value: gemini-3.5-flash
+      - key: SC_RL_SEMANTIC_ENABLED
+        value: "false"
+      - key: SC_RL_CORS_ORIGINS
+        value: https://sustainablecatalyst.com
+      - key: SC_RL_BACKEND_API_KEY
+        generateValue: true
+      - key: SC_RL_GEMINI_API_KEY
+        sync: false

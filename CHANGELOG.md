@@ -1,4 +1,24 @@
+## 6.2.0 — Knowledge Library Intelligence and Production UX
+
+- Added a production FastAPI backend designed for Render deployment.
+- Added secure WordPress-to-Python authentication and backend health/status reporting.
+- Added full public library synchronization across eligible public post types.
+- Added title-aware hybrid ranking with exact-title priority.
+- Added related-title discovery, research paths, title suggestions, and short session continuity.
+- Added grounded Gemini answer generation using retrieved Sustainable Catalyst sources only.
+- Added the Research Librarian AI → Python Intelligence administration page.
+- Added scheduled and post-change synchronization.
+- Added a larger answer-first public interface with advanced diagnostics hidden behind disclosure controls.
+- Moved direct WordPress AI provider configuration to an optional fallback screen under Advanced.
+
 # Changelog
+
+## 6.1.1 — Gemini Authorization Key Compatibility Patch
+
+- Accept modern Google AI Studio authorization keys, including key strings containing periods.
+- Detect older standard Gemini keys and display migration/restriction guidance.
+- Explain 400, 403, 404, 429, and temporary Gemini provider failures in administrator diagnostics.
+- Preserve live AI status, Site Intelligence country routing, semantic retrieval, and deterministic fallback behavior.
 
 ## 6.1.0 — Live AI Restoration and Admin Consolidation
 

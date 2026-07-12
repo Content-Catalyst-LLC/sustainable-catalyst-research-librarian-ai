@@ -1,9 +1,47 @@
-# Sustainable Catalyst Research Librarian AI v6.1.0
+# Sustainable Catalyst Research Librarian AI v6.2.0
 
+## v6.2.0 — Knowledge Library Intelligence and Production UX
 
-## v6.1.0 — Live AI Restoration and Admin Consolidation
+Research Librarian AI is now a hybrid WordPress + Python application. WordPress remains the publishing system, public shortcode interface, feedback layer, route registry, and administrative bridge. A FastAPI service designed for Render performs full-library title-aware retrieval, grounded Gemini synthesis, related-title discovery, short conversational continuity, and production status reporting.
 
-Version 6.1.0 restores the live AI provider as the primary public experience, adds public-safe operational status and administrator diagnostics, recognizes countries such as Pakistan, routes geographic evidence questions into Site Intelligence, and consolidates Research Librarian administration under its own top-level WordPress menu.
+### Core v6.2.0 capabilities
+
+- Full public WordPress content synchronization across eligible public post types
+- Up to 10,000 public records, with a 5,000-record default instead of the former 250-record cap
+- Exact-title, normalized-title, slug, heading, series, article-map, taxonomy, summary, and content ranking
+- Exact titles outrank broad Platform and route pages
+- Related-title and research-path discovery
+- Grounded Gemini answers using only retrieved Sustainable Catalyst sources
+- Server-to-server WordPress → Render authentication
+- Gemini credentials stored in Render rather than exposed to WordPress visitors
+- Dedicated **Research Librarian AI → Python Intelligence** administration
+- Full-library synchronization, scheduled refresh, and post-change resynchronization
+- Public title suggestions from the live Python index
+- Short session continuity for follow-up questions
+- Production answer interface with best matches, related titles, research paths, actions, and hidden diagnostics
+- WordPress-side provider retained only as an optional fallback under Advanced
+
+### Architecture
+
+```text
+WordPress public page and shortcode
+        ↓
+WordPress authenticated proxy
+        ↓
+Render FastAPI knowledge service
+        ├── title-aware retrieval
+        ├── related-title discovery
+        ├── session continuity
+        └── grounded Gemini generation
+        ↓
+Verified Sustainable Catalyst links and actions
+```
+
+The Python service is independently testable through `/health`, `/status`, `/v1/knowledge/sync`, `/v1/retrieve`, and `/v1/ask`.
+
+## v6.1.1 — Gemini Authorization Key Compatibility Patch
+
+Version 6.1.1 repairs compatibility with modern Google AI Studio authorization keys, adds actionable Gemini key and quota diagnostics, preserves the v6.1.0 live AI restoration, and keeps deterministic routing as the clearly labeled resilience layer.
 
 ### Highlights
 

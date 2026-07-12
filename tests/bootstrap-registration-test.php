@@ -1,6 +1,6 @@
 <?php
 /**
- * Standalone regression test for Research Librarian AI v6.1.0.
+ * Standalone regression test for Research Librarian AI v6.2.0.
  * Run: php tests/bootstrap-registration-test.php
  */
 error_reporting( E_ALL );
@@ -79,7 +79,7 @@ function wp_schedule_single_event( $timestamp, $hook, $args = array() ) { return
 function wp_clear_scheduled_hook( $hook ) { return true; }
 function add_settings_error() {}
 
-// Simulate a legacy historic class. v6.1 must still bootstrap under its unique core class.
+// Simulate a legacy historic class. v6.2 must still bootstrap under its unique core class.
 class Sustainable_Catalyst_Research_Librarian_AI { const VERSION = 'legacy-test'; }
 
 require dirname( __DIR__ ) . '/sustainable-catalyst-research-librarian-ai.php';
@@ -100,6 +100,9 @@ $required_rest = array(
     'sc-research-librarian-ai/v1/ai/status',
     'sc-research-librarian-ai/v1/ai/test',
     'sc-research-librarian-ai/v1/ai/models',
+    'sc-research-librarian-ai/v1/python/status',
+    'sc-research-librarian-ai/v1/python/suggest',
+    'sc-research-librarian-ai/v1/python/sync',
 );
 $missing_rest = array_values( array_filter( $required_rest, function( $route ){ return empty( $GLOBALS['sc_rl_test_rest'][ $route ] ); } ) );
 
@@ -111,7 +114,8 @@ $result = array(
     'missing_ai_rest_routes' => $missing_rest,
     'top_level_menu' => isset( $GLOBALS['sc_rl_test_top_pages']['sc-research-librarian-ai'] ),
     'settings_menu_cleaned' => in_array( 'sc-rl-integrated-guidance', $GLOBALS['sc_rl_test_removed_settings'], true ) && ! isset( $GLOBALS['sc_rl_test_sub_pages']['options-general.php']['sc-rl-integrated-guidance'] ),
-    'provider_submenu' => isset( $GLOBALS['sc_rl_test_sub_pages']['sc-research-librarian-ai']['sc-rl-ai-provider'] ),
+    'python_submenu' => isset( $GLOBALS['sc_rl_test_sub_pages']['sc-research-librarian-ai']['sc-rl-python-intelligence'] ),
+    'provider_fallback_hidden_page' => isset( $GLOBALS['sc_rl_test_sub_pages']['']['sc-rl-ai-provider'] ) || isset( $GLOBALS['sc_rl_test_sub_pages'][null]['sc-rl-ai-provider'] ),
     'pakistan_route_id' => $pakistan['id'] ?? '',
     'pakistan_alpha3' => $pakistan['matched_country']['alpha3'] ?? '',
     'pakistan_url' => $pakistan['url'] ?? '',
@@ -120,14 +124,15 @@ $result = array(
 
 echo json_encode( $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . PHP_EOL;
 
-$passed = '6.1.0' === $result['version']
+$passed = '6.2.0' === $result['version']
     && $result['core_loaded']
     && $result['legacy_class_detected']
     && empty( $result['missing_shortcodes'] )
     && empty( $result['missing_ai_rest_routes'] )
     && $result['top_level_menu']
     && $result['settings_menu_cleaned']
-    && $result['provider_submenu']
+    && $result['python_submenu']
+    && $result['provider_fallback_hidden_page']
     && 'country-intelligence' === $result['pakistan_route_id']
     && 'PAK' === $result['pakistan_alpha3']
     && false !== strpos( $result['pakistan_url'], 'country=PAK' )

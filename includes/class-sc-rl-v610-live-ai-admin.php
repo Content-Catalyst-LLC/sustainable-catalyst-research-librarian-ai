@@ -1,6 +1,6 @@
 <?php
 /**
- * Research Librarian AI v6.1.0 — live AI operations and consolidated administration.
+ * Research Librarian AI v6.2.0 — consolidated administration and Python intelligence operations.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -31,13 +31,14 @@ final class SC_RL6_V610_Live_AI_Admin {
         );
 
         add_submenu_page( self::MENU_SLUG, 'Research Librarian AI Dashboard', 'Dashboard', 'manage_options', self::MENU_SLUG, array( __CLASS__, 'render_dashboard' ) );
-        add_submenu_page( self::MENU_SLUG, 'AI Provider', 'AI Provider', 'manage_options', 'sc-rl-ai-provider', array( __CLASS__, 'render_provider_page' ) );
-        add_submenu_page( self::MENU_SLUG, 'Knowledge Index and Settings', 'Index & Settings', 'manage_options', 'sc-rl-index-settings', array( SC_RL6_Core::instance(), 'render_admin_page' ) );
+        add_submenu_page( self::MENU_SLUG, 'Knowledge Index and Settings', 'WordPress Index', 'manage_options', 'sc-rl-index-settings', array( SC_RL6_Core::instance(), 'render_admin_page' ) );
         add_submenu_page( self::MENU_SLUG, 'Routes and Sources', 'Routes & Sources', 'manage_options', 'sc-rl-routes-sources', array( 'SC_RL6_V440_Curation', 'render_admin_page' ) );
         add_submenu_page( self::MENU_SLUG, 'Guided Research Paths', 'Guided Paths', 'manage_options', 'sc-rl-guided-paths', array( 'SC_RL6_V470_Guided_Paths', 'render_admin_page' ) );
         add_submenu_page( self::MENU_SLUG, 'Feedback and Learning', 'Feedback & Learning', 'manage_options', 'sc-rl-feedback-learning', array( 'SC_RL6_V600_Integrated_Research_Guidance_Platform', 'render_admin_page' ) );
         add_submenu_page( self::MENU_SLUG, 'Operations', 'Operations', 'manage_options', 'sc-rl-operations', array( 'SC_RL6_V550_Stable_Operations', 'render_admin_page' ) );
         add_submenu_page( self::MENU_SLUG, 'Advanced Tools', 'Advanced', 'manage_options', 'sc-rl-advanced', array( __CLASS__, 'render_advanced' ) );
+        // Hidden legacy provider screen retained only as a WordPress-side fallback.
+        add_submenu_page( null, 'WordPress AI Provider Fallback', 'WordPress AI Provider Fallback', 'manage_options', 'sc-rl-ai-provider', array( __CLASS__, 'render_provider_page' ) );
     }
 
     private static function legacy_settings_slugs() {
@@ -93,9 +94,16 @@ final class SC_RL6_V610_Live_AI_Admin {
         ?>
         <div class="wrap">
             <h1><?php esc_html_e( 'Research Librarian AI', 'sustainable-catalyst-research-librarian-ai' ); ?></h1>
-            <p><?php esc_html_e( 'Live AI operations, country-aware Site Intelligence routing, semantic retrieval, verified fallback routing, and governed Sustainable Catalyst research guidance.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
+            <p><?php esc_html_e( 'Python knowledge intelligence, full-library title-aware retrieval, grounded AI guidance, Site Intelligence routing, and governed Sustainable Catalyst research workflows.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
 
             <div class="sc-rl-admin-grid">
+                <?php $python_status = class_exists( 'SC_RL6_V620_Knowledge_Intelligence' ) ? SC_RL6_V620_Knowledge_Intelligence::backend_status( false ) : new WP_Error( 'unavailable', 'Python module unavailable' ); ?>
+                <article class="sc-rl-admin-card" data-state="<?php echo esc_attr( is_wp_error( $python_status ) ? 'offline' : ( isset( $python_status['state'] ) ? $python_status['state'] : 'unknown' ) ); ?>">
+                    <h2><?php esc_html_e( 'Python Intelligence', 'sustainable-catalyst-research-librarian-ai' ); ?></h2>
+                    <span class="sc-rl-admin-metric"><?php echo esc_html( is_wp_error( $python_status ) ? 'Not connected' : absint( isset( $python_status['indexed_titles'] ) ? $python_status['indexed_titles'] : 0 ) . ' titles' ); ?></span>
+                    <p><?php echo esc_html( is_wp_error( $python_status ) ? 'Configure the Render backend.' : ( isset( $python_status['label'] ) ? $python_status['label'] : 'Backend online' ) ); ?></p>
+                    <p><a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=sc-rl-python-intelligence' ) ); ?>">Open Python Intelligence</a></p>
+                </article>
                 <article class="sc-rl-admin-card" data-state="<?php echo esc_attr( $status['state'] ); ?>">
                     <h2><?php echo esc_html( $status['label'] ); ?></h2>
                     <span class="sc-rl-admin-metric"><?php echo esc_html( ucfirst( $status['provider'] ) ); ?></span>
@@ -117,6 +125,12 @@ final class SC_RL6_V610_Live_AI_Admin {
                     <p><?php echo esc_html( ( $route['title'] ?? '' ) . ' · ' . ( $route['id'] ?? '' ) ); ?></p>
                 </article>
             </div>
+
+            <?php if ( 'standard' === $gemini_key_type ) : ?>
+                <div class="notice notice-warning"><p><strong>Gemini key migration:</strong> This saved key uses the older standard-key format. Google rejects unrestricted standard keys after June 19, 2026 and plans to end standard-key support in September 2026. Restrict it to the Gemini API in Google AI Studio or replace it with a new authorization key.</p></div>
+            <?php elseif ( 'authorization' === $gemini_key_type ) : ?>
+                <div class="notice notice-info"><p><strong>Gemini authorization key detected.</strong> Research Librarian AI v6.2.0 retains support for modern Google AI Studio authorization keys, including keys that contain periods.</p></div>
+            <?php endif; ?>
 
             <?php if ( ! empty( $status['last_error_message'] ) ) : ?>
                 <div class="notice notice-error"><p><strong><?php esc_html_e( 'Latest AI provider error:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <?php echo esc_html( $status['last_error_message'] ); ?><?php if ( $status['last_http_status'] ) : ?> <?php echo esc_html( '(HTTP ' . $status['last_http_status'] . ')' ); ?><?php endif; ?></p></div>
@@ -166,11 +180,13 @@ final class SC_RL6_V610_Live_AI_Admin {
         $status = $core->ai_status_snapshot( false );
         $full_options = wp_parse_args( get_option( SC_RL6_Core::OPTION_NAME, array() ), SC_RL6_Core::defaults() );
         $gemini_saved = ! empty( $full_options['gemini_api_key'] );
+        $gemini_key_value = trim( (string) ( $full_options['gemini_api_key'] ?? '' ) );
+        $gemini_key_type = $gemini_saved ? ( 0 === strpos( $gemini_key_value, 'AIza' ) ? 'standard' : 'authorization' ) : 'none';
         $openai_saved = ! empty( $full_options['openai_api_key'] );
         ?>
         <div class="wrap">
-            <h1><?php esc_html_e( 'AI Provider', 'sustainable-catalyst-research-librarian-ai' ); ?></h1>
-            <p><?php esc_html_e( 'Configure the server-side provider, test the exact model and credentials, and review the most recent operational result. API keys are never rendered back into the page.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
+            <h1><?php esc_html_e( 'WordPress AI Provider Fallback', 'sustainable-catalyst-research-librarian-ai' ); ?></h1>
+            <p><?php esc_html_e( 'Optional fallback provider configuration for direct WordPress operation when the Python/Render service is disabled. The primary v6.2.0 architecture is configured under Python Intelligence.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
 
             <?php if ( $notice ) : ?><div class="notice notice-<?php echo esc_attr( $notice_type ); ?> is-dismissible"><p><?php echo esc_html( $notice ); ?></p></div><?php endif; ?>
 
@@ -190,7 +206,7 @@ final class SC_RL6_V610_Live_AI_Admin {
                 <table class="form-table sc-rl-provider-table" role="presentation">
                     <tr><th><label for="sc-rl-provider">AI provider</label></th><td><select id="sc-rl-provider" name="sc_rl_ai[provider]"><?php foreach ( array( 'disabled' => 'Disabled / verified fallback only', 'gemini' => 'Gemini', 'openai' => 'OpenAI' ) as $value => $label ) : ?><option value="<?php echo esc_attr( $value ); ?>" <?php selected( $options['provider'], $value ); ?>><?php echo esc_html( $label ); ?></option><?php endforeach; ?></select></td></tr>
                     <tr><th><label for="sc-rl-gemini-model">Gemini model</label></th><td><input id="sc-rl-gemini-model" class="regular-text" name="sc_rl_ai[gemini_model]" value="<?php echo esc_attr( $options['gemini_model'] ); ?>"><p class="description">Use a model returned by the provider model list for this key.</p></td></tr>
-                    <tr><th><label for="sc-rl-gemini-key">Gemini API key</label></th><td><input id="sc-rl-gemini-key" type="password" class="regular-text" name="sc_rl_ai[gemini_api_key_new]" value="" autocomplete="new-password" placeholder="<?php echo esc_attr( $gemini_saved ? 'Key saved. Paste only to replace.' : 'Paste Gemini API key' ); ?>"><?php if ( $gemini_saved ) : ?><p><label><input type="checkbox" name="sc_rl_ai[gemini_api_key_clear]" value="1"> Clear saved Gemini key</label></p><?php endif; ?></td></tr>
+                    <tr><th><label for="sc-rl-gemini-key">Gemini API key</label></th><td><input id="sc-rl-gemini-key" type="password" class="regular-text" name="sc_rl_ai[gemini_api_key_new]" value="" autocomplete="new-password" placeholder="<?php echo esc_attr( $gemini_saved ? 'Key saved. Paste only to replace.' : 'Paste Gemini API key' ); ?>"><p class="description">Create the key in Google AI Studio. Modern authorization keys are supported; leave this field blank to preserve the saved key.</p><?php if ( $gemini_saved ) : ?><p><label><input type="checkbox" name="sc_rl_ai[gemini_api_key_clear]" value="1"> Clear saved Gemini key</label></p><?php endif; ?></td></tr>
                     <tr><th><label for="sc-rl-openai-model">OpenAI model</label></th><td><input id="sc-rl-openai-model" class="regular-text" name="sc_rl_ai[openai_model]" value="<?php echo esc_attr( $options['openai_model'] ); ?>"></td></tr>
                     <tr><th><label for="sc-rl-openai-key">OpenAI API key</label></th><td><input id="sc-rl-openai-key" type="password" class="regular-text" name="sc_rl_ai[openai_api_key_new]" value="" autocomplete="new-password" placeholder="<?php echo esc_attr( $openai_saved ? 'Key saved. Paste only to replace.' : 'Paste OpenAI API key' ); ?>"><?php if ( $openai_saved ) : ?><p><label><input type="checkbox" name="sc_rl_ai[openai_api_key_clear]" value="1"> Clear saved OpenAI key</label></p><?php endif; ?></td></tr>
                     <tr><th><label for="sc-rl-embedding-provider">Semantic retrieval</label></th><td><select id="sc-rl-embedding-provider" name="sc_rl_ai[embeddings_provider]"><option value="disabled" <?php selected( $options['embeddings_provider'], 'disabled' ); ?>>Keyword retrieval only</option><option value="gemini" <?php selected( $options['embeddings_provider'], 'gemini' ); ?>>Gemini embeddings</option></select></td></tr>
@@ -265,6 +281,7 @@ final class SC_RL6_V610_Live_AI_Admin {
             <h1><?php esc_html_e( 'Advanced Research Librarian Tools', 'sustainable-catalyst-research-librarian-ai' ); ?></h1>
             <p><?php esc_html_e( 'Specialized diagnostics and governance tools are consolidated here instead of occupying the main WordPress Settings menu.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
             <div class="sc-rl-advanced-grid">
+                <a href="<?php echo esc_url( admin_url( 'admin.php?page=sc-rl-ai-provider' ) ); ?>">WordPress AI Provider Fallback →</a>
                 <?php foreach ( $tools as $key => $tool ) : ?>
                     <a href="<?php echo esc_url( add_query_arg( array( 'page' => 'sc-rl-advanced', 'tool' => $key ), admin_url( 'admin.php' ) ) ); ?>"><?php echo esc_html( $tool[0] ); ?> →</a>
                 <?php endforeach; ?>

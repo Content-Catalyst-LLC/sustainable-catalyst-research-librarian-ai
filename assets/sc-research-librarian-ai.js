@@ -142,72 +142,77 @@
     var route = data.route || (data.route_note && data.route_note.recommended_route) || {};
     var grounding = data.grounding || {};
     var note = data.route_note || {};
-    var confidence = grounding.confidence || note.confidence || {};
-    var sources = (grounding.sources || note.sources || []).slice(0, 5);
-    var handoffs = (grounding.handoffs || note.handoffs || []).slice(0, 4);
-    var hasWorkbench = handoffs.some(function (item) { return String(item.label || item.target || '').toLowerCase().indexOf('workbench') !== -1; }) || String((note.handoff_payload || {}).target || '').toLowerCase().indexOf('workbench') !== -1;
-    var hasDecisionStudio = handoffs.some(function (item) { return String(item.label || item.target || '').toLowerCase().indexOf('decision') !== -1; }) || String((note.handoff_payload || {}).target || '').toLowerCase().indexOf('decision') !== -1;
+    var confidence = grounding.confidence || note.confidence || data.confidence || {};
+    var sources = (data.matches || grounding.sources || note.sources || []).slice(0, 8);
+    var related = (data.related_titles || grounding.related_titles || []).slice(0, 8);
+    var researchPath = (data.research_path || grounding.research_path || []).slice(0, 6);
+    var actions = (data.actions || grounding.actions || []).slice(0, 6);
     var reasonCodes = grounding.reason_codes || note.reason_codes || [];
     var ambiguity = grounding.ambiguity || note.ambiguity || [];
     var confidenceLevel = confidence.level || 'unknown';
     var routeUrl = route.url || (note.recommended_route && note.recommended_route.url) || '#';
     var routeTitle = route.title || (note.recommended_route && note.recommended_route.title) || 'Recommended route';
-    var routeCategory = route.category || (note.recommended_route && note.recommended_route.category) || 'Route';
+    var routeCategory = route.category || (note.recommended_route && note.recommended_route.category) || 'Knowledge Library';
     var routeDescription = route.description || (note.recommended_route && note.recommended_route.description) || note.intent || '';
-    var why = note.why || route.why || '';
-    var platformFit = note.platform_fit || route.platform_fit || '';
-    var nextStep = note.next_step || route.next_step || '';
+    var clarification = data.clarification || '';
 
-    var html = '<div class="sc-rl-answer-ux__grid">';
-    html += '<article class="sc-rl-answer-ux__route-card">';
-    html += '<div class="sc-rl-answer-ux__card-head"><span>' + escapeHtml(routeCategory) + '</span><b class="sc-rl-answer-ux__badge ' + confidenceClass(confidenceLevel) + '">' + escapeHtml(String(confidenceLevel).toUpperCase()) + '</b></div>';
-    html += '<h3>' + escapeHtml(routeTitle) + '</h3>';
-    html += '<p>' + escapeHtml(routeDescription) + '</p>';
-    if (why) html += '<div class="sc-rl-answer-ux__why"><strong>Why this fits</strong><p>' + escapeHtml(why) + '</p></div>';
-    if (platformFit) html += '<div class="sc-rl-answer-ux__why"><strong>Platform fit</strong><p>' + escapeHtml(platformFit) + '</p></div>';
-    html += '<a class="sc-rl-answer-ux__primary-link" href="' + escapeHtml(routeUrl) + '">Open recommended route →</a>';
-    html += '</article>';
+    var html = '<div class="sc-rl-production-answer">';
+    html += '<section class="sc-rl-production-answer__response">';
+    html += '<div class="sc-rl-production-answer__label">Grounded Research Librarian AI response</div>';
+    html += (fallbackHtml || '');
+    if (clarification) html += '<div class="sc-rl-production-answer__clarification"><strong>One useful clarification</strong><p>' + escapeHtml(clarification) + '</p></div>';
+    html += '</section>';
 
-    html += '<article class="sc-rl-answer-ux__answer-body"><div class="sc-rl-answer-ux__card-head"><span>Route explanation</span></div>' + (fallbackHtml || '') + '</article>';
-    html += '</div>';
+    html += '<section class="sc-rl-production-answer__best">';
+    html += '<div class="sc-rl-production-answer__head"><div><span>' + escapeHtml(routeCategory) + '</span><h3>' + escapeHtml(routeTitle) + '</h3></div><b class="sc-rl-answer-ux__badge ' + confidenceClass(confidenceLevel) + '">' + escapeHtml(String(confidenceLevel).toUpperCase()) + '</b></div>';
+    if (routeDescription) html += '<p>' + escapeHtml(routeDescription) + '</p>';
+    html += '<a class="sc-rl-production-answer__primary" href="' + escapeHtml(routeUrl) + '">Open best match →</a>';
+    html += '</section>';
 
-    html += '<div class="sc-rl-answer-ux__meta-row">';
-    html += '<div class="sc-rl-answer-ux__confidence"><strong>Confidence</strong><p>' + escapeHtml(confidence.explanation || 'Confidence is based on route match quality, matched sources, and ambiguity.') + '</p></div>';
-    if (reasonCodes.length) {
-      html += '<div class="sc-rl-answer-ux__chips"><strong>Reason codes</strong><div>' + reasonCodes.map(function (code) { return '<span>' + escapeHtml(code) + '</span>'; }).join('') + '</div></div>';
-    }
-    if (ambiguity.length) {
-      html += '<div class="sc-rl-answer-ux__chips sc-rl-answer-ux__chips--warning"><strong>Ambiguity</strong><div>' + ambiguity.map(function (item) { return '<span>' + escapeHtml(item) + '</span>'; }).join('') + '</div></div>';
-    }
-    html += '</div>';
-
-    html += '<section class="sc-rl-answer-ux__source-section"><div class="sc-rl-answer-ux__section-head"><span>Matched sources</span><strong>' + sources.length + ' source' + (sources.length === 1 ? '' : 's') + '</strong></div>';
     if (sources.length) {
-      html += '<div class="sc-rl-answer-ux__source-grid">' + sources.map(function (source) {
-        return '<article class="sc-rl-answer-ux__source-card"><span>' + escapeHtml(source.type || source.route_id || 'Source') + '</span><h4><a href="' + escapeHtml(source.url || '#') + '">' + escapeHtml(source.title || 'Untitled source') + '</a></h4><p>' + escapeHtml(source.summary || '') + '</p><small>' + escapeHtml(source.retrieval_mode || 'match') + (sourceScore(source) ? ' · score ' + escapeHtml(sourceScore(source)) : '') + '</small></article>';
-      }).join('') + '</div>';
+      html += '<section class="sc-rl-production-answer__section"><div class="sc-rl-production-answer__section-head"><div><span>Knowledge Library intelligence</span><h3>Best matches</h3></div><strong>' + sources.length + ' verified title' + (sources.length === 1 ? '' : 's') + '</strong></div>';
+      html += '<div class="sc-rl-production-answer__source-grid">' + sources.map(function (source, index) {
+        var exact = source.exact_title_match ? '<em>Exact title</em>' : '';
+        var relationship = source.series || source.article_map || source.parent_title || '';
+        return '<article class="sc-rl-production-answer__source-card' + (index === 0 ? ' is-best' : '') + '"><div><span>' + escapeHtml(source.type || source.post_type || source.route_id || 'Public source') + '</span>' + exact + '</div><h4><a href="' + escapeHtml(source.url || '#') + '">' + escapeHtml(source.title || 'Untitled source') + '</a></h4><p>' + escapeHtml(source.summary || '') + '</p>' + (relationship ? '<small>' + escapeHtml(relationship) + '</small>' : '') + '</article>';
+      }).join('') + '</div></section>';
     } else {
-      html += '<div class="sc-rl-answer-ux__empty-state"><strong>No strong source match yet.</strong><p>Use the route as a starting point, ask a narrower follow-up, or send the gap to Feature Suggestions.</p></div>';
+      html += '<section class="sc-rl-production-answer__empty"><strong>No verified title match yet.</strong><p>Try the exact title, series name, country, subject, calculation, or intended output.</p></section>';
     }
-    html += '</section>';
 
-    html += '<section class="sc-rl-answer-ux__action-center"><div class="sc-rl-answer-ux__section-head"><span>Route Action Center</span><strong>Next actions</strong></div><div class="sc-rl-answer-ux__actions-row">';
-    html += '<a href="' + escapeHtml(routeUrl) + '">Open route</a>';
-    handoffs.forEach(function (handoff) { html += '<a href="' + escapeHtml(handoff.url || '#') + '">' + escapeHtml(handoff.label || 'Open handoff') + '</a>'; });
-    if (hasWorkbench) {
-      html += '<button type="button" class="sc-rl-answer-ux__deep-link" data-sc-rl-deep-link="workbench" data-sc-rl-action="analyze">Analyze in Workbench</button>';
-      html += '<button type="button" class="sc-rl-answer-ux__deep-link" data-sc-rl-deep-link="workbench" data-sc-rl-action="graph">Build a graph</button>';
+    if (researchPath.length) {
+      html += '<section class="sc-rl-production-answer__section"><div class="sc-rl-production-answer__section-head"><div><span>Guided continuation</span><h3>Suggested research path</h3></div></div><ol class="sc-rl-production-answer__path">';
+      researchPath.forEach(function (step) {
+        html += '<li><a href="' + escapeHtml(step.url || '#') + '">' + escapeHtml(step.title || 'Open step') + '</a><span>' + escapeHtml(step.reason || '') + '</span></li>';
+      });
+      html += '</ol></section>';
     }
-    if (hasDecisionStudio) {
-      html += '<button type="button" class="sc-rl-answer-ux__deep-link" data-sc-rl-deep-link="decision_studio" data-sc-rl-action="brief">Create Decision Studio brief</button>';
-      html += '<button type="button" class="sc-rl-answer-ux__deep-link" data-sc-rl-deep-link="decision_studio" data-sc-rl-action="assumptions">Review assumptions</button>';
+
+    if (related.length) {
+      html += '<section class="sc-rl-production-answer__section"><div class="sc-rl-production-answer__section-head"><div><span>Connected knowledge</span><h3>Related titles</h3></div></div><div class="sc-rl-production-answer__related">';
+      related.forEach(function (item) {
+        html += '<a href="' + escapeHtml(item.url || '#') + '"><strong>' + escapeHtml(item.title || 'Related title') + '</strong><span>' + escapeHtml(item.series || item.article_map || item.summary || '') + '</span></a>';
+      });
+      html += '</div></section>';
     }
-    if (note.handoff_payload) html += '<button type="button" data-sc-rl-handoff-download-inline>Download ' + escapeHtml(routeNoteHandoffTarget(note) || 'handoff') + ' JSON</button>';
-    html += '<button type="button" data-sc-rl-copy-inline>Copy route note</button><button type="button" data-sc-rl-download-inline>Download route note</button>';
-    html += '<a href="/platform/feature-suggestions/">Suggest missing feature</a>';
+
+    html += '<section class="sc-rl-production-answer__actions"><div class="sc-rl-production-answer__section-head"><div><span>Continue</span><h3>Next actions</h3></div></div><div>';
+    if (actions.length) {
+      actions.forEach(function (action) {
+        html += '<a href="' + escapeHtml(action.url || '#') + '">' + escapeHtml(action.label || 'Open action') + '</a>';
+      });
+    } else {
+      html += '<a href="' + escapeHtml(routeUrl) + '">Open best match</a><a href="/platform/feature-suggestions/">Report a missing route</a>';
+    }
+    html += '</div></section>';
+
+    html += '<details class="sc-rl-production-answer__details"><summary>Why these results?</summary>';
+    html += '<p><strong>Confidence:</strong> ' + escapeHtml(confidence.explanation || 'Based on title, slug, heading, series, article-map, taxonomy, and content matches.') + '</p>';
+    if (reasonCodes.length) html += '<p><strong>Retrieval signals:</strong> ' + reasonCodes.map(escapeHtml).join(', ') + '</p>';
+    if (ambiguity.length) html += '<p><strong>Ambiguity:</strong> ' + ambiguity.map(escapeHtml).join(', ') + '</p>';
+    html += '<p>Internal scores are available in the downloadable route record but are intentionally hidden from the primary public answer.</p>';
+    html += '</details>';
     html += '</div>';
-    if (nextStep) html += '<p class="sc-rl-answer-ux__next-step"><strong>Suggested next step:</strong> ' + escapeHtml(nextStep) + '</p>';
-    html += '</section>';
 
     container.hidden = false;
     container.innerHTML = html;
@@ -242,6 +247,7 @@
   function init(root) {
     var endpoint = root.getAttribute('data-endpoint');
     var aiStatusEndpoint = root.getAttribute('data-ai-status-endpoint');
+    var suggestEndpoint = root.getAttribute('data-suggest-endpoint');
     var routesEndpoint = root.getAttribute('data-routes-endpoint');
     var sessionEndpoint = root.getAttribute('data-session-endpoint');
     var feedbackEndpoint = root.getAttribute('data-feedback-endpoint');
@@ -267,7 +273,11 @@
     var routeSummary = root.querySelector('[data-sc-rl-route-summary]');
     var answerUx = root.querySelector('[data-sc-rl-answer-ux]');
     var routeStrip = root.querySelector('[data-sc-rl-route-strip]');
+    var suggestionsBox = root.querySelector('[data-sc-rl-title-suggestions]');
     var latest = null;
+    var sessionId = '';
+    try { sessionId = window.localStorage.getItem('sc_rl_ai_session_id') || ''; } catch (e) { sessionId = ''; }
+    var suggestionTimer = null;
 
     function setStatus(text, state) {
       if (status) status.textContent = text;
@@ -292,17 +302,27 @@
       if (state === 'online') {
         detail = (provider !== 'disabled' ? provider.charAt(0).toUpperCase() + provider.slice(1) : 'AI') + (model ? ' · ' + model : '');
         if (payload.semantic_retrieval) detail += ' · ' + payload.semantic_retrieval;
-        if (payload.indexed_records !== undefined) detail += ' · ' + payload.indexed_records + ' indexed records';
-        if (payload.last_success_utc) detail += ' · last success ' + formatHealthTime(payload.last_success_utc);
+        if (payload.indexed_titles !== undefined) detail += ' · ' + payload.indexed_titles + ' indexed titles';
+        else if (payload.indexed_records !== undefined) detail += ' · ' + payload.indexed_records + ' indexed records';
+        if (payload.last_sync_utc) detail += ' · library synced ' + formatHealthTime(payload.last_sync_utc);
+        else if (payload.last_success_utc) detail += ' · last success ' + formatHealthTime(payload.last_success_utc);
+      } else if (state === 'retrieval-only') {
+        detail = 'Python title-aware retrieval is online';
+        if (payload.indexed_titles !== undefined) detail += ' · ' + payload.indexed_titles + ' indexed titles';
+        detail += ' · AI generation is unavailable';
+      } else if (state === 'ready') {
+        detail = 'Python knowledge index is ready';
+        if (payload.indexed_titles !== undefined) detail += ' · ' + payload.indexed_titles + ' indexed titles';
+        detail += ' · awaiting first successful AI answer';
       } else if (state === 'offline') {
-        detail = 'Provider request failed · verified fallback routing active';
+        detail = 'AI or Python backend request failed · verified title-aware fallback remains active when available';
         if (payload.last_failure_utc) detail += ' · checked ' + formatHealthTime(payload.last_failure_utc);
       } else if (state === 'not-configured') {
-        detail = 'No live provider is configured · country-aware deterministic routing remains active';
+        detail = 'No live provider is configured · verified local routing remains active';
       } else if (state === 'hidden') {
         detail = 'Verified fallback routing remains available.';
       } else {
-        detail = (provider !== 'disabled' ? provider.charAt(0).toUpperCase() + provider.slice(1) : 'AI') + (model ? ' · ' + model : '') + ' · run an administrator connection test';
+        detail = (provider !== 'disabled' ? provider.charAt(0).toUpperCase() + provider.slice(1) : 'AI') + (model ? ' · ' + model : '') + ' · knowledge service status is being verified';
       }
       healthDetail.textContent = detail;
     }
@@ -326,15 +346,16 @@
         textarea.focus();
         return;
       }
-      setStatus('Routing…', 'loading');
+      setStatus('Researching…', 'loading');
       submit.disabled = true;
-      answer.innerHTML = '<p class="sc-rl-ai__loading">Checking Sustainable Catalyst routes, source records, semantic matches, Workbench handoffs, and Decision Studio workflows</p>';
+      answer.hidden = false;
+      answer.innerHTML = '<p class="sc-rl-ai__loading">Searching indexed Sustainable Catalyst titles, series, article maps, headings, sources, and platform actions</p>';
 
       fetch(endpoint, {
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
-        body: JSON.stringify({ question: clean, hp: honeypot ? honeypot.value : '' })
+        body: JSON.stringify({ question: clean, hp: honeypot ? honeypot.value : '', session_id: sessionId })
       })
         .then(function (response) {
           return response.json().then(function (data) {
@@ -346,28 +367,74 @@
         })
         .then(function (data) {
           latest = data;
+          if (data.session_id) { sessionId = String(data.session_id); try { window.localStorage.setItem('sc_rl_ai_session_id', sessionId); } catch (e) {} }
           if (data.ai_status) renderHealth(data.ai_status);
           if (data.ai_used) {
-            setStatus('AI answer', 'ready');
+            setStatus('Grounded AI answer', 'ready');
           } else if (data.source === 'boundary') {
             setStatus('Boundary guidance', 'ready');
           } else {
-            setStatus('Verified fallback', data.ai_status && data.ai_status.state === 'offline' ? 'error' : 'ready');
+            setStatus(data.source && String(data.source).indexOf('python') !== -1 ? 'Title-aware answer' : 'Verified fallback', data.ai_status && data.ai_status.state === 'offline' ? 'error' : 'ready');
           }
           var renderedAnswer = renderMarkdownLite(data.answer || 'No answer was returned. Try the Platform or Feature Suggestions route.');
           answer.innerHTML = renderedAnswer;
           renderAnswerUx(answerUx, data, renderedAnswer);
+          if (answerUx) answer.hidden = true;
           renderRouteSummary(routeSummary, data.route, data.grounding);
         })
         .catch(function (error) {
           latest = null;
           setStatus('Endpoint unavailable', 'error');
+          answer.hidden = false;
           answer.innerHTML = renderMarkdownLite('The Research Librarian WordPress endpoint could not be reached. This is separate from the AI provider status.\n\n**Best starting points**\n- [Site Intelligence](/platform/site-intelligence/)\n- [Platform](/platform/)\n- [Platform Demos](/platform/demos/)\n- [Workbench](https://sustainablecatalyst.com/modeling-analytics/workbench/)\n- [Decision Studio](/platform/decision-studio/)\n- [Feature Suggestions](/platform/feature-suggestions/)\n\n' + error.message);
         })
         .finally(function () { submit.disabled = false; });
     }
 
-    submit.addEventListener('click', function () { ask(); });
+    function hideSuggestions() {
+      if (!suggestionsBox) return;
+      suggestionsBox.hidden = true;
+      suggestionsBox.innerHTML = '';
+    }
+
+    function loadSuggestions() {
+      if (!suggestEndpoint || !suggestionsBox) return;
+      var query = (textarea.value || '').trim();
+      if (query.length < 2) { hideSuggestions(); return; }
+      fetch(suggestEndpoint, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
+        body: JSON.stringify({ query: query })
+      }).then(function (response) { return response.json(); })
+        .then(function (data) {
+          var suggestions = data && data.suggestions ? data.suggestions : [];
+          if (!suggestions.length) { hideSuggestions(); return; }
+          suggestionsBox.innerHTML = '<div class="sc-rl-ai__title-suggestions-label">Indexed Sustainable Catalyst titles</div>' + suggestions.map(function (item) {
+            return '<button type="button" data-sc-rl-title-suggestion="' + escapeHtml(item.title || '') + '"><strong>' + escapeHtml(item.title || '') + '</strong><span>' + escapeHtml(item.summary || item.match_type || '') + '</span></button>';
+          }).join('');
+          suggestionsBox.hidden = false;
+        }).catch(hideSuggestions);
+    }
+
+    textarea.addEventListener('input', function () {
+      window.clearTimeout(suggestionTimer);
+      suggestionTimer = window.setTimeout(loadSuggestions, 260);
+    });
+    if (suggestionsBox) {
+      suggestionsBox.addEventListener('click', function (event) {
+        var button = event.target.closest ? event.target.closest('[data-sc-rl-title-suggestion]') : null;
+        if (!button) return;
+        textarea.value = button.getAttribute('data-sc-rl-title-suggestion') || '';
+        hideSuggestions();
+        ask(textarea.value);
+      });
+    }
+    document.addEventListener('click', function (event) {
+      if (!root.contains(event.target)) hideSuggestions();
+    });
+
+    submit.addEventListener('click', function () { hideSuggestions(); ask(); });
     textarea.addEventListener('keydown', function (event) {
       if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') ask();
     });
@@ -375,7 +442,8 @@
       textarea.value = '';
       latest = null;
       setStatus('Ready for a question', 'ready');
-      answer.innerHTML = '<p>Ask a question or choose an example. The librarian will recommend a route, explain why it fits, show related links, and produce an exportable route note and structured handoff payload.</p>';
+      answer.hidden = false;
+      answer.innerHTML = '<p>Ask about an exact title, subject, country, source, calculation, dashboard, or decision workflow. Research Librarian AI will search the indexed library and show the strongest verified matches.</p>';
       if (routeSummary) { routeSummary.hidden = true; routeSummary.innerHTML = ''; }
       if (answerUx) { answerUx.hidden = true; answerUx.innerHTML = ''; }
       textarea.focus();
@@ -606,6 +674,7 @@
     examples.forEach(function (button) {
       button.addEventListener('click', function () {
         textarea.value = button.getAttribute('data-sc-rl-example') || '';
+        hideSuggestions();
         ask(textarea.value);
       });
     });

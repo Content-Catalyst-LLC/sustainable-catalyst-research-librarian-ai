@@ -1,6 +1,6 @@
 <?php
 /**
- * Static release contract checks for Research Librarian AI v6.1.0.
+ * Static release contract checks for Research Librarian AI v6.2.0.
  *
  * Run: php tests/live-ai-provider-contract-test.php
  */
@@ -22,7 +22,7 @@ $assert = static function ( $name, $condition, $detail = '' ) use ( &$checks, &$
     }
 };
 
-$assert( 'plugin_version_610', 1 === preg_match( "/const\s+VERSION\s*=\s*'6\.1\.0';/", $main ) );
+$assert( 'plugin_version_620', 1 === preg_match( "/const\s+VERSION\s*=\s*'6\.2\.0';/", $main ) );
 $assert( 'public_ai_status_endpoint', false !== strpos( $main, "'/ai/status'" ) );
 $assert( 'admin_ai_test_endpoint', false !== strpos( $main, "'/ai/test'" ) );
 $assert( 'admin_ai_models_endpoint', false !== strpos( $main, "'/ai/models'" ) );
@@ -35,7 +35,15 @@ $assert( 'pakistan_evaluation_case', false !== strpos( $main, "'id' => 'pakistan
 $assert( 'site_intelligence_evaluation_case', false !== strpos( $main, "'id' => 'climate-dashboard'" ) );
 $assert( 'top_level_admin_menu', false !== strpos( $admin, "add_menu_page(" ) && false !== strpos( $admin, "Research Librarian AI" ) );
 $assert( 'legacy_settings_cleanup', false !== strpos( $admin, "remove_submenu_page( 'options-general.php', \$slug )" ) );
-$assert( 'provider_screen', false !== strpos( $admin, "'AI Provider'" ) && false !== strpos( $admin, 'render_provider_page' ) );
+$assert( 'provider_fallback_screen', false !== strpos( $admin, 'WordPress AI Provider Fallback' ) && false !== strpos( $admin, 'render_provider_page' ) );
+$v620 = file_get_contents( $root . '/includes/class-sc-rl-v620-knowledge-intelligence.php' );
+$backend = file_get_contents( $root . '/backend/app/main.py' );
+$retrieval = file_get_contents( $root . '/backend/app/retrieval.py' );
+$assert( 'python_intelligence_module', false !== strpos( $v620, 'SC_RL6_V620_Knowledge_Intelligence' ) );
+$assert( 'python_admin_submenu', false !== strpos( $v620, "'sc-rl-python-intelligence'" ) );
+$assert( 'full_library_limit', false !== strpos( $v620, "'max_records' => 5000" ) );
+$assert( 'render_fastapi_backend', false !== strpos( $backend, 'FastAPI(' ) && false !== strpos( $backend, '/v1/knowledge/sync' ) && false !== strpos( $backend, '/v1/ask' ) );
+$assert( 'exact_title_ranking', false !== strpos( $retrieval, 'exact_title' ) && false !== strpos( $retrieval, '420.0' ) );
 $assert( 'public_status_label_passthrough', false !== strpos( $js, "healthLabel.textContent = payload.label" ) );
 $assert( 'public_status_state_handling', false !== strpos( $js, "state === 'not-configured'" ) && false !== strpos( $js, "state === 'offline'" ) );
 $assert( 'public_status_styles', false !== strpos( $css, 'data-ai-health="online"' ) && false !== strpos( $css, 'data-ai-health="offline"' ) );
@@ -52,7 +60,7 @@ foreach ( (array) ( $countries['countries'] ?? array() ) as $country ) {
 $assert( 'pakistan_registry_record', is_array( $pakistan ) && 'Pakistan' === ( $pakistan['name'] ?? '' ) && 'PK' === ( $pakistan['alpha2'] ?? '' ) );
 
 $result = array(
-    'version' => '6.1.0',
+    'version' => '6.2.0',
     'checks' => $checks,
     'passed' => count( $checks ) - count( $failures ),
     'failed' => count( $failures ),

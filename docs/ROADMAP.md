@@ -1,3 +1,20 @@
+## v6.2.0 — Knowledge Library Intelligence and Production UX — Complete
+
+- Render-ready Python/FastAPI intelligence service
+- Full public-library synchronization
+- Exact-title and article-map retrieval hierarchy
+- Grounded Gemini synthesis
+- Related titles and research paths
+- Conversational continuity
+- Production public interface
+- Dedicated Python Intelligence administration
+
+## v6.1.1 — Gemini Authorization Key Compatibility Patch — Complete
+
+- Modern Google AI Studio auth-key support
+- Standard-key migration guidance
+- Actionable Gemini provider diagnostics
+
 ## v6.1.0 — Live AI Restoration and Admin Consolidation — Complete
 
 - Live AI operational status and provider diagnostics

@@ -1,0 +1,42 @@
+{
+  "schema": "sc-research-librarian-release/6.2.0",
+  "version": "6.2.0",
+  "title": "Knowledge Library Intelligence and Production UX",
+  "architecture": [
+    "wordpress-plugin",
+    "python-fastapi",
+    "render",
+    "gemini"
+  ],
+  "backend_endpoints": [
+    "/health",
+    "/status",
+    "/v1/knowledge/sync",
+    "/v1/knowledge/summary",
+    "/v1/retrieve",
+    "/v1/ask"
+  ],
+  "wordpress_endpoints": [
+    "/wp-json/sc-research-librarian-ai/v1/python/status",
+    "/wp-json/sc-research-librarian-ai/v1/python/suggest",
+    "/wp-json/sc-research-librarian-ai/v1/python/sync"
+  ],
+  "retrieval_fields": [
+    "title",
+    "slug",
+    "headings",
+    "series",
+    "article_map",
+    "parent_title",
+    "taxonomies",
+    "summary",
+    "content"
+  ],
+  "governance": [
+    "server-side keys",
+    "grounded sources only",
+    "human review",
+    "deterministic fallback",
+    "public-safe status"
+  ]
+}

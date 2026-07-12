@@ -1,0 +1,12 @@
+RESEARCH LIBRARIAN AI v6.1.1 TEST RESULTS
+
+PHP syntax: 12 files passed
+JavaScript syntax: passed
+JSON validation: 43 files passed
+Bootstrap registration: passed
+Live AI provider contract: 20 passed, 0 failed
+Gemini auth-key compatibility: 8 passed, 0 failed
+Secret scan: clean
+Archive root: stable WordPress plugin folder
+
+Live Gemini request: requires the user's server-side API key in WordPress.

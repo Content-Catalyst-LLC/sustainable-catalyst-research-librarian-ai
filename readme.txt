@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 6.1.0
+Stable tag: 6.2.0
 License: MIT
 
 An AI-powered, site-scoped Research Librarian for Sustainable Catalyst with live provider status, country-aware Site Intelligence routing, source-aware retrieval, verified fallback routing, and a consolidated WordPress administration center.
@@ -37,6 +37,22 @@ v5.9.0 adds adaptive, consent-aware prompts and contextual survey experiences wi
 [sc_research_librarian_article_route_cards]
 
 == Changelog ==
+
+= 6.2.0 =
+* Adds the Render-ready FastAPI knowledge intelligence backend.
+* Synchronizes the full public Sustainable Catalyst library across eligible public post types.
+* Adds exact-title, slug, heading, series, article-map, taxonomy, summary, and content ranking.
+* Adds grounded Gemini synthesis, related-title discovery, research paths, and short session continuity.
+* Adds the dedicated Python Intelligence administration page and secure server-to-server integration.
+* Replaces the beta-style route-card-first interface with a production answer-first experience.
+* Keeps direct WordPress AI provider operation as an optional fallback under Advanced.
+
+
+= 6.1.1 =
+* Accepts modern Google AI Studio authorization keys, including URL-safe period characters.
+* Adds administrator guidance for standard-key restriction and authorization-key migration.
+* Adds actionable diagnostics for invalid keys, permission failures, unavailable models, quota limits, and temporary provider errors.
+* Preserves v6.1.0 live AI status, country-aware Site Intelligence routing, and consolidated administration.
 
 = 6.1.0 =
 * Restored the live AI provider as the primary public experience with visible operational status.

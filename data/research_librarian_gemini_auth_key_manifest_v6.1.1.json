@@ -1,0 +1,18 @@
+{
+  "schema": "sc-research-librarian-gemini-auth-key-compatibility/1.0",
+  "version": "6.1.1",
+  "release": "Gemini Authorization Key Compatibility Patch",
+  "changes": [
+    "modern_google_ai_studio_authorization_key_support",
+    "period_character_key_compatibility",
+    "standard_key_migration_guidance",
+    "actionable_gemini_http_diagnostics"
+  ],
+  "preserved": [
+    "live_ai_status",
+    "country_aware_site_intelligence_routing",
+    "semantic_retrieval",
+    "deterministic_fallback",
+    "consolidated_admin"
+  ]
+}

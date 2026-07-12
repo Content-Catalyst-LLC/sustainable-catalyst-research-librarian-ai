@@ -11,3 +11,8 @@ vendor/
 .idea/
 .vscode/
 *.zip
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+backend/data_runtime/
