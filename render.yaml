@@ -18,6 +18,8 @@ services:
         value: gemini-3.5-flash
       - key: SC_RL_SEMANTIC_ENABLED
         value: "false"
+      - key: SC_RL_MAX_RUNTIME_SNAPSHOTS
+        value: "5"
       - key: SC_RL_CORS_ORIGINS
         value: https://sustainablecatalyst.com
       - key: SC_RL_BACKEND_API_KEY

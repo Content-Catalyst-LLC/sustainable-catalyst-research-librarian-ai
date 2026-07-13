@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 def utc_now() -> str:
@@ -18,7 +18,7 @@ class KnowledgeRecord(BaseModel):
     url: str = Field(min_length=1, max_length=1600)
     slug: str = Field(default="", max_length=500)
     summary: str = Field(default="", max_length=8000)
-    content: str = Field(default="", max_length=50000)
+    content: str = Field(default="", max_length=60000)
     headings: list[str] = Field(default_factory=list)
     post_type: str = Field(default="page", max_length=100)
     taxonomies: dict[str, list[str]] = Field(default_factory=dict)
@@ -29,6 +29,7 @@ class KnowledgeRecord(BaseModel):
     source: str = Field(default="wordpress", max_length=100)
     route_id: str = Field(default="", max_length=180)
     metadata: dict[str, Any] = Field(default_factory=dict)
+    content_hash: str = Field(default="", max_length=128)
     embedding: list[float] | None = None
 
     @field_validator("title", "summary", "content", "series", "article_map", "parent_title", mode="before")
@@ -39,27 +40,51 @@ class KnowledgeRecord(BaseModel):
 
 class SyncRequest(BaseModel):
     records: list[KnowledgeRecord]
-    mode: str = Field(default="replace", pattern="^(replace|upsert)$")
+    mode: str = Field(default="replace", pattern="^(replace|upsert|delete)$")
     source_site: str = ""
     generated_utc: str = Field(default_factory=utc_now)
     job_id: str = Field(default="", max_length=220)
     batch_index: int = Field(default=1, ge=1)
     batch_count: int = Field(default=1, ge=1)
+    deleted_ids: list[str] = Field(default_factory=list)
+    reason: str = Field(default="wordpress-sync", max_length=220)
+
+    @model_validator(mode="after")
+    def validate_batch_position(self) -> "SyncRequest":
+        if self.batch_index > self.batch_count:
+            raise ValueError("batch_index must not exceed batch_count")
+        return self
 
 
 class SyncResponse(BaseModel):
     ok: bool = True
     mode: str
+    state: str = "completed"
+    committed: bool = True
     received: int
     accepted: int = 0
     rejected: int = 0
+    inserted: int = 0
+    updated: int = 0
+    unchanged: int = 0
+    deleted: int = 0
+    staged_records: int = 0
+    staged_deletions: int = 0
+    duplicate_batch: bool = False
     job_id: str = ""
     batch_index: int = 1
     batch_count: int = 1
     total_records: int
     indexed_titles: int
+    index_version: int = 0
+    checksum: str = ""
+    storage_engine: str = "sqlite"
     last_sync_utc: str
     source_site: str = ""
+
+
+class RollbackRequest(BaseModel):
+    snapshot_id: str = Field(min_length=1, max_length=220)
 
 
 class RetrievalRequest(BaseModel):
@@ -125,6 +150,15 @@ class StatusResponse(BaseModel):
     semantic_retrieval: str
     last_sync_utc: str
     source_site: str
+    storage_engine: str = "sqlite"
+    schema_version: int = 3
+    index_version: int = 0
+    checksum: str = ""
+    snapshot_count: int = 0
+    staging_jobs: int = 0
+    recovery_needed: bool = False
+    last_recovery_utc: str = ""
+    last_rollback_utc: str = ""
     last_ai_success_utc: str = ""
     last_ai_failure_utc: str = ""
     last_ai_error: str = ""

@@ -1,0 +1,30 @@
+{
+  "schema": "sc-research-librarian-release-manifest/1.0",
+  "version": "6.3.0",
+  "name": "Durable Knowledge Index, Sync Ledger, and Recovery",
+  "storage": {
+    "canonical_source": "WordPress compressed private snapshot",
+    "runtime_engine": "SQLite",
+    "paid_database_required": false,
+    "ephemeral_runtime_supported": true
+  },
+  "capabilities": [
+    "transactional multi-batch replacement",
+    "idempotent synchronization jobs",
+    "record content hashes",
+    "incremental insert and update",
+    "delete tombstones",
+    "WordPress canonical snapshots",
+    "runtime rollback snapshots",
+    "automatic cold-start rehydration",
+    "sync ledger and checksum comparison",
+    "failed queue retry"
+  ],
+  "compatibility": {
+    "wordpress_options_preserved": true,
+    "v6_2_1_class_alias": true,
+    "v6_2_0_class_alias": true,
+    "render_free_tier": true,
+    "python": "3.12.12"
+  }
+}

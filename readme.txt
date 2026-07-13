@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 6.2.1
+Stable tag: 6.3.0
 License: MIT
 
 An AI-powered, site-scoped Research Librarian for Sustainable Catalyst with live provider status, country-aware Site Intelligence routing, source-aware retrieval, verified fallback routing, and a consolidated WordPress administration center.
@@ -37,6 +37,15 @@ v5.9.0 adds adaptive, consent-aware prompts and contextual survey experiences wi
 [sc_research_librarian_article_route_cards]
 
 == Changelog ==
+
+= 6.3.0 =
+* Replaces the ephemeral JSON runtime index with a transactional SQLite knowledge index.
+* Stages every expected batch before atomically committing a full replacement.
+* Adds idempotent sync jobs, duplicate-batch protection, content hashes, tombstones, and incremental insert/update/delete processing.
+* Creates private compressed WordPress snapshots as the canonical recovery source.
+* Automatically rehydrates an empty backend from the latest verified WordPress snapshot.
+* Adds backend manifests, sync ledgers, checksums, runtime snapshots, and administrator rollback controls.
+* Preserves v6.2.1 endpoint diagnostics, rate-limit improvements, nonce retry, and terminal prompt styling.
 
 = 6.2.1 =
 * Makes canonical published WordPress records take precedence over summary-only legacy index entries.

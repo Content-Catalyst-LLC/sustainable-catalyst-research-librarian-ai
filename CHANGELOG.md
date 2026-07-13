@@ -1,3 +1,17 @@
+## 6.3.0 — Durable Knowledge Index, Sync Ledger, and Recovery
+
+- Replaced the Python JSON runtime store with a transactional SQLite knowledge index.
+- Added atomic multi-batch staging so incomplete synchronization jobs cannot replace a valid live index.
+- Added idempotent jobs, duplicate-batch protection, record content hashes, unchanged detection, and out-of-order batch completion.
+- Added incremental upserts, explicit deletions, tombstones, and record-level WordPress change queues.
+- Added private gzip WordPress snapshots with checksums, retention controls, and direct-access protection.
+- Added automatic cold-start recovery when the backend is reachable but its ephemeral index is empty.
+- Added backend runtime safety snapshots, manifest and snapshot endpoints, and authenticated rollback.
+- Added WordPress/backend checksum comparison, sync ledger visibility, recovery logs, and administrator recovery controls.
+- Added SQLite migration support for the legacy JSON runtime index.
+- Preserved v6.2.1 endpoint reliability, rolling public limits, nonce retry, and black-and-green prompt styling.
+- Added Python 3.12 release validation and repository-root/backend pytest path coverage.
+
 ## 6.2.1 — WordPress Indexing and Endpoint Reliability Patch
 
 - Prioritized full canonical WordPress article records over duplicate summary-only route-index records.
@@ -9,6 +23,7 @@
 - Added structured endpoint status to Python, fallback, and direct WordPress provider responses.
 - Restyled the public question textarea as a black-and-green terminal prompt while retaining light answer and source cards.
 - Added FastAPI sync job and batch metadata with accepted/rejected counts.
+- Added repository-root pytest path configuration and backend-directory release-test execution.
 
 ## 6.2.0 — Knowledge Library Intelligence and Production UX
 

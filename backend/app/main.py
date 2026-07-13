@@ -19,6 +19,7 @@ from .models import (
     AskResponse,
     RetrievalRequest,
     RetrievedSource,
+    RollbackRequest,
     StatusResponse,
     SyncRequest,
     SyncResponse,
@@ -156,6 +157,15 @@ def _status() -> StatusResponse:
         semantic_retrieval="title-aware-hybrid",
         last_sync_utc=str(summary.get("last_sync_utc", "")),
         source_site=str(summary.get("source_site", "")),
+        storage_engine=str(summary.get("storage_engine", "sqlite")),
+        schema_version=int(summary.get("schema_version", 3)),
+        index_version=int(summary.get("index_version", 0)),
+        checksum=str(summary.get("checksum", "")),
+        snapshot_count=int(summary.get("snapshot_count", 0)),
+        staging_jobs=int(summary.get("staging_jobs", 0)),
+        recovery_needed=bool(summary.get("recovery_needed", False)),
+        last_recovery_utc=str(summary.get("last_recovery_utc", "")),
+        last_rollback_utc=str(summary.get("last_rollback_utc", "")),
         last_ai_success_utc=provider_state.last_success_utc,
         last_ai_failure_utc=provider_state.last_failure_utc,
         last_ai_error=provider_state.last_error,
@@ -186,26 +196,66 @@ def status_endpoint() -> StatusResponse:
 
 @app.post("/v1/knowledge/sync", response_model=SyncResponse, dependencies=[Depends(require_key)])
 def sync_knowledge(payload: SyncRequest) -> SyncResponse:
-    meta = store.sync(payload.records, payload.mode, payload.source_site)
-    summary = store.summary()
+    result = store.sync(
+        records=payload.records,
+        mode=payload.mode,
+        source_site=payload.source_site,
+        job_id=payload.job_id,
+        batch_index=payload.batch_index,
+        batch_count=payload.batch_count,
+        deleted_ids=payload.deleted_ids,
+        reason=payload.reason,
+    )
+    summary = result.summary
     return SyncResponse(
         mode=payload.mode,
-        received=len(payload.records),
-        accepted=len(payload.records),
-        rejected=0,
+        state=result.state,
+        committed=result.committed,
+        received=result.received,
+        accepted=result.accepted,
+        rejected=result.rejected,
+        inserted=result.inserted,
+        updated=result.updated,
+        unchanged=result.unchanged,
+        deleted=result.deleted,
+        staged_records=result.staged_records,
+        staged_deletions=result.staged_deletions,
+        duplicate_batch=result.duplicate_batch,
         job_id=payload.job_id,
         batch_index=payload.batch_index,
         batch_count=payload.batch_count,
         total_records=int(summary["total_records"]),
         indexed_titles=int(summary["indexed_titles"]),
-        last_sync_utc=str(meta["last_sync_utc"]),
-        source_site=str(meta.get("source_site", "")),
+        index_version=int(summary.get("index_version", 0)),
+        checksum=str(summary.get("checksum", "")),
+        storage_engine=str(summary.get("storage_engine", "sqlite")),
+        last_sync_utc=str(summary.get("last_sync_utc", "")),
+        source_site=str(summary.get("source_site", "")),
     )
 
 
 @app.get("/v1/knowledge/summary", response_model=StatusResponse, dependencies=[Depends(require_key)])
 def knowledge_summary() -> StatusResponse:
     return _status()
+
+
+@app.get("/v1/knowledge/manifest", dependencies=[Depends(require_key)])
+def knowledge_manifest() -> dict[str, Any]:
+    return {"ok": True, "version": __version__, **store.manifest()}
+
+
+@app.get("/v1/knowledge/snapshots", dependencies=[Depends(require_key)])
+def knowledge_snapshots() -> dict[str, Any]:
+    return {"ok": True, "version": __version__, "snapshots": store.list_snapshots()}
+
+
+@app.post("/v1/knowledge/rollback", dependencies=[Depends(require_key)])
+def knowledge_rollback(payload: RollbackRequest) -> dict[str, Any]:
+    try:
+        result = store.rollback(payload.snapshot_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Runtime index snapshot not found.") from exc
+    return {"version": __version__, **result}
 
 
 @app.post("/v1/retrieve", response_model=list[RetrievedSource], dependencies=[Depends(require_key)])

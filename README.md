@@ -1,31 +1,38 @@
-# Sustainable Catalyst Research Librarian AI v6.2.1
+# Sustainable Catalyst Research Librarian AI v6.3.0
 
-## v6.2.1 — WordPress Indexing and Endpoint Reliability Patch
+## v6.3.0 — Durable Knowledge Index, Sync Ledger, and Recovery
 
-Research Librarian AI v6.2.1 hardens the WordPress-to-FastAPI request path, repairs full-library indexing visibility, and gives administrators precise operational recovery tools. WordPress remains the public interface and canonical publishing source; FastAPI remains the title-aware retrieval and grounded Gemini service.
+Research Librarian AI v6.3.0 makes the knowledge index restart-safe without requiring a paid database. WordPress remains the canonical publishing and recovery layer. FastAPI now maintains a transactional SQLite runtime index that can be rebuilt automatically from private, compressed WordPress snapshots after an ephemeral Render restart.
 
-### Core v6.2.1 capabilities
+### Core v6.3.0 capabilities
 
-- Canonical published WordPress posts are synchronized before summary-only legacy route records.
-- Per-job and per-batch synchronization reports show eligible, collected, skipped, duplicate, accepted, and rejected records.
-- Administrator diagnostics distinguish WordPress REST failure, nonce expiration, backend cold start, backend connection failure, integration-key mismatch, empty index, provider quota, and public rate limiting.
-- A one-click **Repair Endpoint and Resynchronize** action verifies the authenticated backend, repairs the WP-Cron schedule, and runs a full knowledge sync.
-- Public request limits use rolling windows, return `Retry-After`, exempt authenticated editors by default, and can be inspected or reset by administrators.
-- The browser refreshes an expired WordPress nonce once and safely retries the original question or title-suggestion request.
-- The public question-entry textarea is black with green monospace text, a green caret, subdued green placeholder text, and an accessible green focus ring.
-- Answer, evidence, and source-card surfaces remain light and readable.
-- The FastAPI synchronization response records job ID, batch position, accepted records, and rejected records.
-- v6.2.0 retrieval, related-title discovery, research paths, short session continuity, and grounded Gemini synthesis remain intact.
+- Transactional, multi-batch synchronization: the active index is replaced only after every expected batch arrives.
+- Idempotent job IDs and duplicate-batch protection prevent retries from applying the same synchronization twice.
+- A SQLite runtime index stores records, metadata, staging jobs, tombstones, checksums, sync history, and rollback snapshots.
+- WordPress creates canonical gzip snapshots in a private upload directory protected from direct web access.
+- Automatic cold-start recovery detects an empty backend and rehydrates it from the latest verified WordPress snapshot.
+- Record-level content hashes distinguish inserts, updates, unchanged records, and deletions.
+- Saved, unpublished, trashed, and deleted WordPress records enter a bounded incremental synchronization queue.
+- Deleted records create tombstones so removals remain auditable and cannot silently reappear.
+- Administrators can compare WordPress and backend manifests, process the incremental queue, create snapshots, recover an empty backend, and roll back the runtime index.
+- The v6.2.1 endpoint diagnostics, rolling limits, nonce retry, and black-and-green terminal question field remain intact.
 
 ### Primary operations
 
 1. Open **Research Librarian AI → Python Intelligence**.
-2. Select **Test Backend and Integration Key**.
-3. Select **Repair Endpoint and Resynchronize**.
-4. Review the endpoint diagnostics and the latest per-batch synchronization report.
-5. Use **Reset Public Rate Limits** only when an active visitor window needs to be cleared during testing.
+2. Save the backend URL and shared integration key, then select **Test Backend**.
+3. Select **Transactional Full Sync** to create the canonical WordPress snapshot and atomically replace the runtime index.
+4. Confirm that WordPress and backend record counts and checksums match.
+5. Leave **Automatic cold-start recovery** enabled for free Render deployments.
+6. Use **Process Incremental Queue** after editorial changes, **Recover Empty Backend** after an empty-index event, and **Rollback Runtime Index** only when reverting a bad committed sync.
 
-The Python service remains independently testable through `/health`, `/status`, `/v1/knowledge/summary`, `/v1/knowledge/sync`, `/v1/retrieve`, and `/v1/ask`.
+### Runtime and deployment
+
+The included push script requires Python 3.12 and verifies the actual temporary environment before installing dependencies. The Render blueprint pins Python 3.12.12. SQLite remains runtime storage rather than the canonical source, so an ephemeral filesystem is supported: WordPress holds the private recovery snapshot and can restore the backend automatically.
+
+The Python service exposes `/health`, `/status`, `/v1/knowledge/summary`, `/v1/knowledge/manifest`, `/v1/knowledge/snapshots`, `/v1/knowledge/rollback`, `/v1/knowledge/sync`, `/v1/retrieve`, and `/v1/ask`.
+
+See `docs/V630_DURABLE_KNOWLEDGE_INDEX_SYNC_LEDGER_RECOVERY.md` for the release contract and recovery model.
 
 ## v6.1.1 — Gemini Authorization Key Compatibility Patch
 

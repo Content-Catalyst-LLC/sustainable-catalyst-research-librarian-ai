@@ -1,0 +1,18 @@
+Research Librarian AI v6.3.0 — Validation Results
+Date: July 13, 2026
+
+PHP syntax: 17 files passed
+JavaScript syntax: 2 files passed
+JSON parsing: 46 files passed
+WordPress/PHP contract suites: 6 passed
+Durable-index contract: 38/38 passed
+Private snapshot round trip: passed
+Backend tests from repository root: 14 passed
+Backend tests from backend/: 14 passed
+Python compile validation: passed
+Push-script Bash syntax: passed
+Push-safe secret-pattern scan: passed
+
+Project runtime: Python 3.12.12
+Build validation runtime available in this environment: Python 3.13.5
+The push script verifies an isolated Python 3.12 environment before installation or push.

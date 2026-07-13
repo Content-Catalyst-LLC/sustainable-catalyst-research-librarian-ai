@@ -21,3 +21,5 @@ WP-Cron execution, or Render cold starts. After installation, open:
 Research Librarian AI -> Python Intelligence
 and run:
 Repair Endpoint and Resynchronize
+
+Pytest import path: PASS (root pytest.ini + backend-directory push execution)

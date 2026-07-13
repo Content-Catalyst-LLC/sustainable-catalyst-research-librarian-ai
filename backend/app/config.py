@@ -51,6 +51,7 @@ class Settings:
     semantic_document_limit: int = _int("SC_RL_SEMANTIC_DOCUMENT_LIMIT", 500, 25, 2500)
     session_ttl_seconds: int = _int("SC_RL_SESSION_TTL_SECONDS", 3600, 300, 86400)
     max_session_turns: int = _int("SC_RL_MAX_SESSION_TURNS", 6, 1, 20)
+    max_runtime_snapshots: int = _int("SC_RL_MAX_RUNTIME_SNAPSHOTS", 5, 1, 20)
 
 
 settings = Settings()

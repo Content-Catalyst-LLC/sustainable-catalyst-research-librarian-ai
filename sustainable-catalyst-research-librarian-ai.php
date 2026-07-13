@@ -3,7 +3,7 @@
  * Plugin Name: Sustainable Catalyst Research Librarian AI
  * Plugin URI: https://sustainablecatalyst.com/platform/research-librarian/
  * Description: AI-powered, site-scoped research guidance for Sustainable Catalyst with live provider status, country-aware Site Intelligence routing, source-aware retrieval, guided paths, typed platform handoffs, governed feedback, and verified deterministic fallback.
- * Version: 6.2.1
+ * Version: 6.3.0
  * Author: Content Catalyst LLC / Tariq Ahmad
  * Author URI: https://sustainablecatalyst.com/
  * License: MIT
@@ -251,7 +251,7 @@ if ( ! function_exists( 'sc_rl6_render_legacy_class_notice' ) ) {
             return;
         }
         $status = sc_rl6_legacy_class_status();
-        echo '<div class="notice notice-warning"><p><strong>Research Librarian AI v6.2.1 compatibility mode:</strong> A legacy Research Librarian class was already loaded before the current plugin. The collision-safe v6 bootstrap is active, so settings and shortcodes remain available.</p>';
+        echo '<div class="notice notice-warning"><p><strong>Research Librarian AI v6.3.0 compatibility mode:</strong> A legacy Research Librarian class was already loaded before the current plugin. The collision-safe v6 bootstrap is active, so settings and shortcodes remain available.</p>';
         if ( ! empty( $status['file'] ) ) {
             echo '<p>Legacy class file: <code>' . esc_html( $status['file'] ) . '</code>';
             if ( ! empty( $status['version'] ) ) {
@@ -259,7 +259,7 @@ if ( ! function_exists( 'sc_rl6_render_legacy_class_notice' ) ) {
             }
             echo '</p>';
         }
-        echo '<p>Remove the legacy duplicate, network plugin, or must-use copy after confirming the active v6.2.1 plugin is working.</p></div>';
+        echo '<p>Remove the legacy duplicate, network plugin, or must-use copy after confirming the active v6.3.0 plugin is working.</p></div>';
     }
 }
 add_action( 'admin_notices', 'sc_rl6_render_legacy_class_notice' );
@@ -274,7 +274,7 @@ final class SC_RL6_Core {
     const MAINTENANCE_HOOK = 'sc_rl_ai_index_maintenance_event';
     const AI_STATUS_OPTION = 'sc_rl_ai_live_provider_status';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const VERSION        = '6.2.1';
+    const VERSION        = '6.3.0';
     const RATE_LIMIT_REGISTRY_OPTION = 'sc_rl_ai_rate_limit_registry';
 
     private static $instance = null;
@@ -9647,8 +9647,8 @@ require_once plugin_dir_path( __FILE__ ) . 'includes/class-sc-rl-v590-closed-loo
 SC_RL6_V590_Closed_Loop_Route_Improvement::init();
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-sc-rl-v600-integrated-research-guidance-platform.php';
 SC_RL6_V600_Integrated_Research_Guidance_Platform::init();
-require_once plugin_dir_path( __FILE__ ) . 'includes/class-sc-rl-v621-endpoint-reliability.php';
-SC_RL6_V621_Endpoint_Reliability::init();
+require_once plugin_dir_path( __FILE__ ) . 'includes/class-sc-rl-v630-durable-index.php';
+SC_RL6_V630_Durable_Index::init();
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-sc-rl-v610-live-ai-admin.php';
 SC_RL6_V610_Live_AI_Admin::init();
 
@@ -9668,10 +9668,10 @@ SC_RL6_V410_Recovery::init();
 
 register_activation_hook( __FILE__, array( 'SC_RL6_Core', 'activate' ) );
 register_activation_hook( __FILE__, array( 'SC_RL6_V550_Stable_Operations', 'activate' ) );
-register_activation_hook( __FILE__, array( 'SC_RL6_V621_Endpoint_Reliability', 'activate' ) );
+register_activation_hook( __FILE__, array( 'SC_RL6_V630_Durable_Index', 'activate' ) );
 register_deactivation_hook( __FILE__, array( 'SC_RL6_Core', 'deactivate' ) );
 register_deactivation_hook( __FILE__, array( 'SC_RL6_V550_Stable_Operations', 'deactivate' ) );
-register_deactivation_hook( __FILE__, array( 'SC_RL6_V621_Endpoint_Reliability', 'deactivate' ) );
+register_deactivation_hook( __FILE__, array( 'SC_RL6_V630_Durable_Index', 'deactivate' ) );
 SC_RL6_Core::instance();
 
 // Preserve the historic public class name when no legacy implementation already owns it.

@@ -40,7 +40,8 @@ php tests/endpoint-reliability-contract-test.php
 php tests/gemini-auth-key-compatibility-test.php
 php tests/knowledge-intelligence-contract-test.php
 php tests/live-ai-provider-contract-test.php
-python3 -m pytest -q backend/tests
+python3 -m pytest -q backend/tests  # repository root, configured by pytest.ini
+(cd backend && python3 -m pytest -q tests)  # push-script execution path
 php -l <all PHP files>
 node --check <all public JavaScript files>
 python3 -m compileall backend/app backend/tests
@@ -50,3 +51,12 @@ bash -n PUSH_RESEARCH_LIBRARIAN_V621.sh
 ## Deployment boundary
 
 These tests validate the packaged source, WordPress registration contracts, JavaScript behavior contracts, and local FastAPI application. They do not simulate the production WordPress host, Cloudflare rules, WP-Cron traffic, or the deployed Render service. After installation, use **Research Librarian AI → Python Intelligence → Repair Endpoint and Resynchronize** to verify the live server-to-server path and rebuild the production index.
+
+## Push-script compatibility revision
+
+The release push script was revised after a macOS Python launcher conflict was observed. The revised script clears `__PYVENV_LAUNCHER__`, `PYTHONEXECUTABLE`, active virtual-environment and Conda/Pyenv overrides before invoking Python 3.12. It creates the validation environment with `--copies`, verifies that the resulting interpreter is Python 3.12 before installing dependencies, and requires binary wheels so `pydantic-core` cannot silently fall back to a Rust source build under Python 3.14.
+
+
+## Pytest import-path revision
+
+The release package now includes a root `pytest.ini` with `pythonpath = backend` and `testpaths = backend/tests`. The push script also changes into `backend/` before invoking pytest. This makes the `app` package importable whether tests are launched from the repository root, from the backend directory, or by the release push script.

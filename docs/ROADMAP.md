@@ -1,146 +1,68 @@
-## v6.2.1 — WordPress Indexing and Endpoint Reliability Patch — Complete
-
-- Canonical WordPress-first full-library synchronization
-- Endpoint, permalink, WP-Cron, integration-key, index, provider, and rate-limit diagnostics
-- Rolling rate limits with `Retry-After`, editor exemptions, and administrator reset
-- Nonce refresh with one safe public-request retry
-- Per-job and per-batch synchronization reporting
-- One-click endpoint repair and complete resynchronization
-- Black-and-green terminal question field with light answer and source cards
-
-## v6.2.0 — Knowledge Library Intelligence and Production UX — Complete
-
-- Render-ready Python/FastAPI intelligence service
-- Full public-library synchronization
-- Exact-title and article-map retrieval hierarchy
-- Grounded Gemini synthesis
-- Related titles and research paths
-- Conversational continuity
-- Production public interface
-- Dedicated Python Intelligence administration
-
-## v6.1.1 — Gemini Authorization Key Compatibility Patch — Complete
-
-- Modern Google AI Studio auth-key support
-- Standard-key migration guidance
-- Actionable Gemini provider diagnostics
-
-## v6.1.0 — Live AI Restoration and Admin Consolidation — Complete
-
-- Live AI operational status and provider diagnostics
-- Country-aware Site Intelligence routing
-- Pakistan / PAK regression test
-- Weighted deterministic fallback routing
-- Dedicated Research Librarian AI admin menu
-- Consolidated Settings screens
-- AI status, connection-test, and model-list endpoints
-- Gemini request hardening and configurable timeouts
-
-## v6.0.1 — WordPress Bootstrap Registration Repair — Complete
-
-- Removed the self-detecting class guard that stopped v6.0.0 on every request.
-- Restored Settings links, admin pages, shortcodes, REST routes, and module initializers.
-- Added collision-safe internal class/function names and a bootstrap regression test.
-- Confirmed Platform Core does not define or suppress Research Librarian.
-
 # Research Librarian Roadmap
 
-## Completed
+## v6.3.0 — Durable Knowledge Index, Sync Ledger, and Recovery — Complete
 
-- v3.0.0 — Product Routing Layer Upgrade
-- v3.1.0 — Grounded Routing and Source-Aware Recommendations
-- v3.2.0 — Knowledge Indexer and Admin Crawl Dashboard
+- Transactional SQLite runtime index
+- Atomic multi-batch replacement
+- Idempotent jobs and duplicate-batch protection
+- Record hashes, incremental upserts, deletes, and tombstones
+- Private compressed WordPress recovery snapshots
+- Automatic empty-index rehydration on ephemeral Render infrastructure
+- Sync ledger, checksums, manifest comparison, recovery logs, and rollback
+- Free-tier deployment without a paid database
 
-## Recommended next builds
+## v6.3.1 — Cold-Start and Synchronization Reliability Patch — Next
 
-- v3.3.0 — Gemini Retrieval Backend with Embeddings
-- v3.4.0 — Route Confidence Evaluation Tests and Failure Logs
-- v3.5.0 — Workbench and Decision Studio Handoff Payloads
-- v3.6.0 — Saved Route Sessions and Admin Analytics
+- Recovery progress and public warm-up status
+- Bounded retry with backoff and stalled-job detection
+- Failed-record isolation and retry queue
+- Snapshot integrity alerts and administrator sync-log export
+- Recovery-event deduplication and notice suppression
+- Orphaned staging-job cleanup and transaction timeout handling
 
-## Architecture direction
+## v6.4.0 — Hybrid Retrieval and Citation Engine
 
-The Research Librarian should become the source-aware retrieval and routing infrastructure for Sustainable Catalyst. Gemini or OpenAI can assist synthesis, but route selection should remain grounded in an indexed source layer.
+- BM25 lexical retrieval plus exact-title priority
+- Heading-aware article chunking
+- Resumable Gemini embedding queue
+- Lexical, semantic, relationship, and route-signal fusion
+- Structured evidence objects and generated-citation verification
+- PDF full-text and page-aware evidence records
+- Deterministic evidence summaries when Gemini is unavailable
 
+## v6.4.1 — Retrieval Calibration and Regression Patch
 
-## Completed in v3.3.0
+- Golden-query benchmark suite
+- Near-duplicate and confusing-title tests
+- Evidence thresholds and unsupported-answer detection
+- Ranking-weight administration and latency tuning
 
-- Gemini embedding settings
-- Generate Gemini Embeddings admin action
-- Hybrid semantic + keyword retrieval
-- Retrieval status and query endpoints
-- Retrieval-status shortcode
+## v6.5.0 — Production Public Research Workspace
 
-## Candidate next builds
+- Answer-first public workspace
+- Terminal prompt with light evidence and source cards
+- Find-title, explore-subject, build-path, evidence, analysis, and decision modes
+- Citation cards, exports, mobile refinement, and graceful cold-start states
 
-- v3.4.0 — Route Confidence, Evaluation Tests, and Failure Logs
-- v3.5.0 — Workbench / Decision Studio Handoff Payloads
+## v6.6.0 — Platform Intelligence and Typed Research Handoffs
 
+- Versioned handoffs to Workbench, Decision Studio, Site Intelligence, and Lab
+- Provenance-preserving artifact return
+- Capability discovery and destination-health validation
 
-## v3.3.1
+## v6.7.0 — Research Quality and Governance Center
 
-Gemini embedding diagnostics, request format fix, single-record embedding test, and clearer admin failure reporting.
+- Retrieval, citation, route, latency, and fallback benchmarks
+- Source approval, freshness controls, prompt/model/index provenance, and rollback
+- Privacy-minimized analytics and public methodology
 
+## v7.0.0 — Connected Research Intelligence Platform
 
-## Completed in v3.5.0
+- Persistent research workspaces
+- Multi-step investigations and evidence collections
+- Cross-platform research workflows
+- Stable public API, provider-independent generation boundary, and auditable history
 
-- Structured Workbench and Decision Studio handoff payloads.
-- Module artifact and Feature Suggestions handoff targets.
+## Completed foundation
 
-
-## Completed in v3.6.0
-
-- Saved route sessions.
-- Route analytics summary.
-- Session export and clear-session controls.
-- Session/analytics shortcode modes.
-
-
-## Completed in v3.7.0
-
-- Feedback and route-correction queue
-- Knowledge-gap triage records
-- Admin feedback dashboard
-- Feedback export JSON
-
-
-## v4.5.0 completed
-
-- Integration contracts, API catalog, developer handoffs, and admin/public contract exports.
-
-
-## v4.7.1 Completed
-
-- Guided research paths and multi-step route builder.
-- Path session save/export layer.
-- Public path builder shortcode.
-
-## v5.5.0 — Stable Operations Polish and Release Notes — Complete
-
-- Release-readiness dashboard with required and recommended checks.
-- Daily operational validation and privacy-minimized platform events.
-- Migration validation and bounded audit history.
-- Recovery assets, maintenance schedules, and duplicate activation checks.
-- Workbench and Decision Studio integration-health review.
-- Administrator operations export.
-- Public release notes and public-safe status shortcode.
-
-The Research Librarian 5.x public-experience roadmap is now complete. Future releases should begin a new roadmap focused on closed-loop research demand intelligence, adaptive feedback, and measured route improvement rather than extending the v5 launch sequence.
-
-
-## v5.6.0 — Feature Suggestions Feedback Bridge — Complete
-
-- Contextual ratings and route correction reports.
-- Missing-source, missing-topic, missing-tool, and grounding feedback.
-- Feature Suggestions v3 handoff adapter and local queue fallback.
-- Receipt status, duplicate protection, administrator diagnostics, and Site Intelligence events.
-
-- **v5.7.0 — Research Demand and Knowledge-Gap Intelligence:** aggregate route demand, low-confidence clusters, coverage gaps, missing sources and tools, and advisory opportunities for Site Intelligence and editorial review.
-
-- **v5.8.0 — Adaptive Prompt and Survey Experiences:** rule-based, consent-aware contextual prompts, survey triggers, frequency caps, Feature Suggestions handoffs, and aggregate experience analytics.
-
-## v6.0.0 — Integrated Research Guidance Platform — Complete
-
-- Unified source-aware routing, article-map guidance, platform actions, contextual feedback, research-demand intelligence, adaptive experiences, and closed-loop route improvement.
-- Added a platform command center, module readiness, unified capability discovery, public journey views, protected exports, and stable governance boundaries.
-- Established the stable `sc-integrated-research-guidance/1.0` major-release contract.
+v6.2.1 repaired WordPress indexing, endpoint diagnostics, rate limiting, nonce retry, and the terminal prompt. v6.2.0 introduced the Render-ready knowledge-intelligence service. v6.1.x restored live AI and provider diagnostics. v6.0.x established the integrated research-guidance platform and collision-safe bootstrap.

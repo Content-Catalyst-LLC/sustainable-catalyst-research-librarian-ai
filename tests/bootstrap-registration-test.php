@@ -1,6 +1,6 @@
 <?php
 /**
- * Standalone regression test for Research Librarian AI v6.2.1.
+ * Standalone regression test for Research Librarian AI v6.3.0.
  * Run: php tests/bootstrap-registration-test.php
  */
 error_reporting( E_ALL );
@@ -106,6 +106,10 @@ $required_rest = array(
     'sc-research-librarian-ai/v1/python/diagnostics',
     'sc-research-librarian-ai/v1/python/sync-report',
     'sc-research-librarian-ai/v1/python/repair',
+    'sc-research-librarian-ai/v1/python/manifest',
+    'sc-research-librarian-ai/v1/python/snapshots',
+    'sc-research-librarian-ai/v1/python/recover',
+    'sc-research-librarian-ai/v1/python/rollback',
     'sc-research-librarian-ai/v1/nonce',
     'sc-research-librarian-ai/v1/rate-limit/status',
     'sc-research-librarian-ai/v1/rate-limit/reset',
@@ -130,7 +134,7 @@ $result = array(
 
 echo json_encode( $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . PHP_EOL;
 
-$passed = '6.2.1' === $result['version']
+$passed = '6.3.0' === $result['version']
     && $result['core_loaded']
     && $result['legacy_class_detected']
     && empty( $result['missing_shortcodes'] )
