@@ -770,7 +770,7 @@
   }
 }
 
-/* v6.2.0 — Knowledge Library Intelligence and Production UX */
+/* v6.2.1 — WordPress Indexing, Endpoint Reliability, and Production UX */
 .sc-rl-ai {
   --sc-rl-red: #ff0000;
   --sc-rl-black: #000;
@@ -812,14 +812,42 @@
 .sc-rl-ai__ask-card .sc-rl-ai__intro { color: rgba(255,255,255,.76); font-size: clamp(1rem, 1.8vw, 1.2rem); max-width: 78ch; }
 .sc-rl-ai__ask-card .sc-rl-ai__label { color: #fff; }
 
+/* v6.2.1 terminal prompt: only the question-entry control is black and green. */
 .sc-rl-ai__textarea {
-  border: 2px solid rgba(255,255,255,.32);
-  box-shadow: none;
+  background: #000;
+  border: 2px solid #45e85f;
+  box-shadow: inset 0 0 0 1px rgba(69,232,95,.08);
+  caret-color: #7dff91;
+  color: #7dff91;
+  color-scheme: dark;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
   font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.55;
   min-height: 132px;
   padding: 1rem 1.1rem;
 }
-.sc-rl-ai__textarea:focus { border-color: var(--sc-rl-red); box-shadow: 0 0 0 3px rgba(255,0,0,.2); }
+.sc-rl-ai__textarea::placeholder {
+  color: rgba(125,255,145,.64);
+  opacity: 1;
+}
+.sc-rl-ai__textarea:hover { border-color: #7dff91; }
+.sc-rl-ai__textarea:focus,
+.sc-rl-ai__textarea:focus-visible {
+  background: #000;
+  border-color: #a6ffb3;
+  box-shadow: 0 0 0 4px rgba(125,255,145,.24), inset 0 0 18px rgba(69,232,95,.06);
+  color: #a6ffb3;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+.sc-rl-ai__textarea:-webkit-autofill,
+.sc-rl-ai__textarea:-webkit-autofill:hover,
+.sc-rl-ai__textarea:-webkit-autofill:focus {
+  -webkit-text-fill-color: #7dff91;
+  box-shadow: 0 0 0 1000px #000 inset, 0 0 0 4px rgba(125,255,145,.24);
+  caret-color: #7dff91;
+}
 
 .sc-rl-ai__actions--primary { align-items: center; margin-bottom: .65rem; }
 .sc-rl-ai__button { min-height: 44px; padding: .7rem 1.05rem; }
@@ -855,6 +883,24 @@
 .sc-rl-ai__title-suggestions button:focus { background: #f7f1e7; outline: 2px solid #ff0000; outline-offset: -2px; }
 .sc-rl-ai__title-suggestions strong { display: block; font-size: .98rem; }
 .sc-rl-ai__title-suggestions span { color: #5b554e; display: block; font-size: .82rem; margin-top: .25rem; }
+
+
+/* v6.2.1 endpoint-state notices remain light inside the answer surface. */
+.sc-rl-ai__endpoint-notice {
+  background: #f7f1e7;
+  border: 1px solid rgba(0,0,0,.18);
+  border-left: 5px solid #8b1e3f;
+  color: #1a1714;
+  display: grid;
+  gap: .25rem;
+  margin: 0 0 1rem;
+  padding: .9rem 1rem;
+}
+.sc-rl-ai__endpoint-notice strong { color: #000; font-size: .95rem; }
+.sc-rl-ai__endpoint-notice span,
+.sc-rl-ai__endpoint-notice small { color: #5b554e; line-height: 1.5; }
+.sc-rl-ai__endpoint-notice--error { background: #fff5f5; border-left-color: #b42318; }
+.sc-rl-ai__endpoint-notice--error strong { color: #8b0000; }
 
 .sc-rl-ai__answer-card {
   border: 1px solid rgba(0,0,0,.16);

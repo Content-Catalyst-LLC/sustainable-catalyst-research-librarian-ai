@@ -1,3 +1,15 @@
+## 6.2.1 — WordPress Indexing and Endpoint Reliability Patch
+
+- Prioritized full canonical WordPress article records over duplicate summary-only route-index records.
+- Added detailed sync jobs, batch outcomes, source counts, duplicate counts, rejected-record counts, and sync history.
+- Added WordPress REST, permalink, WP-Cron, backend, integration-key, empty-index, provider-quota, and rate-limit diagnostics.
+- Added authenticated backend verification plus **Repair Endpoint and Resynchronize**.
+- Added rolling public request limits, editor exemptions, `Retry-After` responses, status reporting, and administrator reset controls.
+- Added public nonce refresh with one safe retry for questions and title suggestions.
+- Added structured endpoint status to Python, fallback, and direct WordPress provider responses.
+- Restyled the public question textarea as a black-and-green terminal prompt while retaining light answer and source cards.
+- Added FastAPI sync job and batch metadata with accepted/rejected counts.
+
 ## 6.2.0 — Knowledge Library Intelligence and Production UX
 
 - Added a production FastAPI backend designed for Render deployment.

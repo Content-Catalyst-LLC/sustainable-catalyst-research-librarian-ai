@@ -248,6 +248,7 @@
     var endpoint = root.getAttribute('data-endpoint');
     var aiStatusEndpoint = root.getAttribute('data-ai-status-endpoint');
     var suggestEndpoint = root.getAttribute('data-suggest-endpoint');
+    var nonceEndpoint = root.getAttribute('data-nonce-endpoint');
     var routesEndpoint = root.getAttribute('data-routes-endpoint');
     var sessionEndpoint = root.getAttribute('data-session-endpoint');
     var feedbackEndpoint = root.getAttribute('data-feedback-endpoint');
@@ -317,14 +318,110 @@
       } else if (state === 'offline') {
         detail = 'AI or Python backend request failed · verified title-aware fallback remains active when available';
         if (payload.last_failure_utc) detail += ' · checked ' + formatHealthTime(payload.last_failure_utc);
-      } else if (state === 'not-configured') {
-        detail = 'No live provider is configured · verified local routing remains active';
+      } else if (state === 'not-configured' || state === 'backend-not-configured') {
+        detail = 'No live provider or authenticated Python connection is configured · verified local routing remains active';
+      } else if (state === 'needs-sync' || state === 'index-empty') {
+        detail = 'The Python service is reachable, but the Knowledge Library index is empty · run Repair Endpoint and Resynchronize';
+      } else if (state === 'backend-warming') {
+        detail = 'The free Render service is starting · verified WordPress fallback remains available';
+      } else if (state === 'integration-key-mismatch') {
+        detail = 'WordPress reached Python, but the shared integration key was rejected';
+      } else if (state === 'backend-rate-limited') {
+        detail = 'The Python service temporarily rejected requests because of a rate limit';
+      } else if (state === 'backend-unreachable' || state === 'backend-unavailable' || state === 'backend-invalid-response') {
+        detail = 'The Python endpoint is temporarily unavailable · verified WordPress fallback remains active';
       } else if (state === 'hidden') {
         detail = 'Verified fallback routing remains available.';
       } else {
         detail = (provider !== 'disabled' ? provider.charAt(0).toUpperCase() + provider.slice(1) : 'AI') + (model ? ' · ' + model : '') + ' · knowledge service status is being verified';
       }
       healthDetail.textContent = detail;
+    }
+
+    function responseError(response, data) {
+      var error = new Error((data && data.message) || 'The Research Librarian request failed.');
+      error.status = response.status || 0;
+      error.code = data && data.code ? String(data.code) : '';
+      error.data = data && data.data ? data.data : {};
+      error.retryAfter = Number(response.headers.get('Retry-After') || (error.data && error.data.retry_after) || 0);
+      return error;
+    }
+
+    function parseJsonResponse(response) {
+      return response.text().then(function (text) {
+        var data = {};
+        if (text) {
+          try { data = JSON.parse(text); }
+          catch (e) {
+            var invalid = new Error('The WordPress endpoint returned an invalid response.');
+            invalid.status = response.status || 0;
+            invalid.code = 'invalid_json';
+            throw invalid;
+          }
+        }
+        if (!response.ok) throw responseError(response, data);
+        return data;
+      });
+    }
+
+    function refreshNonce() {
+      if (!nonceEndpoint) return Promise.reject(new Error('Nonce refresh endpoint is unavailable.'));
+      return fetch(nonceEndpoint, { credentials: 'same-origin', cache: 'no-store' })
+        .then(parseJsonResponse)
+        .then(function (data) {
+          if (!data || !data.nonce) throw new Error('WordPress did not return a refreshed security token.');
+          nonce = String(data.nonce);
+          root.setAttribute('data-nonce', nonce);
+          return nonce;
+        });
+    }
+
+    function fetchWithNonce(url, options, allowRetry) {
+      options = options || {};
+      options.credentials = 'same-origin';
+      options.headers = options.headers || {};
+      options.headers['X-WP-Nonce'] = nonce;
+      return fetch(url, options).then(parseJsonResponse).catch(function (error) {
+        var nonceFailure = error && (error.code === 'sc_rl_ai_bad_nonce' || error.code === 'sc_rl_v621_bad_nonce' || error.status === 403);
+        if (allowRetry !== false && nonceFailure && nonceEndpoint) {
+          return refreshNonce().then(function () { return fetchWithNonce(url, options, false); });
+        }
+        throw error;
+      });
+    }
+
+    function endpointFailureCopy(error) {
+      var code = error && error.code ? error.code : '';
+      var statusCode = error && error.status ? Number(error.status) : 0;
+      if (code === 'sc_rl_ai_rate_limit' || statusCode === 429) {
+        var minutes = error.retryAfter ? Math.max(1, Math.ceil(error.retryAfter / 60)) : 0;
+        return {
+          label: 'Question limit reached',
+          intro: minutes ? 'The public question limit has been reached. Try again in about ' + minutes + ' minute(s).' : (error.message || 'The public question limit has been reached.'),
+          detail: 'This limit applies to successful public questions. Empty prompts, health checks, and expired security tokens do not consume the allowance.'
+        };
+      }
+      if (code === 'sc_rl_ai_bad_nonce' || code === 'sc_rl_v621_bad_nonce' || statusCode === 403) {
+        return { label: 'Security session expired', intro: 'The WordPress security token could not be refreshed.', detail: 'Reload this page and submit the question again.' };
+      }
+      if (code === 'invalid_json') {
+        return { label: 'Invalid endpoint response', intro: 'WordPress returned a response that the Research Librarian could not read.', detail: 'Check caching, security, or REST-response modification plugins.' };
+      }
+      if (statusCode === 404) {
+        return { label: 'WordPress route unavailable', intro: 'The Research Librarian REST route was not found.', detail: 'Resave WordPress permalinks and confirm that the active v6.2.1 plugin registered its routes.' };
+      }
+      if (statusCode >= 500) {
+        return { label: 'WordPress endpoint error', intro: 'WordPress reached the Research Librarian route but returned a server error.', detail: 'The Python provider status is separate from this WordPress failure.' };
+      }
+      if (!statusCode) {
+        return { label: 'WordPress endpoint unreachable', intro: 'The browser could not reach the Research Librarian WordPress endpoint.', detail: 'Check the site connection, Cloudflare, REST restrictions, or browser network controls.' };
+      }
+      return { label: 'Request unavailable', intro: error && error.message ? error.message : 'The Research Librarian request could not be completed.', detail: 'The Python and AI status indicators may still be online because they are separate from this browser-to-WordPress request.' };
+    }
+
+    function endpointNoticeHtml(endpointStatus) {
+      if (!endpointStatus || !endpointStatus.label || endpointStatus.state === 'online') return '';
+      return '<aside class="sc-rl-ai__endpoint-notice" role="status"><strong>' + escapeHtml(endpointStatus.label) + '</strong><span>' + escapeHtml(endpointStatus.message || '') + '</span></aside>';
     }
 
     function loadHealth() {
@@ -351,20 +448,11 @@
       answer.hidden = false;
       answer.innerHTML = '<p class="sc-rl-ai__loading">Searching indexed Sustainable Catalyst titles, series, article maps, headings, sources, and platform actions</p>';
 
-      fetch(endpoint, {
+      fetchWithNonce(endpoint, {
         method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question: clean, hp: honeypot ? honeypot.value : '', session_id: sessionId })
-      })
-        .then(function (response) {
-          return response.json().then(function (data) {
-            if (!response.ok) {
-              throw new Error(data && data.message ? data.message : 'The Research Librarian could not answer right now.');
-            }
-            return data;
-          });
-        })
+      }, true)
         .then(function (data) {
           latest = data;
           if (data.session_id) { sessionId = String(data.session_id); try { window.localStorage.setItem('sc_rl_ai_session_id', sessionId); } catch (e) {} }
@@ -376,17 +464,22 @@
           } else {
             setStatus(data.source && String(data.source).indexOf('python') !== -1 ? 'Title-aware answer' : 'Verified fallback', data.ai_status && data.ai_status.state === 'offline' ? 'error' : 'ready');
           }
+          if (data.endpoint_status && data.endpoint_status.label && data.endpoint_status.state !== 'online') {
+            setStatus(data.endpoint_status.label, data.endpoint_status.state === 'retrieval-only' || data.endpoint_status.state === 'wordpress-fallback' ? 'ready' : 'error');
+          }
           var renderedAnswer = renderMarkdownLite(data.answer || 'No answer was returned. Try the Platform or Feature Suggestions route.');
-          answer.innerHTML = renderedAnswer;
-          renderAnswerUx(answerUx, data, renderedAnswer);
+          var endpointNotice = endpointNoticeHtml(data.endpoint_status);
+          answer.innerHTML = endpointNotice + renderedAnswer;
+          renderAnswerUx(answerUx, data, endpointNotice + renderedAnswer);
           if (answerUx) answer.hidden = true;
           renderRouteSummary(routeSummary, data.route, data.grounding);
         })
         .catch(function (error) {
           latest = null;
-          setStatus('Endpoint unavailable', 'error');
+          var failure = endpointFailureCopy(error);
+          setStatus(failure.label, 'error');
           answer.hidden = false;
-          answer.innerHTML = renderMarkdownLite('The Research Librarian WordPress endpoint could not be reached. This is separate from the AI provider status.\n\n**Best starting points**\n- [Site Intelligence](/platform/site-intelligence/)\n- [Platform](/platform/)\n- [Platform Demos](/platform/demos/)\n- [Workbench](https://sustainablecatalyst.com/modeling-analytics/workbench/)\n- [Decision Studio](/platform/decision-studio/)\n- [Feature Suggestions](/platform/feature-suggestions/)\n\n' + error.message);
+          answer.innerHTML = '<aside class="sc-rl-ai__endpoint-notice sc-rl-ai__endpoint-notice--error" role="alert"><strong>' + escapeHtml(failure.label) + '</strong><span>' + escapeHtml(failure.intro) + '</span><small>' + escapeHtml(failure.detail) + '</small></aside>' + renderMarkdownLite('**Verified starting points remain available**\n- [Site Intelligence](/platform/site-intelligence/)\n- [Platform](/platform/)\n- [Platform Demos](/platform/demos/)\n- [Workbench](https://sustainablecatalyst.com/modeling-analytics/workbench/)\n- [Decision Studio](/platform/decision-studio/)\n- [Feature Suggestions](/platform/feature-suggestions/)');
         })
         .finally(function () { submit.disabled = false; });
     }
@@ -401,12 +494,11 @@
       if (!suggestEndpoint || !suggestionsBox) return;
       var query = (textarea.value || '').trim();
       if (query.length < 2) { hideSuggestions(); return; }
-      fetch(suggestEndpoint, {
+      fetchWithNonce(suggestEndpoint, {
         method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: query })
-      }).then(function (response) { return response.json(); })
+      }, true)
         .then(function (data) {
           var suggestions = data && data.suggestions ? data.suggestions : [];
           if (!suggestions.length) { hideSuggestions(); return; }

@@ -3,7 +3,7 @@
  * Plugin Name: Sustainable Catalyst Research Librarian AI
  * Plugin URI: https://sustainablecatalyst.com/platform/research-librarian/
  * Description: AI-powered, site-scoped research guidance for Sustainable Catalyst with live provider status, country-aware Site Intelligence routing, source-aware retrieval, guided paths, typed platform handoffs, governed feedback, and verified deterministic fallback.
- * Version: 6.2.0
+ * Version: 6.2.1
  * Author: Content Catalyst LLC / Tariq Ahmad
  * Author URI: https://sustainablecatalyst.com/
  * License: MIT
@@ -251,7 +251,7 @@ if ( ! function_exists( 'sc_rl6_render_legacy_class_notice' ) ) {
             return;
         }
         $status = sc_rl6_legacy_class_status();
-        echo '<div class="notice notice-warning"><p><strong>Research Librarian AI v6.2.0 compatibility mode:</strong> A legacy Research Librarian class was already loaded before the current plugin. The v6.2.0 collision-safe bootstrap is active, so settings and shortcodes remain available.</p>';
+        echo '<div class="notice notice-warning"><p><strong>Research Librarian AI v6.2.1 compatibility mode:</strong> A legacy Research Librarian class was already loaded before the current plugin. The collision-safe v6 bootstrap is active, so settings and shortcodes remain available.</p>';
         if ( ! empty( $status['file'] ) ) {
             echo '<p>Legacy class file: <code>' . esc_html( $status['file'] ) . '</code>';
             if ( ! empty( $status['version'] ) ) {
@@ -259,7 +259,7 @@ if ( ! function_exists( 'sc_rl6_render_legacy_class_notice' ) ) {
             }
             echo '</p>';
         }
-        echo '<p>Remove the legacy duplicate, network plugin, or must-use copy after confirming the active v6.2.0 plugin is working.</p></div>';
+        echo '<p>Remove the legacy duplicate, network plugin, or must-use copy after confirming the active v6.2.1 plugin is working.</p></div>';
     }
 }
 add_action( 'admin_notices', 'sc_rl6_render_legacy_class_notice' );
@@ -274,7 +274,8 @@ final class SC_RL6_Core {
     const MAINTENANCE_HOOK = 'sc_rl_ai_index_maintenance_event';
     const AI_STATUS_OPTION = 'sc_rl_ai_live_provider_status';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const VERSION        = '6.2.0';
+    const VERSION        = '6.2.1';
+    const RATE_LIMIT_REGISTRY_OPTION = 'sc_rl_ai_rate_limit_registry';
 
     private static $instance = null;
 
@@ -294,6 +295,7 @@ final class SC_RL6_Core {
         add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), array( $this, 'add_settings_link' ) );
         add_filter( 'cron_schedules', array( $this, 'register_cron_schedules' ) );
         add_action( self::MAINTENANCE_HOOK, array( $this, 'run_scheduled_index_maintenance' ) );
+        add_filter( 'rest_post_dispatch', array( $this, 'add_public_response_headers' ), 10, 3 );
     }
 
     public static function activate() {
@@ -335,6 +337,8 @@ final class SC_RL6_Core {
             'max_output_tokens'       => 900,
             'temperature'             => '0.2',
             'rate_limit'              => 20,
+            'rate_limit_window_minutes' => 60,
+            'rate_limit_admin_exempt'  => '1',
             'source_result_limit'     => 5,
             'index_max_posts'         => 1000,
             'stale_after_days'        => 180,
@@ -780,12 +784,13 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         $ux_endpoint = rest_url( self::REST_NAMESPACE . '/answer-ux/status' );
         $ai_status_endpoint = rest_url( self::REST_NAMESPACE . '/ai/status' );
         $suggest_endpoint = rest_url( self::REST_NAMESPACE . '/python/suggest' );
+        $nonce_endpoint = rest_url( self::REST_NAMESPACE . '/nonce' );
         $nonce = wp_create_nonce( 'wp_rest' );
         $compact = ( 'compact' === sanitize_key( $atts['display'] ) || 'compact' === sanitize_key( $atts['mode'] ) );
 
         ob_start();
         ?>
-        <section id="<?php echo esc_attr( $root_id ); ?>" class="sc-rl-ai<?php echo $compact ? ' sc-rl-ai--compact' : ''; ?>" data-endpoint="<?php echo esc_url( $endpoint ); ?>" data-routes-endpoint="<?php echo esc_url( $routes_endpoint ); ?>" data-note-endpoint="<?php echo esc_url( $note_endpoint ); ?>" data-handoff-endpoint="<?php echo esc_url( $handoff_endpoint ); ?>" data-deep-link-endpoint="<?php echo esc_url( $deep_link_endpoint ); ?>" data-session-endpoint="<?php echo esc_url( $session_endpoint ); ?>" data-feedback-endpoint="<?php echo esc_url( $feedback_endpoint ); ?>" data-feedback-bridge-endpoint="<?php echo esc_url( $feedback_bridge_endpoint ); ?>" data-ux-endpoint="<?php echo esc_url( $ux_endpoint ); ?>" data-ai-status-endpoint="<?php echo esc_url( $ai_status_endpoint ); ?>" data-suggest-endpoint="<?php echo esc_url( $suggest_endpoint ); ?>" data-nonce="<?php echo esc_attr( $nonce ); ?>">
+        <section id="<?php echo esc_attr( $root_id ); ?>" class="sc-rl-ai<?php echo $compact ? ' sc-rl-ai--compact' : ''; ?>" data-endpoint="<?php echo esc_url( $endpoint ); ?>" data-routes-endpoint="<?php echo esc_url( $routes_endpoint ); ?>" data-note-endpoint="<?php echo esc_url( $note_endpoint ); ?>" data-handoff-endpoint="<?php echo esc_url( $handoff_endpoint ); ?>" data-deep-link-endpoint="<?php echo esc_url( $deep_link_endpoint ); ?>" data-session-endpoint="<?php echo esc_url( $session_endpoint ); ?>" data-feedback-endpoint="<?php echo esc_url( $feedback_endpoint ); ?>" data-feedback-bridge-endpoint="<?php echo esc_url( $feedback_bridge_endpoint ); ?>" data-ux-endpoint="<?php echo esc_url( $ux_endpoint ); ?>" data-ai-status-endpoint="<?php echo esc_url( $ai_status_endpoint ); ?>" data-suggest-endpoint="<?php echo esc_url( $suggest_endpoint ); ?>" data-nonce-endpoint="<?php echo esc_url( $nonce_endpoint ); ?>" data-nonce="<?php echo esc_attr( $nonce ); ?>">
             <div class="sc-rl-ai__shell">
                 <div class="sc-rl-ai__card sc-rl-ai__ask-card">
                     <p class="sc-rl-ai__eyebrow">AI-Powered Research Guidance</p>
@@ -899,6 +904,24 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'args'                => array( 'question' => array( 'required' => true, 'type' => 'string', 'sanitize_callback' => 'sanitize_textarea_field' ) ),
         ) );
 
+
+        register_rest_route( self::REST_NAMESPACE, '/nonce', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'handle_nonce_request' ),
+            'permission_callback' => '__return_true',
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/rate-limit/status', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'handle_rate_limit_status_request' ),
+            'permission_callback' => array( $this, 'can_manage_options' ),
+        ) );
+
+        register_rest_route( self::REST_NAMESPACE, '/rate-limit/reset', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array( $this, 'handle_rate_limit_reset_request' ),
+            'permission_callback' => array( $this, 'can_manage_options' ),
+        ) );
 
         register_rest_route( self::REST_NAMESPACE, '/ai/status', array(
             'methods'             => WP_REST_Server::READABLE,
@@ -1184,6 +1207,85 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'callback'            => array( $this, 'handle_activation_repair_request' ),
             'permission_callback' => array( $this, 'can_manage_options' ),
         ) );
+    }
+
+    public function handle_nonce_request() {
+        return new WP_REST_Response( array(
+            'version' => self::VERSION,
+            'nonce' => wp_create_nonce( 'wp_rest' ),
+            'generated_utc' => gmdate( 'c' ),
+        ), 200 );
+    }
+
+    public function add_public_response_headers( $response, $server, $request ) {
+        if ( ! $response instanceof WP_HTTP_Response || ! $request instanceof WP_REST_Request ) {
+            return $response;
+        }
+        $route = (string) $request->get_route();
+        if ( false === strpos( $route, '/' . self::REST_NAMESPACE . '/ask' ) ) {
+            return $response;
+        }
+        $data = $response->get_data();
+        $error_data = is_array( $data ) && isset( $data['data'] ) && is_array( $data['data'] ) ? $data['data'] : array();
+        if ( ! empty( $error_data['retry_after'] ) ) {
+            $response->header( 'Retry-After', (string) absint( $error_data['retry_after'] ) );
+        }
+        $response->header( 'X-SC-RL-Version', self::VERSION );
+        $response->header( 'Cache-Control', 'no-store, private' );
+        return $response;
+    }
+
+    public function handle_rate_limit_status_request() {
+        return new WP_REST_Response( $this->rate_limit_status(), 200 );
+    }
+
+    public function handle_rate_limit_reset_request() {
+        return new WP_REST_Response( $this->reset_rate_limits(), 200 );
+    }
+
+    public function rate_limit_status() {
+        $options = $this->get_options();
+        $registry = get_option( self::RATE_LIMIT_REGISTRY_OPTION, array() );
+        $registry = is_array( $registry ) ? $registry : array();
+        $active = array();
+        foreach ( $registry as $hash => $entry ) {
+            $transient = isset( $entry['transient'] ) ? sanitize_key( $entry['transient'] ) : '';
+            if ( ! $transient ) {
+                continue;
+            }
+            $timestamps = get_transient( $transient );
+            if ( ! is_array( $timestamps ) || ! $timestamps ) {
+                continue;
+            }
+            $active[] = array(
+                'visitor_hash' => sanitize_text_field( $hash ),
+                'requests' => count( $timestamps ),
+                'oldest_utc' => gmdate( 'c', min( array_map( 'absint', $timestamps ) ) ),
+                'newest_utc' => gmdate( 'c', max( array_map( 'absint', $timestamps ) ) ),
+            );
+        }
+        return array(
+            'version' => self::VERSION,
+            'limit' => absint( $options['rate_limit'] ),
+            'window_minutes' => absint( $options['rate_limit_window_minutes'] ),
+            'authenticated_editor_exempt' => '1' === (string) $options['rate_limit_admin_exempt'],
+            'active_visitors' => count( $active ),
+            'entries' => $active,
+            'generated_utc' => gmdate( 'c' ),
+        );
+    }
+
+    public function reset_rate_limits() {
+        $registry = get_option( self::RATE_LIMIT_REGISTRY_OPTION, array() );
+        $registry = is_array( $registry ) ? $registry : array();
+        $removed = 0;
+        foreach ( $registry as $entry ) {
+            if ( ! empty( $entry['transient'] ) && delete_transient( sanitize_key( $entry['transient'] ) ) ) {
+                $removed++;
+            }
+        }
+        delete_option( self::RATE_LIMIT_REGISTRY_OPTION );
+        return array( 'version' => self::VERSION, 'ok' => true, 'removed' => $removed, 'reset_utc' => gmdate( 'c' ) );
     }
 
     public function handle_activation_status_request() {
@@ -1624,19 +1726,23 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             ), 200 );
         }
 
-        if ( class_exists( 'SC_RL6_V620_Knowledge_Intelligence' ) && SC_RL6_V620_Knowledge_Intelligence::enabled() ) {
+        $python_error = null;
+        if ( class_exists( 'SC_RL6_V621_Endpoint_Reliability' ) && SC_RL6_V621_Endpoint_Reliability::enabled() ) {
             $session_id = isset( $params['session_id'] ) ? sanitize_key( wp_unslash( $params['session_id'] ) ) : '';
-            $backend_answer = SC_RL6_V620_Knowledge_Intelligence::ask(
+            $backend_answer = SC_RL6_V621_Endpoint_Reliability::ask(
                 $question,
                 $route,
                 array( 'version' => self::VERSION, 'local_index_records' => isset( $grounding['sources'] ) && is_array( $grounding['sources'] ) ? count( $grounding['sources'] ) : 0 ),
                 $session_id
             );
             if ( ! is_wp_error( $backend_answer ) ) {
-                $normalized = SC_RL6_V620_Knowledge_Intelligence::normalize_ask_response( $backend_answer, $question, $route, $grounding );
+                $normalized = SC_RL6_V621_Endpoint_Reliability::normalize_ask_response( $backend_answer, $question, $route, $grounding );
                 if ( ! is_wp_error( $normalized ) ) {
                     return new WP_REST_Response( $normalized, 200 );
                 }
+                $python_error = $normalized;
+            } else {
+                $python_error = $backend_answer;
             }
         }
 
@@ -1650,6 +1756,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                 'route' => $route,
                 'grounding' => $grounding,
                 'route_note' => $this->build_route_note( $question, $route, 'fallback', $grounding ),
+                'endpoint_status' => is_wp_error( $python_error ) && class_exists( 'SC_RL6_V621_Endpoint_Reliability' ) ? SC_RL6_V621_Endpoint_Reliability::public_error_snapshot( $python_error ) : array( 'state' => 'wordpress-fallback', 'label' => 'WordPress fallback active' ),
             ), 200 );
         }
 
@@ -1669,6 +1776,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                 'route' => $route,
                 'grounding' => $grounding,
                 'route_note' => $this->build_route_note( $question, $route, 'fallback', $grounding ),
+                'endpoint_status' => is_wp_error( $python_error ) && class_exists( 'SC_RL6_V621_Endpoint_Reliability' ) ? SC_RL6_V621_Endpoint_Reliability::public_error_snapshot( $python_error ) : array( 'state' => 'wordpress-fallback', 'label' => 'WordPress fallback active', 'message' => 'The direct WordPress provider path handled this request.' ),
             ), 200 );
         }
 
@@ -1683,6 +1791,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'route' => $route,
             'grounding' => $grounding,
             'route_note' => $this->build_route_note( $question, $route, $provider, $grounding ),
+            'endpoint_status' => is_wp_error( $python_error ) && class_exists( 'SC_RL6_V621_Endpoint_Reliability' ) ? SC_RL6_V621_Endpoint_Reliability::public_error_snapshot( $python_error ) : array( 'state' => 'online', 'label' => 'WordPress provider online', 'message' => 'The direct WordPress provider path completed successfully.' ),
         ), 200 );
     }
 
@@ -1757,8 +1866,8 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'embedded_records' => absint( $retrieval['embedded_records'] ?? 0 ),
             'indexed_records' => absint( $index_summary['total_records'] ?? 0 ),
         );
-        if ( class_exists( 'SC_RL6_V620_Knowledge_Intelligence' ) && SC_RL6_V620_Knowledge_Intelligence::enabled() ) {
-            $python_status = SC_RL6_V620_Knowledge_Intelligence::backend_status( ! $public );
+        if ( class_exists( 'SC_RL6_V621_Endpoint_Reliability' ) && SC_RL6_V621_Endpoint_Reliability::enabled() ) {
+            $python_status = SC_RL6_V621_Endpoint_Reliability::backend_status( ! $public );
             if ( ! is_wp_error( $python_status ) ) {
                 $python_ai = ! empty( $python_status['ai_configured'] );
                 $python_index = ! empty( $python_status['index_ready'] );
@@ -1950,15 +2059,50 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
     }
 
     private function check_rate_limit( $limit ) {
-        $limit = max( 1, min( 100, $limit ? $limit : 20 ) );
-        $ip = $this->visitor_ip();
-        $key = 'sc_rl_ai_' . md5( $ip . '|' . gmdate( 'YmdH' ) );
-        $count = absint( get_transient( $key ) );
-        if ( $count >= $limit ) {
-            return new WP_Error( 'sc_rl_ai_rate_limit', __( 'Too many questions in a short period. Please try again later.', 'sustainable-catalyst-research-librarian-ai' ), array( 'status' => 429 ) );
+        $options = $this->get_options();
+        if ( '1' === (string) $options['rate_limit_admin_exempt'] && is_user_logged_in() && current_user_can( 'edit_posts' ) ) {
+            return true;
         }
-        set_transient( $key, $count + 1, HOUR_IN_SECONDS );
-        return true;
+        $limit = max( 1, min( 100, $limit ? $limit : 20 ) );
+        $window = max( 5, min( 1440, absint( $options['rate_limit_window_minutes'] ) ) ) * MINUTE_IN_SECONDS;
+        $now = time();
+        $ip = $this->visitor_ip();
+        $hash = hash( 'sha256', wp_salt( 'nonce' ) . '|' . $ip );
+        $key = 'sc_rl_ai_rl_' . substr( $hash, 0, 32 );
+        $timestamps = get_transient( $key );
+        $timestamps = is_array( $timestamps ) ? array_values( array_filter( array_map( 'absint', $timestamps ), function( $timestamp ) use ( $now, $window ) {
+            return $timestamp > ( $now - $window );
+        } ) ) : array();
+        if ( count( $timestamps ) >= $limit ) {
+            $oldest = min( $timestamps );
+            $retry_after = max( 1, ( $oldest + $window ) - $now );
+            return new WP_Error(
+                'sc_rl_ai_rate_limit',
+                sprintf( __( 'The public question limit has been reached. Try again in about %d minute(s).', 'sustainable-catalyst-research-librarian-ai' ), max( 1, (int) ceil( $retry_after / MINUTE_IN_SECONDS ) ) ),
+                array(
+                    'status' => 429,
+                    'error_type' => 'public-rate-limit',
+                    'retry_after' => $retry_after,
+                    'limit' => $limit,
+                    'remaining' => 0,
+                    'reset_utc' => gmdate( 'c', $now + $retry_after ),
+                )
+            );
+        }
+        $timestamps[] = $now;
+        set_transient( $key, $timestamps, $window + MINUTE_IN_SECONDS );
+        $registry = get_option( self::RATE_LIMIT_REGISTRY_OPTION, array() );
+        $registry = is_array( $registry ) ? $registry : array();
+        $registry[ substr( $hash, 0, 12 ) ] = array( 'transient' => $key, 'last_seen_utc' => gmdate( 'c' ) );
+        if ( count( $registry ) > 500 ) {
+            $registry = array_slice( $registry, -500, null, true );
+        }
+        update_option( self::RATE_LIMIT_REGISTRY_OPTION, $registry, false );
+        return array(
+            'limit' => $limit,
+            'remaining' => max( 0, $limit - count( $timestamps ) ),
+            'window_seconds' => $window,
+        );
     }
 
     private function visitor_ip() {
@@ -4543,6 +4687,8 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'max_output_tokens' => __( 'Max Output Tokens', 'sustainable-catalyst-research-librarian-ai' ),
             'temperature' => __( 'Temperature', 'sustainable-catalyst-research-librarian-ai' ),
             'rate_limit' => __( 'Rate Limit', 'sustainable-catalyst-research-librarian-ai' ),
+            'rate_limit_window_minutes' => __( 'Rate-Limit Window (minutes)', 'sustainable-catalyst-research-librarian-ai' ),
+            'rate_limit_admin_exempt' => __( 'Authenticated Editor Rate-Limit Exemption', 'sustainable-catalyst-research-librarian-ai' ),
             'source_result_limit' => __( 'Source Result Limit', 'sustainable-catalyst-research-librarian-ai' ),
             'index_max_posts' => __( 'Indexer Max Posts', 'sustainable-catalyst-research-librarian-ai' ),
             'stale_after_days' => __( 'Stale After Days', 'sustainable-catalyst-research-librarian-ai' ),
@@ -4599,6 +4745,8 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'max_output_tokens'       => max( 150, min( 4000, absint( isset( $input['max_output_tokens'] ) ? $input['max_output_tokens'] : self::defaults()['max_output_tokens'] ) ) ),
             'temperature'             => isset( $input['temperature'] ) && is_numeric( $input['temperature'] ) ? (string) max( 0, min( 1, (float) $input['temperature'] ) ) : self::defaults()['temperature'],
             'rate_limit'              => max( 1, min( 100, absint( isset( $input['rate_limit'] ) ? $input['rate_limit'] : self::defaults()['rate_limit'] ) ) ),
+            'rate_limit_window_minutes' => max( 5, min( 1440, absint( isset( $input['rate_limit_window_minutes'] ) ? $input['rate_limit_window_minutes'] : self::defaults()['rate_limit_window_minutes'] ) ) ),
+            'rate_limit_admin_exempt'  => ( isset( $input['rate_limit_admin_exempt'] ) && '1' === (string) wp_unslash( $input['rate_limit_admin_exempt'] ) ) ? '1' : '0',
             'source_result_limit'     => max( 3, min( 8, absint( isset( $input['source_result_limit'] ) ? $input['source_result_limit'] : self::defaults()['source_result_limit'] ) ) ),
             'index_max_posts'         => max( 25, min( 1000, absint( isset( $input['index_max_posts'] ) ? $input['index_max_posts'] : self::defaults()['index_max_posts'] ) ) ),
             'stale_after_days'        => max( 30, min( 1095, absint( isset( $input['stale_after_days'] ) ? $input['stale_after_days'] : self::defaults()['stale_after_days'] ) ) ),
@@ -4698,6 +4846,9 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                 echo '<label><input type="checkbox" name="' . esc_attr( $name ) . '" value="1" ' . checked( $options[ $field ], '1', false ) . ' /> ' . esc_html__( 'Skip records that already have embeddings for the selected model. Recommended.', 'sustainable-catalyst-research-librarian-ai' ) . '</label>';
                 echo '<p class="description">' . esc_html__( 'This makes the embedding job resumable and prevents a later failure from destroying existing semantic coverage.', 'sustainable-catalyst-research-librarian-ai' ) . '</p>';
                 break;
+            case 'rate_limit_admin_exempt':
+                echo '<label><input type="checkbox" name="' . esc_attr( $name ) . '" value="1" ' . checked( $options[ $field ], '1', false ) . ' /> ' . esc_html__( 'Do not rate-limit logged-in administrators and editors while testing or reviewing the Research Librarian.', 'sustainable-catalyst-research-librarian-ai' ) . '</label>';
+                break;
             case 'public_ai_status_enabled':
                 echo '<label><input type="checkbox" name="' . esc_attr( $name ) . '" value="1" ' . checked( $options[ $field ], '1', false ) . ' /> ' . esc_html__( 'Display provider availability, fallback state, retrieval mode, and last-success information on the public assistant.', 'sustainable-catalyst-research-librarian-ai' ) . '</label>';
                 break;
@@ -4723,6 +4874,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             case 'max_file_search_results':
             case 'max_output_tokens':
             case 'rate_limit':
+            case 'rate_limit_window_minutes':
             case 'source_result_limit':
             case 'index_max_posts':
             case 'stale_after_days':
@@ -9495,8 +9647,8 @@ require_once plugin_dir_path( __FILE__ ) . 'includes/class-sc-rl-v590-closed-loo
 SC_RL6_V590_Closed_Loop_Route_Improvement::init();
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-sc-rl-v600-integrated-research-guidance-platform.php';
 SC_RL6_V600_Integrated_Research_Guidance_Platform::init();
-require_once plugin_dir_path( __FILE__ ) . 'includes/class-sc-rl-v620-knowledge-intelligence.php';
-SC_RL6_V620_Knowledge_Intelligence::init();
+require_once plugin_dir_path( __FILE__ ) . 'includes/class-sc-rl-v621-endpoint-reliability.php';
+SC_RL6_V621_Endpoint_Reliability::init();
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-sc-rl-v610-live-ai-admin.php';
 SC_RL6_V610_Live_AI_Admin::init();
 
@@ -9516,10 +9668,10 @@ SC_RL6_V410_Recovery::init();
 
 register_activation_hook( __FILE__, array( 'SC_RL6_Core', 'activate' ) );
 register_activation_hook( __FILE__, array( 'SC_RL6_V550_Stable_Operations', 'activate' ) );
-register_activation_hook( __FILE__, array( 'SC_RL6_V620_Knowledge_Intelligence', 'activate' ) );
+register_activation_hook( __FILE__, array( 'SC_RL6_V621_Endpoint_Reliability', 'activate' ) );
 register_deactivation_hook( __FILE__, array( 'SC_RL6_Core', 'deactivate' ) );
 register_deactivation_hook( __FILE__, array( 'SC_RL6_V550_Stable_Operations', 'deactivate' ) );
-register_deactivation_hook( __FILE__, array( 'SC_RL6_V620_Knowledge_Intelligence', 'deactivate' ) );
+register_deactivation_hook( __FILE__, array( 'SC_RL6_V621_Endpoint_Reliability', 'deactivate' ) );
 SC_RL6_Core::instance();
 
 // Preserve the historic public class name when no legacy implementation already owns it.

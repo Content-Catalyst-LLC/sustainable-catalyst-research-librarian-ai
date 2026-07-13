@@ -1,3 +1,13 @@
+## v6.2.1 — WordPress Indexing and Endpoint Reliability Patch — Complete
+
+- Canonical WordPress-first full-library synchronization
+- Endpoint, permalink, WP-Cron, integration-key, index, provider, and rate-limit diagnostics
+- Rolling rate limits with `Retry-After`, editor exemptions, and administrator reset
+- Nonce refresh with one safe public-request retry
+- Per-job and per-batch synchronization reporting
+- One-click endpoint repair and complete resynchronization
+- Black-and-green terminal question field with light answer and source cards
+
 ## v6.2.0 — Knowledge Library Intelligence and Production UX — Complete
 
 - Render-ready Python/FastAPI intelligence service

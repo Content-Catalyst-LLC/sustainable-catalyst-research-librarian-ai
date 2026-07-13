@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 6.2.0
+Stable tag: 6.2.1
 License: MIT
 
 An AI-powered, site-scoped Research Librarian for Sustainable Catalyst with live provider status, country-aware Site Intelligence routing, source-aware retrieval, verified fallback routing, and a consolidated WordPress administration center.
@@ -37,6 +37,15 @@ v5.9.0 adds adaptive, consent-aware prompts and contextual survey experiences wi
 [sc_research_librarian_article_route_cards]
 
 == Changelog ==
+
+= 6.2.1 =
+* Makes canonical published WordPress records take precedence over summary-only legacy index entries.
+* Adds per-job and per-batch sync reporting with eligible, collected, skipped, duplicate, accepted, and rejected totals.
+* Adds precise WordPress, nonce, backend, integration-key, empty-index, provider-quota, and rate-limit diagnostics.
+* Adds authenticated backend testing, one-click endpoint repair and full resynchronization, WP-Cron visibility, and public rate-limit reset controls.
+* Replaces fixed hourly counting with rolling public request windows and `Retry-After` responses while exempting authenticated editors by default.
+* Adds one safe nonce refresh and retry for questions and title suggestions.
+* Restyles the public question textarea with a black background and accessible green terminal text while preserving light answer and source-card surfaces.
 
 = 6.2.0 =
 * Adds the Render-ready FastAPI knowledge intelligence backend.

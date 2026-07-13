@@ -42,12 +42,20 @@ class SyncRequest(BaseModel):
     mode: str = Field(default="replace", pattern="^(replace|upsert)$")
     source_site: str = ""
     generated_utc: str = Field(default_factory=utc_now)
+    job_id: str = Field(default="", max_length=220)
+    batch_index: int = Field(default=1, ge=1)
+    batch_count: int = Field(default=1, ge=1)
 
 
 class SyncResponse(BaseModel):
     ok: bool = True
     mode: str
     received: int
+    accepted: int = 0
+    rejected: int = 0
+    job_id: str = ""
+    batch_index: int = 1
+    batch_count: int = 1
     total_records: int
     indexed_titles: int
     last_sync_utc: str

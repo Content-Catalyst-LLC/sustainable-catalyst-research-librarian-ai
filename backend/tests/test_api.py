@@ -13,7 +13,7 @@ client = TestClient(app)
 def test_health() -> None:
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json()["version"] == "6.2.0"
+    assert response.json()["version"] == "6.2.1"
 
 
 def test_sync_requires_key() -> None:
@@ -39,6 +39,8 @@ def test_sync_and_retrieve() -> None:
     }
     response = client.post("/v1/knowledge/sync", headers=headers, json=payload)
     assert response.status_code == 200
+    assert response.json()["accepted"] == 1
+    assert response.json()["rejected"] == 0
     response = client.post("/v1/retrieve", headers=headers, json={"query": "Stability Analysis with Eigenvalues", "limit": 5})
     assert response.status_code == 200
     assert response.json()[0]["title"] == "Stability Analysis with Eigenvalues"

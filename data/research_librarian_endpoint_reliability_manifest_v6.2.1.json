@@ -1,0 +1,38 @@
+{
+  "schema": "sc-research-librarian-release/6.2.1",
+  "version": "6.2.1",
+  "name": "WordPress Indexing and Endpoint Reliability Patch",
+  "released_utc": "2026-07-13T00:00:00Z",
+  "wordpress": {
+    "main": "sustainable-catalyst-research-librarian-ai.php",
+    "reliability_module": "includes/class-sc-rl-v621-endpoint-reliability.php",
+    "public_script": "assets/sc-research-librarian-ai.js",
+    "public_style": "assets/sc-research-librarian-ai.css"
+  },
+  "capabilities": [
+    "wordpress-first-canonical-indexing",
+    "per-job-and-per-batch-sync-reporting",
+    "authenticated-backend-diagnostics",
+    "integration-key-mismatch-detection",
+    "wp-cron-status-and-repair",
+    "rolling-public-rate-limits",
+    "retry-after-responses",
+    "administrator-rate-limit-reset",
+    "nonce-refresh-and-single-safe-retry",
+    "structured-public-endpoint-status",
+    "terminal-question-field",
+    "light-answer-and-source-surfaces"
+  ],
+  "backend": {
+    "framework": "FastAPI",
+    "version": "6.2.1",
+    "sync_job_metadata": true,
+    "accepted_rejected_counts": true
+  },
+  "compatibility": {
+    "preserved_option_name": "sc_rl_v620_python_options",
+    "preserved_status_option": "sc_rl_v620_python_status",
+    "preserved_sync_hook": "sc_rl_v620_python_sync_event",
+    "backward_class_alias": "SC_RL6_V620_Knowledge_Intelligence"
+  }
+}

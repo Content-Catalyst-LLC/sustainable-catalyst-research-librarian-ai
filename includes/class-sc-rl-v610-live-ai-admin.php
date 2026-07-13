@@ -1,6 +1,6 @@
 <?php
 /**
- * Research Librarian AI v6.2.0 — consolidated administration and Python intelligence operations.
+ * Research Librarian AI v6.2.1 — consolidated administration and Python intelligence operations.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -97,7 +97,7 @@ final class SC_RL6_V610_Live_AI_Admin {
             <p><?php esc_html_e( 'Python knowledge intelligence, full-library title-aware retrieval, grounded AI guidance, Site Intelligence routing, and governed Sustainable Catalyst research workflows.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
 
             <div class="sc-rl-admin-grid">
-                <?php $python_status = class_exists( 'SC_RL6_V620_Knowledge_Intelligence' ) ? SC_RL6_V620_Knowledge_Intelligence::backend_status( false ) : new WP_Error( 'unavailable', 'Python module unavailable' ); ?>
+                <?php $python_status = class_exists( 'SC_RL6_V621_Endpoint_Reliability' ) ? SC_RL6_V621_Endpoint_Reliability::backend_status( false ) : new WP_Error( 'unavailable', 'Python module unavailable' ); ?>
                 <article class="sc-rl-admin-card" data-state="<?php echo esc_attr( is_wp_error( $python_status ) ? 'offline' : ( isset( $python_status['state'] ) ? $python_status['state'] : 'unknown' ) ); ?>">
                     <h2><?php esc_html_e( 'Python Intelligence', 'sustainable-catalyst-research-librarian-ai' ); ?></h2>
                     <span class="sc-rl-admin-metric"><?php echo esc_html( is_wp_error( $python_status ) ? 'Not connected' : absint( isset( $python_status['indexed_titles'] ) ? $python_status['indexed_titles'] : 0 ) . ' titles' ); ?></span>
@@ -129,7 +129,7 @@ final class SC_RL6_V610_Live_AI_Admin {
             <?php if ( 'standard' === $gemini_key_type ) : ?>
                 <div class="notice notice-warning"><p><strong>Gemini key migration:</strong> This saved key uses the older standard-key format. Google rejects unrestricted standard keys after June 19, 2026 and plans to end standard-key support in September 2026. Restrict it to the Gemini API in Google AI Studio or replace it with a new authorization key.</p></div>
             <?php elseif ( 'authorization' === $gemini_key_type ) : ?>
-                <div class="notice notice-info"><p><strong>Gemini authorization key detected.</strong> Research Librarian AI v6.2.0 retains support for modern Google AI Studio authorization keys, including keys that contain periods.</p></div>
+                <div class="notice notice-info"><p><strong>Gemini authorization key detected.</strong> Research Librarian AI v6.2.1 retains support for modern Google AI Studio authorization keys, including keys that contain periods.</p></div>
             <?php endif; ?>
 
             <?php if ( ! empty( $status['last_error_message'] ) ) : ?>
@@ -186,7 +186,7 @@ final class SC_RL6_V610_Live_AI_Admin {
         ?>
         <div class="wrap">
             <h1><?php esc_html_e( 'WordPress AI Provider Fallback', 'sustainable-catalyst-research-librarian-ai' ); ?></h1>
-            <p><?php esc_html_e( 'Optional fallback provider configuration for direct WordPress operation when the Python/Render service is disabled. The primary v6.2.0 architecture is configured under Python Intelligence.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
+            <p><?php esc_html_e( 'Optional fallback provider configuration for direct WordPress operation when the Python/Render service is disabled. The primary v6.2.1 architecture is configured under Python Intelligence.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
 
             <?php if ( $notice ) : ?><div class="notice notice-<?php echo esc_attr( $notice_type ); ?> is-dismissible"><p><?php echo esc_html( $notice ); ?></p></div><?php endif; ?>
 

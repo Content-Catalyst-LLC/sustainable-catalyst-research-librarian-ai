@@ -1,43 +1,31 @@
-# Sustainable Catalyst Research Librarian AI v6.2.0
+# Sustainable Catalyst Research Librarian AI v6.2.1
 
-## v6.2.0 — Knowledge Library Intelligence and Production UX
+## v6.2.1 — WordPress Indexing and Endpoint Reliability Patch
 
-Research Librarian AI is now a hybrid WordPress + Python application. WordPress remains the publishing system, public shortcode interface, feedback layer, route registry, and administrative bridge. A FastAPI service designed for Render performs full-library title-aware retrieval, grounded Gemini synthesis, related-title discovery, short conversational continuity, and production status reporting.
+Research Librarian AI v6.2.1 hardens the WordPress-to-FastAPI request path, repairs full-library indexing visibility, and gives administrators precise operational recovery tools. WordPress remains the public interface and canonical publishing source; FastAPI remains the title-aware retrieval and grounded Gemini service.
 
-### Core v6.2.0 capabilities
+### Core v6.2.1 capabilities
 
-- Full public WordPress content synchronization across eligible public post types
-- Up to 10,000 public records, with a 5,000-record default instead of the former 250-record cap
-- Exact-title, normalized-title, slug, heading, series, article-map, taxonomy, summary, and content ranking
-- Exact titles outrank broad Platform and route pages
-- Related-title and research-path discovery
-- Grounded Gemini answers using only retrieved Sustainable Catalyst sources
-- Server-to-server WordPress → Render authentication
-- Gemini credentials stored in Render rather than exposed to WordPress visitors
-- Dedicated **Research Librarian AI → Python Intelligence** administration
-- Full-library synchronization, scheduled refresh, and post-change resynchronization
-- Public title suggestions from the live Python index
-- Short session continuity for follow-up questions
-- Production answer interface with best matches, related titles, research paths, actions, and hidden diagnostics
-- WordPress-side provider retained only as an optional fallback under Advanced
+- Canonical published WordPress posts are synchronized before summary-only legacy route records.
+- Per-job and per-batch synchronization reports show eligible, collected, skipped, duplicate, accepted, and rejected records.
+- Administrator diagnostics distinguish WordPress REST failure, nonce expiration, backend cold start, backend connection failure, integration-key mismatch, empty index, provider quota, and public rate limiting.
+- A one-click **Repair Endpoint and Resynchronize** action verifies the authenticated backend, repairs the WP-Cron schedule, and runs a full knowledge sync.
+- Public request limits use rolling windows, return `Retry-After`, exempt authenticated editors by default, and can be inspected or reset by administrators.
+- The browser refreshes an expired WordPress nonce once and safely retries the original question or title-suggestion request.
+- The public question-entry textarea is black with green monospace text, a green caret, subdued green placeholder text, and an accessible green focus ring.
+- Answer, evidence, and source-card surfaces remain light and readable.
+- The FastAPI synchronization response records job ID, batch position, accepted records, and rejected records.
+- v6.2.0 retrieval, related-title discovery, research paths, short session continuity, and grounded Gemini synthesis remain intact.
 
-### Architecture
+### Primary operations
 
-```text
-WordPress public page and shortcode
-        ↓
-WordPress authenticated proxy
-        ↓
-Render FastAPI knowledge service
-        ├── title-aware retrieval
-        ├── related-title discovery
-        ├── session continuity
-        └── grounded Gemini generation
-        ↓
-Verified Sustainable Catalyst links and actions
-```
+1. Open **Research Librarian AI → Python Intelligence**.
+2. Select **Test Backend and Integration Key**.
+3. Select **Repair Endpoint and Resynchronize**.
+4. Review the endpoint diagnostics and the latest per-batch synchronization report.
+5. Use **Reset Public Rate Limits** only when an active visitor window needs to be cleared during testing.
 
-The Python service is independently testable through `/health`, `/status`, `/v1/knowledge/sync`, `/v1/retrieve`, and `/v1/ask`.
+The Python service remains independently testable through `/health`, `/status`, `/v1/knowledge/summary`, `/v1/knowledge/sync`, `/v1/retrieve`, and `/v1/ask`.
 
 ## v6.1.1 — Gemini Authorization Key Compatibility Patch
 

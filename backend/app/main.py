@@ -191,6 +191,11 @@ def sync_knowledge(payload: SyncRequest) -> SyncResponse:
     return SyncResponse(
         mode=payload.mode,
         received=len(payload.records),
+        accepted=len(payload.records),
+        rejected=0,
+        job_id=payload.job_id,
+        batch_index=payload.batch_index,
+        batch_count=payload.batch_count,
         total_records=int(summary["total_records"]),
         indexed_titles=int(summary["indexed_titles"]),
         last_sync_utc=str(meta["last_sync_utc"]),

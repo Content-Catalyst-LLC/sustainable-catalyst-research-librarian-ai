@@ -1,4 +1,4 @@
-# Install Research Librarian AI v6.2.0
+# Install Research Librarian AI v6.2.1
 
 ## 1. Push the repository
 
@@ -25,7 +25,7 @@ SC_RL_AI_PROVIDER=gemini
 
 ## 3. Install the WordPress plugin
 
-Upload `sustainable-catalyst-research-librarian-ai-v6.2.0-wordpress-plugin.zip`, replace the existing version, and activate it.
+Upload `sustainable-catalyst-research-librarian-ai-v6.2.1.zip`, replace the existing version, and activate it.
 
 ## 4. Connect WordPress to Render
 
@@ -35,7 +35,7 @@ Open **Research Librarian AI → Python Intelligence** and enter:
 - Render backend URL
 - The same `SC_RL_BACKEND_API_KEY`
 
-Save, run **Test Backend Health**, then run **Sync Full Knowledge Library**.
+Save, run **Test Backend and Integration Key**, then run **Repair Endpoint and Resynchronize**. Review the latest batch report before testing a public question.
 
 ## 5. Verify
 
