@@ -1,8 +1,8 @@
-# Install Research Librarian AI v6.4.0
+# Install Research Librarian AI v6.4.1
 
 ## 1. Push the repository
 
-Use `PUSH_RESEARCH_LIBRARIAN_V640_PY312.sh`. The script requires and verifies Python 3.12, clears macOS launcher overrides, validates both Python import layouts, runs all WordPress release contracts, and creates tag `v6.4.0`.
+Use `PUSH_RESEARCH_LIBRARIAN_V641_PY312.sh`. The script requires and verifies Python 3.12, clears macOS launcher overrides, validates both Python import layouts, runs every WordPress release contract, verifies the packaged benchmark and calibration manifest, and creates tag `v6.4.1`.
 
 ## 2. Deploy or update Render
 
@@ -21,7 +21,7 @@ SC_RL_BACKEND_API_KEY=<shared WordPress/backend secret>
 SC_RL_GEMINI_API_KEY=<Gemini key>
 ```
 
-Recommended v6.4.0 settings:
+Recommended settings remain:
 
 ```text
 SC_RL_SEMANTIC_ENABLED=true
@@ -36,39 +36,52 @@ SC_RL_MAX_REJECTION_DETAILS=100
 SC_RL_MAX_RUNTIME_SNAPSHOTS=5
 ```
 
-No paid vector database or persistent Render disk is required. WordPress remains the canonical snapshot source; SQLite and embeddings are recoverable runtime assets.
+Retrieval calibration is stored in SQLite and managed from WordPress. No new Render secret is required. No paid vector database or persistent Render disk is required.
 
 ## 3. Install the WordPress plugin
 
-Upload `sustainable-catalyst-research-librarian-ai-v6.4.0.zip`, replace the installed plugin, and activate it. Existing settings, recovery snapshots, ledgers, and queued editorial changes are retained.
+Upload `sustainable-catalyst-research-librarian-ai-v6.4.1.zip`, replace the installed plugin, and activate it. Existing settings, snapshots, records, chunks, embeddings, ledgers, and queued editorial changes are retained.
 
-## 4. Build the retrieval index
+## 4. Synchronize and verify
 
 Open **Research Librarian AI → Python Intelligence**, save the backend URL and shared key, then run:
 
 1. **Test Backend**
 2. **Validate Snapshots**
 3. **Transactional Full Sync**
-4. Confirm WordPress and backend record counts and checksums match
-5. Confirm the backend reports indexed chunks
-6. Select **Process Embedding Batch** repeatedly until the desired semantic coverage is reached
+4. Confirm WordPress and backend counts and checksums match
+5. Confirm indexed chunks are present
+6. Process embedding batches to the desired semantic coverage
 
-Exact-title and BM25 retrieval work before embeddings are processed. Semantic retrieval activates progressively as coverage increases.
+## 5. Calibrate retrieval
 
-## 5. Verify public behavior
+In **Retrieval Calibration**:
 
-Ask one exact-title question and one conceptual question. Confirm:
+1. Keep the default `balanced-v6.4.1` profile for the first benchmark.
+2. Review structural, lexical, semantic, and RRF weights.
+3. Review minimum evidence, ambiguity, citation-coverage, and context-budget settings.
+4. Add exclusions only for records that must never appear in retrieval.
+5. Save settings.
+6. Select **Run Retrieval Benchmark**.
+7. Compare lexical and hybrid hit-at-1, hit-at-3, MRR, ambiguity, and missing-result metrics.
 
-- the exact title appears first for the title query;
-- conceptual results identify a matching section or page where available;
-- evidence cards show citation labels and supporting passages;
-- retrieval diagnostics identify the active mode;
-- an unverified generated citation cannot appear publicly;
-- the answer falls back to verified evidence if Gemini is unavailable.
+Benchmark output is advisory. Change one group of weights at a time and rerun the same benchmark before accepting a production adjustment.
 
-## 6. Recovery operations
+## 6. Verify public behavior
 
-Keep automatic cold-start recovery enabled. Existing v6.3.1 controls remain available:
+Confirm that:
+
+- exact canonical titles remain first;
+- similarly titled records produce an ambiguity clarification when appropriate;
+- excluded records do not appear;
+- weak evidence does not trigger AI synthesis;
+- unsupported numeric claims are rejected;
+- generated citation labels and URLs map to synchronized evidence;
+- deterministic evidence fallback remains available when verification fails.
+
+## 7. Recovery operations
+
+The v6.3.x recovery controls remain available:
 
 - **Repair Stalled Jobs**
 - **Recover Empty Backend**

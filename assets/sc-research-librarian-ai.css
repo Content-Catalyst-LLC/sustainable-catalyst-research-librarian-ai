@@ -770,7 +770,7 @@
   }
 }
 
-/* v6.4.0 — Hybrid Retrieval, Durable Index, and Production UX */
+/* v6.4.1 — Hybrid Retrieval, Durable Index, and Production UX */
 .sc-rl-ai {
   --sc-rl-red: #ff0000;
   --sc-rl-black: #000;
@@ -812,7 +812,7 @@
 .sc-rl-ai__ask-card .sc-rl-ai__intro { color: rgba(255,255,255,.76); font-size: clamp(1rem, 1.8vw, 1.2rem); max-width: 78ch; }
 .sc-rl-ai__ask-card .sc-rl-ai__label { color: #fff; }
 
-/* v6.4.0 terminal prompt: only the question-entry control is black and green. */
+/* v6.4.1 terminal prompt: only the question-entry control is black and green. */
 .sc-rl-ai__textarea {
   background: #000;
   border: 2px solid #45e85f;
@@ -885,7 +885,7 @@
 .sc-rl-ai__title-suggestions span { color: #5b554e; display: block; font-size: .82rem; margin-top: .25rem; }
 
 
-/* v6.4.0 endpoint-state notices remain light inside the answer surface. */
+/* v6.4.1 endpoint-state notices remain light inside the answer surface. */
 .sc-rl-ai__endpoint-notice {
   background: #f7f1e7;
   border: 1px solid rgba(0,0,0,.18);
@@ -984,7 +984,7 @@
   .sc-rl-ai__answer-card { padding: 1.15rem; }
 }
 
-/* v6.4.0 — section-aware evidence and citation locations */
+/* v6.4.1 — section-aware evidence and citation locations */
 .sc-rl-production-answer__evidence-location {
   display: block;
   margin: -.2rem 0 .55rem;

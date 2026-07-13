@@ -87,7 +87,7 @@ def _metadata_sections(record: KnowledgeRecord) -> list[dict[str, Any]]:
 def chunk_record(record: KnowledgeRecord, max_words: int = 220, overlap_words: int = 35) -> list[ChunkSeed]:
     """Create deterministic, section-aware chunks for lexical and semantic retrieval.
 
-    WordPress v6.4.0 supplies explicit section metadata when available. Older
+    WordPress v6.4.1 supplies explicit section metadata when available. Older
     records remain compatible through summary, heading, and sliding-window
     fallbacks. PDF/library records may provide a page number per section.
     """

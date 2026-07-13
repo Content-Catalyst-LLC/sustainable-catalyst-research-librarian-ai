@@ -1,16 +1,24 @@
+## 6.4.1 — Retrieval Calibration and Regression Patch
+
+- Added persistent sanitized retrieval profiles in SQLite schema version 6.
+- Added configurable structural, lexical, semantic, and reciprocal-rank-fusion weights.
+- Added post-type/source multipliers and record, post-type, source, and URL-prefix exclusions.
+- Added a bounded golden-query benchmark comparing lexical-only and calibrated hybrid retrieval.
+- Added persisted hit-at-1, hit-at-3, MRR, ambiguity, missing-result, and latency history.
+- Added near-duplicate-title ambiguity detection and focused clarification.
+- Added minimum-evidence gates before AI synthesis.
+- Added unsupported paragraph, citation-coverage, and numeric-claim verification.
+- Added context-budget and retrieval-latency diagnostics.
+- Preserved v6.4.0 section-aware hybrid retrieval and all v6.3.x durability and recovery controls.
+
 ## 6.4.0 — Hybrid Retrieval and Citation Engine
 
 - Added deterministic heading-aware and page-aware chunks backed by SQLite schema version 5.
 - Added exact-title priority and BM25 section retrieval.
 - Added optional Gemini embeddings, resumable embedding runs, and semantic-coverage reporting.
 - Added reciprocal-rank fusion across structural, lexical, and semantic rankings.
-- Added intent classification, retrieval explanations, and per-source score diagnostics.
 - Added evidence IDs, citation labels, section headings, page numbers, passages, and record versions.
-- Added generated citation and URL verification; unverified answers are not returned.
-- Added deterministic verified-evidence fallback when generation or citation verification fails.
-- Added embedding status/process and retrieval explanation endpoints.
-- Added bounded WordPress section extraction that respects the include-content setting, evidence normalization, semantic coverage administration, and public evidence-location rendering.
-- Preserved v6.3.1 cold-start recovery hardening and v6.3.0 durable-index behavior.
+- Added generated citation and URL verification with deterministic evidence fallback.
 
 ## 6.3.1 — Cold-Start and Recovery Hardening
 

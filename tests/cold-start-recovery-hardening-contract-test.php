@@ -1,5 +1,5 @@
 <?php
-/** Static release contract checks for Research Librarian AI v6.4.0. */
+/** Static release contract checks for Research Librarian AI v6.4.1. */
 $root = dirname( __DIR__ );
 $main = file_get_contents( $root . '/sustainable-catalyst-research-librarian-ai.php' );
 $module = file_get_contents( $root . '/includes/class-sc-rl-v630-durable-index.php' );
@@ -13,11 +13,11 @@ $docs = file_get_contents( $root . '/docs/V631_COLD_START_RECOVERY_HARDENING.md'
 $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_cold_start_recovery_manifest_v6.3.1.json' ), true );
 
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 6.4.0' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '6.4.0';" ),
-    'module_version' => false !== strpos( $module, "const VERSION = '6.4.0';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "6.4.0"' ),
-    'schema_version_five' => false !== strpos( $store, 'SCHEMA_VERSION = 5' ),
+    'version_header' => false !== strpos( $main, 'Version: 6.4.1' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '6.4.1';" ),
+    'module_version' => false !== strpos( $module, "const VERSION = '6.4.1';" ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "6.4.1"' ),
+    'schema_version_six_or_newer' => false !== strpos( $store, 'SCHEMA_VERSION = 6' ),
     'startup_warmup_setting' => false !== strpos( $config, 'SC_RL_STARTUP_WARMUP_SECONDS' ),
     'stalled_job_setting' => false !== strpos( $config, 'SC_RL_STALLED_JOB_SECONDS' ),
     'rejection_limit_setting' => false !== strpos( $config, 'SC_RL_MAX_REJECTION_DETAILS' ),
@@ -67,7 +67,7 @@ $checks = array(
 );
 $failed = array_keys( array_filter( $checks, static function ( $value ) { return ! $value; } ) );
 echo json_encode( array(
-    'version' => '6.4.0',
+    'version' => '6.4.1',
     'checks' => $checks,
     'passed' => count( $checks ) - count( $failed ),
     'failed' => count( $failed ),

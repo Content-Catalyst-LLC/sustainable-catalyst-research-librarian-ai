@@ -1,0 +1,36 @@
+{
+  "schema": "sc-research-librarian-release/1.0",
+  "version": "6.4.1",
+  "release_name": "Retrieval Calibration and Regression Patch",
+  "backend_schema_version": 6,
+  "retrieval_schema": "sc-research-retrieval/2.1",
+  "capabilities": {
+    "persistent_retrieval_profiles": true,
+    "configurable_rrf_weights": true,
+    "minimum_evidence_gate": true,
+    "near_duplicate_title_detection": true,
+    "unsupported_answer_detection": true,
+    "numeric_claim_verification": true,
+    "lexical_vs_hybrid_benchmarks": true,
+    "benchmark_history": true,
+    "source_and_post_type_weighting": true,
+    "record_and_url_exclusions": true,
+    "latency_diagnostics": true,
+    "context_budget_controls": true
+  },
+  "compatibility": {
+    "minimum_previous_release": "6.4.0",
+    "python_runtime": "3.12.12",
+    "semantic_retrieval_optional": true,
+    "paid_vector_database_required": false,
+    "persistent_render_disk_required": false
+  },
+  "release_gates": [
+    "Exact canonical titles remain first under near-duplicate competition",
+    "Low-evidence answers do not reach AI synthesis",
+    "Unsupported paragraphs and numeric claims fail verification",
+    "Lexical and hybrid benchmark metrics are reproducible and persisted",
+    "Administrator exclusions and weighting are applied by the backend",
+    "Retrieval latency and context-budget diagnostics are reported"
+  ]
+}

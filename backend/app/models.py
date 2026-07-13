@@ -96,6 +96,31 @@ class MaintenanceRequest(BaseModel):
     purge_staging: bool = True
 
 
+class RetrievalCalibrationUpdate(BaseModel):
+    profile: str = Field(default="balanced-v6.4.1", max_length=100)
+    weights: dict[str, float] = Field(default_factory=dict)
+    rrf_k: int = Field(default=60, ge=1, le=500)
+    thresholds: dict[str, float | int] = Field(default_factory=dict)
+    limits: dict[str, int] = Field(default_factory=dict)
+    post_type_weights: dict[str, float] = Field(default_factory=dict)
+    source_weights: dict[str, float] = Field(default_factory=dict)
+    exclusions: dict[str, list[str]] = Field(default_factory=dict)
+
+
+class BenchmarkCase(BaseModel):
+    query: str = Field(min_length=2, max_length=1000)
+    expected_record_id: str = Field(default="", max_length=220)
+    expected_title: str = Field(default="", max_length=500)
+    tags: list[str] = Field(default_factory=list)
+
+
+class BenchmarkRequest(BaseModel):
+    cases: list[BenchmarkCase] = Field(default_factory=list, max_length=100)
+    include_semantic: bool = True
+    limit: int = Field(default=5, ge=1, le=25)
+    persist: bool = True
+
+
 class RetrievalRequest(BaseModel):
     query: str = Field(min_length=2, max_length=3000)
     limit: int = Field(default=10, ge=1, le=25)
@@ -187,6 +212,7 @@ class AskResponse(BaseModel):
     evidence: list[EvidenceCitation] = Field(default_factory=list)
     citation_verification: dict[str, Any] = Field(default_factory=dict)
     retrieval_diagnostics: dict[str, Any] = Field(default_factory=dict)
+    evidence_gate: dict[str, Any] = Field(default_factory=dict)
     status: dict[str, Any] = Field(default_factory=dict)
     generated_utc: str = Field(default_factory=utc_now)
 
@@ -205,7 +231,7 @@ class StatusResponse(BaseModel):
     last_sync_utc: str
     source_site: str
     storage_engine: str = "sqlite"
-    schema_version: int = 5
+    schema_version: int = 6
     index_version: int = 0
     checksum: str = ""
     snapshot_count: int = 0
@@ -227,3 +253,5 @@ class StatusResponse(BaseModel):
     embedded_chunks: int = 0
     semantic_coverage: float = 0.0
     embedding_model: str = ""
+    retrieval_profile: str = "balanced-v6.4.1"
+    benchmark_runs: int = 0

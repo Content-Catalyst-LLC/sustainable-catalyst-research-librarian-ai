@@ -5,6 +5,7 @@ import asyncio
 import hashlib
 import hmac
 import json
+from pathlib import Path
 import re
 import time
 from typing import Any
@@ -14,12 +15,16 @@ from fastapi import Depends, FastAPI, Header, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import __version__
+from .calibration import evidence_gate, sanitize_retrieval_config
 from .config import settings
 from .models import (
     AskRequest,
     AskResponse,
+    BenchmarkCase,
+    BenchmarkRequest,
     EmbeddingProcessRequest,
     MaintenanceRequest,
+    RetrievalCalibrationUpdate,
     RetrievalRequest,
     RetrievedSource,
     RollbackRequest,
@@ -213,31 +218,91 @@ def _status() -> StatusResponse:
         embedded_chunks=int(summary.get("embedded_chunks", 0)),
         semantic_coverage=float(summary.get("semantic_coverage", 0.0)),
         embedding_model=str(summary.get("embedding_model", settings.gemini_embedding_model)),
+        retrieval_profile=str(summary.get("retrieval_profile", "balanced-v6.4.1")),
+        benchmark_runs=int(summary.get("benchmark_runs", 0)),
         **startup,
     )
 
 
-async def _hybrid_retrieve(query: str, limit: int) -> tuple[list[RetrievedSource], dict[str, Any]]:
+async def _hybrid_retrieve(
+    query: str,
+    limit: int,
+    calibration: dict[str, Any] | None = None,
+    include_semantic: bool = True,
+) -> tuple[list[RetrievedSource], dict[str, Any]]:
+    config = sanitize_retrieval_config(calibration or store.retrieval_config())
     records = store.records()
     chunks = store.chunks()
     query_embedding: list[float] | None = None
     semantic_error = ""
+    embedding_latency_ms = 0.0
     embedding_status = store.embedding_status()
     if (
-        settings.semantic_enabled
+        include_semantic
+        and float(config["weights"]["semantic"]) > 0
+        and settings.semantic_enabled
         and settings.semantic_query_embeddings
         and int(embedding_status.get("embedded_chunks", 0)) > 0
         and embeddings_configured()
     ):
+        embedding_started = time.perf_counter()
         try:
             query_embedding = await generate_embedding(query, "RETRIEVAL_QUERY")
         except RuntimeError as exc:
             semantic_error = str(exc)[:500]
-    matches, diagnostics = retrieve_with_diagnostics(query, records, chunks, limit, query_embedding)
+        embedding_latency_ms = (time.perf_counter() - embedding_started) * 1000
+    matches, diagnostics = retrieve_with_diagnostics(query, records, chunks, limit, query_embedding, config)
     diagnostics["semantic_error"] = semantic_error
     diagnostics["semantic_coverage"] = embedding_status.get("semantic_coverage", 0.0)
     diagnostics["embedding_model"] = settings.gemini_embedding_model
+    diagnostics["embedding_latency_ms"] = round(embedding_latency_ms, 3)
+    diagnostics["context_character_estimate"] = sum(
+        len(item.title) + len(item.url) + len(item.section) + len(item.passage)
+        for item in matches
+    )
     return matches, diagnostics
+
+
+def _default_benchmark_cases() -> list[BenchmarkCase]:
+    path = Path(__file__).resolve().parents[2] / "data" / "research_librarian_retrieval_benchmarks_v6.4.1.json"
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        return []
+    raw_cases = payload.get("cases", []) if isinstance(payload, dict) else []
+    output: list[BenchmarkCase] = []
+    for raw in raw_cases:
+        try:
+            output.append(BenchmarkCase.model_validate(raw))
+        except (ValueError, TypeError):
+            continue
+    return output
+
+
+def _expected_rank(matches: list[RetrievedSource], case: BenchmarkCase) -> int | None:
+    expected_title = re.sub(r"\s+", " ", case.expected_title.strip().lower())
+    for rank, match in enumerate(matches, start=1):
+        if case.expected_record_id and match.id == case.expected_record_id:
+            return rank
+        if expected_title and re.sub(r"\s+", " ", match.title.strip().lower()) == expected_title:
+            return rank
+    return None
+
+
+def _benchmark_metrics(rows: list[dict[str, Any]], mode: str) -> dict[str, Any]:
+    ranks = [row.get(mode, {}).get("rank") for row in rows]
+    valid_ranks = [int(rank) for rank in ranks if isinstance(rank, int) and rank > 0]
+    count = max(1, len(rows))
+    return {
+        "cases": len(rows),
+        "matched": len(valid_ranks),
+        "hit_at_1": round(sum(1 for rank in valid_ranks if rank == 1) / count, 4),
+        "hit_at_3": round(sum(1 for rank in valid_ranks if rank <= 3) / count, 4),
+        "mrr": round(sum(1.0 / rank for rank in valid_ranks) / count, 4),
+        "mean_latency_ms": round(sum(float(row.get(mode, {}).get("latency_ms", 0.0)) for row in rows) / count, 3),
+        "ambiguous_cases": sum(1 for row in rows if row.get(mode, {}).get("ambiguous")),
+        "no_result_cases": sum(1 for row in rows if not row.get(mode, {}).get("result_ids")),
+    }
 
 
 @app.get("/")
@@ -393,6 +458,80 @@ async def process_embeddings(payload: EmbeddingProcessRequest) -> dict[str, Any]
     }
 
 
+@app.get("/v1/retrieval/config", dependencies=[Depends(require_key)])
+def retrieval_config_endpoint() -> dict[str, Any]:
+    return {"ok": True, "version": __version__, "config": store.retrieval_config()}
+
+
+@app.post("/v1/retrieval/config", dependencies=[Depends(require_key)])
+def update_retrieval_config(payload: RetrievalCalibrationUpdate) -> dict[str, Any]:
+    config = store.set_retrieval_config(payload.model_dump())
+    return {"ok": True, "version": __version__, "config": config}
+
+
+@app.get("/v1/retrieval/benchmark/history", dependencies=[Depends(require_key)])
+def retrieval_benchmark_history() -> dict[str, Any]:
+    return {"ok": True, "version": __version__, "runs": store.benchmark_history(10)}
+
+
+@app.post("/v1/retrieval/benchmark", dependencies=[Depends(require_key)])
+async def retrieval_benchmark(payload: BenchmarkRequest) -> dict[str, Any]:
+    config = store.retrieval_config()
+    cases = payload.cases or _default_benchmark_cases()
+    cases = cases[: int(config["limits"]["benchmark_cases"])]
+    rows: list[dict[str, Any]] = []
+    for case in cases:
+        lexical_started = time.perf_counter()
+        lexical_matches, lexical_diagnostics = await _hybrid_retrieve(case.query, payload.limit, config, include_semantic=False)
+        lexical_latency = (time.perf_counter() - lexical_started) * 1000
+        hybrid_started = time.perf_counter()
+        hybrid_matches, hybrid_diagnostics = await _hybrid_retrieve(
+            case.query, payload.limit, config, include_semantic=payload.include_semantic
+        )
+        hybrid_latency = (time.perf_counter() - hybrid_started) * 1000
+        rows.append(
+            {
+                "query": case.query,
+                "expected_record_id": case.expected_record_id,
+                "expected_title": case.expected_title,
+                "tags": case.tags,
+                "lexical": {
+                    "rank": _expected_rank(lexical_matches, case),
+                    "result_ids": [item.id for item in lexical_matches],
+                    "result_titles": [item.title for item in lexical_matches],
+                    "latency_ms": round(lexical_latency, 3),
+                    "ambiguous": bool(lexical_diagnostics.get("ambiguous")),
+                },
+                "hybrid": {
+                    "rank": _expected_rank(hybrid_matches, case),
+                    "result_ids": [item.id for item in hybrid_matches],
+                    "result_titles": [item.title for item in hybrid_matches],
+                    "latency_ms": round(hybrid_latency, 3),
+                    "ambiguous": bool(hybrid_diagnostics.get("ambiguous")),
+                    "semantic_used": bool(hybrid_diagnostics.get("semantic_used")),
+                    "semantic_error": hybrid_diagnostics.get("semantic_error", ""),
+                },
+            }
+        )
+    report = {
+        "ok": True,
+        "version": __version__,
+        "run_id": "benchmark-" + uuid.uuid4().hex,
+        "created_utc": utc_now(),
+        "profile": config["profile"],
+        "case_count": len(rows),
+        "include_semantic": payload.include_semantic,
+        "metrics": {
+            "lexical": _benchmark_metrics(rows, "lexical"),
+            "hybrid": _benchmark_metrics(rows, "hybrid"),
+        },
+        "cases": rows,
+    }
+    if payload.persist:
+        store.save_benchmark_run(report)
+    return report
+
+
 @app.post("/v1/retrieve", response_model=list[RetrievedSource], dependencies=[Depends(require_key)])
 async def retrieve_endpoint(payload: RetrievalRequest) -> list[RetrievedSource]:
     matches, _ = await _hybrid_retrieve(payload.query, payload.limit)
@@ -417,10 +556,12 @@ async def ask(payload: AskRequest) -> AskResponse:
     _prune_sessions()
     session_id = _session_id(payload.session_id)
     records = store.records()
-    matches, retrieval_diagnostics = await _hybrid_retrieve(payload.question, settings.source_limit)
+    calibration = store.retrieval_config()
+    matches, retrieval_diagnostics = await _hybrid_retrieve(payload.question, settings.source_limit, calibration)
+    gate = evidence_gate(matches, retrieval_diagnostics, calibration)
     best = matches[0] if matches else None
-    related = related_titles(best, records, settings.related_limit)
-    certainty = confidence(matches)
+    related = related_titles(best, records, settings.related_limit, calibration)
+    certainty = confidence(matches, retrieval_diagnostics)
     evidence = evidence_from_matches(matches)
     history = [
         {"role": str(turn.get("role", "user")), "content": str(turn.get("content", ""))}
@@ -440,8 +581,10 @@ async def ask(payload: AskRequest) -> AskResponse:
     try:
         if not matches:
             raise RuntimeError("No grounded Sustainable Catalyst sources were retrieved.")
-        answer = await generate_answer(payload.question, matches, related, history, payload.route_hint)
-        citation_verification = verify_citations(answer, matches, related)
+        if not gate.get("ok"):
+            raise RuntimeError("Retrieved evidence did not pass the configured minimum-evidence gate: " + ", ".join(gate.get("reasons", [])))
+        answer = await generate_answer(payload.question, matches, related, history, payload.route_hint, calibration)
+        citation_verification = verify_citations(answer, matches, related, calibration)
         if not citation_verification.get("ok"):
             raise RuntimeError("Generated answer failed citation verification.")
         ai_used = True
@@ -450,7 +593,7 @@ async def ask(payload: AskRequest) -> AskResponse:
         model = settings.gemini_model
     except RuntimeError as exc:
         answer = _deterministic_answer(payload.question, matches, related)
-        citation_verification = verify_citations(answer, matches, related)
+        citation_verification = verify_citations(answer, matches, related, calibration)
         citation_verification["fallback"] = True
         citation_verification["fallback_reason"] = str(exc)[:500]
 
@@ -475,10 +618,11 @@ async def ask(payload: AskRequest) -> AskResponse:
         research_path=_research_path(matches, related),
         actions=_actions(payload.question, best),
         interpretation="Exact-title, BM25, semantic, and reciprocal-rank retrieval followed by citation-verified AI synthesis." if ai_used else "Exact-title and section-aware hybrid retrieval with deterministic verified evidence fallback.",
-        clarification="" if certainty.get("level") != "low" else "Which Sustainable Catalyst subject, title, country, tool, or intended output should the search prioritize?",
+        clarification=("Which of the similarly titled Sustainable Catalyst records should be prioritized?" if retrieval_diagnostics.get("ambiguous") else ("" if certainty.get("level") != "low" else "Which Sustainable Catalyst subject, title, country, tool, or intended output should the search prioritize?")),
         confidence=certainty,
         evidence=evidence,
         citation_verification=citation_verification,
         retrieval_diagnostics=retrieval_diagnostics,
+        evidence_gate=gate,
         status=_status().model_dump(),
     )

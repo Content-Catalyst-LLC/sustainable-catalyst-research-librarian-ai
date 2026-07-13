@@ -12,13 +12,14 @@ import threading
 from typing import Any, Iterable, Iterator
 import uuid
 
+from .calibration import DEFAULT_RETRIEVAL_CONFIG, sanitize_retrieval_config
 from .chunking import chunk_record
 from .config import settings
 from .models import KnowledgeChunk, KnowledgeRecord, utc_now
 
 
-SCHEMA_VERSION = 5
-INDEX_SCHEMA = "sc-research-librarian-knowledge-index/5.0"
+SCHEMA_VERSION = 6
+INDEX_SCHEMA = "sc-research-librarian-knowledge-index/6.0"
 SNAPSHOT_SCHEMA = "sc-research-librarian-runtime-snapshot/4.0"
 
 
@@ -188,6 +189,18 @@ class KnowledgeStore:
                     record_count INTEGER NOT NULL,
                     payload_gzip BLOB NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS retrieval_benchmark_runs (
+                    run_id TEXT PRIMARY KEY,
+                    created_utc TEXT NOT NULL,
+                    profile TEXT NOT NULL,
+                    case_count INTEGER NOT NULL DEFAULT 0,
+                    lexical_mrr REAL NOT NULL DEFAULT 0,
+                    hybrid_mrr REAL NOT NULL DEFAULT 0,
+                    lexical_hit_at_1 REAL NOT NULL DEFAULT 0,
+                    hybrid_hit_at_1 REAL NOT NULL DEFAULT 0,
+                    report_json TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_retrieval_benchmark_created ON retrieval_benchmark_runs(created_utc DESC);
                 """
             )
             self._ensure_column(connection, "sync_jobs", "rejected_records", "INTEGER NOT NULL DEFAULT 0")
@@ -202,6 +215,7 @@ class KnowledgeStore:
                 "last_job_id": "",
                 "last_recovery_utc": "",
                 "last_rollback_utc": "",
+                "retrieval_config": _canonical_json(DEFAULT_RETRIEVAL_CONFIG),
             }
             for key, value in defaults.items():
                 connection.execute("INSERT OR IGNORE INTO meta(key,value) VALUES(?,?)", (key, value))
@@ -417,6 +431,8 @@ class KnowledgeStore:
         snapshots = int(connection.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0])
         indexed_chunks = int(connection.execute("SELECT COUNT(*) FROM retrieval_chunks").fetchone()[0])
         embedded_chunks = int(connection.execute("SELECT COUNT(*) FROM retrieval_chunks WHERE embedding_json<>''").fetchone()[0])
+        benchmark_runs = int(connection.execute("SELECT COUNT(*) FROM retrieval_benchmark_runs").fetchone()[0])
+        retrieval_config = self._retrieval_config_from_connection(connection)
         return {
             **meta,
             "schema_version": int(meta.get("schema_version", SCHEMA_VERSION)),
@@ -433,6 +449,8 @@ class KnowledgeStore:
             "embedded_chunks": embedded_chunks,
             "semantic_coverage": round((embedded_chunks / indexed_chunks) * 100, 2) if indexed_chunks else 0.0,
             "embedding_model": settings.gemini_embedding_model,
+            "retrieval_profile": retrieval_config.get("profile", "balanced-v6.4.1"),
+            "benchmark_runs": benchmark_runs,
             "recovery_needed": total_records == 0,
         }
 
@@ -776,6 +794,64 @@ class KnowledgeStore:
                 connection.rollback()
                 raise
         return {"ok": True, "repaired_jobs": repaired, "count": len(repaired), "purged": purge_staging, "max_age_seconds": age}
+
+    @staticmethod
+    def _retrieval_config_from_connection(connection: sqlite3.Connection) -> dict[str, Any]:
+        row = connection.execute("SELECT value FROM meta WHERE key='retrieval_config'").fetchone()
+        try:
+            raw = json.loads(str(row["value"])) if row is not None else {}
+        except (ValueError, TypeError, json.JSONDecodeError):
+            raw = {}
+        return sanitize_retrieval_config(raw)
+
+    def retrieval_config(self) -> dict[str, Any]:
+        with self._lock, self._connection() as connection:
+            return self._retrieval_config_from_connection(connection)
+
+    def set_retrieval_config(self, value: dict[str, Any]) -> dict[str, Any]:
+        config = sanitize_retrieval_config(value)
+        with self._lock, self._connection() as connection:
+            self._set_meta(connection, {"retrieval_config": _canonical_json(config)})
+        return config
+
+    def save_benchmark_run(self, report: dict[str, Any]) -> str:
+        run_id = str(report.get("run_id") or ("benchmark-" + uuid.uuid4().hex))
+        metrics = report.get("metrics", {}) if isinstance(report.get("metrics"), dict) else {}
+        lexical = metrics.get("lexical", {}) if isinstance(metrics.get("lexical"), dict) else {}
+        hybrid = metrics.get("hybrid", {}) if isinstance(metrics.get("hybrid"), dict) else {}
+        with self._lock, self._connection() as connection:
+            connection.execute(
+                "INSERT OR REPLACE INTO retrieval_benchmark_runs(run_id,created_utc,profile,case_count,lexical_mrr,hybrid_mrr,lexical_hit_at_1,hybrid_hit_at_1,report_json) VALUES(?,?,?,?,?,?,?,?,?)",
+                (
+                    run_id,
+                    str(report.get("created_utc") or utc_now()),
+                    str(report.get("profile") or "balanced-v6.4.1"),
+                    int(report.get("case_count") or 0),
+                    float(lexical.get("mrr") or 0.0),
+                    float(hybrid.get("mrr") or 0.0),
+                    float(lexical.get("hit_at_1") or 0.0),
+                    float(hybrid.get("hit_at_1") or 0.0),
+                    _canonical_json(report),
+                ),
+            )
+            connection.execute(
+                "DELETE FROM retrieval_benchmark_runs WHERE run_id NOT IN (SELECT run_id FROM retrieval_benchmark_runs ORDER BY created_utc DESC LIMIT 25)"
+            )
+        return run_id
+
+    def benchmark_history(self, limit: int = 10) -> list[dict[str, Any]]:
+        bounded = max(1, min(25, int(limit)))
+        with self._lock, self._connection() as connection:
+            rows = connection.execute(
+                "SELECT report_json FROM retrieval_benchmark_runs ORDER BY created_utc DESC LIMIT ?", (bounded,)
+            )
+            output: list[dict[str, Any]] = []
+            for row in rows:
+                try:
+                    output.append(json.loads(str(row["report_json"])))
+                except (ValueError, TypeError, json.JSONDecodeError):
+                    continue
+            return output
 
     def records(self) -> list[KnowledgeRecord]:
         with self._lock, self._connection() as connection:

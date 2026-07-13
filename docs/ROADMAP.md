@@ -30,12 +30,15 @@
 - PDF full-text and page-aware evidence records
 - Deterministic evidence summaries when Gemini is unavailable
 
-## v6.4.1 — Retrieval Calibration and Regression Patch
+## v6.4.1 — Retrieval Calibration and Regression Patch — Complete
 
-- Golden-query benchmark suite
-- Near-duplicate and confusing-title tests
-- Evidence thresholds and unsupported-answer detection
-- Ranking-weight administration and latency tuning
+- Persistent, sanitized retrieval profiles
+- Golden-query lexical-versus-hybrid benchmark and history
+- Near-duplicate-title ambiguity protection
+- Minimum-evidence gates before AI synthesis
+- Unsupported paragraph and numeric-claim rejection
+- Ranking weights, source multipliers, exclusions, and context budgets
+- Retrieval latency and calibration diagnostics
 
 ## v6.5.0 — Production Public Research Workspace
 

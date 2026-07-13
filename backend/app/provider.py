@@ -7,6 +7,7 @@ from typing import Any
 
 import httpx
 
+from .calibration import sanitize_retrieval_config
 from .config import settings
 from .models import RetrievedSource
 
@@ -48,8 +49,12 @@ def embeddings_configured() -> bool:
     )
 
 
-def _source_context(matches: list[RetrievedSource]) -> str:
+def _source_context(matches: list[RetrievedSource], calibration: dict[str, Any] | None = None) -> str:
+    config = sanitize_retrieval_config(calibration)
+    max_context = int(config["limits"]["max_context_characters"])
+    max_passage = int(config["limits"]["max_passage_characters"])
     blocks: list[str] = []
+    used = 0
     for index, source in enumerate(matches, start=1):
         location = source.section or "Record summary"
         if source.page:
@@ -66,11 +71,16 @@ def _source_context(matches: list[RetrievedSource]) -> str:
                     f"Series: {source.series or 'Not specified'}",
                     f"Article map: {source.article_map or 'Not specified'}",
                     f"Parent: {source.parent_title or 'Not specified'}",
-                    f"Evidence passage: {source.passage or source.summary or 'No passage available'}",
+                    f"Evidence passage: {(source.passage or source.summary or 'No passage available')[:max_passage]}",
                     f"Retrieval reasons: {', '.join(source.retrieval_reasons) or source.match_type}",
                 ]
             )
         )
+        block = blocks[-1]
+        if used and used + len(block) > max_context:
+            blocks.pop()
+            break
+        used += len(block)
     return "\n\n".join(blocks)
 
 
@@ -112,11 +122,29 @@ async def generate_embedding(text: str, task_type: str = "RETRIEVAL_DOCUMENT") -
         raise RuntimeError(str(exc)) from exc
 
 
+_VERIFICATION_STOPWORDS = {
+    "and", "are", "but", "for", "from", "has", "have", "into", "its", "not", "the",
+    "that", "this", "those", "these", "their", "there", "then", "than", "was", "were",
+    "with", "without", "you", "your", "about", "after", "before", "between", "through",
+    "contains", "include", "includes", "including", "record", "source", "evidence",
+}
+
+
+def _verification_tokens(value: str) -> set[str]:
+    return {
+        token
+        for token in re.findall(r"[a-z0-9]+", (value or "").lower())
+        if len(token) > 2 and token not in _VERIFICATION_STOPWORDS
+    }
+
+
 def verify_citations(
     answer: str,
     matches: list[RetrievedSource],
     related: list[RetrievedSource] | None = None,
+    calibration: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    config = sanitize_retrieval_config(calibration)
     related = related or []
     citation_numbers = [int(value) for value in _CITATION_RE.findall(answer or "")]
     valid_numbers = set(range(1, len(matches) + 1))
@@ -129,8 +157,71 @@ def verify_citations(
         if clean in allowed_urls:
             continue
         unknown_urls.append(url)
+
+    evidence_tokens = {
+        index: _verification_tokens(f"{source.title} {source.section} {source.passage} {source.summary}")
+        for index, source in enumerate(matches, start=1)
+    }
+    paragraphs = [item.strip() for item in re.split(r"\n\s*\n", answer or "") if item.strip()]
+    substantive_count = 0
+    cited_substantive = 0
+    unsupported: list[dict[str, Any]] = []
+    unsupported_numbers: list[dict[str, Any]] = []
+    overlap_floor = float(config["thresholds"]["unsupported_overlap"])
+    meta_prefixes = ("##", "# ", "this fallback uses", "suggested research path", "other relevant sources")
+    for paragraph_index, paragraph in enumerate(paragraphs, start=1):
+        clean_paragraph = re.sub(r"^[-*]\s+", "", paragraph).strip()
+        paragraph_tokens = _verification_tokens(clean_paragraph)
+        if len(paragraph_tokens) < 7 or clean_paragraph.lower().startswith(meta_prefixes):
+            continue
+        substantive_count += 1
+        cited = [int(value) for value in _CITATION_RE.findall(paragraph) if int(value) in valid_numbers]
+        if cited:
+            cited_substantive += 1
+        if not cited:
+            unsupported.append({"paragraph": paragraph_index, "reason": "missing-citation", "excerpt": clean_paragraph[:240]})
+            continue
+        supported = set().union(*(evidence_tokens.get(value, set()) for value in cited))
+        claim_tokens = {token for token in paragraph_tokens if not token.startswith("sc")}
+        overlap = len(claim_tokens & supported) / max(1, min(len(claim_tokens), 24))
+        if overlap < overlap_floor:
+            unsupported.append(
+                {
+                    "paragraph": paragraph_index,
+                    "reason": "low-evidence-overlap",
+                    "overlap": round(overlap, 4),
+                    "required": overlap_floor,
+                    "citations": [f"SC{value}" for value in cited],
+                    "excerpt": clean_paragraph[:240],
+                }
+            )
+        numbers = set(re.findall(r"(?<![A-Za-z])\d+(?:\.\d+)?%?", clean_paragraph))
+        if numbers:
+            supported_text = " ".join(
+                f"{matches[value - 1].title} {matches[value - 1].section} {matches[value - 1].passage} {matches[value - 1].summary}"
+                for value in cited
+            )
+            missing_numbers = sorted(number for number in numbers if number not in supported_text and not number.startswith("SC"))
+            if missing_numbers:
+                unsupported_numbers.append(
+                    {
+                        "paragraph": paragraph_index,
+                        "numbers": missing_numbers,
+                        "citations": [f"SC{value}" for value in cited],
+                    }
+                )
+
+    citation_coverage = cited_substantive / substantive_count if substantive_count else 1.0
+    minimum_coverage = float(config["thresholds"]["minimum_citation_coverage"])
     missing_required = bool(settings.citation_required and matches and not citation_numbers)
-    ok = not invalid_citations and not unknown_urls and not missing_required
+    ok = (
+        not invalid_citations
+        and not unknown_urls
+        and not missing_required
+        and citation_coverage >= minimum_coverage
+        and not unsupported
+        and not unsupported_numbers
+    )
     return {
         "ok": ok,
         "required": settings.citation_required,
@@ -140,6 +231,12 @@ def verify_citations(
         "unknown_urls": sorted(unknown_urls),
         "missing_required_citations": missing_required,
         "verified_source_count": len(matches),
+        "substantive_paragraphs": substantive_count,
+        "cited_substantive_paragraphs": cited_substantive,
+        "citation_coverage": round(citation_coverage, 4),
+        "minimum_citation_coverage": minimum_coverage,
+        "unsupported_paragraphs": unsupported[:20],
+        "unsupported_numeric_claims": unsupported_numbers[:20],
     }
 
 
@@ -149,6 +246,7 @@ async def generate_answer(
     related: list[RetrievedSource],
     history: list[dict[str, str]],
     route_hint: dict[str, Any],
+    calibration: dict[str, Any] | None = None,
 ) -> str:
     if not configured():
         raise RuntimeError("Gemini is not configured on the Python backend.")
@@ -167,7 +265,7 @@ WordPress route hint:
 {json.dumps(route_hint or {}, ensure_ascii=False)}
 
 Verified Sustainable Catalyst evidence:
-{_source_context(matches)}
+{_source_context(matches, calibration)}
 
 Related indexed titles for navigation only:
 {related_text or 'No related titles were found.'}

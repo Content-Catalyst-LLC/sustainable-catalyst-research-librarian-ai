@@ -3,16 +3,16 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 6.4.0
+Stable tag: 6.4.1
 License: MIT
 
-A site-scoped Research Librarian for Sustainable Catalyst with section-aware hybrid retrieval, verified citations, durable indexing, and deterministic evidence fallback.
+A site-scoped Research Librarian for Sustainable Catalyst with calibrated hybrid retrieval, benchmarked ranking, verified citations, durable indexing, and deterministic evidence fallback.
 
 == Description ==
 
-Research Librarian AI retrieves Sustainable Catalyst publications and documents through exact-title priority, section-aware BM25 ranking, optional Gemini embeddings, reciprocal-rank fusion, and citation-verified synthesis. WordPress remains the canonical publishing and recovery source, while FastAPI provides a durable SQLite runtime index that remains compatible with free Render infrastructure.
+Research Librarian AI retrieves Sustainable Catalyst publications and documents through exact-title priority, section-aware BM25 ranking, optional Gemini embeddings, calibrated reciprocal-rank fusion, and citation-verified synthesis. WordPress remains the canonical publishing and recovery source, while FastAPI provides a durable SQLite runtime index compatible with free Render infrastructure.
 
-v6.4.0 adds deterministic article and PDF chunks, page-aware evidence, resumable embedding batches, retrieval explanations, verified `[SC#]` citations, generated-link validation, and a source-backed fallback whenever AI synthesis cannot be verified.
+v6.4.1 adds persistent ranking profiles, lexical-versus-hybrid benchmarks, confusing-title protection, minimum-evidence gates, unsupported-claim detection, source weighting, exclusions, context budgets, and retrieval latency diagnostics.
 
 == Shortcodes ==
 
@@ -38,15 +38,15 @@ v6.4.0 adds deterministic article and PDF chunks, page-aware evidence, resumable
 
 == Changelog ==
 
-= 6.4.0 =
-* Adds deterministic heading-aware and page-aware retrieval chunks in SQLite schema version 5.
-* Adds exact-title priority and BM25 lexical ranking over article sections.
-* Adds optional Gemini embeddings with bounded, resumable processing and semantic-coverage reporting.
-* Combines structural, lexical, semantic, relationship, and route signals with reciprocal-rank fusion.
-* Returns evidence identifiers, citation labels, sections, pages, supporting passages, retrieval reasons, and score diagnostics.
-* Verifies generated citation labels and URLs against synchronized sources before returning an answer.
-* Rejects unsupported generated answers and uses a deterministic evidence summary when verification or Gemini is unavailable.
-* Preserves v6.3.1 cold-start hardening, durable snapshots, bounded retries, and the terminal prompt with light source cards.
+= 6.4.1 =
+* Adds persistent, bounded retrieval profiles in SQLite schema version 6.
+* Adds administrator controls for structural, lexical, semantic, and RRF weights, evidence thresholds, context limits, source multipliers, and exclusions.
+* Adds a packaged golden-query benchmark comparing lexical-only and calibrated hybrid retrieval.
+* Persists hit-at-1, hit-at-3, MRR, ambiguity, missing-result, and latency metrics.
+* Detects near-duplicate titles and requests clarification instead of silently choosing.
+* Blocks AI synthesis when evidence count, score, lexical, semantic, or ambiguity requirements are not met.
+* Rejects low-overlap paragraphs, unsupported numeric claims, unknown citation labels, and unknown generated URLs.
+* Preserves v6.4.0 hybrid retrieval, v6.3.x recovery hardening, and the black-and-green prompt with light answer cards.
 
 = 6.3.0 =
 * Replaces the ephemeral JSON runtime index with a transactional SQLite knowledge index.
