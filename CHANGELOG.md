@@ -1,3 +1,17 @@
+## 6.4.0 — Hybrid Retrieval and Citation Engine
+
+- Added deterministic heading-aware and page-aware chunks backed by SQLite schema version 5.
+- Added exact-title priority and BM25 section retrieval.
+- Added optional Gemini embeddings, resumable embedding runs, and semantic-coverage reporting.
+- Added reciprocal-rank fusion across structural, lexical, and semantic rankings.
+- Added intent classification, retrieval explanations, and per-source score diagnostics.
+- Added evidence IDs, citation labels, section headings, page numbers, passages, and record versions.
+- Added generated citation and URL verification; unverified answers are not returned.
+- Added deterministic verified-evidence fallback when generation or citation verification fails.
+- Added embedding status/process and retrieval explanation endpoints.
+- Added bounded WordPress section extraction that respects the include-content setting, evidence normalization, semantic coverage administration, and public evidence-location rendering.
+- Preserved v6.3.1 cold-start recovery hardening and v6.3.0 durable-index behavior.
+
 ## 6.3.1 — Cold-Start and Recovery Hardening
 
 - Added backend startup state, phase, progress, readiness, service-start time, and uptime reporting.

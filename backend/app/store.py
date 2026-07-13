@@ -12,13 +12,14 @@ import threading
 from typing import Any, Iterable, Iterator
 import uuid
 
+from .chunking import chunk_record
 from .config import settings
-from .models import KnowledgeRecord, utc_now
+from .models import KnowledgeChunk, KnowledgeRecord, utc_now
 
 
-SCHEMA_VERSION = 4
-INDEX_SCHEMA = "sc-research-librarian-knowledge-index/3.1"
-SNAPSHOT_SCHEMA = "sc-research-librarian-runtime-snapshot/3.1"
+SCHEMA_VERSION = 5
+INDEX_SCHEMA = "sc-research-librarian-knowledge-index/5.0"
+SNAPSHOT_SCHEMA = "sc-research-librarian-runtime-snapshot/4.0"
 
 
 def _canonical_json(value: Any) -> str:
@@ -107,6 +108,32 @@ class KnowledgeStore:
                 );
                 CREATE INDEX IF NOT EXISTS idx_records_title ON records(title COLLATE NOCASE);
                 CREATE INDEX IF NOT EXISTS idx_records_url ON records(url);
+                CREATE TABLE IF NOT EXISTS retrieval_chunks (
+                    chunk_id TEXT PRIMARY KEY,
+                    record_id TEXT NOT NULL,
+                    heading TEXT NOT NULL DEFAULT '',
+                    page INTEGER,
+                    passage TEXT NOT NULL,
+                    position INTEGER NOT NULL DEFAULT 0,
+                    content_hash TEXT NOT NULL,
+                    embedding_model TEXT NOT NULL DEFAULT '',
+                    embedding_json TEXT NOT NULL DEFAULT '',
+                    updated_utc TEXT NOT NULL,
+                    FOREIGN KEY(record_id) REFERENCES records(id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS idx_retrieval_chunks_record ON retrieval_chunks(record_id, position);
+                CREATE INDEX IF NOT EXISTS idx_retrieval_chunks_embedding ON retrieval_chunks(embedding_model);
+                CREATE TABLE IF NOT EXISTS embedding_runs (
+                    run_id TEXT PRIMARY KEY,
+                    model TEXT NOT NULL,
+                    state TEXT NOT NULL,
+                    requested INTEGER NOT NULL DEFAULT 0,
+                    processed INTEGER NOT NULL DEFAULT 0,
+                    failed INTEGER NOT NULL DEFAULT 0,
+                    started_utc TEXT NOT NULL,
+                    completed_utc TEXT NOT NULL DEFAULT '',
+                    error TEXT NOT NULL DEFAULT ''
+                );
                 CREATE TABLE IF NOT EXISTS sync_jobs (
                     job_id TEXT PRIMARY KEY,
                     mode TEXT NOT NULL,
@@ -183,6 +210,142 @@ class KnowledgeStore:
                 "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
                 (str(SCHEMA_VERSION),),
             )
+            record_count = int(connection.execute("SELECT COUNT(*) FROM records").fetchone()[0])
+            chunk_count = int(connection.execute("SELECT COUNT(*) FROM retrieval_chunks").fetchone()[0])
+            if record_count and not chunk_count:
+                self._rebuild_all_chunks(connection)
+
+
+    def _rebuild_all_chunks(self, connection: sqlite3.Connection) -> int:
+        existing_embeddings = {
+            str(row["chunk_id"]): (
+                str(row["content_hash"]),
+                str(row["embedding_model"] or ""),
+                str(row["embedding_json"] or ""),
+            )
+            for row in connection.execute(
+                "SELECT chunk_id,content_hash,embedding_model,embedding_json FROM retrieval_chunks"
+            )
+        }
+        connection.execute("DELETE FROM retrieval_chunks")
+        now = utc_now()
+        count = 0
+        for row in connection.execute("SELECT payload FROM records ORDER BY id"):
+            try:
+                record = KnowledgeRecord.model_validate(json.loads(str(row["payload"])))
+            except (ValueError, TypeError):
+                continue
+            for chunk in chunk_record(record, settings.chunk_max_words, settings.chunk_overlap_words):
+                prior = existing_embeddings.get(chunk.chunk_id)
+                model = ""
+                vector = ""
+                if prior and prior[0] == chunk.content_hash:
+                    model, vector = prior[1], prior[2]
+                connection.execute(
+                    "INSERT INTO retrieval_chunks(chunk_id,record_id,heading,page,passage,position,content_hash,embedding_model,embedding_json,updated_utc) "
+                    "VALUES(?,?,?,?,?,?,?,?,?,?)",
+                    (
+                        chunk.chunk_id,
+                        chunk.record_id,
+                        chunk.heading,
+                        chunk.page,
+                        chunk.passage,
+                        chunk.position,
+                        chunk.content_hash,
+                        model,
+                        vector,
+                        now,
+                    ),
+                )
+                count += 1
+        self._set_meta(connection, {"indexed_chunks": count})
+        return count
+
+    @staticmethod
+    def _chunk_from_row(row: sqlite3.Row) -> KnowledgeChunk:
+        embedding = None
+        raw = str(row["embedding_json"] or "")
+        if raw:
+            try:
+                decoded = json.loads(raw)
+                if isinstance(decoded, list):
+                    embedding = [float(value) for value in decoded]
+            except (ValueError, TypeError):
+                embedding = None
+        page = row["page"]
+        return KnowledgeChunk(
+            chunk_id=str(row["chunk_id"]),
+            record_id=str(row["record_id"]),
+            heading=str(row["heading"] or ""),
+            page=int(page) if page is not None else None,
+            passage=str(row["passage"] or ""),
+            position=int(row["position"] or 0),
+            content_hash=str(row["content_hash"] or ""),
+            embedding_model=str(row["embedding_model"] or ""),
+            embedding=embedding,
+        )
+
+    def chunks(self) -> list[KnowledgeChunk]:
+        with self._lock, self._connection() as connection:
+            return [
+                self._chunk_from_row(row)
+                for row in connection.execute(
+                    "SELECT chunk_id,record_id,heading,page,passage,position,content_hash,embedding_model,embedding_json "
+                    "FROM retrieval_chunks ORDER BY record_id,position"
+                )
+            ]
+
+    def pending_chunks(self, limit: int, model: str) -> list[KnowledgeChunk]:
+        with self._lock, self._connection() as connection:
+            rows = connection.execute(
+                "SELECT chunk_id,record_id,heading,page,passage,position,content_hash,embedding_model,embedding_json "
+                "FROM retrieval_chunks WHERE embedding_json='' OR embedding_model<>? ORDER BY record_id,position LIMIT ?",
+                (model, max(1, int(limit))),
+            )
+            return [self._chunk_from_row(row) for row in rows]
+
+    def save_chunk_embedding(self, chunk_id: str, model: str, embedding: list[float]) -> bool:
+        if not embedding:
+            return False
+        with self._lock, self._connection() as connection:
+            cursor = connection.execute(
+                "UPDATE retrieval_chunks SET embedding_model=?,embedding_json=?,updated_utc=? WHERE chunk_id=?",
+                (model, _canonical_json([float(value) for value in embedding]), utc_now(), chunk_id),
+            )
+            return cursor.rowcount > 0
+
+    def begin_embedding_run(self, model: str, requested: int) -> str:
+        run_id = "embedding-" + uuid.uuid4().hex
+        with self._lock, self._connection() as connection:
+            connection.execute(
+                "INSERT INTO embedding_runs(run_id,model,state,requested,started_utc) VALUES(?,?,?,?,?)",
+                (run_id, model, "running", max(0, int(requested)), utc_now()),
+            )
+        return run_id
+
+    def finish_embedding_run(self, run_id: str, processed: int, failed: int, error: str = "") -> None:
+        with self._lock, self._connection() as connection:
+            connection.execute(
+                "UPDATE embedding_runs SET state=?,processed=?,failed=?,completed_utc=?,error=? WHERE run_id=?",
+                ("completed" if not error else "partial", processed, failed, utc_now(), error[:1000], run_id),
+            )
+
+    def embedding_status(self) -> dict[str, Any]:
+        with self._lock, self._connection() as connection:
+            total = int(connection.execute("SELECT COUNT(*) FROM retrieval_chunks").fetchone()[0])
+            embedded = int(connection.execute("SELECT COUNT(*) FROM retrieval_chunks WHERE embedding_json<>''").fetchone()[0])
+            latest = connection.execute(
+                "SELECT run_id,model,state,requested,processed,failed,started_utc,completed_utc,error "
+                "FROM embedding_runs ORDER BY started_utc DESC LIMIT 1"
+            ).fetchone()
+            return {
+                "indexed_chunks": total,
+                "embedded_chunks": embedded,
+                "pending_chunks": max(0, total - embedded),
+                "semantic_coverage": round((embedded / total) * 100, 2) if total else 0.0,
+                "embedding_model": settings.gemini_embedding_model,
+                "latest_run": dict(latest) if latest else {},
+            }
 
     def _migrate_legacy_json(self) -> None:
         legacy = self.path.parent / "knowledge_index.json"
@@ -252,6 +415,8 @@ class KnowledgeStore:
             (cutoff,),
         ).fetchone()[0])
         snapshots = int(connection.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0])
+        indexed_chunks = int(connection.execute("SELECT COUNT(*) FROM retrieval_chunks").fetchone()[0])
+        embedded_chunks = int(connection.execute("SELECT COUNT(*) FROM retrieval_chunks WHERE embedding_json<>''").fetchone()[0])
         return {
             **meta,
             "schema_version": int(meta.get("schema_version", SCHEMA_VERSION)),
@@ -264,6 +429,10 @@ class KnowledgeStore:
             "staging_jobs": staging_jobs,
             "stalled_jobs": stalled_jobs,
             "snapshot_count": snapshots,
+            "indexed_chunks": indexed_chunks,
+            "embedded_chunks": embedded_chunks,
+            "semantic_coverage": round((embedded_chunks / indexed_chunks) * 100, 2) if indexed_chunks else 0.0,
+            "embedding_model": settings.gemini_embedding_model,
             "recovery_needed": total_records == 0,
         }
 
@@ -515,6 +684,7 @@ class KnowledgeStore:
                     if existed:
                         deleted += 1
 
+                indexed_chunks = self._rebuild_all_chunks(connection)
                 meta = self._meta(connection)
                 version = int(meta.get("index_version", 0)) + 1
                 checksum = self._checksum_rows(connection)
@@ -544,6 +714,7 @@ class KnowledgeStore:
                     "snapshot_id": snapshot_id,
                     "index_version": version,
                     "checksum": checksum,
+                    "indexed_chunks": indexed_chunks,
                 }
                 connection.execute(
                     "UPDATE sync_jobs SET state=?,completed_utc=?,updated_utc=?,result=?,error='' WHERE job_id=?",
@@ -729,6 +900,7 @@ class KnowledgeStore:
                         "INSERT INTO records(id,title,url,payload,content_hash,updated_utc) VALUES(?,?,?,?,?,?)",
                         (record.id, record.title, record.url, _canonical_json(payload_row), payload_row["content_hash"], now),
                     )
+                self._rebuild_all_chunks(connection)
                 meta = self._meta(connection)
                 new_version = int(meta.get("index_version", 0)) + 1
                 checksum = self._checksum_rows(connection)

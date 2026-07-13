@@ -20,7 +20,7 @@
 - Administrator maintenance controls and JSON operations-log export
 - Recovery-event deduplication and transient-notice suppression
 
-## v6.4.0 — Hybrid Retrieval and Citation Engine
+## v6.4.0 — Hybrid Retrieval and Citation Engine — Complete
 
 - BM25 lexical retrieval plus exact-title priority
 - Heading-aware article chunking

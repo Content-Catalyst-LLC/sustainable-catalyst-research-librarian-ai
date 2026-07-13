@@ -1,6 +1,6 @@
 <?php
 /**
- * Research Librarian AI v6.3.1 — Cold-start and Recovery Hardening.
+ * Research Librarian AI v6.4.0 — Hybrid Retrieval and Citation Engine.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class SC_RL6_V630_Durable_Index {
-    const VERSION = '6.3.1';
+    const VERSION = '6.4.0';
     const OPTION_NAME = 'sc_rl_v620_python_options';
     const STATUS_OPTION = 'sc_rl_v620_python_status';
     const SYNC_HOOK = 'sc_rl_v620_python_sync_event';
@@ -555,7 +555,7 @@ final class SC_RL6_V630_Durable_Index {
         $recovery_next = wp_next_scheduled( self::RECOVERY_HOOK );
         $retry_next = wp_next_scheduled( self::SYNC_RETRY_HOOK );
         return array(
-            'schema' => 'sc-research-librarian-sync-recovery-export/6.3.1',
+            'schema' => 'sc-research-librarian-sync-recovery-export/6.4.0',
             'version' => self::VERSION,
             'site' => home_url( '/' ),
             'generated_utc' => gmdate( 'c' ),
@@ -731,6 +731,15 @@ final class SC_RL6_V630_Durable_Index {
                 'series' => sanitize_text_field( isset( $item['series'] ) ? $item['series'] : '' ),
                 'article_map' => sanitize_text_field( isset( $item['article_map'] ) ? $item['article_map'] : '' ),
                 'exact_title_match' => ! empty( $item['exact_title_match'] ),
+                'evidence_id' => sanitize_text_field( isset( $item['evidence_id'] ) ? $item['evidence_id'] : '' ),
+                'citation_label' => sanitize_text_field( isset( $item['citation_label'] ) ? $item['citation_label'] : '' ),
+                'section' => sanitize_text_field( isset( $item['section'] ) ? $item['section'] : '' ),
+                'page' => isset( $item['page'] ) && null !== $item['page'] ? absint( $item['page'] ) : null,
+                'passage' => sanitize_textarea_field( isset( $item['passage'] ) ? $item['passage'] : '' ),
+                'lexical_score' => isset( $item['lexical_score'] ) ? round( (float) $item['lexical_score'], 5 ) : 0,
+                'semantic_score' => isset( $item['semantic_score'] ) ? round( (float) $item['semantic_score'], 5 ) : 0,
+                'fusion_score' => isset( $item['fusion_score'] ) ? round( (float) $item['fusion_score'], 5 ) : 0,
+                'retrieval_reasons' => isset( $item['retrieval_reasons'] ) && is_array( $item['retrieval_reasons'] ) ? array_values( array_map( 'sanitize_key', $item['retrieval_reasons'] ) ) : array(),
             );
         }
         $confidence = isset( $backend['confidence'] ) && is_array( $backend['confidence'] ) ? $backend['confidence'] : array( 'level' => 'medium', 'score' => 60, 'explanation' => 'Python title-aware retrieval returned grounded Sustainable Catalyst records.' );
@@ -741,9 +750,13 @@ final class SC_RL6_V630_Durable_Index {
         $grounding['related_titles'] = isset( $backend['related_titles'] ) && is_array( $backend['related_titles'] ) ? $backend['related_titles'] : array();
         $grounding['research_path'] = isset( $backend['research_path'] ) && is_array( $backend['research_path'] ) ? $backend['research_path'] : array();
         $grounding['actions'] = isset( $backend['actions'] ) && is_array( $backend['actions'] ) ? $backend['actions'] : array();
+        $grounding['evidence'] = isset( $backend['evidence'] ) && is_array( $backend['evidence'] ) ? array_values( array_map( array( __CLASS__, 'sanitize_evidence_record' ), $backend['evidence'] ) ) : array();
+        $grounding['citation_verification'] = isset( $backend['citation_verification'] ) && is_array( $backend['citation_verification'] ) ? self::sanitize_diagnostic_map( $backend['citation_verification'] ) : array();
+        $grounding['retrieval_diagnostics'] = isset( $backend['retrieval_diagnostics'] ) && is_array( $backend['retrieval_diagnostics'] ) ? self::sanitize_diagnostic_map( $backend['retrieval_diagnostics'] ) : array();
+        $grounding['reason_codes'] = array_values( array_unique( array_merge( $grounding['reason_codes'], array( 'bm25-section-retrieval', 'citation-verification' ), ! empty( $grounding['retrieval_diagnostics']['semantic_used'] ) ? array( 'semantic-retrieval' ) : array() ) ) );
 
         $note = array(
-            'schema' => 'sc-research-librarian-route-note/6.3.1',
+            'schema' => 'sc-research-librarian-route-note/6.4.0',
             'created_at_utc' => gmdate( 'c' ),
             'question' => sanitize_textarea_field( $question ),
             'source' => sanitize_key( isset( $backend['source'] ) ? $backend['source'] : 'python-backend' ),
@@ -754,6 +767,9 @@ final class SC_RL6_V630_Durable_Index {
             'related' => array(),
             'confidence' => $confidence,
             'sources' => $sources,
+            'evidence' => $grounding['evidence'],
+            'citation_verification' => $grounding['citation_verification'],
+            'retrieval_diagnostics' => $grounding['retrieval_diagnostics'],
             'handoffs' => array(),
             'next_step' => isset( $route['next_step'] ) ? $route['next_step'] : 'Open the best match and continue through the related titles.',
             'boundaries' => array(
@@ -784,9 +800,44 @@ final class SC_RL6_V630_Durable_Index {
             'related_titles' => $grounding['related_titles'],
             'research_path' => $grounding['research_path'],
             'actions' => $grounding['actions'],
+            'evidence' => $grounding['evidence'],
+            'citation_verification' => $grounding['citation_verification'],
+            'retrieval_diagnostics' => $grounding['retrieval_diagnostics'],
             'clarification' => sanitize_textarea_field( isset( $backend['clarification'] ) ? $backend['clarification'] : '' ),
             'endpoint_status' => self::endpoint_status_from_backend( isset( $backend['status'] ) && is_array( $backend['status'] ) ? $backend['status'] : array(), ! empty( $backend['ai_used'] ) ),
         );
+    }
+
+    public static function sanitize_evidence_record( $item ) {
+        $item = is_array( $item ) ? $item : array();
+        return array(
+            'id' => sanitize_text_field( $item['id'] ?? '' ),
+            'record_id' => sanitize_text_field( $item['record_id'] ?? '' ),
+            'chunk_id' => sanitize_text_field( $item['chunk_id'] ?? '' ),
+            'title' => sanitize_text_field( $item['title'] ?? '' ),
+            'url' => esc_url_raw( $item['url'] ?? '' ),
+            'section' => sanitize_text_field( $item['section'] ?? '' ),
+            'page' => isset( $item['page'] ) && null !== $item['page'] ? absint( $item['page'] ) : null,
+            'passage' => sanitize_textarea_field( $item['passage'] ?? '' ),
+            'source_type' => sanitize_key( $item['source_type'] ?? '' ),
+            'record_version' => sanitize_text_field( $item['record_version'] ?? '' ),
+            'reason' => sanitize_text_field( $item['reason'] ?? '' ),
+        );
+    }
+
+    private static function sanitize_diagnostic_map( $map ) {
+        $clean = array();
+        foreach ( (array) $map as $key => $value ) {
+            $key = sanitize_key( $key );
+            if ( is_bool( $value ) || is_numeric( $value ) || null === $value ) {
+                $clean[ $key ] = $value;
+            } elseif ( is_array( $value ) ) {
+                $clean[ $key ] = array_values( array_map( 'sanitize_text_field', $value ) );
+            } else {
+                $clean[ $key ] = sanitize_text_field( $value );
+            }
+        }
+        return $clean;
     }
 
     private static function endpoint_status_from_backend( $status, $ai_used = false ) {
@@ -1084,7 +1135,7 @@ final class SC_RL6_V630_Durable_Index {
         $deleted_ids = array_values( array_diff( array_keys( $ledger['records'] ), array_keys( $current_ids ) ) );
         $report = array_merge( array(
             'version' => self::VERSION,
-            'schema' => 'sc-rl-sync-report/6.3.1',
+            'schema' => 'sc-rl-sync-report/6.4.0',
             'job_id' => $job_id,
             'state' => 'running',
             'mode' => 'transactional-replace',
@@ -1256,7 +1307,7 @@ final class SC_RL6_V630_Durable_Index {
             'records_by_post_type' => array(),
         );
 
-        // v6.3.1 continues to index canonical published WordPress records first. The older
+        // v6.4.0 continues to index canonical published WordPress records first. The older
         // route/index registry is appended only when it contributes a unique URL.
         // This prevents a summary-only legacy entry from masking the full article.
         $all_public_post_types = get_post_types( array( 'public' => true ), 'names' );
@@ -1381,6 +1432,53 @@ final class SC_RL6_V630_Durable_Index {
         return $object && ! empty( $object->public ) && 'attachment' !== $post_type;
     }
 
+    private static function extract_content_sections( $raw_content, $character_limit = 60000 ) {
+        $sections = array();
+        $remaining = max( 0, min( 60000, absint( $character_limit ) ) );
+        if ( ! $remaining ) {
+            return $sections;
+        }
+        $parts = preg_split( '/(<h[1-4][^>]*>.*?<\/h[1-4]>)/is', (string) $raw_content, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY );
+        $heading = 'Introduction';
+        $buffer = '';
+        $flush = static function () use ( &$sections, &$heading, &$buffer, &$remaining ) {
+            if ( $remaining <= 0 ) {
+                $buffer = '';
+                return;
+            }
+            $text = trim( preg_replace( '/\s+/', ' ', wp_strip_all_tags( strip_shortcodes( $buffer ) ) ) );
+            if ( $text ) {
+                $section_limit = min( 12000, $remaining );
+                $text = function_exists( 'mb_substr' ) ? mb_substr( $text, 0, $section_limit ) : substr( $text, 0, $section_limit );
+                if ( $text ) {
+                    $sections[] = array(
+                        'heading' => sanitize_text_field( $heading ),
+                        'text' => sanitize_textarea_field( $text ),
+                    );
+                    $length = function_exists( 'mb_strlen' ) ? mb_strlen( $text ) : strlen( $text );
+                    $remaining = max( 0, $remaining - $length );
+                }
+            }
+            $buffer = '';
+        };
+        foreach ( (array) $parts as $part ) {
+            if ( preg_match( '/^<h[1-4][^>]*>(.*?)<\/h[1-4]>$/is', trim( $part ), $match ) ) {
+                $flush();
+                $heading = trim( wp_strip_all_tags( $match[1] ) );
+                if ( ! $heading ) {
+                    $heading = 'Document section';
+                }
+            } else {
+                $buffer .= ' ' . $part;
+            }
+            if ( count( $sections ) >= 80 || $remaining <= 0 ) {
+                break;
+            }
+        }
+        $flush();
+        return array_slice( $sections, 0, 80 );
+    }
+
     private static function build_post_record( $post_id ) {
         $post = get_post( $post_id );
         if ( ! $post || 'publish' !== $post->post_status || ! self::is_public_post_type( $post->post_type ) ) {
@@ -1459,6 +1557,8 @@ final class SC_RL6_V630_Durable_Index {
                 'post_id' => absint( $post_id ),
                 'author_id' => absint( $post->post_author ),
                 'menu_order' => absint( $post->menu_order ),
+                'sections' => '1' === (string) $options['include_content'] ? self::extract_content_sections( $raw_content, $limit ) : array(),
+                'retrieval_schema' => 'section-aware/1.0',
             ),
         );
         $record['content_hash'] = self::record_content_hash( $record );
@@ -2016,6 +2116,14 @@ final class SC_RL6_V630_Durable_Index {
                 self::clear_sync_retry();
                 self::clear_recovery_state();
                 $notice = 'Pending synchronization and recovery retries were cleared.';
+            } elseif ( isset( $_POST['sc_rl_v640_process_embeddings'] ) ) {
+                $embedding_result = self::request( '/v1/knowledge/embeddings/process', 'POST', array( 'limit' => 20, 'delay_ms' => 200 ) );
+                if ( is_wp_error( $embedding_result ) ) {
+                    $notice_type = 'error';
+                    $notice = $embedding_result->get_error_message();
+                } else {
+                    $notice = 'Embedding batch processed: ' . absint( $embedding_result['processed'] ?? 0 ) . ' completed, ' . absint( $embedding_result['pending_chunks'] ?? 0 ) . ' remaining.';
+                }
             } elseif ( isset( $_POST['sc_rl_v621_reset_rate_limits'] ) ) {
                 if ( class_exists( 'SC_RL6_Core' ) ) {
                     $reset = SC_RL6_Core::instance()->reset_rate_limits();
@@ -2053,11 +2161,12 @@ final class SC_RL6_V630_Durable_Index {
         $recovery_state = self::recovery_state();
         $wordpress_snapshot_validation = self::validate_wordpress_snapshots();
         $backend_snapshot_validation = self::request( '/v1/knowledge/snapshots/validate', 'GET' );
+        $embedding_status = self::request( '/v1/knowledge/embeddings/status', 'GET' );
         $export_url = wp_nonce_url( admin_url( 'admin-post.php?action=sc_rl_v631_export_sync_log' ), 'sc_rl_v631_export_sync_log' );
         ?>
         <div class="wrap">
-            <h1>Python Intelligence, Cold-start Recovery, and Durable Index</h1>
-            <p>Research Librarian AI v6.3.1 hardens free-tier cold starts with visible startup progress, bounded retries, stalled-job repair, snapshot integrity checks, isolated record failures, and exportable synchronization and recovery logs.</p>
+            <h1>Python Intelligence, Hybrid Retrieval, and Durable Index</h1>
+            <p>Research Librarian AI v6.4.0 combines exact-title priority, section-aware BM25 ranking, optional Gemini embeddings, reciprocal-rank fusion, page-aware evidence, and verified citations with the durable recovery architecture introduced in v6.3.x.</p>
             <?php if ( $notice ) : ?><div class="notice notice-<?php echo esc_attr( $notice_type ); ?> is-dismissible"><p><?php echo esc_html( $notice ); ?></p></div><?php endif; ?>
 
             <div class="sc-rl-admin-grid">
@@ -2092,7 +2201,7 @@ final class SC_RL6_V630_Durable_Index {
                     <tr><th><label for="sc-rl-v631-stalled">Stalled transaction threshold</label></th><td><input id="sc-rl-v631-stalled" type="number" min="5" max="1440" name="sc_rl_v620[stalled_job_minutes]" value="<?php echo esc_attr( $options['stalled_job_minutes'] ); ?>"> minutes</td></tr>
                     <tr><th><label for="sc-rl-v631-alerts">Repeated public-alert suppression</label></th><td><input id="sc-rl-v631-alerts" type="number" min="1" max="120" name="sc_rl_v620[alert_suppression_minutes]" value="<?php echo esc_attr( $options['alert_suppression_minutes'] ); ?>"> minutes</td></tr>
                 </table>
-                <p class="submit"><button class="button button-primary" type="submit" name="sc_rl_v620_save" value="1">Save Settings</button> <button class="button" type="submit" name="sc_rl_v620_test" value="1">Test Backend</button> <button class="button button-secondary" type="submit" name="sc_rl_v620_sync" value="1">Transactional Full Sync</button> <button class="button" type="submit" name="sc_rl_v630_sync_incremental" value="1">Process Incremental Queue</button> <button class="button" type="submit" name="sc_rl_v630_create_snapshot" value="1">Create WordPress Snapshot</button> <button class="button button-secondary" type="submit" name="sc_rl_v630_recover" value="1">Recover Empty Backend</button> <button class="button" type="submit" name="sc_rl_v631_repair_stalled" value="1">Repair Stalled Jobs</button> <button class="button" type="submit" name="sc_rl_v631_validate_snapshots" value="1">Validate Snapshots</button> <button class="button" type="submit" name="sc_rl_v631_clear_retries" value="1">Clear Pending Retries</button> <button class="button" type="submit" name="sc_rl_v621_repair" value="1">Repair and Resynchronize</button> <button class="button" type="submit" name="sc_rl_v621_reset_rate_limits" value="1">Reset Public Rate Limits</button> <a class="button" href="<?php echo esc_url( $export_url ); ?>">Export Sync and Recovery Log</a></p>
+                <p class="submit"><button class="button button-primary" type="submit" name="sc_rl_v620_save" value="1">Save Settings</button> <button class="button" type="submit" name="sc_rl_v620_test" value="1">Test Backend</button> <button class="button button-secondary" type="submit" name="sc_rl_v620_sync" value="1">Transactional Full Sync</button> <button class="button" type="submit" name="sc_rl_v630_sync_incremental" value="1">Process Incremental Queue</button> <button class="button" type="submit" name="sc_rl_v630_create_snapshot" value="1">Create WordPress Snapshot</button> <button class="button button-secondary" type="submit" name="sc_rl_v630_recover" value="1">Recover Empty Backend</button> <button class="button" type="submit" name="sc_rl_v631_repair_stalled" value="1">Repair Stalled Jobs</button> <button class="button" type="submit" name="sc_rl_v631_validate_snapshots" value="1">Validate Snapshots</button> <button class="button" type="submit" name="sc_rl_v631_clear_retries" value="1">Clear Pending Retries</button> <button class="button button-secondary" type="submit" name="sc_rl_v640_process_embeddings" value="1">Process Embedding Batch</button> <button class="button" type="submit" name="sc_rl_v621_repair" value="1">Repair and Resynchronize</button> <button class="button" type="submit" name="sc_rl_v621_reset_rate_limits" value="1">Reset Public Rate Limits</button> <a class="button" href="<?php echo esc_url( $export_url ); ?>">Export Sync and Recovery Log</a></p>
 
                 <?php if ( $backend_snapshots ) : ?>
                     <h2>Runtime Rollback</h2>
@@ -2103,6 +2212,8 @@ final class SC_RL6_V630_Durable_Index {
             <h2>Durability and Synchronization Diagnostics</h2>
             <table class="widefat striped" style="max-width:1100px;margin-bottom:18px"><tbody>
                 <tr><th>Runtime storage</th><td><?php echo esc_html( is_wp_error( $status ) ? 'Unavailable' : ( $status['storage_engine'] ?? 'sqlite' ) ); ?><?php if ( ! is_wp_error( $status ) ) : ?> · schema <?php echo esc_html( absint( $status['schema_version'] ?? 0 ) ); ?> · index version <?php echo esc_html( absint( $status['index_version'] ?? 0 ) ); ?><?php endif; ?></td></tr>
+                <tr><th>Retrieval chunks</th><td><?php echo esc_html( is_wp_error( $status ) ? 'Unavailable' : absint( $status['indexed_chunks'] ?? 0 ) . ' section-aware chunk(s)' ); ?></td></tr>
+                <tr><th>Semantic coverage</th><td><?php echo esc_html( is_wp_error( $embedding_status ) ? $embedding_status->get_error_message() : ( number_format_i18n( (float) ( $embedding_status['semantic_coverage'] ?? 0 ), 2 ) . '% · ' . absint( $embedding_status['embedded_chunks'] ?? 0 ) . '/' . absint( $embedding_status['indexed_chunks'] ?? 0 ) . ' chunks · ' . sanitize_text_field( $embedding_status['embedding_model'] ?? '' ) ) ); ?></td></tr>
                 <tr><th>Backend startup</th><td><?php echo esc_html( is_wp_error( $status ) ? 'Unavailable' : ( sanitize_text_field( $status['startup_state'] ?? 'ready' ) . ' · ' . sanitize_text_field( $status['startup_phase'] ?? 'ready' ) . ' · ' . absint( $status['startup_progress'] ?? 100 ) . '% · uptime ' . absint( $status['uptime_seconds'] ?? 0 ) . 's' ) ); ?></td></tr>
                 <tr><th>Stalled backend jobs</th><td><?php echo esc_html( is_wp_error( $status ) ? 'Unknown' : absint( $status['stalled_jobs'] ?? 0 ) ); ?></td></tr>
                 <tr><th>Sync retry</th><td><?php echo esc_html( $sync_retry_state ? ( sanitize_text_field( $sync_retry_state['state'] ?? 'unknown' ) . ' · attempt ' . absint( $sync_retry_state['attempt'] ?? 0 ) . '/' . absint( $sync_retry_state['max_attempts'] ?? $options['max_retry_attempts'] ) . ( ! empty( $sync_retry_state['next_run_utc'] ) ? ' · next ' . $sync_retry_state['next_run_utc'] : '' ) ) : 'No pending retry' ); ?></td></tr>
@@ -2117,7 +2228,7 @@ final class SC_RL6_V630_Durable_Index {
                 <tr><th>Automatic recovery</th><td><?php echo esc_html( '1' === $options['auto_recover'] ? 'Enabled' : 'Disabled' ); ?><?php if ( $diagnostics['cron']['recovery_scheduled'] ) : ?> · scheduled for <?php echo esc_html( $diagnostics['cron']['recovery_next_run_utc'] ); ?><?php endif; ?></td></tr>
                 <tr><th>WP-Cron</th><td><?php echo esc_html( $diagnostics['cron']['wp_cron_disabled'] ? 'Disabled by configuration' : ( $diagnostics['cron']['scheduled'] ? 'Scheduled' : 'Not scheduled' ) ); ?><?php if ( $diagnostics['cron']['next_run_utc'] ) : ?> · next run <?php echo esc_html( $diagnostics['cron']['next_run_utc'] ); ?><?php endif; ?></td></tr>
                 <tr><th>Public rate limit</th><td><?php echo esc_html( absint( $rate_status['limit'] ?? 0 ) ); ?> questions per <?php echo esc_html( absint( $rate_status['window_minutes'] ?? 0 ) ); ?> minutes · <?php echo esc_html( absint( $rate_status['active_visitors'] ?? 0 ) ); ?> active visitor window(s)</td></tr>
-                <tr><th>Latest sync job</th><td><?php echo esc_html( ! empty( $sync_report['job_id'] ) ? $sync_report['job_id'] . ' · ' . $sync_report['state'] : 'No v6.3.1 sync report yet' ); ?></td></tr>
+                <tr><th>Latest sync job</th><td><?php echo esc_html( ! empty( $sync_report['job_id'] ) ? $sync_report['job_id'] . ' · ' . $sync_report['state'] : 'No v6.4.0 sync report yet' ); ?></td></tr>
                 <tr><th>Inserted / updated / unchanged / deleted</th><td><?php echo esc_html( absint( $sync_report['inserted_records'] ?? 0 ) . ' / ' . absint( $sync_report['updated_records'] ?? 0 ) . ' / ' . absint( $sync_report['unchanged_records'] ?? 0 ) . ' / ' . absint( $sync_report['backend_deleted_records'] ?? 0 ) ); ?></td></tr>
             </tbody></table>
             <?php if ( ! empty( $sync_report['batches'] ) ) : ?>

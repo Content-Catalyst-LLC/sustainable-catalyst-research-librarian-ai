@@ -1,0 +1,37 @@
+{
+  "schema": "sc-research-librarian-release/1.0",
+  "version": "6.4.0",
+  "release_name": "Hybrid Retrieval and Citation Engine",
+  "backend_schema_version": 5,
+  "retrieval_schema": "sc-research-retrieval/2.0",
+  "citation_schema": "sc-research-evidence/1.0",
+  "capabilities": {
+    "exact_title_priority": true,
+    "section_aware_chunking": true,
+    "bm25_lexical_retrieval": true,
+    "semantic_embeddings": true,
+    "reciprocal_rank_fusion": true,
+    "page_aware_pdf_evidence": true,
+    "citation_verification": true,
+    "deterministic_evidence_fallback": true,
+    "resumable_embedding_batches": true,
+    "retrieval_diagnostics": true
+  },
+  "compatibility": {
+    "wordpress_is_canonical_source": true,
+    "paid_vector_database_required": false,
+    "persistent_render_disk_required": false,
+    "semantic_retrieval_optional": true,
+    "lexical_fallback_available": true,
+    "python_runtime": "3.12.12",
+    "minimum_previous_release": "6.3.1"
+  },
+  "release_gates": [
+    "Exact-title queries rank the canonical title first",
+    "Conceptual queries retrieve matching article sections",
+    "PDF evidence can retain page numbers",
+    "Generated citations resolve to synchronized evidence identifiers",
+    "Unverified generated answers are rejected",
+    "Retrieval remains available when embeddings or Gemini generation are unavailable"
+  ]
+}

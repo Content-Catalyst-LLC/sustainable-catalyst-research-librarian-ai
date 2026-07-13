@@ -1,49 +1,78 @@
-# Install Research Librarian AI v6.3.1
+# Install Research Librarian AI v6.4.0
 
 ## 1. Push the repository
 
-Use `PUSH_RESEARCH_LIBRARIAN_V631_PY312.sh`. The script requires and verifies Python 3.12, clears macOS launcher overrides, validates the repository from both Python import layouts, and creates tag `v6.3.1`.
+Use `PUSH_RESEARCH_LIBRARIAN_V640_PY312.sh`. The script requires and verifies Python 3.12, clears macOS launcher overrides, validates both Python import layouts, runs all WordPress release contracts, and creates tag `v6.4.0`.
 
 ## 2. Deploy or update Render
 
 Use `render.yaml` or configure:
 
 - Root directory: `backend`
-- Build: `pip install -r requirements.txt`
-- Start: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+- Build command: `pip install -r requirements.txt`
+- Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
 - Health check: `/health`
 - Python: `3.12.12`
 
-Required secrets remain `SC_RL_BACKEND_API_KEY` and `SC_RL_GEMINI_API_KEY`. Recommended hardening settings are:
+Required secrets:
 
 ```text
+SC_RL_BACKEND_API_KEY=<shared WordPress/backend secret>
+SC_RL_GEMINI_API_KEY=<Gemini key>
+```
+
+Recommended v6.4.0 settings:
+
+```text
+SC_RL_SEMANTIC_ENABLED=true
+SC_RL_SEMANTIC_QUERY_EMBEDDINGS=true
+SC_RL_CHUNK_MAX_WORDS=220
+SC_RL_CHUNK_OVERLAP_WORDS=35
+SC_RL_EMBEDDING_BATCH_LIMIT=20
+SC_RL_CITATION_REQUIRED=true
 SC_RL_STARTUP_WARMUP_SECONDS=12
 SC_RL_STALLED_JOB_SECONDS=1800
 SC_RL_MAX_REJECTION_DETAILS=100
 SC_RL_MAX_RUNTIME_SNAPSHOTS=5
 ```
 
-The free Render filesystem remains supported. WordPress is the canonical snapshot source; SQLite is the recoverable runtime index.
+No paid vector database or persistent Render disk is required. WordPress remains the canonical snapshot source; SQLite and embeddings are recoverable runtime assets.
 
-## 3. Install WordPress
+## 3. Install the WordPress plugin
 
-Upload `sustainable-catalyst-research-librarian-ai-v6.3.1.zip`, replace the installed version, and activate it. Existing v6.3.0 settings and snapshots are retained.
+Upload `sustainable-catalyst-research-librarian-ai-v6.4.0.zip`, replace the installed plugin, and activate it. Existing settings, recovery snapshots, ledgers, and queued editorial changes are retained.
 
-## 4. Connect and validate
+## 4. Build the retrieval index
 
 Open **Research Librarian AI → Python Intelligence**, save the backend URL and shared key, then run:
 
 1. **Test Backend**
 2. **Validate Snapshots**
 3. **Transactional Full Sync**
-4. Confirm backend and WordPress counts and checksums match
+4. Confirm WordPress and backend record counts and checksums match
+5. Confirm the backend reports indexed chunks
+6. Select **Process Embedding Batch** repeatedly until the desired semantic coverage is reached
 
-Keep automatic cold-start recovery enabled. Defaults are five retry attempts, 30-second initial retry delay, 900-second maximum delay, 30-minute stalled-job threshold, and 15-minute duplicate-alert suppression.
+Exact-title and BM25 retrieval work before embeddings are processed. Semantic retrieval activates progressively as coverage increases.
 
-## 5. Operational recovery
+## 5. Verify public behavior
 
-- **Repair Stalled Jobs** marks expired transactions failed and clears their staged rows.
-- **Recover Empty Backend** verifies and transfers the latest canonical snapshot.
-- **Clear Pending Retries** stops a bounded retry cycle after a permanent configuration problem is corrected.
-- **Export Operations Log** downloads JSON containing manifests, sync/recovery history, retry state, alert state, snapshot validation, and queue diagnostics.
-- **Rollback Runtime Index** is allowed only when the selected runtime snapshot passes integrity validation.
+Ask one exact-title question and one conceptual question. Confirm:
+
+- the exact title appears first for the title query;
+- conceptual results identify a matching section or page where available;
+- evidence cards show citation labels and supporting passages;
+- retrieval diagnostics identify the active mode;
+- an unverified generated citation cannot appear publicly;
+- the answer falls back to verified evidence if Gemini is unavailable.
+
+## 6. Recovery operations
+
+Keep automatic cold-start recovery enabled. Existing v6.3.1 controls remain available:
+
+- **Repair Stalled Jobs**
+- **Recover Empty Backend**
+- **Validate Snapshots**
+- **Clear Pending Retries**
+- **Export Sync and Recovery Log**
+- **Rollback Runtime Index** after integrity validation

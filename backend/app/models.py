@@ -99,6 +99,38 @@ class MaintenanceRequest(BaseModel):
 class RetrievalRequest(BaseModel):
     query: str = Field(min_length=2, max_length=3000)
     limit: int = Field(default=10, ge=1, le=25)
+    include_diagnostics: bool = False
+
+
+class EmbeddingProcessRequest(BaseModel):
+    limit: int = Field(default=20, ge=1, le=100)
+    delay_ms: int = Field(default=150, ge=0, le=5000)
+
+
+class KnowledgeChunk(BaseModel):
+    chunk_id: str
+    record_id: str
+    heading: str = ""
+    page: int | None = None
+    passage: str = ""
+    position: int = 0
+    content_hash: str = ""
+    embedding_model: str = ""
+    embedding: list[float] | None = None
+
+
+class EvidenceCitation(BaseModel):
+    id: str
+    record_id: str
+    chunk_id: str = ""
+    title: str
+    url: str
+    section: str = ""
+    page: int | None = None
+    passage: str = ""
+    source_type: str = ""
+    record_version: str = ""
+    reason: str = ""
 
 
 class RetrievedSource(BaseModel):
@@ -117,6 +149,16 @@ class RetrievedSource(BaseModel):
     exact_title_match: bool = False
     source: str = "wordpress"
     route_id: str = ""
+    evidence_id: str = ""
+    chunk_id: str = ""
+    section: str = ""
+    page: int | None = None
+    passage: str = ""
+    lexical_score: float = 0.0
+    semantic_score: float = 0.0
+    fusion_score: float = 0.0
+    retrieval_reasons: list[str] = Field(default_factory=list)
+    citation_label: str = ""
 
 
 class AskRequest(BaseModel):
@@ -142,6 +184,9 @@ class AskResponse(BaseModel):
     interpretation: str = ""
     clarification: str = ""
     confidence: dict[str, Any] = Field(default_factory=dict)
+    evidence: list[EvidenceCitation] = Field(default_factory=list)
+    citation_verification: dict[str, Any] = Field(default_factory=dict)
+    retrieval_diagnostics: dict[str, Any] = Field(default_factory=dict)
     status: dict[str, Any] = Field(default_factory=dict)
     generated_utc: str = Field(default_factory=utc_now)
 
@@ -160,7 +205,7 @@ class StatusResponse(BaseModel):
     last_sync_utc: str
     source_site: str
     storage_engine: str = "sqlite"
-    schema_version: int = 4
+    schema_version: int = 5
     index_version: int = 0
     checksum: str = ""
     snapshot_count: int = 0
@@ -178,3 +223,7 @@ class StatusResponse(BaseModel):
     service_started_utc: str = ""
     uptime_seconds: int = 0
     ready: bool = True
+    indexed_chunks: int = 0
+    embedded_chunks: int = 0
+    semantic_coverage: float = 0.0
+    embedding_model: str = ""

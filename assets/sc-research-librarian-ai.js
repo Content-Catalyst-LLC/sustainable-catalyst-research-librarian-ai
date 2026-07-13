@@ -148,6 +148,8 @@
     var researchPath = (data.research_path || grounding.research_path || []).slice(0, 6);
     var actions = (data.actions || grounding.actions || []).slice(0, 6);
     var reasonCodes = grounding.reason_codes || note.reason_codes || [];
+    var citationVerification = data.citation_verification || grounding.citation_verification || note.citation_verification || {};
+    var retrievalDiagnostics = data.retrieval_diagnostics || grounding.retrieval_diagnostics || note.retrieval_diagnostics || {};
     var ambiguity = grounding.ambiguity || note.ambiguity || [];
     var confidenceLevel = confidence.level || 'unknown';
     var routeUrl = route.url || (note.recommended_route && note.recommended_route.url) || '#';
@@ -174,7 +176,11 @@
       html += '<div class="sc-rl-production-answer__source-grid">' + sources.map(function (source, index) {
         var exact = source.exact_title_match ? '<em>Exact title</em>' : '';
         var relationship = source.series || source.article_map || source.parent_title || '';
-        return '<article class="sc-rl-production-answer__source-card' + (index === 0 ? ' is-best' : '') + '"><div><span>' + escapeHtml(source.type || source.post_type || source.route_id || 'Public source') + '</span>' + exact + '</div><h4><a href="' + escapeHtml(source.url || '#') + '">' + escapeHtml(source.title || 'Untitled source') + '</a></h4><p>' + escapeHtml(source.summary || '') + '</p>' + (relationship ? '<small>' + escapeHtml(relationship) + '</small>' : '') + '</article>';
+        var evidenceLabel = source.citation_label || (source.evidence_id ? '[' + source.evidence_id + ']' : '');
+        var location = source.section || '';
+        if (source.page) location += (location ? ' · ' : '') + 'Page ' + source.page;
+        var excerpt = source.passage || source.summary || '';
+        return '<article class="sc-rl-production-answer__source-card' + (index === 0 ? ' is-best' : '') + '"><div><span>' + escapeHtml(source.type || source.post_type || source.route_id || 'Public source') + '</span>' + exact + '</div><h4><a href="' + escapeHtml(source.url || '#') + '">' + escapeHtml(source.title || 'Untitled source') + '</a></h4>' + ((evidenceLabel || location) ? '<small class="sc-rl-production-answer__evidence-location">' + escapeHtml([evidenceLabel, location].filter(Boolean).join(' · ')) + '</small>' : '') + '<p>' + escapeHtml(excerpt) + '</p>' + (relationship ? '<small>' + escapeHtml(relationship) + '</small>' : '') + '</article>';
       }).join('') + '</div></section>';
     } else {
       html += '<section class="sc-rl-production-answer__empty"><strong>No verified title match yet.</strong><p>Try the exact title, series name, country, subject, calculation, or intended output.</p></section>';
@@ -210,6 +216,8 @@
     html += '<p><strong>Confidence:</strong> ' + escapeHtml(confidence.explanation || 'Based on title, slug, heading, series, article-map, taxonomy, and content matches.') + '</p>';
     if (reasonCodes.length) html += '<p><strong>Retrieval signals:</strong> ' + reasonCodes.map(escapeHtml).join(', ') + '</p>';
     if (ambiguity.length) html += '<p><strong>Ambiguity:</strong> ' + ambiguity.map(escapeHtml).join(', ') + '</p>';
+    if (citationVerification && Object.keys(citationVerification).length) html += '<p><strong>Citation verification:</strong> ' + (citationVerification.ok ? 'Passed' : 'Fallback used') + ' · ' + escapeHtml(String(citationVerification.citation_count || 0)) + ' citation token(s).</p>';
+    if (retrievalDiagnostics && retrievalDiagnostics.retrieval_mode) html += '<p><strong>Retrieval mode:</strong> ' + escapeHtml(retrievalDiagnostics.retrieval_mode) + (retrievalDiagnostics.semantic_coverage !== undefined ? ' · semantic coverage ' + escapeHtml(String(retrievalDiagnostics.semantic_coverage)) + '%' : '') + '</p>';
     html += '<p>Internal scores are available in the downloadable route record but are intentionally hidden from the primary public answer.</p>';
     html += '</details>';
     html += '</div>';
@@ -415,7 +423,7 @@
         return { label: 'Invalid endpoint response', intro: 'WordPress returned a response that the Research Librarian could not read.', detail: 'Check caching, security, or REST-response modification plugins.' };
       }
       if (statusCode === 404) {
-        return { label: 'WordPress route unavailable', intro: 'The Research Librarian REST route was not found.', detail: 'Resave WordPress permalinks and confirm that the active v6.3.1 plugin registered its routes.' };
+        return { label: 'WordPress route unavailable', intro: 'The Research Librarian REST route was not found.', detail: 'Resave WordPress permalinks and confirm that the active v6.4.0 plugin registered its routes.' };
       }
       if (statusCode >= 500) {
         return { label: 'WordPress endpoint error', intro: 'WordPress reached the Research Librarian route but returned a server error.', detail: 'The Python provider status is separate from this WordPress failure.' };

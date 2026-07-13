@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+import asyncio
 import hashlib
 import hmac
 import json
@@ -17,6 +18,7 @@ from .config import settings
 from .models import (
     AskRequest,
     AskResponse,
+    EmbeddingProcessRequest,
     MaintenanceRequest,
     RetrievalRequest,
     RetrievedSource,
@@ -27,8 +29,8 @@ from .models import (
     utc_now,
 )
 from .provider import configured as provider_configured
-from .provider import generate_answer, provider_state
-from .retrieval import confidence, related_titles, retrieve
+from .provider import embeddings_configured, generate_answer, generate_embedding, provider_state, verify_citations
+from .retrieval import confidence, evidence_from_matches, related_titles, retrieve, retrieve_with_diagnostics
 from .store import store
 
 
@@ -78,22 +80,26 @@ def _prune_sessions() -> None:
 def _deterministic_answer(question: str, matches: list[RetrievedSource], related: list[RetrievedSource]) -> str:
     if not matches:
         return (
-            "## I could not verify a strong Sustainable Catalyst title yet\n\n"
-            "The knowledge index does not currently contain a sufficiently strong match for this question. "
+            "## I could not verify a strong Sustainable Catalyst source yet\n\n"
+            "The current index does not contain a sufficiently strong title or section match. "
             "Try naming the subject, article title, country, calculation, or decision task more specifically.\n\n"
-            "[Open the Knowledge Library](/knowledge-libraries/) or [submit a missing-capability report](/platform/feature-suggestions/)."
+            "Open the Knowledge Library or submit a missing-capability report from the Sustainable Catalyst platform."
         )
     best = matches[0]
+    best_location = best.section or "record summary"
+    if best.page:
+        best_location += f", page {best.page}"
     lines = [
-        "## Best verified match",
-        f"[{best.title}]({best.url})",
+        "## Best verified evidence",
+        f"[{best.title}]({best.url}) — {best_location}. {best.passage or best.summary} [SC1]",
         "",
-        best.summary or "This is the strongest title-aware match in the current Sustainable Catalyst index.",
-        "",
-        "## Other relevant titles",
+        "## Other relevant sources",
     ]
-    for source in matches[1:5]:
-        lines.append(f"- [{source.title}]({source.url}) — {source.summary[:220]}")
+    for index, source in enumerate(matches[1:5], start=2):
+        location = source.section or "record summary"
+        if source.page:
+            location += f", page {source.page}"
+        lines.append(f"- [{source.title}]({source.url}) — {location}. {source.passage or source.summary} [SC{index}]")
     if related:
         lines.extend(["", "## Continue through the library"])
         for source in related[:4]:
@@ -101,7 +107,7 @@ def _deterministic_answer(question: str, matches: list[RetrievedSource], related
     lines.extend(
         [
             "",
-            "The Python knowledge service found these results through exact-title, title-phrase, heading, series, article-map, taxonomy, and content matching. AI generation is currently unavailable, so no unsupported prose was added.",
+            "This fallback uses exact-title, BM25 section matching, relationship signals, and any available verified semantic embeddings. No unsupported generated prose was added.",
         ]
     )
     return "\n".join(lines)
@@ -187,11 +193,11 @@ def _status() -> StatusResponse:
         index_ready=index_ready,
         indexed_records=int(summary.get("total_records", 0)),
         indexed_titles=int(summary.get("indexed_titles", 0)),
-        semantic_retrieval="title-aware-hybrid",
+        semantic_retrieval=("exact-title+bm25+semantic+rrf" if float(summary.get("semantic_coverage", 0)) > 0 else "exact-title+bm25+rrf"),
         last_sync_utc=str(summary.get("last_sync_utc", "")),
         source_site=str(summary.get("source_site", "")),
         storage_engine=str(summary.get("storage_engine", "sqlite")),
-        schema_version=int(summary.get("schema_version", 4)),
+        schema_version=int(summary.get("schema_version", 5)),
         index_version=int(summary.get("index_version", 0)),
         checksum=str(summary.get("checksum", "")),
         snapshot_count=int(summary.get("snapshot_count", 0)),
@@ -203,8 +209,35 @@ def _status() -> StatusResponse:
         last_ai_success_utc=provider_state.last_success_utc,
         last_ai_failure_utc=provider_state.last_failure_utc,
         last_ai_error=provider_state.last_error,
+        indexed_chunks=int(summary.get("indexed_chunks", 0)),
+        embedded_chunks=int(summary.get("embedded_chunks", 0)),
+        semantic_coverage=float(summary.get("semantic_coverage", 0.0)),
+        embedding_model=str(summary.get("embedding_model", settings.gemini_embedding_model)),
         **startup,
     )
+
+
+async def _hybrid_retrieve(query: str, limit: int) -> tuple[list[RetrievedSource], dict[str, Any]]:
+    records = store.records()
+    chunks = store.chunks()
+    query_embedding: list[float] | None = None
+    semantic_error = ""
+    embedding_status = store.embedding_status()
+    if (
+        settings.semantic_enabled
+        and settings.semantic_query_embeddings
+        and int(embedding_status.get("embedded_chunks", 0)) > 0
+        and embeddings_configured()
+    ):
+        try:
+            query_embedding = await generate_embedding(query, "RETRIEVAL_QUERY")
+        except RuntimeError as exc:
+            semantic_error = str(exc)[:500]
+    matches, diagnostics = retrieve_with_diagnostics(query, records, chunks, limit, query_embedding)
+    diagnostics["semantic_error"] = semantic_error
+    diagnostics["semantic_coverage"] = embedding_status.get("semantic_coverage", 0.0)
+    diagnostics["embedding_model"] = settings.gemini_embedding_model
+    return matches, diagnostics
 
 
 @app.get("/")
@@ -317,9 +350,66 @@ def knowledge_rollback(payload: RollbackRequest) -> dict[str, Any]:
     return {"version": __version__, **result}
 
 
+@app.get("/v1/knowledge/embeddings/status", dependencies=[Depends(require_key)])
+def embedding_status_endpoint() -> dict[str, Any]:
+    return {"ok": True, "version": __version__, "enabled": settings.semantic_enabled, **store.embedding_status()}
+
+
+@app.post("/v1/knowledge/embeddings/process", dependencies=[Depends(require_key)])
+async def process_embeddings(payload: EmbeddingProcessRequest) -> dict[str, Any]:
+    if not embeddings_configured():
+        raise HTTPException(status_code=503, detail="Gemini embeddings are not configured or semantic retrieval is disabled.")
+    requested = min(payload.limit, settings.embedding_batch_limit)
+    pending = store.pending_chunks(requested, settings.gemini_embedding_model)
+    run_id = store.begin_embedding_run(settings.gemini_embedding_model, len(pending))
+    processed = 0
+    failed = 0
+    last_error = ""
+    for chunk in pending:
+        try:
+            vector = await generate_embedding(f"{chunk.heading}\n{chunk.passage}", "RETRIEVAL_DOCUMENT")
+            if store.save_chunk_embedding(chunk.chunk_id, settings.gemini_embedding_model, vector):
+                processed += 1
+            else:
+                failed += 1
+        except RuntimeError as exc:
+            failed += 1
+            last_error = str(exc)[:1000]
+            # A single provider/quota failure stops this bounded batch. The queue
+            # remains resumable because completed chunk embeddings are persisted.
+            break
+        if payload.delay_ms:
+            await asyncio.sleep(payload.delay_ms / 1000.0)
+    store.finish_embedding_run(run_id, processed, failed, last_error)
+    return {
+        "ok": not last_error,
+        "version": __version__,
+        "run_id": run_id,
+        "requested": len(pending),
+        "processed": processed,
+        "failed": failed,
+        "error": last_error,
+        **store.embedding_status(),
+    }
+
+
 @app.post("/v1/retrieve", response_model=list[RetrievedSource], dependencies=[Depends(require_key)])
-def retrieve_endpoint(payload: RetrievalRequest) -> list[RetrievedSource]:
-    return retrieve(payload.query, store.records(), payload.limit)
+async def retrieve_endpoint(payload: RetrievalRequest) -> list[RetrievedSource]:
+    matches, _ = await _hybrid_retrieve(payload.query, payload.limit)
+    return matches
+
+
+@app.post("/v1/retrieve/explain", dependencies=[Depends(require_key)])
+async def retrieve_explain_endpoint(payload: RetrievalRequest) -> dict[str, Any]:
+    matches, diagnostics = await _hybrid_retrieve(payload.query, payload.limit)
+    return {
+        "ok": True,
+        "version": __version__,
+        "query": payload.query,
+        "matches": [item.model_dump() for item in matches],
+        "evidence": [item.model_dump() for item in evidence_from_matches(matches)],
+        "diagnostics": diagnostics,
+    }
 
 
 @app.post("/v1/ask", response_model=AskResponse, dependencies=[Depends(require_key)])
@@ -327,29 +417,42 @@ async def ask(payload: AskRequest) -> AskResponse:
     _prune_sessions()
     session_id = _session_id(payload.session_id)
     records = store.records()
-    matches = retrieve(payload.question, records, settings.source_limit)
+    matches, retrieval_diagnostics = await _hybrid_retrieve(payload.question, settings.source_limit)
     best = matches[0] if matches else None
     related = related_titles(best, records, settings.related_limit)
     certainty = confidence(matches)
+    evidence = evidence_from_matches(matches)
     history = [
         {"role": str(turn.get("role", "user")), "content": str(turn.get("content", ""))}
         for turn in _sessions.get(session_id, [])[-settings.max_session_turns :]
     ]
 
     ai_used = False
-    source = "python-title-aware-retrieval"
+    source = "python-hybrid-retrieval"
     provider = ""
     model = ""
+    citation_verification: dict[str, Any] = {
+        "ok": True,
+        "required": settings.citation_required,
+        "citation_count": 0,
+        "fallback": True,
+    }
     try:
         if not matches:
             raise RuntimeError("No grounded Sustainable Catalyst sources were retrieved.")
         answer = await generate_answer(payload.question, matches, related, history, payload.route_hint)
+        citation_verification = verify_citations(answer, matches, related)
+        if not citation_verification.get("ok"):
+            raise RuntimeError("Generated answer failed citation verification.")
         ai_used = True
-        source = "python-gemini-grounded"
+        source = "python-gemini-citation-verified"
         provider = settings.provider
         model = settings.gemini_model
-    except RuntimeError:
+    except RuntimeError as exc:
         answer = _deterministic_answer(payload.question, matches, related)
+        citation_verification = verify_citations(answer, matches, related)
+        citation_verification["fallback"] = True
+        citation_verification["fallback_reason"] = str(exc)[:500]
 
     _sessions[session_id].extend(
         [
@@ -371,8 +474,11 @@ async def ask(payload: AskRequest) -> AskResponse:
         related_titles=related,
         research_path=_research_path(matches, related),
         actions=_actions(payload.question, best),
-        interpretation="Title-aware Sustainable Catalyst knowledge retrieval followed by grounded AI synthesis." if ai_used else "Title-aware Sustainable Catalyst knowledge retrieval without AI synthesis.",
+        interpretation="Exact-title, BM25, semantic, and reciprocal-rank retrieval followed by citation-verified AI synthesis." if ai_used else "Exact-title and section-aware hybrid retrieval with deterministic verified evidence fallback.",
         clarification="" if certainty.get("level") != "low" else "Which Sustainable Catalyst subject, title, country, tool, or intended output should the search prioritize?",
         confidence=certainty,
+        evidence=evidence,
+        citation_verification=citation_verification,
+        retrieval_diagnostics=retrieval_diagnostics,
         status=_status().model_dump(),
     )

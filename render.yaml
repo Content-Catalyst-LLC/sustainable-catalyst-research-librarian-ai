@@ -16,8 +16,20 @@ services:
         value: gemini
       - key: SC_RL_GEMINI_MODEL
         value: gemini-3.5-flash
+      - key: SC_RL_GEMINI_EMBEDDING_MODEL
+        value: gemini-embedding-001
       - key: SC_RL_SEMANTIC_ENABLED
-        value: "false"
+        value: "true"
+      - key: SC_RL_SEMANTIC_QUERY_EMBEDDINGS
+        value: "true"
+      - key: SC_RL_CHUNK_MAX_WORDS
+        value: "220"
+      - key: SC_RL_CHUNK_OVERLAP_WORDS
+        value: "35"
+      - key: SC_RL_EMBEDDING_BATCH_LIMIT
+        value: "20"
+      - key: SC_RL_CITATION_REQUIRED
+        value: "true"
       - key: SC_RL_MAX_RUNTIME_SNAPSHOTS
         value: "5"
       - key: SC_RL_STARTUP_WARMUP_SECONDS

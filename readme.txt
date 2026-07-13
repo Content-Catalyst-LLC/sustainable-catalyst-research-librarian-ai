@@ -3,16 +3,16 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 6.3.1
+Stable tag: 6.4.0
 License: MIT
 
-An AI-powered, site-scoped Research Librarian for Sustainable Catalyst with live provider status, country-aware Site Intelligence routing, source-aware retrieval, verified fallback routing, and a consolidated WordPress administration center.
+A site-scoped Research Librarian for Sustainable Catalyst with section-aware hybrid retrieval, verified citations, durable indexing, and deterministic evidence fallback.
 
 == Description ==
 
-Research Librarian AI interprets visitor questions, identifies countries and workflow intent, retrieves Sustainable Catalyst context, and recommends the strongest route across the Knowledge Library, Site Intelligence, Workbench, Decision Studio, modules, methodology, Feature Suggestions, and repositories.
+Research Librarian AI retrieves Sustainable Catalyst publications and documents through exact-title priority, section-aware BM25 ranking, optional Gemini embeddings, reciprocal-rank fusion, and citation-verified synthesis. WordPress remains the canonical publishing and recovery source, while FastAPI provides a durable SQLite runtime index that remains compatible with free Render infrastructure.
 
-v5.9.0 adds adaptive, consent-aware prompts and contextual survey experiences with rule-based targeting, frequency caps, Feature Suggestions handoffs, and aggregate analytics.
+v6.4.0 adds deterministic article and PDF chunks, page-aware evidence, resumable embedding batches, retrieval explanations, verified `[SC#]` citations, generated-link validation, and a source-backed fallback whenever AI synthesis cannot be verified.
 
 == Shortcodes ==
 
@@ -38,14 +38,15 @@ v5.9.0 adds adaptive, consent-aware prompts and contextual survey experiences wi
 
 == Changelog ==
 
-= 6.3.1 =
-* Adds startup phase, progress, uptime, and readiness reporting for Render cold starts.
-* Adds persisted recovery progress and capped exponential retry for synchronization and snapshot rehydration.
-* Detects and repairs stalled staging jobs instead of retrying damaged transactions indefinitely.
-* Isolates malformed records, reports rejection details, and commits valid records without deleting the prior valid copy.
-* Validates WordPress and runtime snapshot integrity before recovery or rollback.
-* Adds administrator snapshot validation, stalled-job repair, retry clearing, and JSON operations-log export.
-* Suppresses duplicate transient public notices during one warm-up window while preserving permanent-error notices.
+= 6.4.0 =
+* Adds deterministic heading-aware and page-aware retrieval chunks in SQLite schema version 5.
+* Adds exact-title priority and BM25 lexical ranking over article sections.
+* Adds optional Gemini embeddings with bounded, resumable processing and semantic-coverage reporting.
+* Combines structural, lexical, semantic, relationship, and route signals with reciprocal-rank fusion.
+* Returns evidence identifiers, citation labels, sections, pages, supporting passages, retrieval reasons, and score diagnostics.
+* Verifies generated citation labels and URLs against synchronized sources before returning an answer.
+* Rejects unsupported generated answers and uses a deterministic evidence summary when verification or Gemini is unavailable.
+* Preserves v6.3.1 cold-start hardening, durable snapshots, bounded retries, and the terminal prompt with light source cards.
 
 = 6.3.0 =
 * Replaces the ephemeral JSON runtime index with a transactional SQLite knowledge index.
