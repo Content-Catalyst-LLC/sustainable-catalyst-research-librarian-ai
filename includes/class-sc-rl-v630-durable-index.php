@@ -1,6 +1,6 @@
 <?php
 /**
- * Research Librarian AI v6.3.0 — Durable Knowledge Index, Sync Ledger, and Recovery.
+ * Research Librarian AI v6.3.1 — Cold-start and Recovery Hardening.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class SC_RL6_V630_Durable_Index {
-    const VERSION = '6.3.0';
+    const VERSION = '6.3.1';
     const OPTION_NAME = 'sc_rl_v620_python_options';
     const STATUS_OPTION = 'sc_rl_v620_python_status';
     const SYNC_HOOK = 'sc_rl_v620_python_sync_event';
@@ -21,6 +21,10 @@ final class SC_RL6_V630_Durable_Index {
     const RECOVERY_LOG_OPTION = 'sc_rl_v630_recovery_log';
     const RECOVERY_HOOK = 'sc_rl_v630_backend_recovery_event';
     const INCREMENTAL_HOOK = 'sc_rl_v630_incremental_sync_event';
+    const SYNC_RETRY_HOOK = 'sc_rl_v631_sync_retry_event';
+    const SYNC_RETRY_OPTION = 'sc_rl_v631_sync_retry_state';
+    const RECOVERY_STATE_OPTION = 'sc_rl_v631_recovery_state';
+    const ALERT_STATE_OPTION = 'sc_rl_v631_public_alert_state';
 
     public static function init() {
         add_action( 'admin_menu', array( __CLASS__, 'register_admin_menu' ), 1010 );
@@ -28,6 +32,8 @@ final class SC_RL6_V630_Durable_Index {
         add_action( self::SYNC_HOOK, array( __CLASS__, 'run_scheduled_sync' ) );
         add_action( self::RECOVERY_HOOK, array( __CLASS__, 'run_backend_recovery' ) );
         add_action( self::INCREMENTAL_HOOK, array( __CLASS__, 'run_incremental_sync' ) );
+        add_action( self::SYNC_RETRY_HOOK, array( __CLASS__, 'run_sync_retry' ) );
+        add_action( 'admin_post_sc_rl_v631_export_sync_log', array( __CLASS__, 'export_sync_log' ) );
         add_action( 'save_post', array( __CLASS__, 'schedule_incremental_sync' ), 30, 3 );
         add_action( 'before_delete_post', array( __CLASS__, 'schedule_sync_after_delete' ), 30, 1 );
         add_action( 'transition_post_status', array( __CLASS__, 'schedule_transition_sync' ), 30, 3 );
@@ -45,6 +51,7 @@ final class SC_RL6_V630_Durable_Index {
         wp_clear_scheduled_hook( self::SYNC_HOOK );
         wp_clear_scheduled_hook( self::RECOVERY_HOOK );
         wp_clear_scheduled_hook( self::INCREMENTAL_HOOK );
+        wp_clear_scheduled_hook( self::SYNC_RETRY_HOOK );
     }
 
     public static function defaults() {
@@ -62,6 +69,11 @@ final class SC_RL6_V630_Durable_Index {
             'public_title_suggestions' => '1',
             'auto_recover' => '1',
             'max_wordpress_snapshots' => 5,
+            'max_retry_attempts' => 5,
+            'retry_base_seconds' => 30,
+            'retry_max_seconds' => 900,
+            'stalled_job_minutes' => 30,
+            'alert_suppression_minutes' => 15,
         );
     }
 
@@ -158,8 +170,61 @@ final class SC_RL6_V630_Durable_Index {
         }
     }
 
-    private static function schedule_full_retry() {
-        wp_schedule_single_event( time() + 15 * MINUTE_IN_SECONDS, self::SYNC_HOOK );
+    private static function retry_delay( $attempt ) {
+        $options = self::options();
+        $base = max( 10, min( 300, absint( $options['retry_base_seconds'] ) ) );
+        $maximum = max( $base, min( 3600, absint( $options['retry_max_seconds'] ) ) );
+        return min( $maximum, $base * pow( 2, max( 0, absint( $attempt ) - 1 ) ) );
+    }
+
+    private static function schedule_full_retry( $error = '' ) {
+        $options = self::options();
+        $state = get_option( self::SYNC_RETRY_OPTION, array() );
+        $state = is_array( $state ) ? $state : array();
+        $attempt = absint( isset( $state['attempt'] ) ? $state['attempt'] : 0 ) + 1;
+        $maximum = max( 1, min( 10, absint( $options['max_retry_attempts'] ) ) );
+        if ( $attempt > $maximum ) {
+            update_option( self::SYNC_RETRY_OPTION, array(
+                'state' => 'exhausted',
+                'attempt' => $attempt - 1,
+                'max_attempts' => $maximum,
+                'last_error' => sanitize_text_field( $error ),
+                'updated_utc' => gmdate( 'c' ),
+            ), false );
+            return false;
+        }
+        if ( wp_next_scheduled( self::SYNC_RETRY_HOOK ) ) {
+            return true;
+        }
+        $delay = self::retry_delay( $attempt );
+        wp_schedule_single_event( time() + $delay, self::SYNC_RETRY_HOOK );
+        update_option( self::SYNC_RETRY_OPTION, array(
+            'state' => 'scheduled',
+            'attempt' => $attempt,
+            'max_attempts' => $maximum,
+            'delay_seconds' => $delay,
+            'next_run_utc' => gmdate( 'c', time() + $delay ),
+            'last_error' => sanitize_text_field( $error ),
+            'updated_utc' => gmdate( 'c' ),
+        ), false );
+        return true;
+    }
+
+    public static function run_sync_retry() {
+        $state = get_option( self::SYNC_RETRY_OPTION, array() );
+        $state = is_array( $state ) ? $state : array();
+        $state['state'] = 'running';
+        $state['started_utc'] = gmdate( 'c' );
+        update_option( self::SYNC_RETRY_OPTION, $state, false );
+        $result = self::sync_all_records( 'automatic-retry' );
+        if ( ! is_wp_error( $result ) ) {
+            self::clear_sync_retry();
+        }
+    }
+
+    private static function clear_sync_retry() {
+        wp_clear_scheduled_hook( self::SYNC_RETRY_HOOK );
+        delete_option( self::SYNC_RETRY_OPTION );
     }
 
     private static function queue_change( $operation, $post_id, $record_id ) {
@@ -358,6 +423,21 @@ final class SC_RL6_V630_Durable_Index {
             'callback' => array( __CLASS__, 'handle_rollback' ),
             'permission_callback' => array( __CLASS__, 'can_manage' ),
         ) );
+        register_rest_route( self::REST_NAMESPACE, '/python/maintenance', array(
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => array( __CLASS__, 'handle_maintenance' ),
+            'permission_callback' => array( __CLASS__, 'can_manage' ),
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/python/snapshot-validation', array(
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => array( __CLASS__, 'handle_snapshot_validation' ),
+            'permission_callback' => array( __CLASS__, 'can_manage' ),
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/python/log-export', array(
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => array( __CLASS__, 'handle_log_export' ),
+            'permission_callback' => array( __CLASS__, 'can_manage' ),
+        ) );
     }
 
     public static function can_manage() {
@@ -379,6 +459,10 @@ final class SC_RL6_V630_Durable_Index {
                 'indexed_titles' => 0,
                 'fallback_active' => true,
                 'recovery_available' => (bool) self::latest_wordpress_snapshot(),
+                'suppress_notice' => ! empty( $error['suppress_notice'] ),
+                'alert_occurrences' => absint( $error['alert_occurrences'] ?? 0 ),
+                'suppressed_until_utc' => sanitize_text_field( $error['suppressed_until_utc'] ?? '' ),
+                'recovery_progress' => self::recovery_state(),
             ), 200 );
         }
         if ( self::should_schedule_recovery( $status ) ) {
@@ -390,6 +474,7 @@ final class SC_RL6_V630_Durable_Index {
         $status['enabled'] = self::enabled();
         $status['fallback_active'] = true;
         $status['wordpress_snapshot'] = self::snapshot_manifest_summary( self::latest_wordpress_snapshot() );
+        $status['recovery_progress'] = self::recovery_state();
         return new WP_REST_Response( $status, 200 );
     }
 
@@ -412,10 +497,13 @@ final class SC_RL6_V630_Durable_Index {
 
     public static function handle_snapshots() {
         $backend = self::request( '/v1/knowledge/snapshots', 'GET' );
+        $backend_validation = self::request( '/v1/knowledge/snapshots/validate', 'GET' );
         return new WP_REST_Response( array(
             'version' => self::VERSION,
             'wordpress_snapshots' => self::wordpress_snapshots(),
+            'wordpress_validation' => self::validate_wordpress_snapshots(),
             'backend' => is_wp_error( $backend ) ? self::public_error_snapshot( $backend ) : $backend,
+            'backend_validation' => is_wp_error( $backend_validation ) ? self::public_error_snapshot( $backend_validation ) : $backend_validation,
         ), 200 );
     }
 
@@ -435,6 +523,83 @@ final class SC_RL6_V630_Durable_Index {
         }
         self::append_recovery_log( 'backend-rollback', array( 'snapshot_id' => $snapshot_id, 'result' => $result ) );
         return new WP_REST_Response( $result, 200 );
+    }
+
+    public static function handle_maintenance() {
+        $options = self::options();
+        $result = self::request( '/v1/knowledge/maintenance', 'POST', array(
+            'max_age_seconds' => max( 300, absint( $options['stalled_job_minutes'] ) * MINUTE_IN_SECONDS ),
+            'purge_staging' => true,
+        ) );
+        if ( ! is_wp_error( $result ) ) {
+            self::append_recovery_log( 'stalled-jobs-repaired', $result );
+        }
+        return is_wp_error( $result ) ? $result : new WP_REST_Response( $result, 200 );
+    }
+
+    public static function handle_snapshot_validation() {
+        $backend = self::request( '/v1/knowledge/snapshots/validate', 'GET' );
+        return new WP_REST_Response( array(
+            'version' => self::VERSION,
+            'wordpress' => self::validate_wordpress_snapshots(),
+            'backend' => is_wp_error( $backend ) ? self::public_error_snapshot( $backend ) : $backend,
+        ), 200 );
+    }
+
+    public static function log_export_payload() {
+        $status = self::backend_status( true );
+        $manifest = self::request( '/v1/knowledge/manifest', 'GET' );
+        $backend_snapshot_validation = self::request( '/v1/knowledge/snapshots/validate', 'GET' );
+        $ledger = self::sync_ledger();
+        $sync_next = wp_next_scheduled( self::SYNC_HOOK );
+        $recovery_next = wp_next_scheduled( self::RECOVERY_HOOK );
+        $retry_next = wp_next_scheduled( self::SYNC_RETRY_HOOK );
+        return array(
+            'schema' => 'sc-research-librarian-sync-recovery-export/6.3.1',
+            'version' => self::VERSION,
+            'site' => home_url( '/' ),
+            'generated_utc' => gmdate( 'c' ),
+            'backend_status' => is_wp_error( $status ) ? self::public_error_snapshot( $status ) : $status,
+            'backend_manifest' => is_wp_error( $manifest ) ? self::public_error_snapshot( $manifest ) : $manifest,
+            'latest_sync_report' => self::latest_sync_report(),
+            'sync_history' => self::sync_history(),
+            'recovery_log' => self::recovery_log(),
+            'sync_retry_state' => get_option( self::SYNC_RETRY_OPTION, array() ),
+            'recovery_state' => self::recovery_state(),
+            'public_alert_state' => get_option( self::ALERT_STATE_OPTION, array() ),
+            'wordpress_ledger' => array(
+                'record_count' => count( $ledger['records'] ),
+                'checksum' => sanitize_text_field( $ledger['checksum'] ),
+                'index_version' => absint( $ledger['index_version'] ),
+                'updated_utc' => sanitize_text_field( $ledger['updated_utc'] ),
+            ),
+            'incremental_queue' => array_values( self::incremental_queue() ),
+            'cron' => array(
+                'sync_next_utc' => $sync_next ? gmdate( 'c', $sync_next ) : '',
+                'recovery_next_utc' => $recovery_next ? gmdate( 'c', $recovery_next ) : '',
+                'retry_next_utc' => $retry_next ? gmdate( 'c', $retry_next ) : '',
+                'wp_cron_disabled' => defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON,
+            ),
+            'wordpress_snapshot_validation' => self::validate_wordpress_snapshots(),
+            'backend_snapshot_validation' => is_wp_error( $backend_snapshot_validation ) ? self::public_error_snapshot( $backend_snapshot_validation ) : $backend_snapshot_validation,
+        );
+    }
+
+    public static function handle_log_export() {
+        return new WP_REST_Response( self::log_export_payload(), 200 );
+    }
+
+    public static function export_sync_log() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( esc_html__( 'You are not allowed to export Research Librarian logs.', 'sustainable-catalyst-research-librarian-ai' ) );
+        }
+        check_admin_referer( 'sc_rl_v631_export_sync_log' );
+        $payload = self::log_export_payload();
+        nocache_headers();
+        header( 'Content-Type: application/json; charset=utf-8' );
+        header( 'Content-Disposition: attachment; filename="research-librarian-sync-recovery-' . gmdate( 'Ymd-His' ) . '.json"' );
+        echo wp_json_encode( $payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+        exit;
     }
 
     public static function handle_suggestions( WP_REST_Request $request ) {
@@ -578,7 +743,7 @@ final class SC_RL6_V630_Durable_Index {
         $grounding['actions'] = isset( $backend['actions'] ) && is_array( $backend['actions'] ) ? $backend['actions'] : array();
 
         $note = array(
-            'schema' => 'sc-research-librarian-route-note/6.3.0',
+            'schema' => 'sc-research-librarian-route-note/6.3.1',
             'created_at_utc' => gmdate( 'c' ),
             'question' => sanitize_textarea_field( $question ),
             'source' => sanitize_key( isset( $backend['source'] ) ? $backend['source'] : 'python-backend' ),
@@ -626,6 +791,16 @@ final class SC_RL6_V630_Durable_Index {
 
     private static function endpoint_status_from_backend( $status, $ai_used = false ) {
         $indexed = absint( isset( $status['indexed_records'] ) ? $status['indexed_records'] : 0 );
+        if ( 'backend-warming' === sanitize_key( $status['state'] ?? '' ) || 'warming' === sanitize_key( $status['startup_state'] ?? '' ) ) {
+            return array(
+                'state' => 'backend-warming',
+                'label' => 'Python backend is warming up',
+                'message' => 'Render is opening the service and runtime index. Verified WordPress fallback remains available.',
+                'error_type' => 'backend-cold-start',
+                'startup_phase' => sanitize_key( $status['startup_phase'] ?? 'warming' ),
+                'startup_progress' => absint( $status['startup_progress'] ?? 0 ),
+            );
+        }
         $last_error = sanitize_text_field( isset( $status['last_ai_error'] ) ? $status['last_ai_error'] : '' );
         if ( 0 === $indexed ) {
             return array(
@@ -650,6 +825,36 @@ final class SC_RL6_V630_Durable_Index {
             'label' => $ai_used ? 'WordPress, Python, and grounded AI online' : 'Python retrieval online',
             'message' => $ai_used ? 'The complete Research Librarian request path succeeded.' : 'The Python knowledge index answered through deterministic retrieval.',
             'error_type' => '',
+        );
+    }
+
+    private static function register_public_alert( $type ) {
+        $transient = in_array( $type, array( 'backend-cold-start', 'backend-unavailable', 'backend-unreachable' ), true );
+        if ( ! $transient ) {
+            return array( 'suppress_notice' => false, 'alert_occurrences' => 1, 'suppressed_until_utc' => '' );
+        }
+        $options = self::options();
+        $minutes = max( 1, min( 120, absint( $options['alert_suppression_minutes'] ) ) );
+        $now = time();
+        $fingerprint = hash( 'sha256', $type . '|' . (string) $options['backend_url'] );
+        $state = get_option( self::ALERT_STATE_OPTION, array() );
+        $state = is_array( $state ) ? $state : array();
+        $same_window = ! empty( $state['fingerprint'] ) && hash_equals( (string) $state['fingerprint'], $fingerprint ) && $now < absint( $state['suppressed_until'] ?? 0 );
+        $occurrences = $same_window ? absint( $state['occurrences'] ?? 1 ) + 1 : 1;
+        $until = $same_window ? absint( $state['suppressed_until'] ) : $now + ( $minutes * MINUTE_IN_SECONDS );
+        update_option( self::ALERT_STATE_OPTION, array(
+            'fingerprint' => $fingerprint,
+            'type' => sanitize_key( $type ),
+            'occurrences' => $occurrences,
+            'first_seen_utc' => $same_window ? sanitize_text_field( $state['first_seen_utc'] ?? gmdate( 'c' ) ) : gmdate( 'c' ),
+            'last_seen_utc' => gmdate( 'c' ),
+            'suppressed_until' => $until,
+            'suppressed_until_utc' => gmdate( 'c', $until ),
+        ), false );
+        return array(
+            'suppress_notice' => $same_window,
+            'alert_occurrences' => $occurrences,
+            'suppressed_until_utc' => gmdate( 'c', $until ),
         );
     }
 
@@ -691,6 +896,7 @@ final class SC_RL6_V630_Durable_Index {
             'index-empty' => array( 'index-empty', 'Knowledge index empty', 'The backend is reachable but needs a full Knowledge Library synchronization.' ),
         );
         $selected = isset( $map[ $type ] ) ? $map[ $type ] : array( 'backend-unavailable', 'Python endpoint unavailable', $message );
+        $alert = self::register_public_alert( $type );
         return array(
             'state' => $selected[0],
             'label' => $selected[1],
@@ -699,6 +905,9 @@ final class SC_RL6_V630_Durable_Index {
             'http_status' => $status,
             'technical_message' => $message,
             'checked_utc' => gmdate( 'c' ),
+            'suppress_notice' => ! empty( $alert['suppress_notice'] ),
+            'alert_occurrences' => absint( $alert['alert_occurrences'] ?? 1 ),
+            'suppressed_until_utc' => sanitize_text_field( $alert['suppressed_until_utc'] ?? '' ),
         );
     }
 
@@ -738,7 +947,7 @@ final class SC_RL6_V630_Durable_Index {
         if ( is_wp_error( $status ) ) {
             return $status;
         }
-        if ( empty( $status['indexed_records'] ) ) {
+        if ( empty( $status['indexed_records'] ) && 'warming' !== sanitize_key( $status['startup_state'] ?? '' ) ) {
             $status['state'] = 'needs-sync';
             $status['label'] = 'Knowledge Index Needs Sync';
             $status['endpoint_status'] = array( 'state' => 'index-empty', 'error_type' => 'index-empty' );
@@ -780,6 +989,9 @@ final class SC_RL6_V630_Durable_Index {
             'indexed_records' => absint( isset( $authenticated['indexed_records'] ) ? $authenticated['indexed_records'] : 0 ),
             'indexed_titles' => absint( isset( $authenticated['indexed_titles'] ) ? $authenticated['indexed_titles'] : 0 ),
             'state' => sanitize_key( isset( $authenticated['state'] ) ? $authenticated['state'] : '' ),
+            'startup_state' => sanitize_key( $body['startup_state'] ?? $authenticated['startup_state'] ?? 'ready' ),
+            'startup_phase' => sanitize_key( $body['startup_phase'] ?? $authenticated['startup_phase'] ?? 'ready' ),
+            'startup_progress' => absint( $body['startup_progress'] ?? $authenticated['startup_progress'] ?? 100 ),
         );
     }
 
@@ -846,6 +1058,7 @@ final class SC_RL6_V630_Durable_Index {
         if ( 'online' === $state ) {
             $current['last_success_utc'] = gmdate( 'c' );
             $current['last_error'] = '';
+            delete_option( self::ALERT_STATE_OPTION );
         } else {
             $current['last_failure_utc'] = gmdate( 'c' );
             $current['last_error'] = sanitize_text_field( $error );
@@ -853,7 +1066,7 @@ final class SC_RL6_V630_Durable_Index {
         update_option( self::STATUS_OPTION, $current, false );
     }
 
-    public static function sync_all_records() {
+    public static function sync_all_records( $trigger = 'manual' ) {
         if ( ! self::enabled() ) {
             return new WP_Error( 'sc_rl_v630_sync_disabled', 'Enable and configure the Python backend before syncing.', array( 'status' => 400, 'error_type' => 'backend-not-configured' ) );
         }
@@ -871,10 +1084,11 @@ final class SC_RL6_V630_Durable_Index {
         $deleted_ids = array_values( array_diff( array_keys( $ledger['records'] ), array_keys( $current_ids ) ) );
         $report = array_merge( array(
             'version' => self::VERSION,
-            'schema' => 'sc-rl-sync-report/6.3.0',
+            'schema' => 'sc-rl-sync-report/6.3.1',
             'job_id' => $job_id,
             'state' => 'running',
             'mode' => 'transactional-replace',
+            'trigger' => sanitize_key( $trigger ),
             'started_utc' => gmdate( 'c' ),
             'completed_utc' => '',
             'synced_records' => 0,
@@ -933,14 +1147,16 @@ final class SC_RL6_V630_Durable_Index {
                 $report['completed_utc'] = gmdate( 'c' );
                 $report['error'] = $last->get_error_message();
                 $report['rejected_records'] += count( $chunk );
-                $report['retry_scheduled'] = true;
+                $report['retry_scheduled'] = self::schedule_full_retry( $last->get_error_message() );
+                $report['retry_exhausted'] = ! $report['retry_scheduled'];
                 self::save_sync_report( $report );
-                self::schedule_full_retry();
                 return new WP_Error( $last->get_error_code(), $last->get_error_message(), array_merge( (array) $last->get_error_data(), array( 'sync_report' => $report ) ) );
             }
             $batch['state'] = ! empty( $last['committed'] ) ? 'committed' : 'staged';
             $batch['completed_utc'] = gmdate( 'c' );
-            $batch['accepted_records'] = absint( isset( $last['received'] ) ? $last['received'] : count( $chunk ) );
+            $batch['accepted_records'] = absint( isset( $last['accepted'] ) ? $last['accepted'] : count( $chunk ) );
+            $batch['rejected_records'] = absint( isset( $last['rejected'] ) ? $last['rejected'] : 0 );
+            $batch['rejection_details'] = isset( $last['rejected_records'] ) && is_array( $last['rejected_records'] ) ? array_slice( $last['rejected_records'], 0, 25 ) : array();
             $batch['backend_total_records'] = absint( isset( $last['total_records'] ) ? $last['total_records'] : 0 );
             $batch['backend_state'] = sanitize_key( isset( $last['state'] ) ? $last['state'] : '' );
             $batch['staged_records'] = absint( isset( $last['staged_records'] ) ? $last['staged_records'] : 0 );
@@ -952,12 +1168,12 @@ final class SC_RL6_V630_Durable_Index {
             $report['state'] = 'failed';
             $report['completed_utc'] = gmdate( 'c' );
             $report['error'] = 'The backend received all batches but did not commit the staged transaction.';
-            $report['retry_scheduled'] = true;
+            $report['retry_scheduled'] = self::schedule_full_retry( $report['error'] );
+            $report['retry_exhausted'] = ! $report['retry_scheduled'];
             self::save_sync_report( $report );
-            self::schedule_full_retry();
             return new WP_Error( 'sc_rl_v630_not_committed', $report['error'], array( 'status' => 502, 'sync_report' => $report ) );
         }
-        $report['state'] = 'completed';
+        $report['state'] = ! empty( $last['rejected'] ) ? 'completed-with-rejections' : 'completed';
         $report['completed_utc'] = gmdate( 'c' );
         $report['batch_count'] = count( $chunks );
         $report['accepted_records'] = absint( isset( $last['accepted'] ) ? $last['accepted'] : count( $records ) );
@@ -968,9 +1184,19 @@ final class SC_RL6_V630_Durable_Index {
         $report['backend_deleted_records'] = absint( isset( $last['deleted'] ) ? $last['deleted'] : 0 );
         $report['index_version'] = absint( isset( $last['index_version'] ) ? $last['index_version'] : 0 );
         $report['checksum'] = sanitize_text_field( isset( $last['checksum'] ) ? $last['checksum'] : '' );
+        $report['rejection_details'] = isset( $last['rejected_records'] ) && is_array( $last['rejected_records'] ) ? array_slice( $last['rejected_records'], 0, 100 ) : array();
         $report['backend_result'] = $last;
         self::save_sync_report( $report );
-        self::save_ledger( $records, $last );
+        $rejected_ids = array();
+        foreach ( $report['rejection_details'] as $rejection ) {
+            if ( ! empty( $rejection['id'] ) ) {
+                $rejected_ids[] = sanitize_text_field( $rejection['id'] );
+            }
+        }
+        $ledger_records = array_values( array_filter( $records, function( $record ) use ( $rejected_ids ) {
+            return empty( $record['id'] ) || ! in_array( $record['id'], $rejected_ids, true );
+        } ) );
+        self::save_ledger( $ledger_records, $last );
         update_option( self::QUEUE_OPTION, array(), false );
         $status = array(
             'state' => 'online',
@@ -987,12 +1213,13 @@ final class SC_RL6_V630_Durable_Index {
             'sync_report' => $report,
         );
         update_option( self::STATUS_OPTION, array_merge( (array) get_option( self::STATUS_OPTION, array() ), $status ), false );
+        self::clear_sync_retry();
         return $status;
     }
 
     private static function save_sync_report( $report ) {
         update_option( self::SYNC_REPORT_OPTION, $report, false );
-        if ( isset( $report['state'] ) && in_array( $report['state'], array( 'completed', 'failed' ), true ) ) {
+        if ( isset( $report['state'] ) && in_array( $report['state'], array( 'completed', 'completed-with-rejections', 'failed' ), true ) ) {
             $history = get_option( self::SYNC_HISTORY_OPTION, array() );
             $history = is_array( $history ) ? $history : array();
             $history[] = $report;
@@ -1029,7 +1256,7 @@ final class SC_RL6_V630_Durable_Index {
             'records_by_post_type' => array(),
         );
 
-        // v6.3.0 continues to index canonical published WordPress records first. The older
+        // v6.3.1 continues to index canonical published WordPress records first. The older
         // route/index registry is appended only when it contributes a unique URL.
         // This prevents a summary-only legacy entry from masking the full article.
         $all_public_post_types = get_post_types( array( 'public' => true ), 'names' );
@@ -1288,7 +1515,7 @@ final class SC_RL6_V630_Durable_Index {
         $created = gmdate( 'c' );
         $snapshot_id = 'wp-' . gmdate( 'Ymd-His' ) . '-' . wp_generate_password( 8, false, false );
         $payload = array(
-            'schema' => 'sc-research-librarian-wordpress-snapshot/3.0',
+            'schema' => 'sc-research-librarian-wordpress-snapshot/3.1',
             'snapshot_id' => $snapshot_id,
             'created_utc' => $created,
             'reason' => sanitize_text_field( $reason ),
@@ -1323,7 +1550,7 @@ final class SC_RL6_V630_Durable_Index {
             'file_sha256' => hash_file( 'sha256', $path ),
             'size_bytes' => absint( filesize( $path ) ),
             'compressed' => '.json.gz' === $extension,
-            'schema' => 'sc-research-librarian-wordpress-snapshot/3.0',
+            'schema' => 'sc-research-librarian-wordpress-snapshot/3.1',
         );
         $snapshots = self::wordpress_snapshots();
         array_unshift( $snapshots, $manifest );
@@ -1396,18 +1623,57 @@ final class SC_RL6_V630_Durable_Index {
         if ( ! is_array( $payload ) || empty( $payload['records'] ) || ! is_array( $payload['records'] ) ) {
             return new WP_Error( 'sc_rl_v630_snapshot_invalid', 'The canonical WordPress snapshot contains invalid JSON or no records.' );
         }
+        $expected_count = absint( $payload['manifest']['record_count'] ?? $manifest['record_count'] ?? 0 );
+        if ( $expected_count && $expected_count !== count( $payload['records'] ) ) {
+            return new WP_Error( 'sc_rl_v631_snapshot_record_count', 'The canonical WordPress snapshot failed its record-count validation.' );
+        }
         $hashes = array();
-        foreach ( $payload['records'] as $record ) {
-            if ( ! empty( $record['id'] ) ) {
-                $hashes[ $record['id'] ] = ! empty( $record['content_hash'] ) ? $record['content_hash'] : self::record_content_hash( $record );
+        $seen = array();
+        foreach ( $payload['records'] as $position => $record ) {
+            if ( ! is_array( $record ) || empty( $record['id'] ) || empty( $record['title'] ) || empty( $record['url'] ) ) {
+                return new WP_Error( 'sc_rl_v631_snapshot_record_invalid', 'The canonical WordPress snapshot contains an invalid record at position ' . absint( $position ) . '.' );
             }
+            $record_id = sanitize_text_field( $record['id'] );
+            if ( isset( $seen[ $record_id ] ) ) {
+                return new WP_Error( 'sc_rl_v631_snapshot_duplicate_record', 'The canonical WordPress snapshot contains a duplicate record identifier: ' . $record_id . '.' );
+            }
+            $seen[ $record_id ] = true;
+            $calculated_record_hash = self::record_content_hash( $record );
+            if ( ! empty( $record['content_hash'] ) && ! hash_equals( (string) $record['content_hash'], $calculated_record_hash ) ) {
+                return new WP_Error( 'sc_rl_v631_snapshot_record_hash', 'A canonical WordPress snapshot record failed its content-hash validation: ' . $record_id . '.' );
+            }
+            $hashes[ $record_id ] = $calculated_record_hash;
+            $payload['records'][ $position ]['content_hash'] = $calculated_record_hash;
         }
         $calculated = self::ledger_checksum( $hashes );
         $expected = sanitize_text_field( $payload['manifest']['checksum'] ?? $manifest['checksum'] ?? '' );
         if ( $expected && ! hash_equals( $expected, $calculated ) ) {
             return new WP_Error( 'sc_rl_v630_snapshot_checksum', 'The canonical WordPress snapshot failed its record checksum validation.' );
         }
+        $payload['integrity'] = array( 'ok' => true, 'record_count' => count( $payload['records'] ), 'checksum' => $calculated, 'validated_utc' => gmdate( 'c' ) );
         return $payload;
+    }
+
+    public static function validate_wordpress_snapshots() {
+        $results = array();
+        foreach ( self::wordpress_snapshots() as $manifest ) {
+            $payload = self::read_wordpress_snapshot( $manifest );
+            $results[] = array(
+                'snapshot_id' => sanitize_text_field( $manifest['snapshot_id'] ?? '' ),
+                'ok' => ! is_wp_error( $payload ),
+                'record_count' => is_wp_error( $payload ) ? 0 : absint( $payload['integrity']['record_count'] ?? count( $payload['records'] ) ),
+                'checksum' => is_wp_error( $payload ) ? '' : sanitize_text_field( $payload['integrity']['checksum'] ?? '' ),
+                'error' => is_wp_error( $payload ) ? $payload->get_error_message() : '',
+            );
+        }
+        $invalid = array_filter( $results, function( $row ) { return empty( $row['ok'] ); } );
+        return array(
+            'ok' => empty( $invalid ),
+            'snapshot_count' => count( $results ),
+            'invalid_count' => count( $invalid ),
+            'snapshots' => $results,
+            'validated_utc' => gmdate( 'c' ),
+        );
     }
 
     private static function should_schedule_recovery( $status ) {
@@ -1418,15 +1684,70 @@ final class SC_RL6_V630_Durable_Index {
             && ! empty( self::latest_wordpress_snapshot() );
     }
 
-    private static function schedule_backend_recovery() {
-        if ( ! wp_next_scheduled( self::RECOVERY_HOOK ) ) {
-            wp_schedule_single_event( time() + 10, self::RECOVERY_HOOK );
+    private static function recovery_state() {
+        $state = get_option( self::RECOVERY_STATE_OPTION, array() );
+        return is_array( $state ) ? $state : array();
+    }
+
+    private static function update_recovery_state( $values ) {
+        $state = array_merge( self::recovery_state(), is_array( $values ) ? $values : array() );
+        $state['updated_utc'] = gmdate( 'c' );
+        update_option( self::RECOVERY_STATE_OPTION, $state, false );
+        return $state;
+    }
+
+    private static function clear_recovery_state() {
+        wp_clear_scheduled_hook( self::RECOVERY_HOOK );
+        delete_option( self::RECOVERY_STATE_OPTION );
+    }
+
+    private static function schedule_backend_recovery( $trigger = 'automatic-cold-start', $error = '' ) {
+        $options = self::options();
+        $state = self::recovery_state();
+        $attempt = absint( $state['attempt'] ?? 0 ) + 1;
+        $maximum = max( 1, min( 10, absint( $options['max_retry_attempts'] ) ) );
+        if ( $attempt > $maximum ) {
+            self::update_recovery_state( array(
+                'state' => 'exhausted',
+                'phase' => 'manual-review-required',
+                'progress' => 0,
+                'attempt' => $attempt - 1,
+                'max_attempts' => $maximum,
+                'trigger' => sanitize_key( $trigger ),
+                'last_error' => sanitize_text_field( $error ),
+            ) );
+            self::append_recovery_log( 'recovery-exhausted', array( 'trigger' => $trigger, 'attempts' => $attempt - 1, 'error' => $error ) );
+            return false;
         }
+        if ( wp_next_scheduled( self::RECOVERY_HOOK ) ) {
+            return true;
+        }
+        $delay = 1 === $attempt ? 10 : self::retry_delay( $attempt - 1 );
+        wp_schedule_single_event( time() + $delay, self::RECOVERY_HOOK );
+        self::update_recovery_state( array(
+            'state' => 'scheduled',
+            'phase' => 'waiting-for-backend',
+            'progress' => 5,
+            'attempt' => $attempt,
+            'max_attempts' => $maximum,
+            'delay_seconds' => $delay,
+            'next_run_utc' => gmdate( 'c', time() + $delay ),
+            'trigger' => sanitize_key( $trigger ),
+            'last_error' => sanitize_text_field( $error ),
+        ) );
+        return true;
     }
 
     public static function run_backend_recovery() {
-        if ( self::enabled() ) {
-            self::recover_backend_from_snapshot( 'automatic-cold-start' );
+        if ( ! self::enabled() ) {
+            return;
+        }
+        $state = self::recovery_state();
+        $trigger = sanitize_key( $state['trigger'] ?? 'automatic-cold-start' );
+        self::update_recovery_state( array( 'state' => 'running', 'phase' => 'verifying-snapshot', 'progress' => 10, 'started_utc' => gmdate( 'c' ) ) );
+        $result = self::recover_backend_from_snapshot( $trigger );
+        if ( ! is_wp_error( $result ) ) {
+            self::clear_recovery_state();
         }
     }
 
@@ -1434,9 +1755,11 @@ final class SC_RL6_V630_Durable_Index {
         if ( ! self::enabled() ) {
             return new WP_Error( 'sc_rl_v630_recovery_disabled', 'Enable and configure the Python backend before recovery.', array( 'status' => 400 ) );
         }
+        self::update_recovery_state( array( 'state' => 'running', 'phase' => 'verifying-snapshot', 'progress' => 10, 'trigger' => sanitize_key( $trigger ) ) );
         $snapshot = self::read_wordpress_snapshot();
         if ( is_wp_error( $snapshot ) ) {
-            self::append_recovery_log( 'recovery-failed', array( 'trigger' => $trigger, 'error' => $snapshot->get_error_message() ) );
+            self::append_recovery_log( 'recovery-failed', array( 'trigger' => $trigger, 'phase' => 'snapshot-validation', 'error' => $snapshot->get_error_message() ) );
+            self::schedule_backend_recovery( $trigger, $snapshot->get_error_message() );
             return $snapshot;
         }
         $records = $snapshot['records'];
@@ -1444,7 +1767,17 @@ final class SC_RL6_V630_Durable_Index {
         $chunks = array_chunk( $records, max( 25, min( 250, absint( $options['sync_batch_size'] ) ) ) );
         $job_id = 'recovery-' . gmdate( 'Ymd-His' ) . '-' . wp_generate_password( 8, false, false );
         $last = array();
+        self::append_recovery_log( 'recovery-started', array( 'trigger' => $trigger, 'job_id' => $job_id, 'record_count' => count( $records ), 'batch_count' => count( $chunks ) ) );
         foreach ( $chunks as $index => $chunk ) {
+            $progress = 20 + (int) floor( ( ( $index + 1 ) / max( 1, count( $chunks ) ) ) * 65 );
+            self::update_recovery_state( array(
+                'state' => 'running',
+                'phase' => 'sending-snapshot-batches',
+                'progress' => min( 85, $progress ),
+                'job_id' => $job_id,
+                'batch' => $index + 1,
+                'batch_count' => count( $chunks ),
+            ) );
             $last = self::request( '/v1/knowledge/sync', 'POST', array(
                 'records' => $chunk,
                 'deleted_ids' => array(),
@@ -1458,26 +1791,42 @@ final class SC_RL6_V630_Durable_Index {
             ) );
             if ( is_wp_error( $last ) ) {
                 self::append_recovery_log( 'recovery-failed', array( 'trigger' => $trigger, 'job_id' => $job_id, 'batch' => $index + 1, 'error' => $last->get_error_message() ) );
-                self::schedule_backend_recovery();
+                self::update_recovery_state( array( 'state' => 'failed', 'phase' => 'batch-failed', 'progress' => $progress, 'last_error' => $last->get_error_message() ) );
+                self::schedule_backend_recovery( $trigger, $last->get_error_message() );
                 return $last;
             }
         }
+        self::update_recovery_state( array( 'state' => 'running', 'phase' => 'verifying-commit', 'progress' => 92 ) );
         if ( empty( $last['committed'] ) ) {
             $error = new WP_Error( 'sc_rl_v630_recovery_not_committed', 'The backend staged the recovery snapshot but did not commit it.', array( 'status' => 502 ) );
             self::append_recovery_log( 'recovery-failed', array( 'trigger' => $trigger, 'job_id' => $job_id, 'error' => $error->get_error_message() ) );
+            self::schedule_backend_recovery( $trigger, $error->get_error_message() );
             return $error;
         }
-        self::save_ledger( $records, $last );
+        $rejected = isset( $last['rejected_records'] ) && is_array( $last['rejected_records'] ) ? $last['rejected_records'] : array();
+        $rejected_ids = array();
+        foreach ( $rejected as $row ) {
+            if ( ! empty( $row['id'] ) ) {
+                $rejected_ids[] = sanitize_text_field( $row['id'] );
+            }
+        }
+        $ledger_records = array_values( array_filter( $records, function( $record ) use ( $rejected_ids ) {
+            return empty( $record['id'] ) || ! in_array( $record['id'], $rejected_ids, true );
+        } ) );
+        self::save_ledger( $ledger_records, $last );
         $result = array(
             'ok' => true,
             'version' => self::VERSION,
-            'state' => 'recovered',
+            'state' => $rejected ? 'recovered-with-rejections' : 'recovered',
             'trigger' => sanitize_key( $trigger ),
             'job_id' => $job_id,
             'snapshot' => self::snapshot_manifest_summary( self::latest_wordpress_snapshot() ),
+            'snapshot_integrity' => $snapshot['integrity'] ?? array(),
+            'rejected_records' => $rejected,
             'backend_result' => $last,
             'recovered_utc' => gmdate( 'c' ),
         );
+        self::update_recovery_state( array( 'state' => 'completed', 'phase' => 'complete', 'progress' => 100, 'completed_utc' => $result['recovered_utc'], 'last_error' => '' ) );
         self::append_recovery_log( 'recovery-completed', $result );
         return $result;
     }
@@ -1490,7 +1839,7 @@ final class SC_RL6_V630_Durable_Index {
             'created_utc' => gmdate( 'c' ),
             'details' => is_array( $details ) ? $details : array(),
         ) );
-        update_option( self::RECOVERY_LOG_OPTION, array_slice( $rows, 0, 50 ), false );
+        update_option( self::RECOVERY_LOG_OPTION, array_slice( $rows, 0, 100 ), false );
     }
 
     public static function recovery_log() {
@@ -1504,8 +1853,10 @@ final class SC_RL6_V630_Durable_Index {
         $stored = get_option( self::STATUS_OPTION, array() );
         $next = wp_next_scheduled( self::SYNC_HOOK );
         $recovery_next = wp_next_scheduled( self::RECOVERY_HOOK );
+        $sync_retry_next = wp_next_scheduled( self::SYNC_RETRY_HOOK );
         $report = self::latest_sync_report();
         $manifest = is_wp_error( $status ) ? $status : self::request( '/v1/knowledge/manifest', 'GET' );
+        $backend_snapshot_validation = is_wp_error( $status ) ? $status : self::request( '/v1/knowledge/snapshots/validate', 'GET' );
         $snapshot = self::latest_wordpress_snapshot();
         $ledger = self::sync_ledger();
         return array(
@@ -1524,6 +1875,11 @@ final class SC_RL6_V630_Durable_Index {
                 'sync_frequency' => sanitize_key( $options['sync_frequency'] ),
                 'auto_recover' => '1' === (string) $options['auto_recover'],
                 'max_wordpress_snapshots' => absint( $options['max_wordpress_snapshots'] ),
+                'max_retry_attempts' => absint( $options['max_retry_attempts'] ),
+                'retry_base_seconds' => absint( $options['retry_base_seconds'] ),
+                'retry_max_seconds' => absint( $options['retry_max_seconds'] ),
+                'stalled_job_minutes' => absint( $options['stalled_job_minutes'] ),
+                'alert_suppression_minutes' => absint( $options['alert_suppression_minutes'] ),
             ),
             'cron' => array(
                 'scheduled' => (bool) $next,
@@ -1532,12 +1888,20 @@ final class SC_RL6_V630_Durable_Index {
                 'recovery_scheduled' => (bool) $recovery_next,
                 'recovery_next_run_utc' => $recovery_next ? gmdate( 'c', $recovery_next ) : '',
                 'recovery_hook' => self::RECOVERY_HOOK,
+                'sync_retry_scheduled' => (bool) $sync_retry_next,
+                'sync_retry_next_run_utc' => $sync_retry_next ? gmdate( 'c', $sync_retry_next ) : '',
+                'sync_retry_hook' => self::SYNC_RETRY_HOOK,
                 'wp_cron_disabled' => defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON,
             ),
             'backend' => is_wp_error( $status ) ? self::public_error_snapshot( $status ) : $status,
             'backend_manifest' => is_wp_error( $manifest ) ? self::public_error_snapshot( $manifest ) : $manifest,
             'wordpress_snapshot' => self::snapshot_manifest_summary( $snapshot ),
             'wordpress_snapshot_count' => count( self::wordpress_snapshots() ),
+            'wordpress_snapshot_validation' => self::validate_wordpress_snapshots(),
+            'backend_snapshot_validation' => is_wp_error( $backend_snapshot_validation ) ? self::public_error_snapshot( $backend_snapshot_validation ) : $backend_snapshot_validation,
+            'sync_retry_state' => get_option( self::SYNC_RETRY_OPTION, array() ),
+            'recovery_state' => self::recovery_state(),
+            'public_alert_state' => get_option( self::ALERT_STATE_OPTION, array() ),
             'sync_ledger' => array(
                 'record_count' => count( $ledger['records'] ),
                 'checksum' => sanitize_text_field( $ledger['checksum'] ),
@@ -1577,7 +1941,7 @@ final class SC_RL6_V630_Durable_Index {
                 } else {
                     $notice = 'Python backend health check succeeded. Version ' . sanitize_text_field( isset( $test['version'] ) ? $test['version'] : self::VERSION ) . '.';
                     if ( self::should_schedule_recovery( $test ) ) {
-                        self::schedule_backend_recovery();
+                        self::schedule_backend_recovery( 'admin-health-check' );
                         $notice .= ' The runtime index is empty, so automatic snapshot recovery was scheduled.';
                     }
                 }
@@ -1614,6 +1978,7 @@ final class SC_RL6_V630_Durable_Index {
                     $notice_type = 'error';
                     $notice = $recovery->get_error_message();
                 } else {
+                    self::clear_recovery_state();
                     $notice = 'Backend runtime index recovered from the canonical WordPress snapshot.';
                 }
             } elseif ( isset( $_POST['sc_rl_v630_rollback'] ) ) {
@@ -1626,6 +1991,31 @@ final class SC_RL6_V630_Durable_Index {
                     self::append_recovery_log( 'backend-rollback', array( 'snapshot_id' => $snapshot_id, 'result' => $rollback ) );
                     $notice = 'Backend runtime index rolled back to ' . $snapshot_id . '.';
                 }
+            } elseif ( isset( $_POST['sc_rl_v631_repair_stalled'] ) ) {
+                $maintenance = self::request( '/v1/knowledge/maintenance', 'POST', array(
+                    'max_age_seconds' => max( 300, absint( self::options()['stalled_job_minutes'] ) * MINUTE_IN_SECONDS ),
+                    'purge_staging' => true,
+                ) );
+                if ( is_wp_error( $maintenance ) ) {
+                    $notice_type = 'error';
+                    $notice = $maintenance->get_error_message();
+                } else {
+                    self::append_recovery_log( 'stalled-jobs-repaired', $maintenance );
+                    $notice = 'Stalled transaction repair completed: ' . absint( $maintenance['count'] ?? 0 ) . ' job(s) repaired.';
+                }
+            } elseif ( isset( $_POST['sc_rl_v631_validate_snapshots'] ) ) {
+                $wordpress_validation = self::validate_wordpress_snapshots();
+                $backend_validation = self::request( '/v1/knowledge/snapshots/validate', 'GET' );
+                if ( ! empty( $wordpress_validation['invalid_count'] ) || is_wp_error( $backend_validation ) || ! empty( $backend_validation['invalid_count'] ) ) {
+                    $notice_type = 'error';
+                    $notice = 'Snapshot validation found an integrity problem. Review the diagnostics below before recovery or rollback.';
+                } else {
+                    $notice = 'All available WordPress and backend runtime snapshots passed integrity validation.';
+                }
+            } elseif ( isset( $_POST['sc_rl_v631_clear_retries'] ) ) {
+                self::clear_sync_retry();
+                self::clear_recovery_state();
+                $notice = 'Pending synchronization and recovery retries were cleared.';
             } elseif ( isset( $_POST['sc_rl_v621_reset_rate_limits'] ) ) {
                 if ( class_exists( 'SC_RL6_Core' ) ) {
                     $reset = SC_RL6_Core::instance()->reset_rate_limits();
@@ -1658,17 +2048,23 @@ final class SC_RL6_V630_Durable_Index {
         $backend_snapshots = ! is_wp_error( $backend_snapshots_response ) && ! empty( $backend_snapshots_response['snapshots'] ) && is_array( $backend_snapshots_response['snapshots'] ) ? $backend_snapshots_response['snapshots'] : array();
         $ledger = self::sync_ledger();
         $queue = self::incremental_queue();
+        $sync_retry_state = get_option( self::SYNC_RETRY_OPTION, array() );
+        $sync_retry_state = is_array( $sync_retry_state ) ? $sync_retry_state : array();
+        $recovery_state = self::recovery_state();
+        $wordpress_snapshot_validation = self::validate_wordpress_snapshots();
+        $backend_snapshot_validation = self::request( '/v1/knowledge/snapshots/validate', 'GET' );
+        $export_url = wp_nonce_url( admin_url( 'admin-post.php?action=sc_rl_v631_export_sync_log' ), 'sc_rl_v631_export_sync_log' );
         ?>
         <div class="wrap">
-            <h1>Python Intelligence and Durable Index</h1>
-            <p>Research Librarian AI v6.3.0 keeps WordPress as the canonical publishing and recovery source while FastAPI uses a transactional SQLite runtime index for title-aware retrieval and grounded Gemini synthesis. The design remains compatible with free Render infrastructure.</p>
+            <h1>Python Intelligence, Cold-start Recovery, and Durable Index</h1>
+            <p>Research Librarian AI v6.3.1 hardens free-tier cold starts with visible startup progress, bounded retries, stalled-job repair, snapshot integrity checks, isolated record failures, and exportable synchronization and recovery logs.</p>
             <?php if ( $notice ) : ?><div class="notice notice-<?php echo esc_attr( $notice_type ); ?> is-dismissible"><p><?php echo esc_html( $notice ); ?></p></div><?php endif; ?>
 
             <div class="sc-rl-admin-grid">
                 <article class="sc-rl-admin-card" data-state="<?php echo esc_attr( is_wp_error( $status ) ? 'offline' : ( $status['state'] ?? 'unknown' ) ); ?>">
                     <h2><?php echo esc_html( is_wp_error( $status ) ? 'Backend unavailable' : ( $status['label'] ?? 'Backend status' ) ); ?></h2>
                     <span class="sc-rl-admin-metric"><?php echo esc_html( is_wp_error( $status ) ? 'Offline' : 'v' . ( $status['version'] ?? self::VERSION ) ); ?></span>
-                    <p><?php echo esc_html( is_wp_error( $status ) ? $status->get_error_message() : ( ( $status['storage_engine'] ?? 'sqlite' ) . ' · index v' . absint( $status['index_version'] ?? 0 ) ) ); ?></p>
+                    <p><?php echo esc_html( is_wp_error( $status ) ? $status->get_error_message() : ( ( $status['storage_engine'] ?? 'sqlite' ) . ' · index v' . absint( $status['index_version'] ?? 0 ) . ' · ' . sanitize_text_field( $status['startup_phase'] ?? 'ready' ) . ' ' . absint( $status['startup_progress'] ?? 100 ) . '%' ) ); ?></p>
                 </article>
                 <article class="sc-rl-admin-card"><h2>Indexed records</h2><span class="sc-rl-admin-metric"><?php echo esc_html( is_wp_error( $status ) ? 0 : absint( $status['indexed_records'] ?? 0 ) ); ?></span><p><?php echo esc_html( is_wp_error( $status ) ? 'Run a full sync or recovery.' : absint( $status['indexed_titles'] ?? 0 ) . ' distinct titles' ); ?></p></article>
                 <article class="sc-rl-admin-card"><h2>Canonical snapshots</h2><span class="sc-rl-admin-metric"><?php echo esc_html( count( $wp_snapshots ) ); ?></span><p><?php echo esc_html( $wp_snapshots ? ( $wp_snapshots[0]['record_count'] . ' records · ' . $wp_snapshots[0]['created_utc'] ) : 'Create a snapshot or run a full sync.' ); ?></p></article>
@@ -1690,8 +2086,13 @@ final class SC_RL6_V630_Durable_Index {
                     <tr><th><label for="sc-rl-v620-frequency">Recurring frequency</label></th><td><select id="sc-rl-v620-frequency" name="sc_rl_v620[sync_frequency]"><?php foreach ( array( 'hourly' => 'Hourly', 'sc_rl_six_hourly' => 'Every six hours', 'twicedaily' => 'Twice daily', 'daily' => 'Daily' ) as $value => $label ) : ?><option value="<?php echo esc_attr( $value ); ?>" <?php selected( $options['sync_frequency'], $value ); ?>><?php echo esc_html( $label ); ?></option><?php endforeach; ?></select></td></tr>
                     <tr><th>Automatic cold-start recovery</th><td><input type="hidden" name="sc_rl_v620[auto_recover]" value="0"><label><input type="checkbox" name="sc_rl_v620[auto_recover]" value="1" <?php checked( $options['auto_recover'], '1' ); ?>> Rehydrate an empty backend from the latest verified WordPress snapshot</label></td></tr>
                     <tr><th><label for="sc-rl-v630-snapshots">WordPress snapshot retention</label></th><td><input id="sc-rl-v630-snapshots" type="number" min="1" max="20" name="sc_rl_v620[max_wordpress_snapshots]" value="<?php echo esc_attr( $options['max_wordpress_snapshots'] ); ?>"> snapshots</td></tr>
+                    <tr><th><label for="sc-rl-v631-retries">Maximum automatic retries</label></th><td><input id="sc-rl-v631-retries" type="number" min="1" max="10" name="sc_rl_v620[max_retry_attempts]" value="<?php echo esc_attr( $options['max_retry_attempts'] ); ?>"> attempts</td></tr>
+                    <tr><th><label for="sc-rl-v631-base-delay">Retry base delay</label></th><td><input id="sc-rl-v631-base-delay" type="number" min="10" max="300" name="sc_rl_v620[retry_base_seconds]" value="<?php echo esc_attr( $options['retry_base_seconds'] ); ?>"> seconds</td></tr>
+                    <tr><th><label for="sc-rl-v631-max-delay">Retry maximum delay</label></th><td><input id="sc-rl-v631-max-delay" type="number" min="30" max="3600" name="sc_rl_v620[retry_max_seconds]" value="<?php echo esc_attr( $options['retry_max_seconds'] ); ?>"> seconds</td></tr>
+                    <tr><th><label for="sc-rl-v631-stalled">Stalled transaction threshold</label></th><td><input id="sc-rl-v631-stalled" type="number" min="5" max="1440" name="sc_rl_v620[stalled_job_minutes]" value="<?php echo esc_attr( $options['stalled_job_minutes'] ); ?>"> minutes</td></tr>
+                    <tr><th><label for="sc-rl-v631-alerts">Repeated public-alert suppression</label></th><td><input id="sc-rl-v631-alerts" type="number" min="1" max="120" name="sc_rl_v620[alert_suppression_minutes]" value="<?php echo esc_attr( $options['alert_suppression_minutes'] ); ?>"> minutes</td></tr>
                 </table>
-                <p class="submit"><button class="button button-primary" type="submit" name="sc_rl_v620_save" value="1">Save Settings</button> <button class="button" type="submit" name="sc_rl_v620_test" value="1">Test Backend</button> <button class="button button-secondary" type="submit" name="sc_rl_v620_sync" value="1">Transactional Full Sync</button> <button class="button" type="submit" name="sc_rl_v630_sync_incremental" value="1">Process Incremental Queue</button> <button class="button" type="submit" name="sc_rl_v630_create_snapshot" value="1">Create WordPress Snapshot</button> <button class="button button-secondary" type="submit" name="sc_rl_v630_recover" value="1">Recover Empty Backend</button> <button class="button" type="submit" name="sc_rl_v621_repair" value="1">Repair and Resynchronize</button> <button class="button" type="submit" name="sc_rl_v621_reset_rate_limits" value="1">Reset Public Rate Limits</button></p>
+                <p class="submit"><button class="button button-primary" type="submit" name="sc_rl_v620_save" value="1">Save Settings</button> <button class="button" type="submit" name="sc_rl_v620_test" value="1">Test Backend</button> <button class="button button-secondary" type="submit" name="sc_rl_v620_sync" value="1">Transactional Full Sync</button> <button class="button" type="submit" name="sc_rl_v630_sync_incremental" value="1">Process Incremental Queue</button> <button class="button" type="submit" name="sc_rl_v630_create_snapshot" value="1">Create WordPress Snapshot</button> <button class="button button-secondary" type="submit" name="sc_rl_v630_recover" value="1">Recover Empty Backend</button> <button class="button" type="submit" name="sc_rl_v631_repair_stalled" value="1">Repair Stalled Jobs</button> <button class="button" type="submit" name="sc_rl_v631_validate_snapshots" value="1">Validate Snapshots</button> <button class="button" type="submit" name="sc_rl_v631_clear_retries" value="1">Clear Pending Retries</button> <button class="button" type="submit" name="sc_rl_v621_repair" value="1">Repair and Resynchronize</button> <button class="button" type="submit" name="sc_rl_v621_reset_rate_limits" value="1">Reset Public Rate Limits</button> <a class="button" href="<?php echo esc_url( $export_url ); ?>">Export Sync and Recovery Log</a></p>
 
                 <?php if ( $backend_snapshots ) : ?>
                     <h2>Runtime Rollback</h2>
@@ -1702,21 +2103,27 @@ final class SC_RL6_V630_Durable_Index {
             <h2>Durability and Synchronization Diagnostics</h2>
             <table class="widefat striped" style="max-width:1100px;margin-bottom:18px"><tbody>
                 <tr><th>Runtime storage</th><td><?php echo esc_html( is_wp_error( $status ) ? 'Unavailable' : ( $status['storage_engine'] ?? 'sqlite' ) ); ?><?php if ( ! is_wp_error( $status ) ) : ?> · schema <?php echo esc_html( absint( $status['schema_version'] ?? 0 ) ); ?> · index version <?php echo esc_html( absint( $status['index_version'] ?? 0 ) ); ?><?php endif; ?></td></tr>
+                <tr><th>Backend startup</th><td><?php echo esc_html( is_wp_error( $status ) ? 'Unavailable' : ( sanitize_text_field( $status['startup_state'] ?? 'ready' ) . ' · ' . sanitize_text_field( $status['startup_phase'] ?? 'ready' ) . ' · ' . absint( $status['startup_progress'] ?? 100 ) . '% · uptime ' . absint( $status['uptime_seconds'] ?? 0 ) . 's' ) ); ?></td></tr>
+                <tr><th>Stalled backend jobs</th><td><?php echo esc_html( is_wp_error( $status ) ? 'Unknown' : absint( $status['stalled_jobs'] ?? 0 ) ); ?></td></tr>
+                <tr><th>Sync retry</th><td><?php echo esc_html( $sync_retry_state ? ( sanitize_text_field( $sync_retry_state['state'] ?? 'unknown' ) . ' · attempt ' . absint( $sync_retry_state['attempt'] ?? 0 ) . '/' . absint( $sync_retry_state['max_attempts'] ?? $options['max_retry_attempts'] ) . ( ! empty( $sync_retry_state['next_run_utc'] ) ? ' · next ' . $sync_retry_state['next_run_utc'] : '' ) ) : 'No pending retry' ); ?></td></tr>
+                <tr><th>Recovery progress</th><td><?php echo esc_html( $recovery_state ? ( sanitize_text_field( $recovery_state['state'] ?? 'unknown' ) . ' · ' . sanitize_text_field( $recovery_state['phase'] ?? '' ) . ' · ' . absint( $recovery_state['progress'] ?? 0 ) . '% · attempt ' . absint( $recovery_state['attempt'] ?? 0 ) . '/' . absint( $recovery_state['max_attempts'] ?? $options['max_retry_attempts'] ) ) : 'Idle' ); ?></td></tr>
                 <tr><th>Runtime checksum</th><td><code><?php echo esc_html( is_wp_error( $status ) ? '' : ( $status['checksum'] ?? '' ) ); ?></code></td></tr>
                 <tr><th>WordPress ledger</th><td><?php echo esc_html( count( $ledger['records'] ) ); ?> records · index v<?php echo esc_html( absint( $ledger['index_version'] ) ); ?> · <code><?php echo esc_html( $ledger['checksum'] ); ?></code></td></tr>
                 <tr><th>Canonical snapshot</th><td><?php echo esc_html( $wp_snapshots ? ( $wp_snapshots[0]['snapshot_id'] . ' · ' . $wp_snapshots[0]['record_count'] . ' records · ' . $wp_snapshots[0]['created_utc'] ) : 'No canonical snapshot available' ); ?></td></tr>
+                <tr><th>WordPress snapshot integrity</th><td><?php echo esc_html( empty( $wordpress_snapshot_validation['invalid_count'] ) ? 'Passed · ' . absint( $wordpress_snapshot_validation['snapshot_count'] ?? 0 ) . ' snapshot(s)' : 'Failed · ' . absint( $wordpress_snapshot_validation['invalid_count'] ) . ' invalid snapshot(s)' ); ?></td></tr>
+                <tr><th>Runtime snapshot integrity</th><td><?php echo esc_html( is_wp_error( $backend_snapshot_validation ) ? $backend_snapshot_validation->get_error_message() : ( empty( $backend_snapshot_validation['invalid_count'] ) ? 'Passed · ' . absint( $backend_snapshot_validation['snapshot_count'] ?? 0 ) . ' snapshot(s)' : 'Failed · ' . absint( $backend_snapshot_validation['invalid_count'] ) . ' invalid snapshot(s)' ) ); ?></td></tr>
                 <tr><th>Runtime snapshots</th><td><?php echo esc_html( count( $backend_snapshots ) ); ?> available for rollback</td></tr>
                 <tr><th>Incremental queue</th><td><?php echo esc_html( count( $queue ) ); ?> pending change(s)</td></tr>
                 <tr><th>Automatic recovery</th><td><?php echo esc_html( '1' === $options['auto_recover'] ? 'Enabled' : 'Disabled' ); ?><?php if ( $diagnostics['cron']['recovery_scheduled'] ) : ?> · scheduled for <?php echo esc_html( $diagnostics['cron']['recovery_next_run_utc'] ); ?><?php endif; ?></td></tr>
                 <tr><th>WP-Cron</th><td><?php echo esc_html( $diagnostics['cron']['wp_cron_disabled'] ? 'Disabled by configuration' : ( $diagnostics['cron']['scheduled'] ? 'Scheduled' : 'Not scheduled' ) ); ?><?php if ( $diagnostics['cron']['next_run_utc'] ) : ?> · next run <?php echo esc_html( $diagnostics['cron']['next_run_utc'] ); ?><?php endif; ?></td></tr>
                 <tr><th>Public rate limit</th><td><?php echo esc_html( absint( $rate_status['limit'] ?? 0 ) ); ?> questions per <?php echo esc_html( absint( $rate_status['window_minutes'] ?? 0 ) ); ?> minutes · <?php echo esc_html( absint( $rate_status['active_visitors'] ?? 0 ) ); ?> active visitor window(s)</td></tr>
-                <tr><th>Latest sync job</th><td><?php echo esc_html( ! empty( $sync_report['job_id'] ) ? $sync_report['job_id'] . ' · ' . $sync_report['state'] : 'No v6.3.0 sync report yet' ); ?></td></tr>
+                <tr><th>Latest sync job</th><td><?php echo esc_html( ! empty( $sync_report['job_id'] ) ? $sync_report['job_id'] . ' · ' . $sync_report['state'] : 'No v6.3.1 sync report yet' ); ?></td></tr>
                 <tr><th>Inserted / updated / unchanged / deleted</th><td><?php echo esc_html( absint( $sync_report['inserted_records'] ?? 0 ) . ' / ' . absint( $sync_report['updated_records'] ?? 0 ) . ' / ' . absint( $sync_report['unchanged_records'] ?? 0 ) . ' / ' . absint( $sync_report['backend_deleted_records'] ?? 0 ) ); ?></td></tr>
             </tbody></table>
             <?php if ( ! empty( $sync_report['batches'] ) ) : ?>
                 <h3>Last Transaction Batches</h3>
-                <table class="widefat striped" style="max-width:1100px;margin-bottom:18px"><thead><tr><th>Batch</th><th>Mode</th><th>Sent</th><th>Backend state</th><th>Transaction state</th></tr></thead><tbody>
-                <?php foreach ( $sync_report['batches'] as $batch ) : ?><tr><td><?php echo esc_html( absint( $batch['batch'] ) . ' / ' . absint( $batch['batch_count'] ) ); ?></td><td><?php echo esc_html( $batch['mode'] ); ?></td><td><?php echo esc_html( absint( $batch['records_sent'] ) ); ?></td><td><?php echo esc_html( $batch['backend_state'] ?? '' ); ?></td><td><?php echo esc_html( $batch['state'] ); ?></td></tr><?php endforeach; ?>
+                <table class="widefat striped" style="max-width:1100px;margin-bottom:18px"><thead><tr><th>Batch</th><th>Mode</th><th>Sent</th><th>Rejected</th><th>Backend state</th><th>Transaction state</th></tr></thead><tbody>
+                <?php foreach ( $sync_report['batches'] as $batch ) : ?><tr><td><?php echo esc_html( absint( $batch['batch'] ) . ' / ' . absint( $batch['batch_count'] ) ); ?></td><td><?php echo esc_html( $batch['mode'] ); ?></td><td><?php echo esc_html( absint( $batch['records_sent'] ) ); ?></td><td><?php echo esc_html( absint( $batch['rejected_records'] ?? 0 ) ); ?></td><td><?php echo esc_html( $batch['backend_state'] ?? '' ); ?></td><td><?php echo esc_html( $batch['state'] ); ?></td></tr><?php endforeach; ?>
                 </tbody></table>
             <?php endif; ?>
             <div class="sc-rl-admin-note"><strong>Free-tier recovery boundary:</strong> Render's local SQLite file may be replaced when an instance restarts. WordPress therefore retains the canonical compressed snapshot and automatically rehydrates an empty runtime index. No paid database is required for this release.</div>
@@ -1742,6 +2149,11 @@ final class SC_RL6_V630_Durable_Index {
             'public_title_suggestions' => '1',
             'auto_recover' => ! empty( $input['auto_recover'] ) ? '1' : '0',
             'max_wordpress_snapshots' => max( 1, min( 20, absint( isset( $input['max_wordpress_snapshots'] ) ? $input['max_wordpress_snapshots'] : $old['max_wordpress_snapshots'] ) ) ),
+            'max_retry_attempts' => max( 1, min( 10, absint( isset( $input['max_retry_attempts'] ) ? $input['max_retry_attempts'] : $old['max_retry_attempts'] ) ) ),
+            'retry_base_seconds' => max( 10, min( 300, absint( isset( $input['retry_base_seconds'] ) ? $input['retry_base_seconds'] : $old['retry_base_seconds'] ) ) ),
+            'retry_max_seconds' => max( 30, min( 3600, absint( isset( $input['retry_max_seconds'] ) ? $input['retry_max_seconds'] : $old['retry_max_seconds'] ) ) ),
+            'stalled_job_minutes' => max( 5, min( 1440, absint( isset( $input['stalled_job_minutes'] ) ? $input['stalled_job_minutes'] : $old['stalled_job_minutes'] ) ) ),
+            'alert_suppression_minutes' => max( 1, min( 120, absint( isset( $input['alert_suppression_minutes'] ) ? $input['alert_suppression_minutes'] : $old['alert_suppression_minutes'] ) ) ),
         );
         update_option( self::OPTION_NAME, $saved, false );
         return $saved;
@@ -1749,6 +2161,9 @@ final class SC_RL6_V630_Durable_Index {
 }
 
 // Backward-compatible aliases preserve cached admin code and v6.2.x integrations.
+if ( ! class_exists( 'SC_RL6_V631_Cold_Start_Recovery_Hardening', false ) ) {
+    class_alias( 'SC_RL6_V630_Durable_Index', 'SC_RL6_V631_Cold_Start_Recovery_Hardening' );
+}
 if ( ! class_exists( 'SC_RL6_V621_Endpoint_Reliability', false ) ) {
     class_alias( 'SC_RL6_V630_Durable_Index', 'SC_RL6_V621_Endpoint_Reliability' );
 }

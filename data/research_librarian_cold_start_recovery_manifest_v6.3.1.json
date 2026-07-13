@@ -1,0 +1,39 @@
+{
+  "schema": "sc-research-librarian-release-manifest/1.0",
+  "version": "6.3.1",
+  "title": "Cold-Start and Recovery Hardening",
+  "backend_schema_version": 4,
+  "storage_engine": "sqlite",
+  "python_runtime": "3.12.12",
+  "features": [
+    "startup phase and progress reporting",
+    "bounded exponential retry",
+    "retry exhaustion",
+    "stalled job detection and repair",
+    "per-record rejection isolation",
+    "WordPress snapshot integrity validation",
+    "runtime snapshot validation before rollback",
+    "operations log export",
+    "transient notice suppression"
+  ],
+  "endpoints": [
+    "/health",
+    "/startup",
+    "/status",
+    "/v1/knowledge/maintenance",
+    "/v1/knowledge/snapshots/validate",
+    "/v1/knowledge/sync"
+  ],
+  "compatibility": {
+    "wordpress_options": "preserved",
+    "v630_snapshots": "preserved",
+    "paid_database_required": false,
+    "persistent_render_disk_required": false
+  },
+  "release_gate": {
+    "backend_tests_min": 20,
+    "wordpress_contracts_required": true,
+    "snapshot_roundtrip_required": true,
+    "python_3_12_required": true
+  }
+}

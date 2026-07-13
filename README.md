@@ -1,4 +1,34 @@
-# Sustainable Catalyst Research Librarian AI v6.3.0
+# Sustainable Catalyst Research Librarian AI v6.3.1
+
+## v6.3.1 — Cold-Start and Recovery Hardening
+
+Research Librarian AI v6.3.1 hardens the restart and recovery path introduced in v6.3.0. The public interface now reports startup phases and recovery progress, automatic retries are bounded with exponential backoff, stalled staging jobs can be repaired, malformed records are isolated without discarding valid records, and both WordPress and runtime snapshots are checked before recovery or rollback.
+
+### Core v6.3.1 capabilities
+
+- Explicit backend startup state, phase, percentage, uptime, and readiness reporting.
+- Persisted WordPress recovery phases for verification, transfer, commit verification, and completion.
+- Capped exponential retry for full synchronization and empty-index recovery.
+- Automatic retry exhaustion instead of endless WP-Cron loops.
+- Stalled-job detection, repair, optional purge, and administrator controls.
+- Per-record validation and rejection details while valid records continue through the transaction.
+- Protection against deleting a previously valid record when its replacement is malformed.
+- WordPress snapshot record-count, duplicate-ID, record-hash, file-hash, and canonical-checksum validation.
+- Runtime snapshot integrity validation before rollback.
+- JSON operations-log export for sync, recovery, retry, snapshot, and alert state.
+- Deduplicated transient public notices during temporary Render warm-up or connectivity interruptions.
+- Existing terminal prompt, light answer cards, transactional SQLite index, and free-tier recovery model remain intact.
+
+### Primary hardening operations
+
+1. Open **Research Librarian AI → Python Intelligence**.
+2. Review **Backend startup**, **Sync retry**, **Recovery progress**, and both snapshot-integrity rows.
+3. Use **Repair Stalled Jobs** when a staging transaction exceeds the configured timeout.
+4. Use **Validate Snapshots** before manual recovery or rollback.
+5. Use **Export Operations Log** for a support-safe JSON record of recent synchronization and recovery activity.
+6. Use **Clear Pending Retries** after correcting a permanent configuration error.
+
+The Python service adds `/startup`, `/v1/knowledge/maintenance`, and `/v1/knowledge/snapshots/validate`. See `docs/V631_COLD_START_RECOVERY_HARDENING.md` for the release contract.
 
 ## v6.3.0 — Durable Knowledge Index, Sync Ledger, and Recovery
 

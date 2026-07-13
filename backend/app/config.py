@@ -52,6 +52,9 @@ class Settings:
     session_ttl_seconds: int = _int("SC_RL_SESSION_TTL_SECONDS", 3600, 300, 86400)
     max_session_turns: int = _int("SC_RL_MAX_SESSION_TURNS", 6, 1, 20)
     max_runtime_snapshots: int = _int("SC_RL_MAX_RUNTIME_SNAPSHOTS", 5, 1, 20)
+    startup_warmup_seconds: int = _int("SC_RL_STARTUP_WARMUP_SECONDS", 12, 0, 120)
+    stalled_job_seconds: int = _int("SC_RL_STALLED_JOB_SECONDS", 1800, 300, 86400)
+    max_rejection_details: int = _int("SC_RL_MAX_REJECTION_DETAILS", 100, 10, 500)
 
 
 settings = Settings()

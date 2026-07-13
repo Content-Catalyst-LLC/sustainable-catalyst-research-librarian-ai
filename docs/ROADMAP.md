@@ -11,14 +11,14 @@
 - Sync ledger, checksums, manifest comparison, recovery logs, and rollback
 - Free-tier deployment without a paid database
 
-## v6.3.1 — Cold-Start and Synchronization Reliability Patch — Next
+## v6.3.1 — Cold-Start and Recovery Hardening — Complete
 
-- Recovery progress and public warm-up status
-- Bounded retry with backoff and stalled-job detection
-- Failed-record isolation and retry queue
-- Snapshot integrity alerts and administrator sync-log export
-- Recovery-event deduplication and notice suppression
-- Orphaned staging-job cleanup and transaction timeout handling
+- Startup phase, progress, readiness, and public warm-up status
+- Bounded exponential retry, retry exhaustion, and stalled-job repair
+- Failed-record isolation with rejection history and prior-record protection
+- WordPress and runtime snapshot integrity validation
+- Administrator maintenance controls and JSON operations-log export
+- Recovery-event deduplication and transient-notice suppression
 
 ## v6.4.0 — Hybrid Retrieval and Citation Engine
 

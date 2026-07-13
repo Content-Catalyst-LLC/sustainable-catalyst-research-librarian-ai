@@ -1,71 +1,49 @@
-# Install Research Librarian AI v6.3.0
+# Install Research Librarian AI v6.3.1
 
 ## 1. Push the repository
 
-Use `PUSH_RESEARCH_LIBRARIAN_V630_PY312.sh` to validate and push the complete repository to `Content-Catalyst-LLC/sustainable-catalyst-research-librarian-ai`.
+Use `PUSH_RESEARCH_LIBRARIAN_V631_PY312.sh`. The script requires and verifies Python 3.12, clears macOS launcher overrides, validates the repository from both Python import layouts, and creates tag `v6.3.1`.
 
-The script requires Python 3.12, clears macOS virtual-environment launcher overrides, verifies the temporary interpreter, runs PHP/JavaScript/JSON/Python validation, and creates the `v6.3.0` tag.
+## 2. Deploy or update Render
 
-## 2. Deploy or update the Python service on Render
-
-Use the included `render.yaml`, or configure a Python web service with:
+Use `render.yaml` or configure:
 
 - Root directory: `backend`
-- Build command: `pip install -r requirements.txt`
-- Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+- Build: `pip install -r requirements.txt`
+- Start: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
 - Health check: `/health`
 - Python: `3.12.12`
 
-Set:
+Required secrets remain `SC_RL_BACKEND_API_KEY` and `SC_RL_GEMINI_API_KEY`. Recommended hardening settings are:
 
 ```text
-SC_RL_BACKEND_API_KEY=<long random shared key>
-SC_RL_GEMINI_API_KEY=<Gemini key>
-SC_RL_GEMINI_MODEL=gemini-3.5-flash
-SC_RL_CORS_ORIGINS=https://sustainablecatalyst.com
-SC_RL_AI_PROVIDER=gemini
+SC_RL_STARTUP_WARMUP_SECONDS=12
+SC_RL_STALLED_JOB_SECONDS=1800
+SC_RL_MAX_REJECTION_DETAILS=100
 SC_RL_MAX_RUNTIME_SNAPSHOTS=5
 ```
 
-The free Render filesystem may be erased during restart or redeploy. That is supported: SQLite is the runtime index, while WordPress stores the private canonical recovery snapshot.
+The free Render filesystem remains supported. WordPress is the canonical snapshot source; SQLite is the recoverable runtime index.
 
-## 3. Install the WordPress plugin
+## 3. Install WordPress
 
-Upload `sustainable-catalyst-research-librarian-ai-v6.3.0.zip`, replace the existing version, and activate it.
+Upload `sustainable-catalyst-research-librarian-ai-v6.3.1.zip`, replace the installed version, and activate it. Existing v6.3.0 settings and snapshots are retained.
 
-## 4. Connect and synchronize
+## 4. Connect and validate
 
-Open **Research Librarian AI → Python Intelligence** and configure:
+Open **Research Librarian AI → Python Intelligence**, save the backend URL and shared key, then run:
 
-- Enable Python intelligence
-- Render backend URL
-- The same `SC_RL_BACKEND_API_KEY`
-- Automatic cold-start recovery enabled
-- WordPress snapshot retention (five is the default)
+1. **Test Backend**
+2. **Validate Snapshots**
+3. **Transactional Full Sync**
+4. Confirm backend and WordPress counts and checksums match
 
-Save the settings, select **Test Backend**, and then select **Transactional Full Sync**.
+Keep automatic cold-start recovery enabled. Defaults are five retry attempts, 30-second initial retry delay, 900-second maximum delay, 30-minute stalled-job threshold, and 15-minute duplicate-alert suppression.
 
-## 5. Verify durability
+## 5. Operational recovery
 
-Confirm that:
-
-- the backend reports `storage_engine: sqlite` and schema version 3;
-- WordPress and backend record counts match;
-- WordPress and backend checksums match;
-- at least one private WordPress snapshot exists;
-- the incremental queue is empty after synchronization;
-- `/v1/knowledge/manifest` reports a completed index version.
-
-The public shortcode remains:
-
-```text
-[sustainable_catalyst_research_librarian_ai]
-```
-
-## 6. Recovery operations
-
-- **Process Incremental Queue** applies saved, unpublished, trashed, or deleted record changes.
-- **Recover Empty Backend** restores the latest verified WordPress snapshot when the backend index is empty.
-- **Create WordPress Snapshot** creates a recovery point without replacing the backend index.
-- **Rollback Runtime Index** restores a backend safety snapshot created before a committed synchronization.
-- **Repair and Resynchronize** repairs schedules, verifies connectivity, and performs a complete transactional sync.
+- **Repair Stalled Jobs** marks expired transactions failed and clears their staged rows.
+- **Recover Empty Backend** verifies and transfers the latest canonical snapshot.
+- **Clear Pending Retries** stops a bounded retry cycle after a permanent configuration problem is corrected.
+- **Export Operations Log** downloads JSON containing manifests, sync/recovery history, retry state, alert state, snapshot validation, and queue diagnostics.
+- **Rollback Runtime Index** is allowed only when the selected runtime snapshot passes integrity validation.

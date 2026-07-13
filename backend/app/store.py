@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 import gzip
 import hashlib
 import json
@@ -15,9 +16,9 @@ from .config import settings
 from .models import KnowledgeRecord, utc_now
 
 
-SCHEMA_VERSION = 3
-INDEX_SCHEMA = "sc-research-librarian-knowledge-index/3.0"
-SNAPSHOT_SCHEMA = "sc-research-librarian-runtime-snapshot/3.0"
+SCHEMA_VERSION = 4
+INDEX_SCHEMA = "sc-research-librarian-knowledge-index/3.1"
+SNAPSHOT_SCHEMA = "sc-research-librarian-runtime-snapshot/3.1"
 
 
 def _canonical_json(value: Any) -> str:
@@ -38,6 +39,7 @@ class SyncResult:
     received: int
     accepted: int
     rejected: int
+    rejected_records: list[dict[str, Any]]
     inserted: int
     updated: int
     unchanged: int
@@ -62,6 +64,7 @@ class KnowledgeStore:
         self._lock = threading.RLock()
         self._initialize()
         self._migrate_legacy_json()
+        self.repair_stalled_jobs(settings.stalled_job_seconds, purge_staging=True)
 
     @contextmanager
     def _connection(self) -> Iterator[sqlite3.Connection]:
@@ -75,6 +78,16 @@ class KnowledgeStore:
             yield connection
         finally:
             connection.close()
+
+    @staticmethod
+    def _ensure_column(connection: sqlite3.Connection, table: str, column: str, definition: str) -> None:
+        columns = {str(row["name"]) for row in connection.execute(f"PRAGMA table_info({table})")}
+        if column not in columns:
+            connection.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+
+    @staticmethod
+    def _utc_cutoff(seconds: int) -> str:
+        return (datetime.now(timezone.utc) - timedelta(seconds=max(0, seconds))).isoformat()
 
     def _initialize(self) -> None:
         with self._lock, self._connection() as connection:
@@ -123,6 +136,17 @@ class KnowledgeStore:
                     PRIMARY KEY(job_id, id),
                     FOREIGN KEY(job_id) REFERENCES sync_jobs(job_id) ON DELETE CASCADE
                 );
+                CREATE TABLE IF NOT EXISTS sync_rejections (
+                    rejection_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    job_id TEXT NOT NULL,
+                    batch_index INTEGER NOT NULL DEFAULT 1,
+                    record_id TEXT NOT NULL DEFAULT '',
+                    error TEXT NOT NULL,
+                    payload TEXT NOT NULL DEFAULT '{}',
+                    created_utc TEXT NOT NULL,
+                    FOREIGN KEY(job_id) REFERENCES sync_jobs(job_id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS idx_sync_rejections_job ON sync_rejections(job_id, batch_index);
                 CREATE TABLE IF NOT EXISTS tombstones (
                     id TEXT PRIMARY KEY,
                     deleted_utc TEXT NOT NULL,
@@ -139,6 +163,7 @@ class KnowledgeStore:
                 );
                 """
             )
+            self._ensure_column(connection, "sync_jobs", "rejected_records", "INTEGER NOT NULL DEFAULT 0")
             defaults = {
                 "schema_version": str(SCHEMA_VERSION),
                 "index_schema": INDEX_SCHEMA,
@@ -221,6 +246,11 @@ class KnowledgeStore:
         total_records = self._record_count(connection)
         indexed_titles = self._title_count(connection)
         staging_jobs = int(connection.execute("SELECT COUNT(*) FROM sync_jobs WHERE state='staging'").fetchone()[0])
+        cutoff = self._utc_cutoff(settings.stalled_job_seconds)
+        stalled_jobs = int(connection.execute(
+            "SELECT COUNT(*) FROM sync_jobs WHERE state='stalled' OR (state='staging' AND updated_utc < ?)",
+            (cutoff,),
+        ).fetchone()[0])
         snapshots = int(connection.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0])
         return {
             **meta,
@@ -232,6 +262,7 @@ class KnowledgeStore:
             "storage_engine": "sqlite",
             "database_path": str(self.path),
             "staging_jobs": staging_jobs,
+            "stalled_jobs": stalled_jobs,
             "snapshot_count": snapshots,
             "recovery_needed": total_records == 0,
         }
@@ -280,7 +311,7 @@ class KnowledgeStore:
 
     def sync(
         self,
-        records: Iterable[KnowledgeRecord],
+        records: Iterable[Any],
         mode: str,
         source_site: str = "",
         job_id: str = "",
@@ -289,7 +320,24 @@ class KnowledgeStore:
         deleted_ids: Iterable[str] | None = None,
         reason: str = "wordpress-sync",
     ) -> SyncResult:
-        incoming = list(records)
+        raw_incoming = list(records)
+        valid_records: list[KnowledgeRecord] = []
+        rejected_records: list[dict[str, Any]] = []
+        for position, raw in enumerate(raw_incoming):
+            try:
+                valid_records.append(KnowledgeRecord.model_validate(raw))
+            except (ValueError, TypeError) as exc:
+                record_id = ""
+                if isinstance(raw, dict):
+                    record_id = str(raw.get("id", "")).strip()[:220]
+                rejected_records.append(
+                    {
+                        "position": position,
+                        "id": record_id,
+                        "error": str(exc)[:1000],
+                    }
+                )
+
         deletions = sorted({str(value).strip() for value in (deleted_ids or []) if str(value).strip()})
         job_id = job_id.strip() or "sync-" + uuid.uuid4().hex
         requested_mode = mode if mode in {"replace", "upsert", "delete"} else "upsert"
@@ -298,16 +346,17 @@ class KnowledgeStore:
             connection.execute("BEGIN IMMEDIATE")
             try:
                 existing = connection.execute("SELECT * FROM sync_jobs WHERE job_id=?", (job_id,)).fetchone()
-                if existing and str(existing["state"]) == "completed":
+                if existing and str(existing["state"]) in {"completed", "completed-with-rejections"}:
                     stored = json.loads(str(existing["result"] or "{}"))
                     summary = self._summary_from_connection(connection)
                     connection.commit()
                     return SyncResult(
-                        state="completed",
+                        state=str(existing["state"]),
                         committed=True,
-                        received=len(incoming),
+                        received=len(raw_incoming),
                         accepted=int(stored.get("accepted", 0)),
                         rejected=int(stored.get("rejected", 0)),
+                        rejected_records=list(stored.get("rejected_records", [])),
                         inserted=int(stored.get("inserted", 0)),
                         updated=int(stored.get("updated", 0)),
                         unchanged=int(stored.get("unchanged", 0)),
@@ -321,44 +370,74 @@ class KnowledgeStore:
                 if existing:
                     job_mode = str(existing["mode"])
                     received_batches = set(json.loads(str(existing["received_batches"] or "[]")))
+                    if str(existing["state"]) in {"failed", "stalled"} and batch_index == 1:
+                        connection.execute("DELETE FROM staging_records WHERE job_id=?", (job_id,))
+                        connection.execute("DELETE FROM staging_deletions WHERE job_id=?", (job_id,))
+                        connection.execute("DELETE FROM sync_rejections WHERE job_id=?", (job_id,))
+                        received_batches = set()
+                        connection.execute(
+                            "UPDATE sync_jobs SET state='staging',received_batches='[]',staged_records=0,staged_deletions=0,rejected_records=0,started_utc=?,updated_utc=?,completed_utc='',result='{}',error='' WHERE job_id=?",
+                            (now, now, job_id),
+                        )
                 else:
                     job_mode = requested_mode
                     received_batches: set[int] = set()
                     connection.execute(
-                        "INSERT INTO sync_jobs(job_id,mode,source_site,state,batch_count,received_batches,started_utc,updated_utc) VALUES(?,?,?,?,?,?,?,?)",
+                        "INSERT INTO sync_jobs(job_id,mode,source_site,state,batch_count,received_batches,started_utc,updated_utc,rejected_records) VALUES(?,?,?,?,?,?,?,?,0)",
                         (job_id, job_mode, source_site, "staging", batch_count, "[]", now, now),
                     )
 
                 duplicate_batch = batch_index in received_batches
-                for record in incoming:
-                    payload = record.model_dump()
-                    payload["content_hash"] = record_hash(record)
-                    connection.execute(
-                        "INSERT INTO staging_records(job_id,id,payload,content_hash) VALUES(?,?,?,?) "
-                        "ON CONFLICT(job_id,id) DO UPDATE SET payload=excluded.payload,content_hash=excluded.content_hash",
-                        (job_id, record.id, _canonical_json(payload), payload["content_hash"]),
-                    )
-                    connection.execute("DELETE FROM staging_deletions WHERE job_id=? AND id=?", (job_id, record.id))
-                for record_id in deletions:
-                    connection.execute(
-                        "INSERT OR IGNORE INTO staging_deletions(job_id,id) VALUES(?,?)", (job_id, record_id)
-                    )
-                    connection.execute("DELETE FROM staging_records WHERE job_id=? AND id=?", (job_id, record_id))
+                if not duplicate_batch:
+                    for record in valid_records:
+                        payload = record.model_dump()
+                        payload["content_hash"] = record_hash(record)
+                        connection.execute(
+                            "INSERT INTO staging_records(job_id,id,payload,content_hash) VALUES(?,?,?,?) "
+                            "ON CONFLICT(job_id,id) DO UPDATE SET payload=excluded.payload,content_hash=excluded.content_hash",
+                            (job_id, record.id, _canonical_json(payload), payload["content_hash"]),
+                        )
+                        connection.execute("DELETE FROM staging_deletions WHERE job_id=? AND id=?", (job_id, record.id))
+                    for rejection in rejected_records:
+                        raw_payload = raw_incoming[int(rejection["position"])]
+                        connection.execute(
+                            "INSERT INTO sync_rejections(job_id,batch_index,record_id,error,payload,created_utc) VALUES(?,?,?,?,?,?)",
+                            (
+                                job_id,
+                                batch_index,
+                                rejection["id"],
+                                rejection["error"],
+                                _canonical_json(raw_payload)[:12000],
+                                now,
+                            ),
+                        )
+                    for record_id in deletions:
+                        connection.execute(
+                            "INSERT OR IGNORE INTO staging_deletions(job_id,id) VALUES(?,?)", (job_id, record_id)
+                        )
+                        connection.execute("DELETE FROM staging_records WHERE job_id=? AND id=?", (job_id, record_id))
+                    received_batches.add(batch_index)
 
-                received_batches.add(batch_index)
                 staged_records = int(connection.execute("SELECT COUNT(*) FROM staging_records WHERE job_id=?", (job_id,)).fetchone()[0])
                 staged_deletions = int(connection.execute("SELECT COUNT(*) FROM staging_deletions WHERE job_id=?", (job_id,)).fetchone()[0])
-                effective_batch_count = max(
-                    batch_count, int(existing["batch_count"]) if existing else batch_count
-                )
+                rejected_total = int(connection.execute("SELECT COUNT(*) FROM sync_rejections WHERE job_id=?", (job_id,)).fetchone()[0])
+                rejection_rows = [
+                    {"position": int(row["batch_index"]), "id": str(row["record_id"]), "error": str(row["error"])}
+                    for row in connection.execute(
+                        "SELECT batch_index,record_id,error FROM sync_rejections WHERE job_id=? ORDER BY rejection_id LIMIT ?",
+                        (job_id, settings.max_rejection_details),
+                    )
+                ]
+                effective_batch_count = max(batch_count, int(existing["batch_count"]) if existing else batch_count)
                 connection.execute(
-                    "UPDATE sync_jobs SET source_site=?,batch_count=?,received_batches=?,staged_records=?,staged_deletions=?,updated_utc=? WHERE job_id=?",
+                    "UPDATE sync_jobs SET source_site=?,batch_count=?,received_batches=?,staged_records=?,staged_deletions=?,rejected_records=?,updated_utc=? WHERE job_id=?",
                     (
                         source_site,
                         effective_batch_count,
                         _canonical_json(sorted(received_batches)),
                         staged_records,
                         staged_deletions,
+                        rejected_total,
                         now,
                         job_id,
                     ),
@@ -369,11 +448,12 @@ class KnowledgeStore:
                     summary = self._summary_from_connection(connection)
                     connection.commit()
                     return SyncResult(
-                        state="staging",
+                        state="staging-with-rejections" if rejected_total else "staging",
                         committed=False,
-                        received=len(incoming),
-                        accepted=len(incoming),
-                        rejected=0,
+                        received=len(raw_incoming),
+                        accepted=len(valid_records),
+                        rejected=len(rejected_records),
+                        rejected_records=rejected_records[: settings.max_rejection_details],
                         inserted=0,
                         updated=0,
                         unchanged=0,
@@ -388,8 +468,15 @@ class KnowledgeStore:
                 inserted = updated = unchanged = deleted = 0
                 if job_mode == "replace":
                     staged_ids = {str(row["id"]) for row in connection.execute("SELECT id FROM staging_records WHERE job_id=?", (job_id,))}
+                    protected_ids = {
+                        str(row["record_id"])
+                        for row in connection.execute(
+                            "SELECT DISTINCT record_id FROM sync_rejections WHERE job_id=? AND trim(record_id) <> ''",
+                            (job_id,),
+                        )
+                    }
                     existing_ids = {str(row["id"]) for row in connection.execute("SELECT id FROM records")}
-                    removed = existing_ids - staged_ids
+                    removed = existing_ids - staged_ids - protected_ids
                     if removed:
                         connection.executemany("DELETE FROM records WHERE id=?", [(value,) for value in removed])
                         connection.executemany(
@@ -412,14 +499,7 @@ class KnowledgeStore:
                         connection.execute(
                             "INSERT INTO records(id,title,url,payload,content_hash,updated_utc) VALUES(?,?,?,?,?,?) "
                             "ON CONFLICT(id) DO UPDATE SET title=excluded.title,url=excluded.url,payload=excluded.payload,content_hash=excluded.content_hash,updated_utc=excluded.updated_utc",
-                            (
-                                row["id"],
-                                str(payload.get("title", "")),
-                                str(payload.get("url", "")),
-                                row["payload"],
-                                row["content_hash"],
-                                now,
-                            ),
+                            (row["id"], str(payload.get("title", "")), str(payload.get("url", "")), row["payload"], row["content_hash"], now),
                         )
                         connection.execute("DELETE FROM tombstones WHERE id=?", (row["id"],))
 
@@ -452,9 +532,11 @@ class KnowledgeStore:
                 if "recovery" in reason:
                     meta_updates["last_recovery_utc"] = now
                 self._set_meta(connection, meta_updates)
+                final_state = "completed-with-rejections" if rejected_total else "completed"
                 result = {
                     "accepted": staged_records,
-                    "rejected": 0,
+                    "rejected": rejected_total,
+                    "rejected_records": rejection_rows,
                     "inserted": inserted,
                     "updated": updated,
                     "unchanged": unchanged,
@@ -464,19 +546,20 @@ class KnowledgeStore:
                     "checksum": checksum,
                 }
                 connection.execute(
-                    "UPDATE sync_jobs SET state='completed',completed_utc=?,updated_utc=?,result=?,error='' WHERE job_id=?",
-                    (now, now, _canonical_json(result), job_id),
+                    "UPDATE sync_jobs SET state=?,completed_utc=?,updated_utc=?,result=?,error='' WHERE job_id=?",
+                    (final_state, now, now, _canonical_json(result), job_id),
                 )
                 connection.execute("DELETE FROM staging_records WHERE job_id=?", (job_id,))
                 connection.execute("DELETE FROM staging_deletions WHERE job_id=?", (job_id,))
                 summary = self._summary_from_connection(connection)
                 connection.commit()
                 return SyncResult(
-                    state="completed",
+                    state=final_state,
                     committed=True,
-                    received=len(incoming),
+                    received=len(raw_incoming),
                     accepted=staged_records,
-                    rejected=0,
+                    rejected=rejected_total,
+                    rejected_records=rejection_rows,
                     inserted=inserted,
                     updated=updated,
                     unchanged=unchanged,
@@ -495,6 +578,34 @@ class KnowledgeStore:
                     )
                 raise
 
+    def repair_stalled_jobs(self, max_age_seconds: int | None = None, purge_staging: bool = True) -> dict[str, Any]:
+        age = max(300, int(max_age_seconds or settings.stalled_job_seconds))
+        cutoff = self._utc_cutoff(age)
+        repaired: list[str] = []
+        with self._lock, self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                rows = list(connection.execute(
+                    "SELECT job_id FROM sync_jobs WHERE state='staging' AND updated_utc < ? ORDER BY updated_utc",
+                    (cutoff,),
+                ))
+                now = utc_now()
+                for row in rows:
+                    job_id = str(row["job_id"])
+                    repaired.append(job_id)
+                    if purge_staging:
+                        connection.execute("DELETE FROM staging_records WHERE job_id=?", (job_id,))
+                        connection.execute("DELETE FROM staging_deletions WHERE job_id=?", (job_id,))
+                    connection.execute(
+                        "UPDATE sync_jobs SET state='stalled',updated_utc=?,error=? WHERE job_id=?",
+                        (now, f"Staging job exceeded {age} seconds without all expected batches.", job_id),
+                    )
+                connection.commit()
+            except Exception:
+                connection.rollback()
+                raise
+        return {"ok": True, "repaired_jobs": repaired, "count": len(repaired), "purged": purge_staging, "max_age_seconds": age}
+
     def records(self) -> list[KnowledgeRecord]:
         with self._lock, self._connection() as connection:
             result: list[KnowledgeRecord] = []
@@ -512,30 +623,99 @@ class KnowledgeStore:
     def manifest(self) -> dict[str, Any]:
         with self._lock, self._connection() as connection:
             summary = self._summary_from_connection(connection)
-            jobs = [dict(row) for row in connection.execute(
-                "SELECT job_id,mode,state,batch_count,staged_records,staged_deletions,started_utc,updated_utc,completed_utc,error "
+            cutoff = self._utc_cutoff(settings.stalled_job_seconds)
+            jobs: list[dict[str, Any]] = []
+            for row in connection.execute(
+                "SELECT job_id,mode,state,batch_count,staged_records,staged_deletions,rejected_records,started_utc,updated_utc,completed_utc,error "
                 "FROM sync_jobs ORDER BY started_utc DESC LIMIT 20"
-            )]
+            ):
+                item = dict(row)
+                item["stalled"] = item["state"] == "stalled" or (item["state"] == "staging" and str(item["updated_utc"]) < cutoff)
+                jobs.append(item)
             tombstones = int(connection.execute("SELECT COUNT(*) FROM tombstones").fetchone()[0])
             return {
                 "schema": INDEX_SCHEMA,
                 "manifest": summary,
                 "recent_jobs": jobs,
                 "tombstone_count": tombstones,
+                "stalled_job_seconds": settings.stalled_job_seconds,
             }
+
+    def job_rejections(self, job_id: str) -> list[dict[str, Any]]:
+        with self._lock, self._connection() as connection:
+            return [dict(row) for row in connection.execute(
+                "SELECT batch_index,record_id,error,created_utc FROM sync_rejections WHERE job_id=? ORDER BY rejection_id LIMIT ?",
+                (job_id, settings.max_rejection_details),
+            )]
+
+    @staticmethod
+    def _validate_snapshot_row(row: sqlite3.Row) -> dict[str, Any]:
+        errors: list[str] = []
+        try:
+            payload = json.loads(gzip.decompress(bytes(row["payload_gzip"])).decode("utf-8"))
+        except (OSError, ValueError, TypeError, gzip.BadGzipFile) as exc:
+            return {"ok": False, "errors": [f"snapshot-decode: {exc}"]}
+        raw_records = payload.get("records", []) if isinstance(payload, dict) else []
+        if not isinstance(raw_records, list):
+            return {"ok": False, "errors": ["records is not a list"]}
+        digest = hashlib.sha256()
+        valid_count = 0
+        for position, raw in enumerate(raw_records):
+            try:
+                record = KnowledgeRecord.model_validate(raw)
+            except (ValueError, TypeError) as exc:
+                errors.append(f"record {position}: {str(exc)[:300]}")
+                continue
+            digest.update(record.id.encode("utf-8"))
+            digest.update(b":")
+            digest.update(record_hash(record).encode("ascii", errors="ignore"))
+            digest.update(b"\n")
+            valid_count += 1
+        calculated = digest.hexdigest()
+        manifest = payload.get("manifest", {}) if isinstance(payload, dict) else {}
+        expected_checksum = str(manifest.get("checksum", row["checksum"] or ""))
+        expected_count = int(manifest.get("record_count", row["record_count"] or 0))
+        if expected_count != len(raw_records):
+            errors.append(f"record-count mismatch: expected {expected_count}, found {len(raw_records)}")
+        if expected_checksum and calculated != expected_checksum:
+            errors.append("record checksum mismatch")
+        if valid_count != len(raw_records):
+            errors.append(f"{len(raw_records) - valid_count} invalid record(s)")
+        return {
+            "ok": not errors,
+            "errors": errors[:20],
+            "record_count": len(raw_records),
+            "checksum": calculated,
+            "payload": payload,
+        }
 
     def list_snapshots(self) -> list[dict[str, Any]]:
         with self._lock, self._connection() as connection:
-            return [dict(row) for row in connection.execute(
-                "SELECT snapshot_id,created_utc,reason,index_version,checksum,record_count FROM snapshots ORDER BY created_utc DESC"
-            )]
+            result: list[dict[str, Any]] = []
+            for row in connection.execute(
+                "SELECT snapshot_id,created_utc,reason,index_version,checksum,record_count,payload_gzip FROM snapshots ORDER BY created_utc DESC"
+            ):
+                item = {key: row[key] for key in ("snapshot_id", "created_utc", "reason", "index_version", "checksum", "record_count")}
+                integrity = self._validate_snapshot_row(row)
+                item["integrity_ok"] = bool(integrity["ok"])
+                item["integrity_errors"] = integrity["errors"]
+                result.append(item)
+            return result
+
+    def validate_snapshots(self) -> dict[str, Any]:
+        snapshots = self.list_snapshots()
+        invalid = [item for item in snapshots if not item.get("integrity_ok")]
+        return {"ok": not invalid, "snapshot_count": len(snapshots), "invalid_count": len(invalid), "snapshots": snapshots}
 
     def rollback(self, snapshot_id: str) -> dict[str, Any]:
         with self._lock, self._connection() as connection:
             row = connection.execute("SELECT * FROM snapshots WHERE snapshot_id=?", (snapshot_id,)).fetchone()
             if row is None:
                 raise KeyError(snapshot_id)
-            payload = json.loads(gzip.decompress(bytes(row["payload_gzip"])).decode("utf-8"))
+            integrity = self._validate_snapshot_row(row)
+            if not integrity["ok"]:
+                raise ValueError("Runtime snapshot failed integrity validation: " + "; ".join(integrity["errors"]))
+            payload = integrity["payload"]
             records = [KnowledgeRecord.model_validate(item) for item in payload.get("records", [])]
             connection.execute("BEGIN IMMEDIATE")
             try:
@@ -547,14 +727,7 @@ class KnowledgeStore:
                     payload_row["content_hash"] = record_hash(record)
                     connection.execute(
                         "INSERT INTO records(id,title,url,payload,content_hash,updated_utc) VALUES(?,?,?,?,?,?)",
-                        (
-                            record.id,
-                            record.title,
-                            record.url,
-                            _canonical_json(payload_row),
-                            payload_row["content_hash"],
-                            now,
-                        ),
+                        (record.id, record.title, record.url, _canonical_json(payload_row), payload_row["content_hash"], now),
                     )
                 meta = self._meta(connection)
                 new_version = int(meta.get("index_version", 0)) + 1
@@ -574,7 +747,7 @@ class KnowledgeStore:
             except Exception:
                 connection.rollback()
                 raise
-            return {"ok": True, "snapshot_id": snapshot_id, "summary": self.summary()}
+            return {"ok": True, "snapshot_id": snapshot_id, "integrity": {"ok": True, "checksum": integrity["checksum"]}, "summary": self.summary()}
 
 
 store = KnowledgeStore()

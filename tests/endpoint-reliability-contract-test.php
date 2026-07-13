@@ -1,5 +1,5 @@
 <?php
-/** Static contract checks for Research Librarian AI v6.3.0 endpoint and recovery reliability. */
+/** Static contract checks for Research Librarian AI v6.3.1 endpoint and recovery reliability. */
 $root = dirname( __DIR__ );
 $main = file_get_contents( $root . '/sustainable-catalyst-research-librarian-ai.php' );
 $module = file_get_contents( $root . '/includes/class-sc-rl-v630-durable-index.php' );
@@ -8,10 +8,10 @@ $css = file_get_contents( $root . '/assets/sc-research-librarian-ai.css' );
 $models = file_get_contents( $root . '/backend/app/models.py' );
 $backend = file_get_contents( $root . '/backend/app/main.py' );
 $store = file_get_contents( $root . '/backend/app/store.py' );
-$manifest = json_decode( file_get_contents( $root . '/data/research_librarian_durable_index_manifest_v6.3.0.json' ), true );
+$manifest = json_decode( file_get_contents( $root . '/data/research_librarian_cold_start_recovery_manifest_v6.3.1.json' ), true );
 
 $checks = array(
-    'plugin_version' => false !== strpos( $main, "const VERSION        = '6.3.0';" ),
+    'plugin_version' => false !== strpos( $main, "const VERSION        = '6.3.1';" ),
     'durable_module' => false !== strpos( $module, 'final class SC_RL6_V630_Durable_Index' ),
     'nonce_route' => false !== strpos( $main, "'/nonce'" ) && false !== strpos( $main, 'handle_nonce_request' ),
     'single_nonce_retry' => false !== strpos( $js, 'function fetchWithNonce' ) && false !== strpos( $js, 'fetchWithNonce(url, options, false)' ),
@@ -34,7 +34,7 @@ $checks = array(
     'sqlite_runtime' => false !== strpos( $store, 'knowledge_index.sqlite3' ) && false !== strpos( $store, 'PRAGMA journal_mode=WAL' ),
     'staged_jobs' => false !== strpos( $store, 'CREATE TABLE IF NOT EXISTS staging_records' ) && false !== strpos( $store, 'CREATE TABLE IF NOT EXISTS sync_jobs' ),
     'atomic_commit' => false !== strpos( $store, 'BEGIN IMMEDIATE' ) && false !== strpos( $store, 'final_batch' ),
-    'idempotent_jobs' => false !== strpos( $store, 'duplicate_batch' ) && false !== strpos( $store, 'str(existing["state"]) == "completed"' ),
+    'idempotent_jobs' => false !== strpos( $store, 'duplicate_batch' ) && false !== strpos( $store, 'str(existing["state"]) in {"completed", "completed-with-rejections"}' ),
     'runtime_snapshots' => false !== strpos( $store, 'CREATE TABLE IF NOT EXISTS snapshots' ) && false !== strpos( $store, 'def rollback(' ),
     'runtime_snapshot_retention' => false !== strpos( $store, 'settings.max_runtime_snapshots' ) && false !== strpos( file_get_contents( $root . '/backend/app/config.py' ), 'SC_RL_MAX_RUNTIME_SNAPSHOTS' ),
     'legacy_json_migration' => false !== strpos( $store, 'def _migrate_legacy_json' ) && false !== strpos( $store, '.json.migrated' ),
@@ -47,10 +47,10 @@ $checks = array(
     'terminal_accessible_focus' => false !== strpos( $css, '.sc-rl-ai__textarea:focus-visible' ) && false !== strpos( $css, '0 0 0 4px rgba(125,255,145,.24)' ),
     'light_answer_surface' => false !== strpos( $css, '.sc-rl-ai__answer-card' ) && false !== strpos( $css, '--sc-rl-paper: #fff' ),
     'light_source_cards' => false !== strpos( $css, '.sc-rl-production-answer__source-card' ) && false !== strpos( $css, 'background: #fff' ),
-    'release_manifest' => is_array( $manifest ) && '6.3.0' === ( $manifest['version'] ?? '' ),
+    'release_manifest' => is_array( $manifest ) && '6.3.1' === ( $manifest['version'] ?? '' ),
     'backward_aliases' => false !== strpos( $module, "class_alias( 'SC_RL6_V630_Durable_Index', 'SC_RL6_V621_Endpoint_Reliability' )" ) && false !== strpos( $module, "class_alias( 'SC_RL6_V630_Durable_Index', 'SC_RL6_V620_Knowledge_Intelligence' )" ),
 );
 $failed = array_keys( array_filter( $checks, static function ( $value ) { return ! $value; } ) );
-$result = array( 'version' => '6.3.0', 'checks' => $checks, 'passed' => count( $checks ) - count( $failed ), 'failed' => count( $failed ), 'failures' => $failed );
+$result = array( 'version' => '6.3.1', 'checks' => $checks, 'passed' => count( $checks ) - count( $failed ), 'failed' => count( $failed ), 'failures' => $failed );
 echo json_encode( $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . PHP_EOL;
 exit( $failed ? 1 : 0 );

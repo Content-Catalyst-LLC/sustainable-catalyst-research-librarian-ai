@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 import shutil
 
-TEST_DATA_DIR = Path("/tmp/sc-rl-tests-v630")
+TEST_DATA_DIR = Path("/tmp/sc-rl-tests-v631")
 shutil.rmtree(TEST_DATA_DIR, ignore_errors=True)
 os.environ["SC_RL_BACKEND_API_KEY"] = "test-key"
 os.environ["SC_RL_DATA_DIR"] = str(TEST_DATA_DIR)
@@ -17,7 +17,7 @@ client = TestClient(app)
 def test_health() -> None:
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json()["version"] == "6.3.0"
+    assert response.json()["version"] == "6.3.1"
 
 
 def test_sync_requires_key() -> None:
@@ -57,7 +57,7 @@ def test_manifest_and_runtime_snapshots() -> None:
     assert manifest.status_code == 200
     body = manifest.json()
     assert body["manifest"]["storage_engine"] == "sqlite"
-    assert body["manifest"]["schema_version"] == 3
+    assert body["manifest"]["schema_version"] == 4
     snapshots = client.get("/v1/knowledge/snapshots", headers=headers)
     assert snapshots.status_code == 200
     assert isinstance(snapshots.json()["snapshots"], list)
@@ -77,3 +77,56 @@ def test_sync_rejects_batch_index_beyond_batch_count() -> None:
         },
     )
     assert response.status_code == 422
+
+
+def test_startup_status_is_exposed() -> None:
+    response = client.get("/startup")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["version"] == "6.3.1"
+    assert body["startup_state"] in {"warming", "ready"}
+    assert 0 <= body["startup_progress"] <= 100
+
+
+def test_sync_isolates_invalid_record() -> None:
+    headers = {"X-SC-RL-Key": "test-key"}
+    response = client.post(
+        "/v1/knowledge/sync",
+        headers=headers,
+        json={
+            "mode": "upsert",
+            "job_id": "api-isolated-rejection",
+            "records": [
+                {
+                    "id": "valid-record",
+                    "title": "Valid Record",
+                    "url": "https://sustainablecatalyst.com/valid-record/",
+                },
+                {
+                    "id": "invalid-record",
+                    "title": "",
+                    "url": "https://sustainablecatalyst.com/invalid-record/",
+                },
+            ],
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["committed"] is True
+    assert body["rejected"] == 1
+    assert body["state"] == "completed-with-rejections"
+    assert body["rejected_records"][0]["id"] == "invalid-record"
+
+
+def test_snapshot_validation_and_maintenance_endpoints() -> None:
+    headers = {"X-SC-RL-Key": "test-key"}
+    validation = client.get("/v1/knowledge/snapshots/validate", headers=headers)
+    assert validation.status_code == 200
+    assert "invalid_count" in validation.json()
+    maintenance = client.post(
+        "/v1/knowledge/maintenance",
+        headers=headers,
+        json={"max_age_seconds": 300, "purge_staging": True},
+    )
+    assert maintenance.status_code == 200
+    assert "repaired_jobs" in maintenance.json()

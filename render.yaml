@@ -20,6 +20,12 @@ services:
         value: "false"
       - key: SC_RL_MAX_RUNTIME_SNAPSHOTS
         value: "5"
+      - key: SC_RL_STARTUP_WARMUP_SECONDS
+        value: "12"
+      - key: SC_RL_STALLED_JOB_SECONDS
+        value: "1800"
+      - key: SC_RL_MAX_REJECTION_DETAILS
+        value: "100"
       - key: SC_RL_CORS_ORIGINS
         value: https://sustainablecatalyst.com
       - key: SC_RL_BACKEND_API_KEY

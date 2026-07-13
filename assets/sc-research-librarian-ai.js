@@ -323,7 +323,14 @@
       } else if (state === 'needs-sync' || state === 'index-empty') {
         detail = 'The Python service is reachable, but the Knowledge Library index is empty · run Repair Endpoint and Resynchronize';
       } else if (state === 'backend-warming') {
-        detail = 'The free Render service is starting · verified WordPress fallback remains available';
+        detail = 'The free Render service is starting';
+        if (payload.startup_phase) detail += ' · ' + String(payload.startup_phase).replace(/-/g, ' ');
+        if (payload.startup_progress !== undefined) detail += ' · ' + Math.max(0, Math.min(100, Number(payload.startup_progress) || 0)) + '%';
+        if (payload.recovery_progress && payload.recovery_progress.phase) {
+          detail += ' · recovery ' + String(payload.recovery_progress.phase).replace(/-/g, ' ');
+          if (payload.recovery_progress.progress !== undefined) detail += ' ' + Math.max(0, Math.min(100, Number(payload.recovery_progress.progress) || 0)) + '%';
+        }
+        detail += ' · verified WordPress fallback remains available';
       } else if (state === 'integration-key-mismatch') {
         detail = 'WordPress reached Python, but the shared integration key was rejected';
       } else if (state === 'backend-rate-limited') {
@@ -408,7 +415,7 @@
         return { label: 'Invalid endpoint response', intro: 'WordPress returned a response that the Research Librarian could not read.', detail: 'Check caching, security, or REST-response modification plugins.' };
       }
       if (statusCode === 404) {
-        return { label: 'WordPress route unavailable', intro: 'The Research Librarian REST route was not found.', detail: 'Resave WordPress permalinks and confirm that the active v6.3.0 plugin registered its routes.' };
+        return { label: 'WordPress route unavailable', intro: 'The Research Librarian REST route was not found.', detail: 'Resave WordPress permalinks and confirm that the active v6.3.1 plugin registered its routes.' };
       }
       if (statusCode >= 500) {
         return { label: 'WordPress endpoint error', intro: 'WordPress reached the Research Librarian route but returned a server error.', detail: 'The Python provider status is separate from this WordPress failure.' };
@@ -420,7 +427,7 @@
     }
 
     function endpointNoticeHtml(endpointStatus) {
-      if (!endpointStatus || !endpointStatus.label || endpointStatus.state === 'online') return '';
+      if (!endpointStatus || !endpointStatus.label || endpointStatus.state === 'online' || endpointStatus.suppress_notice) return '';
       return '<aside class="sc-rl-ai__endpoint-notice" role="status"><strong>' + escapeHtml(endpointStatus.label) + '</strong><span>' + escapeHtml(endpointStatus.message || '') + '</span></aside>';
     }
 

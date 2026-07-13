@@ -17,6 +17,7 @@ from .config import settings
 from .models import (
     AskRequest,
     AskResponse,
+    MaintenanceRequest,
     RetrievalRequest,
     RetrievedSource,
     RollbackRequest,
@@ -45,6 +46,8 @@ app.add_middleware(
 )
 
 _sessions: dict[str, list[dict[str, Any]]] = defaultdict(list)
+_SERVICE_STARTED_MONOTONIC = time.monotonic()
+_SERVICE_STARTED_UTC = utc_now()
 
 
 def require_key(x_sc_rl_key: str = Header(default="")) -> None:
@@ -132,11 +135,41 @@ def _actions(question: str, best: RetrievedSource | None) -> list[dict[str, str]
     return actions[:5]
 
 
+def _startup_snapshot(summary: dict[str, Any] | None = None) -> dict[str, Any]:
+    summary = summary or store.summary()
+    uptime = max(0, int(time.monotonic() - _SERVICE_STARTED_MONOTONIC))
+    warmup = max(0, settings.startup_warmup_seconds)
+    warming = warmup > 0 and uptime < warmup
+    if warming:
+        progress = min(95, max(10, int((uptime / warmup) * 100)))
+        phase = "opening-runtime-index" if int(summary.get("total_records", 0)) else "awaiting-index-recovery"
+        state = "warming"
+    elif int(summary.get("total_records", 0)) == 0:
+        progress = 100
+        phase = "awaiting-index-recovery"
+        state = "ready"
+    else:
+        progress = 100
+        phase = "ready"
+        state = "ready"
+    return {
+        "startup_state": state,
+        "startup_phase": phase,
+        "startup_progress": progress,
+        "service_started_utc": _SERVICE_STARTED_UTC,
+        "uptime_seconds": uptime,
+        "ready": not warming,
+    }
+
+
 def _status() -> StatusResponse:
     summary = store.summary()
     ai_ready = provider_configured()
     index_ready = int(summary.get("total_records", 0)) > 0
-    if ai_ready and index_ready and provider_state.last_success_utc:
+    startup = _startup_snapshot(summary)
+    if startup["startup_state"] == "warming":
+        state, label = "backend-warming", "Python Backend Warming"
+    elif ai_ready and index_ready and provider_state.last_success_utc:
         state, label = "online", "AI and Knowledge Index Online"
     elif ai_ready and index_ready:
         state, label = "ready", "AI Configured — Knowledge Index Ready"
@@ -158,17 +191,19 @@ def _status() -> StatusResponse:
         last_sync_utc=str(summary.get("last_sync_utc", "")),
         source_site=str(summary.get("source_site", "")),
         storage_engine=str(summary.get("storage_engine", "sqlite")),
-        schema_version=int(summary.get("schema_version", 3)),
+        schema_version=int(summary.get("schema_version", 4)),
         index_version=int(summary.get("index_version", 0)),
         checksum=str(summary.get("checksum", "")),
         snapshot_count=int(summary.get("snapshot_count", 0)),
         staging_jobs=int(summary.get("staging_jobs", 0)),
+        stalled_jobs=int(summary.get("stalled_jobs", 0)),
         recovery_needed=bool(summary.get("recovery_needed", False)),
         last_recovery_utc=str(summary.get("last_recovery_utc", "")),
         last_rollback_utc=str(summary.get("last_rollback_utc", "")),
         last_ai_success_utc=provider_state.last_success_utc,
         last_ai_failure_utc=provider_state.last_failure_utc,
         last_ai_error=provider_state.last_error,
+        **startup,
     )
 
 
@@ -181,12 +216,19 @@ def root() -> dict[str, Any]:
         "version": __version__,
         "state": current.state,
         "indexed_records": current.indexed_records,
+        "startup_state": current.startup_state,
+        "startup_progress": current.startup_progress,
     }
 
 
 @app.get("/health")
 def health() -> dict[str, Any]:
-    return {"ok": True, "version": __version__, "environment": settings.environment}
+    return {"ok": True, "version": __version__, "environment": settings.environment, **_startup_snapshot()}
+
+
+@app.get("/startup")
+def startup() -> dict[str, Any]:
+    return {"ok": True, "version": __version__, **_startup_snapshot()}
 
 
 @app.get("/status", response_model=StatusResponse)
@@ -214,6 +256,7 @@ def sync_knowledge(payload: SyncRequest) -> SyncResponse:
         received=result.received,
         accepted=result.accepted,
         rejected=result.rejected,
+        rejected_records=result.rejected_records,
         inserted=result.inserted,
         updated=result.updated,
         unchanged=result.unchanged,
@@ -244,9 +287,23 @@ def knowledge_manifest() -> dict[str, Any]:
     return {"ok": True, "version": __version__, **store.manifest()}
 
 
+@app.post("/v1/knowledge/maintenance", dependencies=[Depends(require_key)])
+def knowledge_maintenance(payload: MaintenanceRequest) -> dict[str, Any]:
+    return {
+        "version": __version__,
+        **store.repair_stalled_jobs(payload.max_age_seconds, payload.purge_staging),
+        "manifest": store.summary(),
+    }
+
+
 @app.get("/v1/knowledge/snapshots", dependencies=[Depends(require_key)])
 def knowledge_snapshots() -> dict[str, Any]:
     return {"ok": True, "version": __version__, "snapshots": store.list_snapshots()}
+
+
+@app.get("/v1/knowledge/snapshots/validate", dependencies=[Depends(require_key)])
+def knowledge_validate_snapshots() -> dict[str, Any]:
+    return {"version": __version__, **store.validate_snapshots()}
 
 
 @app.post("/v1/knowledge/rollback", dependencies=[Depends(require_key)])
@@ -255,6 +312,8 @@ def knowledge_rollback(payload: RollbackRequest) -> dict[str, Any]:
         result = store.rollback(payload.snapshot_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="Runtime index snapshot not found.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     return {"version": __version__, **result}
 
 

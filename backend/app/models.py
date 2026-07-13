@@ -39,7 +39,10 @@ class KnowledgeRecord(BaseModel):
 
 
 class SyncRequest(BaseModel):
-    records: list[KnowledgeRecord]
+    # Raw dictionaries are accepted deliberately. Each record is validated and
+    # isolated inside the transactional store so one malformed record cannot
+    # reject an otherwise valid synchronization batch.
+    records: list[dict[str, Any]] = Field(default_factory=list)
     mode: str = Field(default="replace", pattern="^(replace|upsert|delete)$")
     source_site: str = ""
     generated_utc: str = Field(default_factory=utc_now)
@@ -64,6 +67,7 @@ class SyncResponse(BaseModel):
     received: int
     accepted: int = 0
     rejected: int = 0
+    rejected_records: list[dict[str, Any]] = Field(default_factory=list)
     inserted: int = 0
     updated: int = 0
     unchanged: int = 0
@@ -85,6 +89,11 @@ class SyncResponse(BaseModel):
 
 class RollbackRequest(BaseModel):
     snapshot_id: str = Field(min_length=1, max_length=220)
+
+
+class MaintenanceRequest(BaseModel):
+    max_age_seconds: int = Field(default=1800, ge=300, le=86400)
+    purge_staging: bool = True
 
 
 class RetrievalRequest(BaseModel):
@@ -151,14 +160,21 @@ class StatusResponse(BaseModel):
     last_sync_utc: str
     source_site: str
     storage_engine: str = "sqlite"
-    schema_version: int = 3
+    schema_version: int = 4
     index_version: int = 0
     checksum: str = ""
     snapshot_count: int = 0
     staging_jobs: int = 0
+    stalled_jobs: int = 0
     recovery_needed: bool = False
     last_recovery_utc: str = ""
     last_rollback_utc: str = ""
     last_ai_success_utc: str = ""
     last_ai_failure_utc: str = ""
     last_ai_error: str = ""
+    startup_state: str = "ready"
+    startup_phase: str = "ready"
+    startup_progress: int = 100
+    service_started_utc: str = ""
+    uptime_seconds: int = 0
+    ready: bool = True

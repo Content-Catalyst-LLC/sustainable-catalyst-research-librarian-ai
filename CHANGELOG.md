@@ -1,3 +1,16 @@
+## 6.3.1 — Cold-Start and Recovery Hardening
+
+- Added backend startup state, phase, progress, readiness, service-start time, and uptime reporting.
+- Added persisted WordPress recovery phases and public recovery-progress visibility.
+- Added bounded exponential retry with configurable ceilings for full sync and cold-start recovery.
+- Added retry exhaustion, manual retry clearing, and recovery-event deduplication.
+- Added stalled staging-job detection, repair, purge controls, and transaction-timeout handling.
+- Added per-record validation, rejection history, and safe valid-record commits with malformed-record isolation.
+- Added WordPress snapshot record/hash/checksum validation and runtime snapshot integrity verification before rollback.
+- Added administrator snapshot validation, maintenance actions, and JSON operations-log export.
+- Added transient public-notice suppression for repeated warm-up or connectivity events.
+- Preserved the v6.3.0 transactional SQLite index, private WordPress recovery snapshots, v6.2.1 endpoint reliability, and black-and-green prompt interface.
+
 ## 6.3.0 — Durable Knowledge Index, Sync Ledger, and Recovery
 
 - Replaced the Python JSON runtime store with a transactional SQLite knowledge index.

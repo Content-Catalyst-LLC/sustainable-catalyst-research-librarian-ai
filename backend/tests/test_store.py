@@ -158,3 +158,61 @@ def test_legacy_json_index_migrates_once(tmp_path: Path) -> None:
     assert store.summary()["source_site"] == "https://legacy.example"
     assert not legacy.exists()
     assert (tmp_path / "knowledge_index.json.migrated").exists()
+
+
+def test_invalid_record_is_isolated_and_existing_record_is_preserved(tmp_path: Path) -> None:
+    store = make_store(tmp_path)
+    store.sync([record("keep", "Keep")], "replace", "https://example.test", "seed-keep", 1, 1, [])
+    result = store.sync(
+        [
+            {"id": "new", "title": "New", "url": "https://example.test/new/"},
+            {"id": "keep", "title": "", "url": "https://example.test/keep/"},
+        ],
+        "replace",
+        "https://example.test",
+        "isolated-failure",
+        1,
+        1,
+        [],
+    )
+    assert result.committed is True
+    assert result.rejected == 1
+    assert result.state == "completed-with-rejections"
+    assert {item.id for item in store.records()} == {"keep", "new"}
+    assert store.job_rejections("isolated-failure")[0]["record_id"] == "keep"
+
+
+def test_stalled_job_repair_purges_staging(tmp_path: Path) -> None:
+    store = make_store(tmp_path)
+    first = store.sync(
+        [record("partial", "Partial")],
+        "replace",
+        "https://example.test",
+        "stalled-job",
+        1,
+        2,
+        [],
+    )
+    assert first.committed is False
+    with store._connection() as connection:
+        connection.execute(
+            "UPDATE sync_jobs SET updated_utc='2000-01-01T00:00:00+00:00' WHERE job_id='stalled-job'"
+        )
+    repaired = store.repair_stalled_jobs(300, purge_staging=True)
+    assert repaired["count"] == 1
+    manifest = store.manifest()
+    job = next(item for item in manifest["recent_jobs"] if item["job_id"] == "stalled-job")
+    assert job["state"] == "stalled"
+    assert job["staged_records"] == 1  # historical count remains visible
+    with store._connection() as connection:
+        assert connection.execute("SELECT COUNT(*) FROM staging_records WHERE job_id='stalled-job'").fetchone()[0] == 0
+
+
+def test_runtime_snapshot_integrity_is_reported(tmp_path: Path) -> None:
+    store = make_store(tmp_path)
+    store.sync([record("a", "A")], "replace", "https://example.test", "seed-integrity", 1, 1, [])
+    store.sync([record("b", "B")], "replace", "https://example.test", "replace-integrity", 1, 1, [])
+    snapshots = store.list_snapshots()
+    assert snapshots
+    assert all("integrity_ok" in item for item in snapshots)
+    assert store.validate_snapshots()["invalid_count"] == 0

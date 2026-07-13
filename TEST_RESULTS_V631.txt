@@ -1,0 +1,17 @@
+Research Librarian AI v6.3.1 — Validation Results
+
+PASS  51/51 v6.3.1 hardening contract checks
+PASS  38/38 inherited endpoint/durable-index checks
+PASS  8 WordPress/PHP release suites
+PASS  Snapshot round-trip and tamper rejection
+PASS  Retry backoff, exhaustion, and alert-suppression functional checks
+PASS  20/20 backend tests from repository root
+PASS  20/20 backend tests from backend directory
+PASS  19 PHP syntax checks
+PASS  2 JavaScript syntax checks
+PASS  47 JSON validations
+PASS  Python compile validation
+PASS  Bash push-script validation
+PASS  Release-marker validation
+PASS  Push-safe secret scan
+PASS  Clean ZIP extraction and complete retest

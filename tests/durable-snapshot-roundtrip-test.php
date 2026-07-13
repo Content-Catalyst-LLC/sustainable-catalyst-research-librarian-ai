@@ -1,5 +1,5 @@
 <?php
-/** Functional round-trip test for v6.3.0 private WordPress snapshots. */
+/** Functional round-trip test for v6.3.1 private WordPress snapshots. */
 error_reporting( E_ALL );
 ini_set( 'display_errors', '1' );
 
@@ -64,6 +64,14 @@ if ( is_wp_error( $manifest ) ) {
     } elseif ( 'wp:post:1' !== ( $roundtrip['records'][0]['id'] ?? '' ) || empty( $roundtrip['records'][0]['content_hash'] ) ) {
         $failed[] = 'Round-trip record or content hash missing';
     }
+
+    $original = file_get_contents( $path );
+    file_put_contents( $path, $original . 'tampered' );
+    $tampered = $method->invoke( null, $manifest );
+    if ( ! is_wp_error( $tampered ) ) {
+        $failed[] = 'Tampered snapshot was not rejected';
+    }
+    file_put_contents( $path, $original );
 }
 
 $result = array(
