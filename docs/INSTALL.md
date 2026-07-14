@@ -1,8 +1,8 @@
-# Install Research Librarian AI v6.5.0
+# Install Research Librarian AI v6.5.1
 
 ## 1. Push the repository
 
-Use `PUSH_RESEARCH_LIBRARIAN_V650_PY312.sh`. The script requires and verifies Python 3.12, clears macOS launcher overrides, validates both Python import layouts, runs every WordPress release contract, verifies the public-workspace manifest, and creates tag `v6.5.0`.
+Use `PUSH_RESEARCH_LIBRARIAN_V651_PY312.sh`. The script requires and verifies Python 3.12, clears macOS launcher overrides, validates both Python import layouts, runs every WordPress release contract, verifies the accessibility/performance manifest, and creates tag `v6.5.1`.
 
 ## 2. Deploy or update Render
 
@@ -40,7 +40,7 @@ No paid vector database or persistent Render disk is required.
 
 ## 3. Install the WordPress plugin
 
-Upload `sustainable-catalyst-research-librarian-ai-v6.5.0.zip`, replace the installed plugin, and activate it. Existing settings, snapshots, records, chunks, embeddings, calibration profiles, benchmarks, ledgers, and queued editorial changes are retained.
+Upload `sustainable-catalyst-research-librarian-ai-wordpress-v6.5.1.zip`, replace the installed plugin, and activate it. Existing settings, snapshots, records, chunks, embeddings, calibration profiles, benchmarks, ledgers, and queued editorial changes are retained.
 
 ## 4. Synchronize and verify
 
@@ -58,7 +58,12 @@ Open **Research Librarian AI → Python Intelligence**, save the backend URL and
 
 Open a page containing `[sustainable_catalyst_research_librarian_ai]` and confirm:
 
-- all eight research-mode controls are visible and keyboard operable;
+- all eight research-mode controls are visible and operable with Arrow keys, Home, and End;
+- title suggestions remain focused in the question field while Arrow keys update the active option;
+- Enter chooses an active title suggestion and Escape closes the list;
+- status, progress, result availability, and suggestion counts are announced;
+- the feedback form opens as a labeled dialog without browser prompts;
+- reduced-motion and forced-colors modes remain usable;
 - the question field remains black with green monospace text and a green focus state;
 - answer, evidence, source, path, and action cards remain light;
 - an exact title suggestion can be selected with the keyboard;
@@ -91,3 +96,8 @@ The v6.3.x recovery controls remain available:
 - **Clear Pending Retries**
 - **Export Sync and Recovery Log**
 - **Rollback Runtime Index** after integrity validation
+
+
+## 8. v6.5.1 performance verification
+
+Confirm that repeated title queries can return `X-SC-RL-Suggestion-Cache: HIT`, stale suggestion requests are cancelled while typing, duplicate answer submissions do not create duplicate in-flight requests, and the FastAPI response headers indicate gzip compression for sufficiently large responses when the client requests it.

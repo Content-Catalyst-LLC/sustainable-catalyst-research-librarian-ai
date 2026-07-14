@@ -13,6 +13,7 @@ import uuid
 
 from fastapi import Depends, FastAPI, Header, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 
 from . import __version__
 from .calibration import evidence_gate, sanitize_retrieval_config
@@ -45,6 +46,7 @@ app = FastAPI(
     version=__version__,
     description="Python knowledge intelligence, title-aware retrieval, and grounded AI guidance for Sustainable Catalyst.",
 )
+app.add_middleware(GZipMiddleware, minimum_size=900)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=list(settings.cors_origins),
@@ -110,7 +112,7 @@ def _follow_up_prompts(mode: str, best: RetrievedSource | None, related: list[Re
 
 def _workspace_summary(mode: str, matches: list[RetrievedSource], related: list[RetrievedSource], ai_used: bool, gate: dict[str, Any]) -> dict[str, Any]:
     return {
-        "schema": "sc-research-librarian-public-workspace/1.0",
+        "schema": "sc-research-librarian-public-workspace/1.1",
         "mode": mode,
         "mode_label": _RESEARCH_MODES.get(mode, _RESEARCH_MODES["auto"])["label"],
         "verified_sources": len(matches),
@@ -118,6 +120,8 @@ def _workspace_summary(mode: str, matches: list[RetrievedSource], related: list[
         "answer_kind": "citation-verified-ai" if ai_used else "deterministic-evidence",
         "evidence_gate_passed": bool(gate.get("ok")),
         "exports": ["copy", "markdown", "json", "print", "research-note"],
+        "accessibility_profile": "wcag-focused-v6.5.1",
+        "rendering_profile": "staged-v6.5.1",
     }
 
 

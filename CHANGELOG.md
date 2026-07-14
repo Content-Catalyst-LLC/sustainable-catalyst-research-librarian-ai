@@ -1,3 +1,14 @@
+## 6.5.1 — Accessibility, Performance, and Interface Reliability
+
+- Added keyboard-complete research-mode radio behavior and roving tabindex.
+- Added combobox/listbox title suggestions with active-descendant navigation and live result counts.
+- Added progressbar semantics, result focus management, reduced motion, forced colors, and mobile touch-target hardening.
+- Replaced browser prompts with an accessible feedback dialog.
+- Added shared health/route caches plus browser and checksum-aware WordPress suggestion caches.
+- Added stale-request cancellation, duplicate in-flight prevention, and staged answer rendering.
+- Added deferred script loading, FastAPI gzip, clipboard fallback, delayed download cleanup, and WordPress-theme compatibility rules.
+- Preserved the v6.5.0 public workspace, black-and-green prompt, light evidence cards, calibrated retrieval, and durable recovery architecture.
+
 ## 6.5.0 — Production Public Research Workspace
 
 - Added eight explicit research modes for title, subject, path, evidence, analysis, comparison, decision preparation, and auto-detection.

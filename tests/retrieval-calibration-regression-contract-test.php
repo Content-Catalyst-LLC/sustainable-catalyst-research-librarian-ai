@@ -1,5 +1,5 @@
 <?php
-/** Static release contract checks for Research Librarian AI v6.5.0. */
+/** Static release contract checks for Research Librarian AI v6.5.1. */
 $root = dirname( __DIR__ );
 $main = file_get_contents( $root . '/sustainable-catalyst-research-librarian-ai.php' );
 $module = file_get_contents( $root . '/includes/class-sc-rl-v630-durable-index.php' );
@@ -14,10 +14,10 @@ $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_re
 $benchmarks = json_decode( file_get_contents( $root . '/data/research_librarian_retrieval_benchmarks_v6.5.0.json' ), true );
 
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 6.5.0' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '6.5.0';" ),
-    'module_version' => false !== strpos( $module, "const VERSION = '6.5.0';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "6.5.0"' ),
+    'version_header' => false !== strpos( $main, 'Version: 6.5.1' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '6.5.1';" ),
+    'module_version' => false !== strpos( $module, "const VERSION = '6.5.1';" ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "6.5.1"' ),
     'schema_version_six' => false !== strpos( $store, 'SCHEMA_VERSION = 6' ),
     'index_schema_six' => false !== strpos( $store, 'sc-research-librarian-knowledge-index/6.0' ),
     'calibration_module' => false !== strpos( $calibration, 'DEFAULT_RETRIEVAL_CONFIG' ),
@@ -96,7 +96,7 @@ $checks = array(
 );
 $failed = array_keys( array_filter( $checks, static function ( $value ) { return ! $value; } ) );
 echo json_encode( array(
-    'version' => '6.5.0',
+    'version' => '6.5.1',
     'checks' => $checks,
     'passed' => count( $checks ) - count( $failed ),
     'failed' => count( $failed ),

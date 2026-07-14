@@ -3,7 +3,7 @@
  * Plugin Name: Sustainable Catalyst Research Librarian AI
  * Plugin URI: https://sustainablecatalyst.com/platform/research-librarian/
  * Description: Production public research workspace for Sustainable Catalyst with site-scoped retrieval, verified citations, guided paths, bounded follow-up continuity, controlled exports, typed platform handoffs, and deterministic fallback.
- * Version: 6.5.0
+ * Version: 6.5.1
  * Author: Content Catalyst LLC / Tariq Ahmad
  * Author URI: https://sustainablecatalyst.com/
  * License: MIT
@@ -251,7 +251,7 @@ if ( ! function_exists( 'sc_rl6_render_legacy_class_notice' ) ) {
             return;
         }
         $status = sc_rl6_legacy_class_status();
-        echo '<div class="notice notice-warning"><p><strong>Research Librarian AI v6.5.0 compatibility mode:</strong> A legacy Research Librarian class was already loaded before the current plugin. The collision-safe v6 bootstrap is active, so settings and shortcodes remain available.</p>';
+        echo '<div class="notice notice-warning"><p><strong>Research Librarian AI v6.5.1 compatibility mode:</strong> A legacy Research Librarian class was already loaded before the current plugin. The collision-safe v6 bootstrap is active, so settings and shortcodes remain available.</p>';
         if ( ! empty( $status['file'] ) ) {
             echo '<p>Legacy class file: <code>' . esc_html( $status['file'] ) . '</code>';
             if ( ! empty( $status['version'] ) ) {
@@ -259,7 +259,7 @@ if ( ! function_exists( 'sc_rl6_render_legacy_class_notice' ) ) {
             }
             echo '</p>';
         }
-        echo '<p>Remove the legacy duplicate, network plugin, or must-use copy after confirming the active v6.5.0 plugin is working.</p></div>';
+        echo '<p>Remove the legacy duplicate, network plugin, or must-use copy after confirming the active v6.5.1 plugin is working.</p></div>';
     }
 }
 add_action( 'admin_notices', 'sc_rl6_render_legacy_class_notice' );
@@ -274,7 +274,7 @@ final class SC_RL6_Core {
     const MAINTENANCE_HOOK = 'sc_rl_ai_index_maintenance_event';
     const AI_STATUS_OPTION = 'sc_rl_ai_live_provider_status';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const VERSION        = '6.5.0';
+    const VERSION        = '6.5.1';
     const RATE_LIMIT_REGISTRY_OPTION = 'sc_rl_ai_rate_limit_registry';
 
     private static $instance = null;
@@ -425,6 +425,9 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
 
         wp_enqueue_style( 'sc-research-librarian-ai', plugins_url( 'assets/sc-research-librarian-ai.css', __FILE__ ), array(), self::VERSION );
         wp_enqueue_script( 'sc-research-librarian-ai', plugins_url( 'assets/sc-research-librarian-ai.js', __FILE__ ), array(), self::VERSION, true );
+        if ( function_exists( 'wp_script_add_data' ) ) {
+            wp_script_add_data( 'sc-research-librarian-ai', 'strategy', 'defer' );
+        }
 
         $mode = sanitize_key( $atts['mode'] );
         if ( 'landing' === $mode ) {
@@ -790,30 +793,31 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
 
         ob_start();
         ?>
-        <section id="<?php echo esc_attr( $root_id ); ?>" class="sc-rl-ai sc-rl-ai--workspace<?php echo $compact ? ' sc-rl-ai--compact' : ''; ?>" data-workspace-version="1.0" data-endpoint="<?php echo esc_url( $endpoint ); ?>" data-routes-endpoint="<?php echo esc_url( $routes_endpoint ); ?>" data-note-endpoint="<?php echo esc_url( $note_endpoint ); ?>" data-handoff-endpoint="<?php echo esc_url( $handoff_endpoint ); ?>" data-deep-link-endpoint="<?php echo esc_url( $deep_link_endpoint ); ?>" data-session-endpoint="<?php echo esc_url( $session_endpoint ); ?>" data-feedback-endpoint="<?php echo esc_url( $feedback_endpoint ); ?>" data-feedback-bridge-endpoint="<?php echo esc_url( $feedback_bridge_endpoint ); ?>" data-ux-endpoint="<?php echo esc_url( $ux_endpoint ); ?>" data-ai-status-endpoint="<?php echo esc_url( $ai_status_endpoint ); ?>" data-suggest-endpoint="<?php echo esc_url( $suggest_endpoint ); ?>" data-nonce-endpoint="<?php echo esc_url( $nonce_endpoint ); ?>" data-nonce="<?php echo esc_attr( $nonce ); ?>">
+        <section id="<?php echo esc_attr( $root_id ); ?>" class="sc-rl-ai sc-rl-ai--workspace<?php echo $compact ? ' sc-rl-ai--compact' : ''; ?>" aria-labelledby="<?php echo esc_attr( $root_id ); ?>-title" data-workspace-version="1.1" data-endpoint="<?php echo esc_url( $endpoint ); ?>" data-routes-endpoint="<?php echo esc_url( $routes_endpoint ); ?>" data-note-endpoint="<?php echo esc_url( $note_endpoint ); ?>" data-handoff-endpoint="<?php echo esc_url( $handoff_endpoint ); ?>" data-deep-link-endpoint="<?php echo esc_url( $deep_link_endpoint ); ?>" data-session-endpoint="<?php echo esc_url( $session_endpoint ); ?>" data-feedback-endpoint="<?php echo esc_url( $feedback_endpoint ); ?>" data-feedback-bridge-endpoint="<?php echo esc_url( $feedback_bridge_endpoint ); ?>" data-ux-endpoint="<?php echo esc_url( $ux_endpoint ); ?>" data-ai-status-endpoint="<?php echo esc_url( $ai_status_endpoint ); ?>" data-suggest-endpoint="<?php echo esc_url( $suggest_endpoint ); ?>" data-nonce-endpoint="<?php echo esc_url( $nonce_endpoint ); ?>" data-nonce="<?php echo esc_attr( $nonce ); ?>">
             <div class="sc-rl-ai__shell">
                 <div class="sc-rl-ai__card sc-rl-ai__ask-card">
                     <p class="sc-rl-ai__eyebrow">AI-Powered Research Guidance</p>
-                    <h2 class="sc-rl-ai__title"><?php echo esc_html( $atts['title'] ); ?></h2>
+                    <h2 class="sc-rl-ai__title" id="<?php echo esc_attr( $root_id ); ?>-title"><?php echo esc_html( $atts['title'] ); ?></h2>
                     <p class="sc-rl-ai__intro">Begin with a title, subject, evidence need, comparison, analytical question, research path, or decision task. The workspace retrieves verified Sustainable Catalyst records first, then presents a readable answer, evidence cards, a guided path, and controlled next actions.</p>
 
                     <fieldset class="sc-rl-ai__mode-picker" data-sc-rl-mode-picker>
                         <legend>Choose a research mode</legend>
                         <div role="radiogroup" aria-label="Research mode">
-                            <button type="button" class="is-active" role="radio" aria-checked="true" data-sc-rl-mode="auto">Auto-detect</button>
-                            <button type="button" role="radio" aria-checked="false" data-sc-rl-mode="title">Find a title</button>
-                            <button type="button" role="radio" aria-checked="false" data-sc-rl-mode="subject">Explore a subject</button>
-                            <button type="button" role="radio" aria-checked="false" data-sc-rl-mode="path">Build a path</button>
-                            <button type="button" role="radio" aria-checked="false" data-sc-rl-mode="evidence">Find evidence</button>
-                            <button type="button" role="radio" aria-checked="false" data-sc-rl-mode="analyze">Analyze</button>
-                            <button type="button" role="radio" aria-checked="false" data-sc-rl-mode="compare">Compare</button>
-                            <button type="button" role="radio" aria-checked="false" data-sc-rl-mode="decision">Prepare a decision</button>
+                            <button type="button" class="is-active" role="radio" aria-checked="true" tabindex="0" data-sc-rl-mode="auto">Auto-detect</button>
+                            <button type="button" role="radio" aria-checked="false" tabindex="-1" data-sc-rl-mode="title">Find a title</button>
+                            <button type="button" role="radio" aria-checked="false" tabindex="-1" data-sc-rl-mode="subject">Explore a subject</button>
+                            <button type="button" role="radio" aria-checked="false" tabindex="-1" data-sc-rl-mode="path">Build a path</button>
+                            <button type="button" role="radio" aria-checked="false" tabindex="-1" data-sc-rl-mode="evidence">Find evidence</button>
+                            <button type="button" role="radio" aria-checked="false" tabindex="-1" data-sc-rl-mode="analyze">Analyze</button>
+                            <button type="button" role="radio" aria-checked="false" tabindex="-1" data-sc-rl-mode="compare">Compare</button>
+                            <button type="button" role="radio" aria-checked="false" tabindex="-1" data-sc-rl-mode="decision">Prepare a decision</button>
                         </div>
                     </fieldset>
 
                     <label class="sc-rl-ai__label" for="<?php echo esc_attr( $root_id ); ?>-question">Research question or task <span data-sc-rl-mode-label>Auto-detect</span></label>
-                    <textarea class="sc-rl-ai__textarea" id="<?php echo esc_attr( $root_id ); ?>-question" rows="5" maxlength="1400" autocomplete="off" aria-autocomplete="list" aria-expanded="false" aria-controls="<?php echo esc_attr( $root_id ); ?>-suggestions" placeholder="What are you trying to understand, find, compare, analyze, or prepare?"></textarea>
-                    <div id="<?php echo esc_attr( $root_id ); ?>-suggestions" class="sc-rl-ai__title-suggestions" data-sc-rl-title-suggestions hidden></div>
+                    <textarea class="sc-rl-ai__textarea" id="<?php echo esc_attr( $root_id ); ?>-question" rows="5" maxlength="1400" autocomplete="off" autocapitalize="sentences" spellcheck="true" role="combobox" aria-autocomplete="list" aria-haspopup="listbox" aria-expanded="false" aria-controls="<?php echo esc_attr( $root_id ); ?>-suggestions" aria-describedby="<?php echo esc_attr( $root_id ); ?>-input-help" placeholder="What are you trying to understand, find, compare, analyze, or prepare?"></textarea>
+                    <p class="sc-rl-sr-only" id="<?php echo esc_attr( $root_id ); ?>-input-help">Enter a site-scoped research question. Press Control or Command plus Enter to submit. Title suggestions appear after two characters.</p>
+                    <div id="<?php echo esc_attr( $root_id ); ?>-suggestions" class="sc-rl-ai__title-suggestions" data-sc-rl-title-suggestions role="listbox" aria-label="Indexed Sustainable Catalyst title suggestions" hidden></div>
                     <input type="text" class="sc-rl-ai__hp" value="" tabindex="-1" autocomplete="off" aria-hidden="true" />
 
                     <div class="sc-rl-ai__actions sc-rl-ai__actions--primary">
@@ -845,7 +849,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                     </div>
                 </div>
 
-                <div class="sc-rl-ai__card sc-rl-ai__answer-card" aria-live="polite">
+                <div class="sc-rl-ai__card sc-rl-ai__answer-card" role="region" aria-label="Research workspace results" aria-busy="false">
                     <div class="sc-rl-ai__answer-header">
                         <div>
                             <p class="sc-rl-ai__eyebrow">Research Librarian AI</p>
@@ -854,22 +858,65 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                                 <span data-sc-rl-ai-health-detail>Verifying provider, model, retrieval, and index status.</span>
                             </div>
                         </div>
-                        <span class="sc-rl-ai__status" data-sc-rl-status>Ready</span>
+                        <span class="sc-rl-ai__status" data-sc-rl-status role="status" aria-live="polite" aria-atomic="true">Ready</span>
                     </div>
-                    <div class="sc-rl-ai__workspace-progress" data-sc-rl-progress hidden aria-hidden="true"><span data-sc-rl-progress-bar></span><b data-sc-rl-progress-label>Preparing workspace</b></div>
+                    <div class="sc-rl-ai__workspace-progress" data-sc-rl-progress role="progressbar" aria-label="Research workspace progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="Preparing workspace" hidden aria-hidden="true"><span data-sc-rl-progress-bar></span><b data-sc-rl-progress-label>Preparing workspace</b></div>
                     <div class="sc-rl-ai__session-bar" data-sc-rl-session-bar hidden>
                         <span><strong data-sc-rl-session-mode>Auto-detect</strong><small data-sc-rl-session-turns>New research session</small></span>
                         <button type="button" data-sc-rl-reset-session>Reset session</button>
                     </div>
-                    <div class="sc-rl-ai__answer" data-sc-rl-answer>
+                    <div class="sc-rl-ai__answer" data-sc-rl-answer role="document" aria-label="Research Librarian answer">
                         <p>Choose a research mode, enter a question, or use an example. The workspace will keep the primary answer readable while placing verified sources, research paths, next actions, and retrieval diagnostics in their own sections.</p>
                     </div>
                     <div class="sc-rl-ai__route-summary" data-sc-rl-route-summary hidden></div>
-                    <div class="sc-rl-ai__answer-ux" data-sc-rl-answer-ux hidden></div>
+                    <div class="sc-rl-ai__answer-ux" data-sc-rl-answer-ux role="document" aria-label="Verified research workspace" hidden></div>
                     <section class="sc-rl-ai__follow-ups" data-sc-rl-follow-ups hidden aria-label="Suggested follow-up questions">
                         <span>Continue this research</span>
                         <div data-sc-rl-follow-up-list></div>
                     </section>
+                    <div class="sc-rl-sr-only" data-sc-rl-announcer role="status" aria-live="polite" aria-atomic="true"></div>
+                    <dialog class="sc-rl-ai__feedback-dialog" data-sc-rl-feedback-dialog aria-labelledby="<?php echo esc_attr( $root_id ); ?>-feedback-title" aria-describedby="<?php echo esc_attr( $root_id ); ?>-feedback-description">
+                        <form method="dialog" class="sc-rl-ai__feedback-form">
+                            <div class="sc-rl-ai__feedback-head">
+                                <div>
+                                    <span>Research workspace feedback</span>
+                                    <h3 id="<?php echo esc_attr( $root_id ); ?>-feedback-title">Review this result</h3>
+                                </div>
+                                <button type="button" class="sc-rl-ai__feedback-close" data-sc-rl-feedback-cancel aria-label="Close feedback form">×</button>
+                            </div>
+                            <p id="<?php echo esc_attr( $root_id ); ?>-feedback-description">Share only information needed to improve the route. Do not include personal, confidential, legal, medical, financial, or safety-critical information.</p>
+                            <label data-sc-rl-feedback-type-row>Issue type
+                                <select data-sc-rl-feedback-type>
+                                    <option value="wrong_route">Wrong route</option>
+                                    <option value="missing_source">Missing source</option>
+                                    <option value="missing_topic">Missing topic</option>
+                                    <option value="missing_tool">Missing tool</option>
+                                    <option value="answer_grounding">Grounding problem</option>
+                                    <option value="unclear">Unclear answer</option>
+                                    <option value="issue">Other issue</option>
+                                </select>
+                            </label>
+                            <label data-sc-rl-feedback-rating-row>Helpfulness rating
+                                <select data-sc-rl-feedback-rating>
+                                    <option value="5">5 — Very helpful</option>
+                                    <option value="4">4 — Helpful</option>
+                                    <option value="3">3 — Mixed</option>
+                                    <option value="2">2 — Limited</option>
+                                    <option value="1">1 — Not helpful</option>
+                                </select>
+                            </label>
+                            <label>Review note
+                                <textarea rows="4" maxlength="1200" data-sc-rl-feedback-note placeholder="What worked, what should change, or what is missing?"></textarea>
+                            </label>
+                            <label data-sc-rl-feedback-expected-row>Expected result
+                                <textarea rows="3" maxlength="900" data-sc-rl-feedback-expected placeholder="What result or route did you expect?"></textarea>
+                            </label>
+                            <div class="sc-rl-ai__feedback-actions">
+                                <button type="button" class="sc-rl-ai__button sc-rl-ai__button--primary" data-sc-rl-feedback-submit>Submit feedback</button>
+                                <button type="button" class="sc-rl-ai__button sc-rl-ai__button--secondary" data-sc-rl-feedback-cancel>Cancel</button>
+                            </div>
+                        </form>
+                    </dialog>
                     <div class="sc-rl-ai__boundary-note">Educational routing only. No legal, financial, medical, tax, engineering, compliance, assurance, ESG/SDG certification, or regulated-information advice.</div>
                 </div>
             </div>
@@ -6759,6 +6806,9 @@ final class SC_RL6_V470_Guided_Paths {
         $atts = shortcode_atts( array( 'title' => 'Research Librarian Path Builder' ), $atts, 'sc_research_librarian_path_builder' );
         wp_enqueue_style( 'sc-research-librarian-ai', plugins_url( 'assets/sc-research-librarian-ai.css', __FILE__ ), array(), self::VERSION );
         wp_enqueue_script( 'sc-research-librarian-ai', plugins_url( 'assets/sc-research-librarian-ai.js', __FILE__ ), array(), self::VERSION, true );
+        if ( function_exists( 'wp_script_add_data' ) ) {
+            wp_script_add_data( 'sc-research-librarian-ai', 'strategy', 'defer' );
+        }
         $root_id = wp_unique_id( 'sc-rl-path-builder-' );
         $endpoint = rest_url( self::REST_NAMESPACE . '/paths/build' );
         $save_endpoint = rest_url( self::REST_NAMESPACE . '/paths/save' );

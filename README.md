@@ -1,23 +1,23 @@
-# Sustainable Catalyst Research Librarian AI v6.5.0
+# Sustainable Catalyst Research Librarian AI v6.5.1
 
-## Production Public Research Workspace
+## Accessibility, Performance, and Interface Reliability
 
 Research Librarian AI is the site-scoped discovery and research-guidance layer for Sustainable Catalyst. WordPress remains the canonical publishing and recovery source. FastAPI provides a restart-safe SQLite retrieval index, exact-title and section-aware BM25 ranking, optional Gemini semantic similarity, calibrated reciprocal-rank fusion, verified citations, and deterministic evidence fallback.
 
-v6.5.0 turns that retrieval foundation into a finished public workspace. Visitors can choose a research mode, receive a readable answer before diagnostics, inspect verified evidence and related records, continue a bounded research session, and export the result without turning the Librarian into an unrestricted chatbot.
+v6.5.1 hardens the production public workspace for keyboard, screen-reader, reduced-motion, forced-colors, mobile, and WordPress-theme use. It also reduces duplicate REST traffic, caches title suggestions, cancels superseded requests, stages answer rendering, and replaces browser prompts with an accessible feedback dialog.
 
-## v6.5.0 highlights
+## v6.5.1 highlights
 
-- Adds eight explicit public research modes: auto-detect, title, subject, path, evidence, analysis, comparison, and decision preparation.
-- Introduces a responsive two-pane workspace with a focused prompt surface and a larger answer/evidence surface.
-- Preserves the black prompt, green monospace text, green caret, subdued green placeholder, and accessible focus state.
-- Keeps answer, evidence, citation, source, path, and action cards light and readable.
-- Adds answer-first workspace headers, source counts, active-mode labels, and generated-versus-deterministic response status.
-- Adds short site-scoped follow-up continuity, suggested next questions, and an explicit session reset.
-- Adds accessible live title suggestions with keyboard navigation and automatic title-mode selection.
-- Adds copy, Markdown, JSON, research-note, print, session, feedback, and typed-handoff controls.
-- Adds visible startup and recovery progress while verified WordPress fallback remains available.
-- Preserves v6.4.1 retrieval calibration, v6.4.0 citation verification, and v6.3.x durability and recovery controls.
+- Adds roving-tabindex radio behavior and complete arrow-key navigation for all eight research modes.
+- Upgrades title suggestions to a combobox/listbox pattern with active-descendant navigation and result-count announcements.
+- Adds progressbar semantics, result focus management, accessible failure focus, reduced-motion support, and forced-colors support.
+- Replaces browser prompt feedback with a labeled, keyboard-operable feedback dialog.
+- Coalesces and caches health and route requests across shortcode instances.
+- Adds five-minute browser and WordPress title-suggestion caches tied to the canonical index checksum.
+- Cancels superseded suggestion, answer, and guided-path requests and prevents duplicate in-flight questions.
+- Stages direct-answer and evidence rendering, defers the WordPress script, and enables FastAPI gzip responses.
+- Adds clipboard fallback, safer download cleanup, theme-scoped controls, admin-bar-aware sticky positioning, and stronger mobile behavior.
+- Preserves the black-and-green prompt, light answer/source cards, v6.5.0 research modes, v6.4.x retrieval, and v6.3.x recovery controls.
 
 ## Public workspace sequence
 
@@ -66,6 +66,7 @@ The Render blueprint pins Python 3.12.12. Required production secrets are `SC_RL
 
 ## Release documentation
 
+- `docs/V651_ACCESSIBILITY_PERFORMANCE_INTERFACE_RELIABILITY.md`
 - `docs/V650_PRODUCTION_PUBLIC_RESEARCH_WORKSPACE.md`
 - `docs/V641_RETRIEVAL_CALIBRATION_REGRESSION.md`
 - `docs/V640_HYBRID_RETRIEVAL_CITATION_ENGINE.md`
@@ -74,13 +75,13 @@ The Render blueprint pins Python 3.12.12. Required production secrets are `SC_RL
 - `docs/INSTALL.md`
 - `docs/ROADMAP.md`
 
-## v6.5.0 API addition
+## v6.5.1 API and response notes
 
 ```text
 POST /v1/session/reset
 ```
 
-The ask response now includes `research_mode`, `follow_up_prompts`, `workspace`, and `session_turns`. Existing health, startup, status, synchronization, manifest, snapshot, maintenance, rollback, embedding, retrieval, benchmark, related-title, and ask endpoints remain available.
+The ask response retains `research_mode`, `follow_up_prompts`, `workspace`, and `session_turns`. The workspace schema is now `sc-research-librarian-public-workspace/1.1` and advertises accessibility and staged-rendering profiles. Existing health, startup, status, synchronization, manifest, snapshot, maintenance, rollback, embedding, retrieval, benchmark, related-title, and ask endpoints remain available.
 
 ## License
 

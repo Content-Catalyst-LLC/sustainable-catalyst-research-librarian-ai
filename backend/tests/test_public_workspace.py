@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from app.main import _follow_up_prompts, _resolve_research_mode, app
+from app.main import _follow_up_prompts, _resolve_research_mode, _workspace_summary, app
 from app.models import RetrievedSource
 
 
@@ -44,6 +44,13 @@ def test_session_reset_endpoint() -> None:
     )
     assert response.status_code == 200
     body = response.json()
-    assert body["version"] == "6.5.0"
+    assert body["version"] == "6.5.1"
     assert body["session_id"] == "workspace-session"
     assert body["removed_turns"] >= 0
+
+
+def test_workspace_schema_advertises_accessibility_and_staged_rendering() -> None:
+    workspace = _workspace_summary("subject", [source()], [], False, {"ok": True})
+    assert workspace["schema"] == "sc-research-librarian-public-workspace/1.1"
+    assert workspace["accessibility_profile"] == "wcag-focused-v6.5.1"
+    assert workspace["rendering_profile"] == "staged-v6.5.1"

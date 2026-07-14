@@ -1,0 +1,52 @@
+{
+  "schema": "sc-research-librarian-accessibility-performance-manifest/1.0",
+  "version": "6.5.1",
+  "release": "Accessibility, Performance, and Interface Reliability",
+  "workspace_schema": "sc-research-librarian-public-workspace/1.1",
+  "backend_schema_version": 6,
+  "accessibility": {
+    "research_mode_roving_tabindex": true,
+    "research_mode_arrow_navigation": true,
+    "combobox_listbox_semantics": true,
+    "active_descendant_title_suggestions": true,
+    "live_status_and_result_announcements": true,
+    "progressbar_values": true,
+    "result_focus_management": true,
+    "accessible_feedback_dialog": true,
+    "reduced_motion": true,
+    "forced_colors": true,
+    "minimum_mobile_touch_target_px": 44
+  },
+  "performance": {
+    "shared_health_request_cache_seconds": 45,
+    "shared_route_request_cache_seconds": 300,
+    "browser_suggestion_cache_seconds": 300,
+    "wordpress_suggestion_cache_seconds": 300,
+    "abort_stale_suggestion_requests": true,
+    "abort_superseded_answer_requests": true,
+    "prevent_identical_inflight_requests": true,
+    "staged_answer_rendering": true,
+    "deferred_wordpress_script": true,
+    "fastapi_gzip_minimum_bytes": 900,
+    "content_visibility_cards": true
+  },
+  "interface_reliability": {
+    "clipboard_fallback": true,
+    "delayed_object_url_cleanup": true,
+    "theme_scoped_form_resets": true,
+    "admin_bar_sticky_offset": true,
+    "mobile_single_column": true,
+    "mobile_no_horizontal_overflow": true,
+    "consistent_endpoint_error_focus": true,
+    "path_builder_request_cancellation": true
+  },
+  "compatibility": {
+    "wordpress_canonical_source": true,
+    "sqlite_schema_migration_required": false,
+    "paid_vector_database_required": false,
+    "persistent_render_disk_required": false,
+    "deterministic_fallback_available": true,
+    "black_green_prompt_preserved": true,
+    "light_answer_cards_preserved": true
+  }
+}

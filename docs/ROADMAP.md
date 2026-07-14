@@ -51,7 +51,7 @@
 - Markdown, JSON, research-note, print, session, feedback, and handoff actions
 - Visible cold-start and recovery progress
 
-## v6.5.1 — Accessibility, Performance, and Interface Reliability
+## v6.5.1 — Accessibility, Performance, and Interface Reliability — Complete
 
 - Full keyboard and screen-reader audit
 - Reduced-motion and high-contrast refinements

@@ -1,6 +1,64 @@
 (function () {
   'use strict';
 
+  var runtime = window.SCResearchLibrarianRuntime = window.SCResearchLibrarianRuntime || {
+    health: {},
+    routes: {},
+    suggestions: {},
+    suggestionOrder: []
+  };
+
+  function nowMs() { return Date.now ? Date.now() : new Date().getTime(); }
+
+  function prefersReducedMotion() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+
+  function nextFrame(callback) {
+    if (prefersReducedMotion() || !window.requestAnimationFrame) { callback(); return; }
+    window.requestAnimationFrame(callback);
+  }
+
+  function safeFocus(element) {
+    if (!element || !element.focus) return;
+    try { element.focus({ preventScroll: true }); } catch (e) { element.focus(); }
+  }
+
+  function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(String(text || ''));
+    return new Promise(function (resolve, reject) {
+      var field = document.createElement('textarea');
+      field.value = String(text || '');
+      field.setAttribute('readonly', 'readonly');
+      field.style.position = 'fixed';
+      field.style.left = '-9999px';
+      document.body.appendChild(field);
+      field.select();
+      try {
+        if (!document.execCommand('copy')) throw new Error('Copy command unavailable.');
+        resolve();
+      } catch (error) { reject(error); }
+      document.body.removeChild(field);
+    });
+  }
+
+  function sharedJson(endpoint, bucketName, ttl, fetcher) {
+    var bucket = runtime[bucketName] = runtime[bucketName] || {};
+    var entry = bucket[endpoint];
+    var current = nowMs();
+    if (entry && entry.data && current - entry.time < ttl) return Promise.resolve(entry.data);
+    if (entry && entry.promise) return entry.promise;
+    var promise = fetcher().then(function (data) {
+      bucket[endpoint] = { data: data, time: nowMs(), promise: null };
+      return data;
+    }).catch(function (error) {
+      if (bucket[endpoint]) bucket[endpoint].promise = null;
+      throw error;
+    });
+    bucket[endpoint] = { data: entry && entry.data, time: entry && entry.time || 0, promise: promise };
+    return promise;
+  }
+
   function escapeHtml(value) {
     return String(value || '')
       .replace(/&/g, '&amp;')
@@ -115,7 +173,7 @@
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    window.setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }
 
   function downloadText(filename, text, mime) {
@@ -127,7 +185,7 @@
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    window.setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }
 
   function workspaceMarkdown(data, question) {
@@ -198,7 +256,7 @@
     var modeLabel = workspace.mode_label || String(researchMode).replace(/-/g, ' ');
     var answerKind = workspace.answer_kind || (data.ai_used ? 'citation-verified-ai' : 'deterministic-evidence');
     var html = '<div class="sc-rl-production-answer">';
-    html += '<header class="sc-rl-production-answer__workspace-head"><div><span>Production research workspace</span><h3>' + escapeHtml(modeLabel) + '</h3></div><div><b>' + escapeHtml(data.ai_used ? 'Verified AI synthesis' : 'Verified evidence fallback') + '</b><small>' + escapeHtml(sources.length + ' source' + (sources.length === 1 ? '' : 's')) + '</small></div></header>';
+    html += '<header class="sc-rl-production-answer__workspace-head"><div><span>Production research workspace</span><h3 tabindex="-1" data-sc-rl-result-heading>' + escapeHtml(modeLabel) + '</h3></div><div><b>' + escapeHtml(data.ai_used ? 'Verified AI synthesis' : 'Verified evidence fallback') + '</b><small>' + escapeHtml(sources.length + ' source' + (sources.length === 1 ? '' : 's')) + '</small></div></header>';
     html += '<section class="sc-rl-production-answer__response">';
     html += '<div class="sc-rl-production-answer__label">Direct response · ' + escapeHtml(answerKind.replace(/-/g, ' ')) + '</div>';
     html += (fallbackHtml || '');
@@ -339,7 +397,25 @@
     var resetSession = root.querySelector('[data-sc-rl-reset-session]');
     var followUps = root.querySelector('[data-sc-rl-follow-ups]');
     var followUpList = root.querySelector('[data-sc-rl-follow-up-list]');
+    var announcer = root.querySelector('[data-sc-rl-announcer]');
+    var feedbackDialog = root.querySelector('[data-sc-rl-feedback-dialog]');
+    var feedbackSubmit = root.querySelector('[data-sc-rl-feedback-submit]');
+    var feedbackCancelButtons = root.querySelectorAll('[data-sc-rl-feedback-cancel]');
+    var feedbackType = root.querySelector('[data-sc-rl-feedback-type]');
+    var feedbackRating = root.querySelector('[data-sc-rl-feedback-rating]');
+    var feedbackNote = root.querySelector('[data-sc-rl-feedback-note]');
+    var feedbackExpected = root.querySelector('[data-sc-rl-feedback-expected]');
+    var feedbackTypeRow = root.querySelector('[data-sc-rl-feedback-type-row]');
+    var feedbackRatingRow = root.querySelector('[data-sc-rl-feedback-rating-row]');
+    var feedbackExpectedRow = root.querySelector('[data-sc-rl-feedback-expected-row]');
     var latest = null;
+    var currentAskController = null;
+    var currentAskKey = '';
+    var currentAskSequence = 0;
+    var suggestionController = null;
+    var suggestionSequence = 0;
+    var activeSuggestionIndex = -1;
+    var feedbackMode = 'issue';
     var sessionId = '';
     try { sessionId = window.localStorage.getItem('sc_rl_ai_session_id') || ''; } catch (e) { sessionId = ''; }
     var suggestionTimer = null;
@@ -356,8 +432,18 @@
       decision: ['Prepare a decision', 'What decision, alternatives, evidence, and uncertainty should be organized?']
     };
 
+    function announce(text, assertive) {
+      if (!announcer || !text) return;
+      announcer.setAttribute('aria-live', assertive ? 'assertive' : 'polite');
+      announcer.textContent = '';
+      window.setTimeout(function () { announcer.textContent = String(text); }, 20);
+    }
+
     function setStatus(text, state) {
-      if (status) status.textContent = text;
+      if (status) {
+        status.textContent = text;
+        status.setAttribute('data-status-state', state || 'ready');
+      }
       root.setAttribute('data-state', state || 'ready');
       if (answerCard) answerCard.setAttribute('aria-busy', state === 'loading' ? 'true' : 'false');
     }
@@ -368,6 +454,7 @@
         var active = button.getAttribute('data-sc-rl-mode') === currentMode;
         button.classList.toggle('is-active', active);
         button.setAttribute('aria-checked', active ? 'true' : 'false');
+        button.setAttribute('tabindex', active ? '0' : '-1');
       });
       if (modeLabel) modeLabel.textContent = modeCopy[currentMode][0];
       if (textarea && (!preserveQuestion || !textarea.value.trim())) textarea.setAttribute('placeholder', modeCopy[currentMode][1]);
@@ -376,9 +463,12 @@
 
     function setProgress(visible, percent, label) {
       if (!progress) return;
+      var value = Math.max(0, Math.min(100, Number(percent) || 0));
       progress.hidden = !visible;
       progress.setAttribute('aria-hidden', visible ? 'false' : 'true');
-      if (progressBar) progressBar.style.width = Math.max(0, Math.min(100, Number(percent) || 0)) + '%';
+      progress.setAttribute('aria-valuenow', String(value));
+      progress.setAttribute('aria-valuetext', label || (visible ? 'Working' : 'Workspace ready'));
+      if (progressBar) progressBar.style.width = value + '%';
       if (progressLabel && label) progressLabel.textContent = label;
     }
 
@@ -532,7 +622,7 @@
         return { label: 'Invalid endpoint response', intro: 'WordPress returned a response that the Research Librarian could not read.', detail: 'Check caching, security, or REST-response modification plugins.' };
       }
       if (statusCode === 404) {
-        return { label: 'WordPress route unavailable', intro: 'The Research Librarian REST route was not found.', detail: 'Resave WordPress permalinks and confirm that the active v6.5.0 plugin registered its routes.' };
+        return { label: 'WordPress route unavailable', intro: 'The Research Librarian REST route was not found.', detail: 'Resave WordPress permalinks and confirm that the active v6.5.1 plugin registered its routes.' };
       }
       if (statusCode >= 500) {
         return { label: 'WordPress endpoint error', intro: 'WordPress reached the Research Librarian route but returned a server error.', detail: 'The Python provider status is separate from this WordPress failure.' };
@@ -550,13 +640,18 @@
 
     function loadHealth() {
       if (!aiStatusEndpoint) return;
-      fetch(aiStatusEndpoint, { credentials: 'same-origin' })
-        .then(function (response) { return response.json().then(function (data) { if (!response.ok) throw new Error('AI status unavailable'); return data; }); })
-        .then(renderHealth)
-        .catch(function () {
-          renderHealth({ state: 'offline', label: 'AI Status Unavailable', provider: 'disabled', fallback_active: true });
-          if (healthDetail) healthDetail.textContent = 'The status endpoint could not be reached · verified fallback routing may still be available.';
-        });
+      sharedJson(aiStatusEndpoint, 'health', 45000, function () {
+        return fetch(aiStatusEndpoint, { credentials: 'same-origin', cache: 'no-store' })
+          .then(function (response) {
+            return response.json().then(function (data) {
+              if (!response.ok) throw new Error('AI status unavailable');
+              return data;
+            });
+          });
+      }).then(renderHealth).catch(function () {
+        renderHealth({ state: 'offline', label: 'AI Status Unavailable', provider: 'disabled', fallback_active: true });
+        if (healthDetail) healthDetail.textContent = 'The status endpoint could not be reached · verified fallback routing may still be available.';
+      });
     }
 
     function ask(question) {
@@ -564,23 +659,41 @@
       if (!clean) {
         setStatus('Add a question', 'error');
         answer.innerHTML = '<p>Please enter a question first.</p>';
-        textarea.focus();
+        safeFocus(textarea);
         return;
       }
+
+      var askKey = currentMode + '|' + clean.toLowerCase();
+      if (currentAskController && currentAskKey === askKey) {
+        setStatus('Already researching this question…', 'loading');
+        return;
+      }
+      if (currentAskController && currentAskController.abort) currentAskController.abort();
+      currentAskController = window.AbortController ? new AbortController() : null;
+      currentAskKey = askKey;
+      currentAskSequence += 1;
+      var sequence = currentAskSequence;
+
       setStatus('Researching…', 'loading');
       setProgress(true, 18, 'Interpreting the research task');
       submit.disabled = true;
+      submit.setAttribute('aria-disabled', 'true');
       answer.hidden = false;
       answer.innerHTML = '<p class="sc-rl-ai__loading">Searching indexed Sustainable Catalyst titles, series, article maps, headings, sources, and platform actions</p>';
+      if (answerUx) { answerUx.hidden = true; answerUx.innerHTML = ''; }
 
-      fetchWithNonce(endpoint, {
+      var requestOptions = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question: clean, research_mode: currentMode, hp: honeypot ? honeypot.value : '', session_id: sessionId })
-      }, true)
+      };
+      if (currentAskController) requestOptions.signal = currentAskController.signal;
+
+      fetchWithNonce(endpoint, requestOptions, true)
         .then(function (data) {
+          if (sequence !== currentAskSequence) return;
           latest = data;
-          setProgress(true, 82, 'Rendering verified evidence and research actions');
+          setProgress(true, 72, 'Preparing the direct response');
           if (data.session_id) { sessionId = String(data.session_id); try { window.localStorage.setItem('sc_rl_ai_session_id', sessionId); } catch (e) {} }
           if (data.ai_status) renderHealth(data.ai_status);
           if (data.ai_used) {
@@ -596,64 +709,148 @@
           var renderedAnswer = renderMarkdownLite(data.answer || 'No answer was returned. Try the Platform or Feature Suggestions route.');
           var endpointNotice = endpointNoticeHtml(data.endpoint_status);
           answer.innerHTML = endpointNotice + renderedAnswer;
-          renderAnswerUx(answerUx, data, endpointNotice + renderedAnswer);
-          if (answerUx) answer.hidden = true;
           renderRouteSummary(routeSummary, data.route, data.grounding);
           setMode(data.research_mode || (data.grounding && data.grounding.research_mode) || currentMode, true);
           updateSession(data);
           renderFollowUps(data);
-          setProgress(false, 100, 'Workspace ready');
+          setProgress(true, 88, 'Rendering verified evidence and research actions');
+
+          nextFrame(function () {
+            if (sequence !== currentAskSequence) return;
+            renderAnswerUx(answerUx, data, endpointNotice + renderedAnswer);
+            if (answerUx) {
+              answer.hidden = true;
+              var heading = answerUx.querySelector('[data-sc-rl-result-heading]');
+              safeFocus(heading);
+            }
+            setProgress(false, 100, 'Workspace ready');
+            announce('Research workspace ready with ' + String((data.matches || (data.grounding && data.grounding.sources) || []).length) + ' verified sources.', false);
+          });
         })
         .catch(function (error) {
+          if (error && error.name === 'AbortError') return;
+          if (sequence !== currentAskSequence) return;
           latest = null;
           setProgress(false, 100, 'Request unavailable');
           var failure = endpointFailureCopy(error);
           setStatus(failure.label, 'error');
           answer.hidden = false;
-          answer.innerHTML = '<aside class="sc-rl-ai__endpoint-notice sc-rl-ai__endpoint-notice--error" role="alert"><strong>' + escapeHtml(failure.label) + '</strong><span>' + escapeHtml(failure.intro) + '</span><small>' + escapeHtml(failure.detail) + '</small></aside>' + renderMarkdownLite('**Verified starting points remain available**\n- [Site Intelligence](/platform/site-intelligence/)\n- [Platform](/platform/)\n- [Platform Demos](/platform/demos/)\n- [Workbench](https://sustainablecatalyst.com/modeling-analytics/workbench/)\n- [Decision Studio](/platform/decision-studio/)\n- [Feature Suggestions](/platform/feature-suggestions/)');
+          answer.innerHTML = '<aside class="sc-rl-ai__endpoint-notice sc-rl-ai__endpoint-notice--error" role="alert" tabindex="-1"><strong>' + escapeHtml(failure.label) + '</strong><span>' + escapeHtml(failure.intro) + '</span><small>' + escapeHtml(failure.detail) + '</small></aside>' + renderMarkdownLite('**Verified starting points remain available**\n- [Site Intelligence](/platform/site-intelligence/)\n- [Platform](/platform/)\n- [Platform Demos](/platform/demos/)\n- [Workbench](https://sustainablecatalyst.com/modeling-analytics/workbench/)\n- [Decision Studio](/platform/decision-studio/)\n- [Feature Suggestions](/platform/feature-suggestions/)');
+          safeFocus(answer.querySelector('[role="alert"]'));
         })
-        .finally(function () { submit.disabled = false; });
+        .finally(function () {
+          if (sequence !== currentAskSequence) return;
+          submit.disabled = false;
+          submit.removeAttribute('aria-disabled');
+          currentAskController = null;
+          currentAskKey = '';
+        });
     }
 
     function hideSuggestions() {
       if (!suggestionsBox) return;
       suggestionsBox.hidden = true;
       suggestionsBox.innerHTML = '';
+      activeSuggestionIndex = -1;
       textarea.setAttribute('aria-expanded', 'false');
+      textarea.removeAttribute('aria-activedescendant');
+    }
+
+    function suggestionCacheKey(query) {
+      return String(suggestEndpoint || '') + '|' + String(query || '').trim().toLowerCase();
+    }
+
+    function cacheSuggestions(key, suggestions) {
+      runtime.suggestions[key] = { data: suggestions, time: nowMs() };
+      runtime.suggestionOrder.push(key);
+      while (runtime.suggestionOrder.length > 40) {
+        var oldest = runtime.suggestionOrder.shift();
+        if (oldest !== key) delete runtime.suggestions[oldest];
+      }
+    }
+
+    function renderSuggestions(suggestions, query, cached) {
+      if (!suggestionsBox) return;
+      if (!suggestions.length) { hideSuggestions(); return; }
+      activeSuggestionIndex = -1;
+      suggestionsBox.innerHTML = '<div class="sc-rl-ai__title-suggestions-label" aria-hidden="true">Indexed Sustainable Catalyst titles' + (cached ? ' · cached' : '') + '</div>' + suggestions.map(function (item, index) {
+        var optionId = root.id + '-suggestion-' + index;
+        return '<button id="' + escapeHtml(optionId) + '" type="button" role="option" aria-selected="false" tabindex="-1" data-sc-rl-title-suggestion="' + escapeHtml(item.title || '') + '" data-sc-rl-suggestion-index="' + index + '"><strong>' + escapeHtml(item.title || '') + '</strong><span>' + escapeHtml(item.summary || item.match_type || '') + '</span></button>';
+      }).join('');
+      suggestionsBox.hidden = false;
+      textarea.setAttribute('aria-expanded', 'true');
+      announce(suggestions.length + ' title suggestion' + (suggestions.length === 1 ? '' : 's') + ' available for ' + query + '.', false);
+    }
+
+    function setActiveSuggestion(index) {
+      if (!suggestionsBox || suggestionsBox.hidden) return;
+      var buttons = Array.prototype.slice.call(suggestionsBox.querySelectorAll('[role="option"]'));
+      if (!buttons.length) return;
+      activeSuggestionIndex = (index + buttons.length) % buttons.length;
+      buttons.forEach(function (button, buttonIndex) {
+        var selected = buttonIndex === activeSuggestionIndex;
+        button.setAttribute('aria-selected', selected ? 'true' : 'false');
+        button.classList.toggle('is-active', selected);
+      });
+      textarea.setAttribute('aria-activedescendant', buttons[activeSuggestionIndex].id);
+      try {
+        buttons[activeSuggestionIndex].scrollIntoView({ block: 'nearest' });
+      } catch (error) {
+        buttons[activeSuggestionIndex].scrollIntoView(false);
+      }
+      announce(buttons[activeSuggestionIndex].textContent, false);
+    }
+
+    function chooseSuggestion(button) {
+      if (!button) return;
+      textarea.value = button.getAttribute('data-sc-rl-title-suggestion') || '';
+      setMode('title', true);
+      hideSuggestions();
+      ask(textarea.value);
     }
 
     function loadSuggestions() {
       if (!suggestEndpoint || !suggestionsBox) return;
       var query = (textarea.value || '').trim();
       if (query.length < 2) { hideSuggestions(); return; }
-      fetchWithNonce(suggestEndpoint, {
+      var key = suggestionCacheKey(query);
+      var cached = runtime.suggestions[key];
+      if (cached && nowMs() - cached.time < 300000) {
+        renderSuggestions(cached.data || [], query, true);
+        return;
+      }
+      if (suggestionController && suggestionController.abort) suggestionController.abort();
+      suggestionController = window.AbortController ? new AbortController() : null;
+      suggestionSequence += 1;
+      var sequence = suggestionSequence;
+      var options = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: query })
-      }, true)
+      };
+      if (suggestionController) options.signal = suggestionController.signal;
+      fetchWithNonce(suggestEndpoint, options, true)
         .then(function (data) {
+          if (sequence !== suggestionSequence || query !== (textarea.value || '').trim()) return;
           var suggestions = data && data.suggestions ? data.suggestions : [];
-          if (!suggestions.length) { hideSuggestions(); return; }
-          suggestionsBox.innerHTML = '<div class="sc-rl-ai__title-suggestions-label">Indexed Sustainable Catalyst titles</div>' + suggestions.map(function (item) {
-            return '<button type="button" data-sc-rl-title-suggestion="' + escapeHtml(item.title || '') + '"><strong>' + escapeHtml(item.title || '') + '</strong><span>' + escapeHtml(item.summary || item.match_type || '') + '</span></button>';
-          }).join('');
-          suggestionsBox.hidden = false;
-          textarea.setAttribute('aria-expanded', 'true');
-        }).catch(hideSuggestions);
+          cacheSuggestions(key, suggestions);
+          renderSuggestions(suggestions, query, !!(data && data.cached));
+        }).catch(function (error) {
+          if (error && error.name === 'AbortError') return;
+          if (sequence === suggestionSequence) hideSuggestions();
+        });
     }
 
     textarea.addEventListener('input', function () {
       window.clearTimeout(suggestionTimer);
-      suggestionTimer = window.setTimeout(loadSuggestions, 260);
+      activeSuggestionIndex = -1;
+      textarea.removeAttribute('aria-activedescendant');
+      suggestionTimer = window.setTimeout(loadSuggestions, 220);
     });
     if (suggestionsBox) {
       suggestionsBox.addEventListener('click', function (event) {
         var button = event.target.closest ? event.target.closest('[data-sc-rl-title-suggestion]') : null;
-        if (!button) return;
-        textarea.value = button.getAttribute('data-sc-rl-title-suggestion') || '';
-        setMode('title', true);
-        hideSuggestions();
-        ask(textarea.value);
+        chooseSuggestion(button);
       });
     }
     document.addEventListener('click', function (event) {
@@ -662,23 +859,36 @@
 
     submit.addEventListener('click', function () { hideSuggestions(); ask(); });
     textarea.addEventListener('keydown', function (event) {
-      if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') ask();
-      if (event.key === 'ArrowDown' && suggestionsBox && !suggestionsBox.hidden) {
-        var firstSuggestion = suggestionsBox.querySelector('button');
-        if (firstSuggestion) { event.preventDefault(); firstSuggestion.focus(); }
+      if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+        event.preventDefault();
+        hideSuggestions();
+        ask();
+        return;
+      }
+      if (suggestionsBox && !suggestionsBox.hidden && event.key === 'ArrowDown') {
+        event.preventDefault();
+        setActiveSuggestion(activeSuggestionIndex + 1);
+        return;
+      }
+      if (suggestionsBox && !suggestionsBox.hidden && event.key === 'ArrowUp') {
+        event.preventDefault();
+        setActiveSuggestion(activeSuggestionIndex < 0 ? -1 : activeSuggestionIndex - 1);
+        return;
+      }
+      if (suggestionsBox && !suggestionsBox.hidden && event.key === 'Enter' && activeSuggestionIndex >= 0) {
+        event.preventDefault();
+        chooseSuggestion(suggestionsBox.querySelectorAll('[role="option"]')[activeSuggestionIndex]);
+        return;
       }
       if (event.key === 'Escape') hideSuggestions();
     });
-    if (suggestionsBox) {
-      suggestionsBox.addEventListener('keydown', function (event) {
-        var buttons = Array.prototype.slice.call(suggestionsBox.querySelectorAll('button'));
-        var index = buttons.indexOf(document.activeElement);
-        if (event.key === 'ArrowDown' && index > -1) { event.preventDefault(); buttons[(index + 1) % buttons.length].focus(); }
-        if (event.key === 'ArrowUp' && index > -1) { event.preventDefault(); if (index === 0) textarea.focus(); else buttons[index - 1].focus(); }
-        if (event.key === 'Escape') { hideSuggestions(); textarea.focus(); }
-      });
-    }
+
     clear.addEventListener('click', function () {
+      if (currentAskController && currentAskController.abort) currentAskController.abort();
+      currentAskSequence += 1;
+      currentAskController = null;
+      currentAskKey = '';
+      hideSuggestions();
       textarea.value = '';
       latest = null;
       setStatus('Ready for a question', 'ready');
@@ -688,14 +898,13 @@
       if (answerUx) { answerUx.hidden = true; answerUx.innerHTML = ''; }
       if (followUps) { followUps.hidden = true; followUpList.innerHTML = ''; }
       setProgress(false, 100, 'Workspace ready');
-      textarea.focus();
+      safeFocus(textarea);
     });
     if (copyAnswer) {
       copyAnswer.addEventListener('click', function () {
         if (!latest) { setStatus('Ask first', 'error'); return; }
         var text = workspaceMarkdown(latest, textarea ? textarea.value : '');
-        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { setStatus('Answer copied', 'ready'); });
-        else setStatus('Copy unavailable', 'error');
+        copyText(text).then(function () { setStatus('Answer copied', 'ready'); }).catch(function () { setStatus('Copy unavailable', 'error'); });
       });
     }
     if (downloadMarkdown) {
@@ -728,11 +937,7 @@
         return;
       }
       var text = routeNoteMarkdown(latest.route_note);
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(function () { setStatus('Copied', 'ready'); });
-      } else {
-        setStatus('Copy unavailable', 'error');
-      }
+      copyText(text).then(function () { setStatus('Copied', 'ready'); }).catch(function () { setStatus('Copy unavailable', 'error'); });
     });
     download.addEventListener('click', function () {
       if (!latest || !latest.route_note) {
@@ -882,6 +1087,7 @@
         .then(function (bridge) {
           var suffix = bridge && bridge.receipt ? ' · receipt ' + bridge.receipt : '';
           setStatus((type === 'helpful' ? 'Feedback saved' : 'Issue recorded') + suffix, 'ready');
+          closeFeedbackDialog();
         })
         .catch(function (error) { setStatus(error.message || 'Feedback failed', 'error'); });
     }
@@ -919,34 +1125,75 @@
     }
 
 
-    if (feedbackHelpful) {
-      feedbackHelpful.addEventListener('click', function () {
-        var rating = window.prompt('Optional: rate this route from 1 to 5.', '5');
-        submitFeedback('helpful', 'Visitor marked this route as helpful.', { rating: parseInt(rating || '5', 10) || 5 });
+    function closeFeedbackDialog() {
+      if (!feedbackDialog) return;
+      if (feedbackDialog.close && feedbackDialog.open) feedbackDialog.close();
+      else feedbackDialog.removeAttribute('open');
+      feedbackDialog.classList.remove('is-open');
+      if (feedbackMode === 'helpful') safeFocus(feedbackHelpful);
+      else safeFocus(feedbackIssue);
+    }
+
+    function openFeedbackDialog(mode) {
+      if (!latest || !latest.route_note) {
+        setStatus('Ask first', 'error');
+        return;
+      }
+      if (!feedbackDialog) {
+        setStatus('Feedback form unavailable', 'error');
+        return;
+      }
+      feedbackMode = mode === 'helpful' ? 'helpful' : 'issue';
+      if (feedbackTypeRow) feedbackTypeRow.hidden = feedbackMode === 'helpful';
+      if (feedbackRatingRow) feedbackRatingRow.hidden = feedbackMode !== 'helpful';
+      if (feedbackExpectedRow) feedbackExpectedRow.hidden = feedbackMode === 'helpful';
+      if (feedbackNote) feedbackNote.value = feedbackMode === 'helpful' ? 'Visitor marked this research workspace as helpful.' : '';
+      if (feedbackExpected) feedbackExpected.value = '';
+      if (feedbackRating) feedbackRating.value = '5';
+      feedbackDialog.classList.add('is-open');
+      if (feedbackDialog.showModal) feedbackDialog.showModal();
+      else feedbackDialog.setAttribute('open', 'open');
+      window.setTimeout(function () {
+        safeFocus(feedbackMode === 'helpful' ? feedbackRating : feedbackType);
+      }, 20);
+    }
+
+    if (feedbackHelpful) feedbackHelpful.addEventListener('click', function () { openFeedbackDialog('helpful'); });
+    if (feedbackIssue) feedbackIssue.addEventListener('click', function () { openFeedbackDialog('issue'); });
+    feedbackCancelButtons.forEach(function (button) { button.addEventListener('click', closeFeedbackDialog); });
+    if (feedbackDialog) {
+      feedbackDialog.addEventListener('cancel', function (event) { event.preventDefault(); closeFeedbackDialog(); });
+      feedbackDialog.addEventListener('click', function (event) {
+        if (event.target === feedbackDialog) closeFeedbackDialog();
+      });
+    }
+    if (feedbackSubmit) {
+      feedbackSubmit.addEventListener('click', function () {
+        var type = feedbackMode === 'helpful' ? 'helpful' : ((feedbackType && feedbackType.value) || 'issue');
+        var note = (feedbackNote && feedbackNote.value.trim()) || (feedbackMode === 'helpful' ? 'Visitor marked this route as helpful.' : 'Visitor reported a route issue.');
+        var extra = {
+          rating: feedbackMode === 'helpful' ? parseInt((feedbackRating && feedbackRating.value) || '5', 10) || 5 : 0,
+          expectedResult: feedbackMode === 'issue' && feedbackExpected ? feedbackExpected.value.trim() : ''
+        };
+        submitFeedback(type, note, extra);
       });
     }
 
-    if (feedbackIssue) {
-      feedbackIssue.addEventListener('click', function () {
-        var category = window.prompt('Choose the closest issue: wrong route, missing source, missing topic, missing tool, grounding, unclear, or other.', 'wrong route');
-        if (category === null) return;
-        var note = window.prompt('What should be reviewed? Please avoid personal or confidential information.', '');
-        if (note === null) return;
-        var expected = window.prompt('What result or route did you expect?', '');
-        var lowered = (category || '').toLowerCase();
-        var type = 'issue';
-        if (lowered.indexOf('wrong') !== -1) type = 'wrong_route';
-        else if (lowered.indexOf('source') !== -1) type = 'missing_source';
-        else if (lowered.indexOf('topic') !== -1) type = 'missing_topic';
-        else if (lowered.indexOf('tool') !== -1 || lowered.indexOf('calculator') !== -1) type = 'missing_tool';
-        else if (lowered.indexOf('ground') !== -1) type = 'answer_grounding';
-        else if (lowered.indexOf('unclear') !== -1) type = 'unclear';
-        submitFeedback(type, note || 'Visitor reported a route issue.', { expectedResult: expected || '' });
+    modeButtons.forEach(function (button, buttonIndex) {
+      button.addEventListener('click', function () { setMode(button.getAttribute('data-sc-rl-mode') || 'auto', true); safeFocus(textarea); });
+      button.addEventListener('keydown', function (event) {
+        var keys = ['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'Home', 'End'];
+        if (keys.indexOf(event.key) === -1) return;
+        event.preventDefault();
+        var nextIndex = buttonIndex;
+        if (event.key === 'ArrowRight' || event.key === 'ArrowDown') nextIndex = (buttonIndex + 1) % modeButtons.length;
+        else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') nextIndex = (buttonIndex - 1 + modeButtons.length) % modeButtons.length;
+        else if (event.key === 'Home') nextIndex = 0;
+        else if (event.key === 'End') nextIndex = modeButtons.length - 1;
+        var nextButton = modeButtons[nextIndex];
+        setMode(nextButton.getAttribute('data-sc-rl-mode') || 'auto', true);
+        safeFocus(nextButton);
       });
-    }
-
-    modeButtons.forEach(function (button) {
-      button.addEventListener('click', function () { setMode(button.getAttribute('data-sc-rl-mode') || 'auto', true); textarea.focus(); });
     });
     setMode(currentMode, true);
 
@@ -961,7 +1208,7 @@
         answer.hidden = false;
         answer.innerHTML = '<p>The prior conversational context has been cleared. Start a new site-scoped research question.</p>';
         if (answerUx) { answerUx.hidden = true; answerUx.innerHTML = ''; }
-        textarea.focus();
+        safeFocus(textarea);
       });
     }
 
@@ -987,15 +1234,20 @@
     loadHealth();
 
     if (routeStrip && routesEndpoint) {
-      fetch(routesEndpoint, { credentials: 'same-origin' })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-          var routes = (data && data.routes ? data.routes : []).slice(0, 8);
-          routeStrip.innerHTML = routes.map(function (route) {
-            return '<a href="' + escapeHtml(route.url) + '"><span>' + escapeHtml(route.category) + '</span><strong>' + escapeHtml(route.title) + '</strong></a>';
-          }).join('');
-        })
-        .catch(function () { routeStrip.hidden = true; });
+      sharedJson(routesEndpoint, 'routes', 300000, function () {
+        return fetch(routesEndpoint, { credentials: 'same-origin', cache: 'no-store' })
+          .then(function (response) {
+            return response.json().then(function (data) {
+              if (!response.ok) throw new Error('Routes unavailable');
+              return data;
+            });
+          });
+      }).then(function (data) {
+        var routes = (data && data.routes ? data.routes : []).slice(0, 8);
+        routeStrip.innerHTML = routes.map(function (route) {
+          return '<a href="' + escapeHtml(route.url) + '"><span>' + escapeHtml(route.category) + '</span><strong>' + escapeHtml(route.title) + '</strong></a>';
+        }).join('');
+      }).catch(function () { routeStrip.hidden = true; });
     }
   }
 
@@ -1073,6 +1325,8 @@
     var status = root.querySelector('[data-sc-rl-path-status]');
     var examples = root.querySelectorAll('[data-sc-rl-path-example]');
     var latest = null;
+    var buildController = null;
+    var buildKey = '';
 
     function setStatus(text, state) {
       if (status) status.textContent = text;
@@ -1086,25 +1340,34 @@
         output.innerHTML = '<p>Please enter a question or workflow goal first.</p>';
         return;
       }
+      var requestedKey = clean + '|' + (preferred ? preferred.value : '') + '|' + (depth ? depth.value : 'standard');
+      if (buildController && buildKey === requestedKey) { setStatus('Already building this path…', 'loading'); return; }
+      if (buildController && buildController.abort) buildController.abort();
+      buildController = window.AbortController ? new AbortController() : null;
+      buildKey = requestedKey;
       setStatus('Building path…', 'loading');
       build.disabled = true;
+      build.setAttribute('aria-disabled', 'true');
+      output.setAttribute('aria-busy', 'true');
       output.innerHTML = '<p class="sc-rl-ai__loading">Building an ordered Sustainable Catalyst route path</p>';
-      fetch(endpoint, {
+      var options = {
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
         body: JSON.stringify({ question: clean, preferred_path: preferred ? preferred.value : '', depth: depth ? depth.value : 'standard' })
-      })
+      };
+      if (buildController) options.signal = buildController.signal;
+      fetch(endpoint, options)
         .then(function(response) { return response.json().then(function(data) { if (!response.ok) throw new Error(data && data.message ? data.message : 'Path could not be built.'); return data; }); })
         .then(function(data) { latest = data; output.innerHTML = renderPathResult(data); setStatus('Path ready', 'ready'); })
-        .catch(function(error) { latest = null; output.innerHTML = '<p>' + escapeHtml(error.message || 'The path builder could not run.') + '</p>'; setStatus('Error', 'error'); })
-        .finally(function() { build.disabled = false; });
+        .catch(function(error) { if (error && error.name === 'AbortError') return; latest = null; output.innerHTML = '<p>' + escapeHtml(error.message || 'The path builder could not run.') + '</p>'; setStatus('Error', 'error'); })
+        .finally(function() { build.disabled = false; build.removeAttribute('aria-disabled'); output.setAttribute('aria-busy', 'false'); buildController = null; buildKey = ''; });
     }
 
     build.addEventListener('click', function() { runBuild(); });
     textarea.addEventListener('keydown', function(event) { if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') runBuild(); });
     examples.forEach(function(button) { button.addEventListener('click', function() { textarea.value = button.getAttribute('data-sc-rl-path-example') || ''; runBuild(textarea.value); }); });
-    copy.addEventListener('click', function() { if (!latest) { setStatus('Build first', 'error'); return; } if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(renderPathMarkdown(latest)).then(function(){ setStatus('Copied', 'ready'); }); });
+    copy.addEventListener('click', function() { if (!latest) { setStatus('Build first', 'error'); return; } copyText(renderPathMarkdown(latest)).then(function(){ setStatus('Copied', 'ready'); }).catch(function(){ setStatus('Copy unavailable', 'error'); }); });
     download.addEventListener('click', function() { if (!latest) { setStatus('Build first', 'error'); return; } downloadJson('sustainable-catalyst-guided-path.json', latest); setStatus('Downloaded', 'ready'); });
     save.addEventListener('click', function() {
       if (!latest) { setStatus('Build first', 'error'); return; }

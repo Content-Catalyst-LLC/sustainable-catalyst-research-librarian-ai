@@ -1,6 +1,6 @@
 <?php
 /**
- * Research Librarian AI v6.5.0 — Production Public Research Workspace.
+ * Research Librarian AI v6.5.1 — Accessibility, Performance, and Interface Reliability.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class SC_RL6_V630_Durable_Index {
-    const VERSION = '6.5.0';
+    const VERSION = '6.5.1';
     const OPTION_NAME = 'sc_rl_v620_python_options';
     const STATUS_OPTION = 'sc_rl_v620_python_status';
     const SYNC_HOOK = 'sc_rl_v620_python_sync_event';
@@ -575,7 +575,7 @@ final class SC_RL6_V630_Durable_Index {
         $recovery_next = wp_next_scheduled( self::RECOVERY_HOOK );
         $retry_next = wp_next_scheduled( self::SYNC_RETRY_HOOK );
         return array(
-            'schema' => 'sc-research-librarian-sync-recovery-export/6.5.0',
+            'schema' => 'sc-research-librarian-sync-recovery-export/6.5.1',
             'version' => self::VERSION,
             'site' => home_url( '/' ),
             'generated_utc' => gmdate( 'c' ),
@@ -626,19 +626,38 @@ final class SC_RL6_V630_Durable_Index {
 
     public static function handle_suggestions( WP_REST_Request $request ) {
         if ( ! self::enabled() ) {
-            return new WP_REST_Response( array( 'suggestions' => array() ), 200 );
+            return new WP_REST_Response( array( 'suggestions' => array(), 'cached' => false ), 200 );
         }
         $nonce = $request->get_header( 'x_wp_nonce' );
         if ( ! $nonce || ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
             return new WP_Error( 'sc_rl_v621_bad_nonce', 'Security check failed.', array( 'status' => 403 ) );
         }
-        $query = sanitize_text_field( $request->get_param( 'query' ) );
+        $query = trim( sanitize_text_field( $request->get_param( 'query' ) ) );
         if ( strlen( $query ) < 2 ) {
-            return new WP_REST_Response( array( 'suggestions' => array() ), 200 );
+            return new WP_REST_Response( array( 'suggestions' => array(), 'cached' => false ), 200 );
         }
+
+        // v6.5.1 caches title suggestions against the current canonical ledger checksum.
+        // A full or incremental sync changes the checksum, naturally invalidating old suggestions.
+        $ledger = get_option( self::LEDGER_OPTION, array() );
+        $ledger_checksum = sanitize_text_field( isset( $ledger['checksum'] ) ? $ledger['checksum'] : '' );
+        $normalized_query = strtolower( preg_replace( '/\s+/', ' ', $query ) );
+        $cache_key = 'sc_rl_v651_suggest_' . md5( self::VERSION . '|' . $ledger_checksum . '|' . $normalized_query );
+        $cached = get_transient( $cache_key );
+        if ( is_array( $cached ) ) {
+            $response = new WP_REST_Response( array(
+                'suggestions' => $cached,
+                'cached' => true,
+                'cache_ttl' => 300,
+            ), 200 );
+            $response->header( 'Cache-Control', 'private, max-age=60, stale-while-revalidate=240' );
+            $response->header( 'X-SC-RL-Suggestion-Cache', 'HIT' );
+            return $response;
+        }
+
         $response = self::request( '/v1/retrieve', 'POST', array( 'query' => $query, 'limit' => 8 ) );
         if ( is_wp_error( $response ) ) {
-            return new WP_REST_Response( array( 'suggestions' => array() ), 200 );
+            return new WP_REST_Response( array( 'suggestions' => array(), 'cached' => false ), 200 );
         }
         $suggestions = array();
         foreach ( is_array( $response ) ? $response : array() as $item ) {
@@ -652,7 +671,15 @@ final class SC_RL6_V630_Durable_Index {
                 'match_type' => sanitize_key( isset( $item['match_type'] ) ? $item['match_type'] : '' ),
             );
         }
-        return new WP_REST_Response( array( 'suggestions' => $suggestions ), 200 );
+        set_transient( $cache_key, $suggestions, 5 * MINUTE_IN_SECONDS );
+        $rest_response = new WP_REST_Response( array(
+            'suggestions' => $suggestions,
+            'cached' => false,
+            'cache_ttl' => 300,
+        ), 200 );
+        $rest_response->header( 'Cache-Control', 'private, max-age=60, stale-while-revalidate=240' );
+        $rest_response->header( 'X-SC-RL-Suggestion-Cache', 'MISS' );
+        return $rest_response;
     }
 
     public static function handle_admin_sync() {
@@ -784,7 +811,7 @@ final class SC_RL6_V630_Durable_Index {
         $grounding['reason_codes'] = array_values( array_unique( array_merge( $grounding['reason_codes'], array( 'bm25-section-retrieval', 'citation-verification' ), ! empty( $grounding['retrieval_diagnostics']['semantic_used'] ) ? array( 'semantic-retrieval' ) : array() ) ) );
 
         $note = array(
-            'schema' => 'sc-research-librarian-route-note/6.5.0',
+            'schema' => 'sc-research-librarian-route-note/6.5.1',
             'created_at_utc' => gmdate( 'c' ),
             'question' => sanitize_textarea_field( $question ),
             'source' => sanitize_key( isset( $backend['source'] ) ? $backend['source'] : 'python-backend' ),
@@ -1180,7 +1207,7 @@ final class SC_RL6_V630_Durable_Index {
         $deleted_ids = array_values( array_diff( array_keys( $ledger['records'] ), array_keys( $current_ids ) ) );
         $report = array_merge( array(
             'version' => self::VERSION,
-            'schema' => 'sc-rl-sync-report/6.5.0',
+            'schema' => 'sc-rl-sync-report/6.5.1',
             'job_id' => $job_id,
             'state' => 'running',
             'mode' => 'transactional-replace',
@@ -2298,7 +2325,7 @@ final class SC_RL6_V630_Durable_Index {
         ?>
         <div class="wrap">
             <h1>Python Intelligence, Retrieval Calibration, and Durable Index</h1>
-            <p>Research Librarian AI v6.5.0 adds benchmark-driven retrieval calibration, minimum-evidence gates, near-duplicate-title protection, unsupported-answer detection, source weighting, exclusions, and latency diagnostics to the v6.4.0 hybrid retrieval engine.</p>
+            <p>Research Librarian AI v6.5.1 retains benchmark-driven retrieval calibration, minimum-evidence gates, near-duplicate-title protection, unsupported-answer detection, source weighting, exclusions, and latency diagnostics to the v6.4.0 hybrid retrieval engine.</p>
             <?php if ( $notice ) : ?><div class="notice notice-<?php echo esc_attr( $notice_type ); ?> is-dismissible"><p><?php echo esc_html( $notice ); ?></p></div><?php endif; ?>
 
             <div class="sc-rl-admin-grid">
@@ -2373,7 +2400,7 @@ final class SC_RL6_V630_Durable_Index {
                 <tr><th>Automatic recovery</th><td><?php echo esc_html( '1' === $options['auto_recover'] ? 'Enabled' : 'Disabled' ); ?><?php if ( $diagnostics['cron']['recovery_scheduled'] ) : ?> · scheduled for <?php echo esc_html( $diagnostics['cron']['recovery_next_run_utc'] ); ?><?php endif; ?></td></tr>
                 <tr><th>WP-Cron</th><td><?php echo esc_html( $diagnostics['cron']['wp_cron_disabled'] ? 'Disabled by configuration' : ( $diagnostics['cron']['scheduled'] ? 'Scheduled' : 'Not scheduled' ) ); ?><?php if ( $diagnostics['cron']['next_run_utc'] ) : ?> · next run <?php echo esc_html( $diagnostics['cron']['next_run_utc'] ); ?><?php endif; ?></td></tr>
                 <tr><th>Public rate limit</th><td><?php echo esc_html( absint( $rate_status['limit'] ?? 0 ) ); ?> questions per <?php echo esc_html( absint( $rate_status['window_minutes'] ?? 0 ) ); ?> minutes · <?php echo esc_html( absint( $rate_status['active_visitors'] ?? 0 ) ); ?> active visitor window(s)</td></tr>
-                <tr><th>Latest sync job</th><td><?php echo esc_html( ! empty( $sync_report['job_id'] ) ? $sync_report['job_id'] . ' · ' . $sync_report['state'] : 'No v6.5.0 sync report yet' ); ?></td></tr>
+                <tr><th>Latest sync job</th><td><?php echo esc_html( ! empty( $sync_report['job_id'] ) ? $sync_report['job_id'] . ' · ' . $sync_report['state'] : 'No v6.5.1 sync report yet' ); ?></td></tr>
                 <tr><th>Inserted / updated / unchanged / deleted</th><td><?php echo esc_html( absint( $sync_report['inserted_records'] ?? 0 ) . ' / ' . absint( $sync_report['updated_records'] ?? 0 ) . ' / ' . absint( $sync_report['unchanged_records'] ?? 0 ) . ' / ' . absint( $sync_report['backend_deleted_records'] ?? 0 ) ); ?></td></tr>
             </tbody></table>
             <?php if ( ! empty( $sync_report['batches'] ) ) : ?>

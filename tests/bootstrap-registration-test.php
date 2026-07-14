@@ -1,6 +1,6 @@
 <?php
 /**
- * Standalone regression test for Research Librarian AI v6.5.0.
+ * Standalone regression test for Research Librarian AI v6.5.1.
  * Run: php tests/bootstrap-registration-test.php
  */
 error_reporting( E_ALL );
@@ -134,7 +134,7 @@ $result = array(
 
 echo json_encode( $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . PHP_EOL;
 
-$passed = '6.5.0' === $result['version']
+$passed = '6.5.1' === $result['version']
     && $result['core_loaded']
     && $result['legacy_class_detected']
     && empty( $result['missing_shortcodes'] )

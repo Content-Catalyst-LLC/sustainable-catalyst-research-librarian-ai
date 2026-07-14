@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 6.5.0
+Stable tag: 6.5.1
 License: MIT
 
 A site-scoped public research workspace for Sustainable Catalyst with verified retrieval, citations, bounded follow-up continuity, durable indexing, and controlled exports.
@@ -12,7 +12,7 @@ A site-scoped public research workspace for Sustainable Catalyst with verified r
 
 Research Librarian AI retrieves Sustainable Catalyst publications and documents through exact-title priority, section-aware BM25 ranking, optional Gemini embeddings, calibrated reciprocal-rank fusion, and citation-verified synthesis. WordPress remains the canonical publishing and recovery source, while FastAPI provides a durable SQLite runtime index compatible with free Render infrastructure.
 
-v6.5.0 adds a production public research workspace with eight modes, answer-first evidence presentation, accessible title suggestions, bounded follow-up continuity, explicit session reset, cold-start progress, and Markdown, JSON, research-note, print, session, feedback, and handoff controls.
+v6.5.1 hardens the public workspace with keyboard-complete research modes, combobox/listbox title suggestions, live progress and result announcements, reduced-motion and forced-colors support, request caching and cancellation, staged rendering, a feedback dialog, and stronger mobile and theme compatibility.
 
 == Shortcodes ==
 
@@ -37,6 +37,16 @@ v6.5.0 adds a production public research workspace with eight modes, answer-firs
 [sc_research_librarian_article_route_cards]
 
 == Changelog ==
+
+= 6.5.1 =
+* Adds roving-tabindex and arrow-key navigation for research modes.
+* Adds combobox/listbox title suggestions with active-descendant navigation and cached results.
+* Adds progressbar semantics, result focus, reduced motion, forced colors, and 44-pixel mobile targets.
+* Replaces browser prompts with an accessible feedback dialog.
+* Coalesces health and route requests and caches suggestions against the current index checksum.
+* Cancels stale requests, prevents duplicate in-flight questions, and stages answer rendering.
+* Adds deferred script loading, FastAPI gzip, clipboard fallback, safer downloads, and theme/mobile hardening.
+* Preserves the black-and-green prompt and light answer/source surfaces.
 
 = 6.5.0 =
 * Adds eight explicit research modes: auto-detect, title, subject, path, evidence, analysis, comparison, and decision preparation.
