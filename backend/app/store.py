@@ -449,7 +449,7 @@ class KnowledgeStore:
             "embedded_chunks": embedded_chunks,
             "semantic_coverage": round((embedded_chunks / indexed_chunks) * 100, 2) if indexed_chunks else 0.0,
             "embedding_model": settings.gemini_embedding_model,
-            "retrieval_profile": retrieval_config.get("profile", "balanced-v6.4.1"),
+            "retrieval_profile": retrieval_config.get("profile", "balanced-v6.5.0"),
             "benchmark_runs": benchmark_runs,
             "recovery_needed": total_records == 0,
         }
@@ -825,7 +825,7 @@ class KnowledgeStore:
                 (
                     run_id,
                     str(report.get("created_utc") or utc_now()),
-                    str(report.get("profile") or "balanced-v6.4.1"),
+                    str(report.get("profile") or "balanced-v6.5.0"),
                     int(report.get("case_count") or 0),
                     float(lexical.get("mrr") or 0.0),
                     float(hybrid.get("mrr") or 0.0),

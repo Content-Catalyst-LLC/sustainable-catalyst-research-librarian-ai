@@ -97,7 +97,7 @@ class MaintenanceRequest(BaseModel):
 
 
 class RetrievalCalibrationUpdate(BaseModel):
-    profile: str = Field(default="balanced-v6.4.1", max_length=100)
+    profile: str = Field(default="balanced-v6.5.0", max_length=100)
     weights: dict[str, float] = Field(default_factory=dict)
     rrf_k: int = Field(default=60, ge=1, le=500)
     thresholds: dict[str, float | int] = Field(default_factory=dict)
@@ -188,6 +188,10 @@ class RetrievedSource(BaseModel):
 
 class AskRequest(BaseModel):
     question: str = Field(min_length=3, max_length=3000)
+    research_mode: str = Field(
+        default="auto",
+        pattern="^(auto|title|subject|path|evidence|analyze|compare|decision)$",
+    )
     session_id: str = Field(default="", max_length=180)
     page_url: str = Field(default="", max_length=1600)
     route_hint: dict[str, Any] = Field(default_factory=dict)
@@ -214,7 +218,15 @@ class AskResponse(BaseModel):
     retrieval_diagnostics: dict[str, Any] = Field(default_factory=dict)
     evidence_gate: dict[str, Any] = Field(default_factory=dict)
     status: dict[str, Any] = Field(default_factory=dict)
+    research_mode: str = "auto"
+    follow_up_prompts: list[str] = Field(default_factory=list)
+    workspace: dict[str, Any] = Field(default_factory=dict)
+    session_turns: int = 0
     generated_utc: str = Field(default_factory=utc_now)
+
+
+class SessionResetRequest(BaseModel):
+    session_id: str = Field(default="", max_length=180)
 
 
 class StatusResponse(BaseModel):
@@ -253,5 +265,5 @@ class StatusResponse(BaseModel):
     embedded_chunks: int = 0
     semantic_coverage: float = 0.0
     embedding_model: str = ""
-    retrieval_profile: str = "balanced-v6.4.1"
+    retrieval_profile: str = "balanced-v6.5.0"
     benchmark_runs: int = 0

@@ -1,0 +1,70 @@
+{
+  "schema": "sc-research-librarian-retrieval-benchmark/1.0",
+  "version": "6.5.0",
+  "description": "Bounded golden queries used to compare lexical and calibrated hybrid retrieval against canonical Sustainable Catalyst titles.",
+  "cases": [
+    {
+      "query": "Systems Thinking",
+      "expected_title": "Systems Thinking",
+      "tags": [
+        "exact-title",
+        "confusing-title"
+      ]
+    },
+    {
+      "query": "Mathematical Thinking",
+      "expected_title": "Mathematical Thinking",
+      "tags": [
+        "exact-title"
+      ]
+    },
+    {
+      "query": "Algorithms and Computational Reasoning",
+      "expected_title": "Algorithms and Computational Reasoning",
+      "tags": [
+        "exact-title",
+        "technology"
+      ]
+    },
+    {
+      "query": "Sustainable Development",
+      "expected_title": "Sustainable Development",
+      "tags": [
+        "exact-title",
+        "sustainability"
+      ]
+    },
+    {
+      "query": "planetary boundaries safe operating space",
+      "expected_title": "Planetary Boundaries",
+      "tags": [
+        "concept",
+        "section-match"
+      ]
+    },
+    {
+      "query": "public country indicators and earth observation",
+      "expected_title": "Site Intelligence",
+      "tags": [
+        "platform-route",
+        "country-intelligence"
+      ]
+    },
+    {
+      "query": "calculate equations model uncertainty and graph results",
+      "expected_title": "Workbench",
+      "tags": [
+        "platform-route",
+        "calculation"
+      ]
+    },
+    {
+      "query": "compare scenarios evidence tradeoffs and prepare a decision brief",
+      "expected_title": "Decision Studio",
+      "tags": [
+        "platform-route",
+        "decision-support"
+      ]
+    }
+  ]
+}

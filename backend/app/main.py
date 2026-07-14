@@ -28,6 +28,7 @@ from .models import (
     RetrievalRequest,
     RetrievedSource,
     RollbackRequest,
+    SessionResetRequest,
     StatusResponse,
     SyncRequest,
     SyncResponse,
@@ -53,6 +54,73 @@ app.add_middleware(
 )
 
 _sessions: dict[str, list[dict[str, Any]]] = defaultdict(list)
+
+_RESEARCH_MODES: dict[str, dict[str, str]] = {
+    "auto": {"label": "Auto-detect", "instruction": "Infer the most useful site-scoped research workflow."},
+    "title": {"label": "Find a title", "instruction": "Prioritize exact and near-exact canonical titles and series order."},
+    "subject": {"label": "Explore a subject", "instruction": "Synthesize the strongest verified subject overview and connected concepts."},
+    "path": {"label": "Build a research path", "instruction": "Return an ordered path through verified Sustainable Catalyst records."},
+    "evidence": {"label": "Find evidence", "instruction": "Prioritize passages, sections, page references, and attributable evidence."},
+    "analyze": {"label": "Analyze a question", "instruction": "Identify assumptions, methods, calculations, and appropriate Workbench actions."},
+    "compare": {"label": "Compare records", "instruction": "Compare verified records without inventing differences or unsupported claims."},
+    "decision": {"label": "Prepare a decision", "instruction": "Organize evidence, uncertainty, alternatives, and Decision Studio actions."},
+}
+
+
+def _resolve_research_mode(question: str, requested: str = "auto") -> str:
+    clean = (requested or "auto").strip().lower()
+    if clean in _RESEARCH_MODES and clean != "auto":
+        return clean
+    q = (question or "").lower()
+    if any(term in q for term in ["titled", "exact title", "article called", "find the article"]):
+        return "title"
+    if any(term in q for term in ["evidence", "source", "citation", "page", "passage", "supporting"]):
+        return "evidence"
+    if any(term in q for term in ["compare", "difference", "versus", " vs "]):
+        return "compare"
+    if any(term in q for term in ["decision", "tradeoff", "scenario", "brief", "recommendation"]):
+        return "decision"
+    if any(term in q for term in ["calculate", "formula", "model", "analyze", "analysis", "graph", "simulate"]):
+        return "analyze"
+    if any(term in q for term in ["path", "sequence", "where should i start", "reading order", "learn"]):
+        return "path"
+    return "subject"
+
+
+def _follow_up_prompts(mode: str, best: RetrievedSource | None, related: list[RetrievedSource]) -> list[str]:
+    title = best.title if best else "this subject"
+    prompts: list[str] = []
+    if mode == "title":
+        prompts = [f"What comes before and after {title} in its series?", f"Show the strongest passages in {title}."]
+    elif mode == "evidence":
+        prompts = [f"Which passages in {title} provide the strongest support?", "Show related records that disagree or add important context."]
+    elif mode == "path":
+        prompts = [f"Turn {title} into a five-step reading path.", "Which step should lead into Workbench or Site Intelligence?"]
+    elif mode == "analyze":
+        prompts = [f"What assumptions and variables should I extract from {title}?", "Prepare the next analytical step for Workbench."]
+    elif mode == "compare":
+        other = related[0].title if related else "the next closest record"
+        prompts = [f"Compare {title} with {other} using only verified evidence.", "What important difference remains unresolved?"]
+    elif mode == "decision":
+        prompts = [f"What evidence and uncertainty from {title} belong in a decision packet?", "Prepare the next Decision Studio step."]
+    else:
+        prompts = [f"Explain the key concepts connected to {title}.", f"Build a research path starting with {title}."]
+    return prompts[:3]
+
+
+def _workspace_summary(mode: str, matches: list[RetrievedSource], related: list[RetrievedSource], ai_used: bool, gate: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "schema": "sc-research-librarian-public-workspace/1.0",
+        "mode": mode,
+        "mode_label": _RESEARCH_MODES.get(mode, _RESEARCH_MODES["auto"])["label"],
+        "verified_sources": len(matches),
+        "related_titles": len(related),
+        "answer_kind": "citation-verified-ai" if ai_used else "deterministic-evidence",
+        "evidence_gate_passed": bool(gate.get("ok")),
+        "exports": ["copy", "markdown", "json", "print", "research-note"],
+    }
+
+
 _SERVICE_STARTED_MONOTONIC = time.monotonic()
 _SERVICE_STARTED_UTC = utc_now()
 
@@ -131,16 +199,18 @@ def _research_path(matches: list[RetrievedSource], related: list[RetrievedSource
     return path
 
 
-def _actions(question: str, best: RetrievedSource | None) -> list[dict[str, str]]:
+def _actions(question: str, best: RetrievedSource | None, research_mode: str = "auto") -> list[dict[str, str]]:
     q = question.lower()
     actions: list[dict[str, str]] = []
     if best:
         actions.append({"label": "Open best match", "url": best.url, "type": "source"})
+    if research_mode == "evidence" and best:
+        actions.append({"label": "Open cited evidence", "url": best.url, "type": "evidence"})
     if any(term in q for term in ["country", "pakistan", "climate", "indicator", "public evidence", "compare countries"]):
         actions.append({"label": "Open Site Intelligence", "url": "/platform/site-intelligence/", "type": "evidence"})
-    if any(term in q for term in ["calculate", "formula", "graph", "model", "analysis", "simulate"]):
+    if research_mode == "analyze" or any(term in q for term in ["calculate", "formula", "graph", "model", "analysis", "simulate"]):
         actions.append({"label": "Use Workbench", "url": "/modeling-analytics/workbench/", "type": "analysis"})
-    if any(term in q for term in ["decision", "brief", "scenario", "tradeoff", "recommendation"]):
+    if research_mode == "decision" or any(term in q for term in ["decision", "brief", "scenario", "tradeoff", "recommendation"]):
         actions.append({"label": "Open Decision Studio", "url": "/platform/decision-studio/", "type": "decision"})
     actions.append({"label": "Report a missing route", "url": "/platform/feature-suggestions/", "type": "feedback"})
     return actions[:5]
@@ -218,7 +288,7 @@ def _status() -> StatusResponse:
         embedded_chunks=int(summary.get("embedded_chunks", 0)),
         semantic_coverage=float(summary.get("semantic_coverage", 0.0)),
         embedding_model=str(summary.get("embedding_model", settings.gemini_embedding_model)),
-        retrieval_profile=str(summary.get("retrieval_profile", "balanced-v6.4.1")),
+        retrieval_profile=str(summary.get("retrieval_profile", "balanced-v6.5.0")),
         benchmark_runs=int(summary.get("benchmark_runs", 0)),
         **startup,
     )
@@ -532,6 +602,13 @@ async def retrieval_benchmark(payload: BenchmarkRequest) -> dict[str, Any]:
     return report
 
 
+@app.post("/v1/session/reset", dependencies=[Depends(require_key)])
+def reset_session(payload: SessionResetRequest) -> dict[str, Any]:
+    session_id = _session_id(payload.session_id)
+    removed_turns = len(_sessions.pop(session_id, []))
+    return {"ok": True, "version": __version__, "session_id": session_id, "removed_turns": removed_turns}
+
+
 @app.post("/v1/retrieve", response_model=list[RetrievedSource], dependencies=[Depends(require_key)])
 async def retrieve_endpoint(payload: RetrievalRequest) -> list[RetrievedSource]:
     matches, _ = await _hybrid_retrieve(payload.query, payload.limit)
@@ -555,6 +632,7 @@ async def retrieve_explain_endpoint(payload: RetrievalRequest) -> dict[str, Any]
 async def ask(payload: AskRequest) -> AskResponse:
     _prune_sessions()
     session_id = _session_id(payload.session_id)
+    research_mode = _resolve_research_mode(payload.question, payload.research_mode)
     records = store.records()
     calibration = store.retrieval_config()
     matches, retrieval_diagnostics = await _hybrid_retrieve(payload.question, settings.source_limit, calibration)
@@ -583,7 +661,11 @@ async def ask(payload: AskRequest) -> AskResponse:
             raise RuntimeError("No grounded Sustainable Catalyst sources were retrieved.")
         if not gate.get("ok"):
             raise RuntimeError("Retrieved evidence did not pass the configured minimum-evidence gate: " + ", ".join(gate.get("reasons", [])))
-        answer = await generate_answer(payload.question, matches, related, history, payload.route_hint, calibration)
+        route_hint = dict(payload.route_hint or {})
+        route_hint["research_mode"] = research_mode
+        route_hint["research_mode_label"] = _RESEARCH_MODES[research_mode]["label"]
+        route_hint["workspace_instruction"] = _RESEARCH_MODES[research_mode]["instruction"]
+        answer = await generate_answer(payload.question, matches, related, history, route_hint, calibration)
         citation_verification = verify_citations(answer, matches, related, calibration)
         if not citation_verification.get("ok"):
             raise RuntimeError("Generated answer failed citation verification.")
@@ -616,7 +698,7 @@ async def ask(payload: AskRequest) -> AskResponse:
         matches=matches,
         related_titles=related,
         research_path=_research_path(matches, related),
-        actions=_actions(payload.question, best),
+        actions=_actions(payload.question, best, research_mode),
         interpretation="Exact-title, BM25, semantic, and reciprocal-rank retrieval followed by citation-verified AI synthesis." if ai_used else "Exact-title and section-aware hybrid retrieval with deterministic verified evidence fallback.",
         clarification=("Which of the similarly titled Sustainable Catalyst records should be prioritized?" if retrieval_diagnostics.get("ambiguous") else ("" if certainty.get("level") != "low" else "Which Sustainable Catalyst subject, title, country, tool, or intended output should the search prioritize?")),
         confidence=certainty,
@@ -624,5 +706,9 @@ async def ask(payload: AskRequest) -> AskResponse:
         citation_verification=citation_verification,
         retrieval_diagnostics=retrieval_diagnostics,
         evidence_gate=gate,
+        research_mode=research_mode,
+        follow_up_prompts=_follow_up_prompts(research_mode, best, related),
+        workspace=_workspace_summary(research_mode, matches, related, ai_used, gate),
+        session_turns=len(_sessions[session_id]) // 2,
         status=_status().model_dump(),
     )

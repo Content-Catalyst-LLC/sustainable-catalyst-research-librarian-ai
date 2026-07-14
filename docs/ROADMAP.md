@@ -40,18 +40,36 @@
 - Ranking weights, source multipliers, exclusions, and context budgets
 - Retrieval latency and calibration diagnostics
 
-## v6.5.0 — Production Public Research Workspace
+## v6.5.0 — Production Public Research Workspace — Complete
 
-- Answer-first public workspace
+- Answer-first responsive public workspace
+- Eight explicit research modes
 - Terminal prompt with light evidence and source cards
-- Find-title, explore-subject, build-path, evidence, analysis, and decision modes
-- Citation cards, exports, mobile refinement, and graceful cold-start states
+- Accessible title suggestions and keyboard navigation
+- Bounded follow-up continuity and explicit session reset
+- Citation, path, related-record, and action sections
+- Markdown, JSON, research-note, print, session, feedback, and handoff actions
+- Visible cold-start and recovery progress
+
+## v6.5.1 — Accessibility, Performance, and Interface Reliability
+
+- Full keyboard and screen-reader audit
+- Reduced-motion and high-contrast refinements
+- Cached title suggestions and reduced duplicate REST traffic
+- Staged answer rendering and performance budgets
+- Browser, theme, and mobile compatibility regression suite
 
 ## v6.6.0 — Platform Intelligence and Typed Research Handoffs
 
 - Versioned handoffs to Workbench, Decision Studio, Site Intelligence, and Lab
 - Provenance-preserving artifact return
 - Capability discovery and destination-health validation
+
+## v6.6.1 — Cross-Product Reliability Patch
+
+- Destination-version checks, retry, and recovery
+- Expired-token repair and duplicate-event prevention
+- Artifact-return validation and end-to-end integration tests
 
 ## v6.7.0 — Research Quality and Governance Center
 

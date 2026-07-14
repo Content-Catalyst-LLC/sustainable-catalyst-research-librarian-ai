@@ -1,3 +1,14 @@
+## 6.5.0 — Production Public Research Workspace
+
+- Added eight explicit research modes for title, subject, path, evidence, analysis, comparison, decision preparation, and auto-detection.
+- Added a responsive two-pane public workspace with a focused terminal prompt and a larger answer/evidence surface.
+- Added answer-first workspace headers, active-mode labels, source counts, and generated-versus-deterministic response status.
+- Added short site-scoped follow-up continuity, suggested next questions, and explicit session reset.
+- Added accessible indexed-title suggestions with keyboard navigation and automatic title-mode selection.
+- Added copy, Markdown, JSON, research-note, print, session, feedback, and typed-handoff actions.
+- Added visible cold-start and recovery progress while verified WordPress fallback remains available.
+- Preserved the black-and-green prompt, light answer/source cards, v6.4.1 retrieval calibration, and v6.3.x recovery controls.
+
 ## 6.4.1 — Retrieval Calibration and Regression Patch
 
 - Added persistent sanitized retrieval profiles in SQLite schema version 6.

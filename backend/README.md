@@ -1,4 +1,4 @@
-# Research Librarian AI Python Backend v6.4.1
+# Research Librarian AI Python Backend v6.5.0
 
 This FastAPI service provides exact-title, section-aware BM25, optional semantic, and calibrated reciprocal-rank retrieval with evidence-gated, citation-verified Gemini synthesis. WordPress remains the canonical publishing, snapshot, and recovery layer.
 

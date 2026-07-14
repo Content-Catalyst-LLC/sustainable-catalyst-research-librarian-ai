@@ -6,7 +6,7 @@ from typing import Any
 
 
 DEFAULT_RETRIEVAL_CONFIG: dict[str, Any] = {
-    "profile": "balanced-v6.4.1",
+    "profile": "balanced-v6.5.0",
     "weights": {
         "structural": 1.0,
         "lexical": 24.0,

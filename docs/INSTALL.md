@@ -1,8 +1,8 @@
-# Install Research Librarian AI v6.4.1
+# Install Research Librarian AI v6.5.0
 
 ## 1. Push the repository
 
-Use `PUSH_RESEARCH_LIBRARIAN_V641_PY312.sh`. The script requires and verifies Python 3.12, clears macOS launcher overrides, validates both Python import layouts, runs every WordPress release contract, verifies the packaged benchmark and calibration manifest, and creates tag `v6.4.1`.
+Use `PUSH_RESEARCH_LIBRARIAN_V650_PY312.sh`. The script requires and verifies Python 3.12, clears macOS launcher overrides, validates both Python import layouts, runs every WordPress release contract, verifies the public-workspace manifest, and creates tag `v6.5.0`.
 
 ## 2. Deploy or update Render
 
@@ -36,11 +36,11 @@ SC_RL_MAX_REJECTION_DETAILS=100
 SC_RL_MAX_RUNTIME_SNAPSHOTS=5
 ```
 
-Retrieval calibration is stored in SQLite and managed from WordPress. No new Render secret is required. No paid vector database or persistent Render disk is required.
+No paid vector database or persistent Render disk is required.
 
 ## 3. Install the WordPress plugin
 
-Upload `sustainable-catalyst-research-librarian-ai-v6.4.1.zip`, replace the installed plugin, and activate it. Existing settings, snapshots, records, chunks, embeddings, ledgers, and queued editorial changes are retained.
+Upload `sustainable-catalyst-research-librarian-ai-v6.5.0.zip`, replace the installed plugin, and activate it. Existing settings, snapshots, records, chunks, embeddings, calibration profiles, benchmarks, ledgers, and queued editorial changes are retained.
 
 ## 4. Synchronize and verify
 
@@ -52,22 +52,24 @@ Open **Research Librarian AI → Python Intelligence**, save the backend URL and
 4. Confirm WordPress and backend counts and checksums match
 5. Confirm indexed chunks are present
 6. Process embedding batches to the desired semantic coverage
+7. Run the retrieval benchmark once with the default `balanced-v6.5.0` profile
 
-## 5. Calibrate retrieval
+## 5. Verify the public workspace
 
-In **Retrieval Calibration**:
+Open a page containing `[sustainable_catalyst_research_librarian_ai]` and confirm:
 
-1. Keep the default `balanced-v6.4.1` profile for the first benchmark.
-2. Review structural, lexical, semantic, and RRF weights.
-3. Review minimum evidence, ambiguity, citation-coverage, and context-budget settings.
-4. Add exclusions only for records that must never appear in retrieval.
-5. Save settings.
-6. Select **Run Retrieval Benchmark**.
-7. Compare lexical and hybrid hit-at-1, hit-at-3, MRR, ambiguity, and missing-result metrics.
+- all eight research-mode controls are visible and keyboard operable;
+- the question field remains black with green monospace text and a green focus state;
+- answer, evidence, source, path, and action cards remain light;
+- an exact title suggestion can be selected with the keyboard;
+- the selected mode reaches the backend and appears in the answer header;
+- follow-up prompts remain scoped to the current research session;
+- **Reset session** clears conversational continuity;
+- Markdown, JSON, research-note, print, and handoff actions work;
+- cold-start progress is visible while verified fallback remains available;
+- mobile layouts collapse to one column without horizontal overflow.
 
-Benchmark output is advisory. Change one group of weights at a time and rerun the same benchmark before accepting a production adjustment.
-
-## 6. Verify public behavior
+## 6. Verify evidence behavior
 
 Confirm that:
 

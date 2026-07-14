@@ -118,6 +118,41 @@
     URL.revokeObjectURL(url);
   }
 
+  function downloadText(filename, text, mime) {
+    var blob = new Blob([String(text || '')], { type: mime || 'text/plain;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function workspaceMarkdown(data, question) {
+    data = data || {};
+    var grounding = data.grounding || {};
+    var workspace = data.workspace || grounding.workspace || {};
+    var sources = data.matches || grounding.sources || [];
+    var path = data.research_path || grounding.research_path || [];
+    var lines = ['# Sustainable Catalyst Research Workspace', '', 'Question: ' + (question || ''), 'Mode: ' + (workspace.mode_label || data.research_mode || grounding.research_mode || 'Auto-detect'), 'Generated: ' + (data.generated_utc || new Date().toISOString()), '', '## Answer', '', data.answer || ''];
+    if (sources.length) {
+      lines.push('', '## Verified Sources');
+      sources.forEach(function (source) {
+        var location = source.section || '';
+        if (source.page) location += (location ? ', ' : '') + 'page ' + source.page;
+        lines.push('- [' + (source.title || 'Untitled source') + '](' + (source.url || '#') + ')' + (location ? ' — ' + location : '') + (source.passage ? ' — ' + source.passage : ''));
+      });
+    }
+    if (path.length) {
+      lines.push('', '## Suggested Research Path');
+      path.forEach(function (step, index) { lines.push((index + 1) + '. [' + (step.title || 'Open step') + '](' + (step.url || '#') + ') — ' + (step.reason || '')); });
+    }
+    lines.push('', '## Boundaries', '', 'This workspace is site-scoped to verified Sustainable Catalyst records. Generated synthesis remains reviewable and does not replace authoritative sources or professional judgment.');
+    return lines.join('\n');
+  }
+
   function confidenceClass(level) {
     var clean = String(level || 'unknown').toLowerCase();
     if (clean.indexOf('high') !== -1) return 'sc-rl-answer-ux__badge--high';
@@ -158,9 +193,14 @@
     var routeDescription = route.description || (note.recommended_route && note.recommended_route.description) || note.intent || '';
     var clarification = data.clarification || '';
 
+    var workspace = data.workspace || grounding.workspace || {};
+    var researchMode = data.research_mode || grounding.research_mode || workspace.mode || 'auto';
+    var modeLabel = workspace.mode_label || String(researchMode).replace(/-/g, ' ');
+    var answerKind = workspace.answer_kind || (data.ai_used ? 'citation-verified-ai' : 'deterministic-evidence');
     var html = '<div class="sc-rl-production-answer">';
+    html += '<header class="sc-rl-production-answer__workspace-head"><div><span>Production research workspace</span><h3>' + escapeHtml(modeLabel) + '</h3></div><div><b>' + escapeHtml(data.ai_used ? 'Verified AI synthesis' : 'Verified evidence fallback') + '</b><small>' + escapeHtml(sources.length + ' source' + (sources.length === 1 ? '' : 's')) + '</small></div></header>';
     html += '<section class="sc-rl-production-answer__response">';
-    html += '<div class="sc-rl-production-answer__label">Grounded Research Librarian AI response</div>';
+    html += '<div class="sc-rl-production-answer__label">Direct response · ' + escapeHtml(answerKind.replace(/-/g, ' ')) + '</div>';
     html += (fallbackHtml || '');
     if (clarification) html += '<div class="sc-rl-production-answer__clarification"><strong>One useful clarification</strong><p>' + escapeHtml(clarification) + '</p></div>';
     html += '</section>';
@@ -267,13 +307,18 @@
     var submit = root.querySelector('[data-sc-rl-submit]');
     var clear = root.querySelector('[data-sc-rl-clear]');
     var copy = root.querySelector('[data-sc-rl-copy]');
+    var copyAnswer = root.querySelector('[data-sc-rl-copy-answer]');
     var download = root.querySelector('[data-sc-rl-download]');
+    var downloadMarkdown = root.querySelector('[data-sc-rl-download-markdown]');
+    var researchNote = root.querySelector('[data-sc-rl-research-note]');
+    var printButton = root.querySelector('[data-sc-rl-print]');
     var handoffDownload = root.querySelector('[data-sc-rl-handoff-download]');
     var saveSession = root.querySelector('[data-sc-rl-save-session]');
     var feedbackHelpful = root.querySelector('[data-sc-rl-feedback-helpful]');
     var feedbackIssue = root.querySelector('[data-sc-rl-feedback-issue]');
     var answer = root.querySelector('[data-sc-rl-answer]');
     var status = root.querySelector('[data-sc-rl-status]');
+    var answerCard = root.querySelector('.sc-rl-ai__answer-card');
     var health = root.querySelector('[data-sc-rl-ai-health]');
     var healthLabel = root.querySelector('[data-sc-rl-ai-health-label]');
     var healthDetail = root.querySelector('[data-sc-rl-ai-health-detail]');
@@ -283,14 +328,76 @@
     var answerUx = root.querySelector('[data-sc-rl-answer-ux]');
     var routeStrip = root.querySelector('[data-sc-rl-route-strip]');
     var suggestionsBox = root.querySelector('[data-sc-rl-title-suggestions]');
+    var modeButtons = root.querySelectorAll('[data-sc-rl-mode]');
+    var modeLabel = root.querySelector('[data-sc-rl-mode-label]');
+    var progress = root.querySelector('[data-sc-rl-progress]');
+    var progressBar = root.querySelector('[data-sc-rl-progress-bar]');
+    var progressLabel = root.querySelector('[data-sc-rl-progress-label]');
+    var sessionBar = root.querySelector('[data-sc-rl-session-bar]');
+    var sessionMode = root.querySelector('[data-sc-rl-session-mode]');
+    var sessionTurns = root.querySelector('[data-sc-rl-session-turns]');
+    var resetSession = root.querySelector('[data-sc-rl-reset-session]');
+    var followUps = root.querySelector('[data-sc-rl-follow-ups]');
+    var followUpList = root.querySelector('[data-sc-rl-follow-up-list]');
     var latest = null;
     var sessionId = '';
     try { sessionId = window.localStorage.getItem('sc_rl_ai_session_id') || ''; } catch (e) { sessionId = ''; }
     var suggestionTimer = null;
+    var currentMode = 'auto';
+    try { currentMode = window.localStorage.getItem('sc_rl_ai_research_mode') || 'auto'; } catch (e) { currentMode = 'auto'; }
+    var modeCopy = {
+      auto: ['Auto-detect', 'What are you trying to understand, find, compare, analyze, or prepare?'],
+      title: ['Find a title', 'Enter an exact or partial Sustainable Catalyst title.'],
+      subject: ['Explore a subject', 'What subject or concept should the Library explain and connect?'],
+      path: ['Build a research path', 'What do you want to learn, and what should the ordered path lead toward?'],
+      evidence: ['Find evidence', 'What claim, question, passage, or document needs supporting evidence?'],
+      analyze: ['Analyze a question', 'What assumptions, variables, formula, data, or method should be analyzed?'],
+      compare: ['Compare records', 'Which titles, concepts, places, or approaches should be compared?'],
+      decision: ['Prepare a decision', 'What decision, alternatives, evidence, and uncertainty should be organized?']
+    };
 
     function setStatus(text, state) {
       if (status) status.textContent = text;
       root.setAttribute('data-state', state || 'ready');
+      if (answerCard) answerCard.setAttribute('aria-busy', state === 'loading' ? 'true' : 'false');
+    }
+
+    function setMode(mode, preserveQuestion) {
+      currentMode = modeCopy[mode] ? mode : 'auto';
+      modeButtons.forEach(function (button) {
+        var active = button.getAttribute('data-sc-rl-mode') === currentMode;
+        button.classList.toggle('is-active', active);
+        button.setAttribute('aria-checked', active ? 'true' : 'false');
+      });
+      if (modeLabel) modeLabel.textContent = modeCopy[currentMode][0];
+      if (textarea && (!preserveQuestion || !textarea.value.trim())) textarea.setAttribute('placeholder', modeCopy[currentMode][1]);
+      try { window.localStorage.setItem('sc_rl_ai_research_mode', currentMode); } catch (e) {}
+    }
+
+    function setProgress(visible, percent, label) {
+      if (!progress) return;
+      progress.hidden = !visible;
+      progress.setAttribute('aria-hidden', visible ? 'false' : 'true');
+      if (progressBar) progressBar.style.width = Math.max(0, Math.min(100, Number(percent) || 0)) + '%';
+      if (progressLabel && label) progressLabel.textContent = label;
+    }
+
+    function updateSession(data) {
+      if (!sessionBar) return;
+      var workspace = (data && data.workspace) || (data && data.grounding && data.grounding.workspace) || {};
+      var mode = (data && data.research_mode) || (data && data.grounding && data.grounding.research_mode) || currentMode;
+      var turns = Number((data && data.session_turns) || (data && data.grounding && data.grounding.session_turns) || 0);
+      sessionBar.hidden = false;
+      if (sessionMode) sessionMode.textContent = workspace.mode_label || (modeCopy[mode] ? modeCopy[mode][0] : mode);
+      if (sessionTurns) sessionTurns.textContent = turns ? turns + ' research turn' + (turns === 1 ? '' : 's') + ' in this session' : 'New research session';
+    }
+
+    function renderFollowUps(data) {
+      if (!followUps || !followUpList) return;
+      var prompts = (data && data.follow_up_prompts) || (data && data.grounding && data.grounding.follow_up_prompts) || [];
+      if (!prompts.length) { followUps.hidden = true; followUpList.innerHTML = ''; return; }
+      followUpList.innerHTML = prompts.slice(0, 3).map(function (prompt) { return '<button type="button" data-sc-rl-follow-up="' + escapeHtml(prompt) + '">' + escapeHtml(prompt) + '</button>'; }).join('');
+      followUps.hidden = false;
     }
 
     function formatHealthTime(value) {
@@ -351,6 +458,8 @@
         detail = (provider !== 'disabled' ? provider.charAt(0).toUpperCase() + provider.slice(1) : 'AI') + (model ? ' · ' + model : '') + ' · knowledge service status is being verified';
       }
       healthDetail.textContent = detail;
+      if (state === 'backend-warming') setProgress(true, payload.startup_progress || 20, 'Starting knowledge service · verified fallback remains available');
+      else if (root.getAttribute('data-state') !== 'loading') setProgress(false, 100, 'Workspace ready');
     }
 
     function responseError(response, data) {
@@ -423,7 +532,7 @@
         return { label: 'Invalid endpoint response', intro: 'WordPress returned a response that the Research Librarian could not read.', detail: 'Check caching, security, or REST-response modification plugins.' };
       }
       if (statusCode === 404) {
-        return { label: 'WordPress route unavailable', intro: 'The Research Librarian REST route was not found.', detail: 'Resave WordPress permalinks and confirm that the active v6.4.1 plugin registered its routes.' };
+        return { label: 'WordPress route unavailable', intro: 'The Research Librarian REST route was not found.', detail: 'Resave WordPress permalinks and confirm that the active v6.5.0 plugin registered its routes.' };
       }
       if (statusCode >= 500) {
         return { label: 'WordPress endpoint error', intro: 'WordPress reached the Research Librarian route but returned a server error.', detail: 'The Python provider status is separate from this WordPress failure.' };
@@ -459,6 +568,7 @@
         return;
       }
       setStatus('Researching…', 'loading');
+      setProgress(true, 18, 'Interpreting the research task');
       submit.disabled = true;
       answer.hidden = false;
       answer.innerHTML = '<p class="sc-rl-ai__loading">Searching indexed Sustainable Catalyst titles, series, article maps, headings, sources, and platform actions</p>';
@@ -466,10 +576,11 @@
       fetchWithNonce(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: clean, hp: honeypot ? honeypot.value : '', session_id: sessionId })
+        body: JSON.stringify({ question: clean, research_mode: currentMode, hp: honeypot ? honeypot.value : '', session_id: sessionId })
       }, true)
         .then(function (data) {
           latest = data;
+          setProgress(true, 82, 'Rendering verified evidence and research actions');
           if (data.session_id) { sessionId = String(data.session_id); try { window.localStorage.setItem('sc_rl_ai_session_id', sessionId); } catch (e) {} }
           if (data.ai_status) renderHealth(data.ai_status);
           if (data.ai_used) {
@@ -488,9 +599,14 @@
           renderAnswerUx(answerUx, data, endpointNotice + renderedAnswer);
           if (answerUx) answer.hidden = true;
           renderRouteSummary(routeSummary, data.route, data.grounding);
+          setMode(data.research_mode || (data.grounding && data.grounding.research_mode) || currentMode, true);
+          updateSession(data);
+          renderFollowUps(data);
+          setProgress(false, 100, 'Workspace ready');
         })
         .catch(function (error) {
           latest = null;
+          setProgress(false, 100, 'Request unavailable');
           var failure = endpointFailureCopy(error);
           setStatus(failure.label, 'error');
           answer.hidden = false;
@@ -503,6 +619,7 @@
       if (!suggestionsBox) return;
       suggestionsBox.hidden = true;
       suggestionsBox.innerHTML = '';
+      textarea.setAttribute('aria-expanded', 'false');
     }
 
     function loadSuggestions() {
@@ -521,6 +638,7 @@
             return '<button type="button" data-sc-rl-title-suggestion="' + escapeHtml(item.title || '') + '"><strong>' + escapeHtml(item.title || '') + '</strong><span>' + escapeHtml(item.summary || item.match_type || '') + '</span></button>';
           }).join('');
           suggestionsBox.hidden = false;
+          textarea.setAttribute('aria-expanded', 'true');
         }).catch(hideSuggestions);
     }
 
@@ -533,6 +651,7 @@
         var button = event.target.closest ? event.target.closest('[data-sc-rl-title-suggestion]') : null;
         if (!button) return;
         textarea.value = button.getAttribute('data-sc-rl-title-suggestion') || '';
+        setMode('title', true);
         hideSuggestions();
         ask(textarea.value);
       });
@@ -544,7 +663,21 @@
     submit.addEventListener('click', function () { hideSuggestions(); ask(); });
     textarea.addEventListener('keydown', function (event) {
       if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') ask();
+      if (event.key === 'ArrowDown' && suggestionsBox && !suggestionsBox.hidden) {
+        var firstSuggestion = suggestionsBox.querySelector('button');
+        if (firstSuggestion) { event.preventDefault(); firstSuggestion.focus(); }
+      }
+      if (event.key === 'Escape') hideSuggestions();
     });
+    if (suggestionsBox) {
+      suggestionsBox.addEventListener('keydown', function (event) {
+        var buttons = Array.prototype.slice.call(suggestionsBox.querySelectorAll('button'));
+        var index = buttons.indexOf(document.activeElement);
+        if (event.key === 'ArrowDown' && index > -1) { event.preventDefault(); buttons[(index + 1) % buttons.length].focus(); }
+        if (event.key === 'ArrowUp' && index > -1) { event.preventDefault(); if (index === 0) textarea.focus(); else buttons[index - 1].focus(); }
+        if (event.key === 'Escape') { hideSuggestions(); textarea.focus(); }
+      });
+    }
     clear.addEventListener('click', function () {
       textarea.value = '';
       latest = null;
@@ -553,8 +686,42 @@
       answer.innerHTML = '<p>Ask about an exact title, subject, country, source, calculation, dashboard, or decision workflow. Research Librarian AI will search the indexed library and show the strongest verified matches.</p>';
       if (routeSummary) { routeSummary.hidden = true; routeSummary.innerHTML = ''; }
       if (answerUx) { answerUx.hidden = true; answerUx.innerHTML = ''; }
+      if (followUps) { followUps.hidden = true; followUpList.innerHTML = ''; }
+      setProgress(false, 100, 'Workspace ready');
       textarea.focus();
     });
+    if (copyAnswer) {
+      copyAnswer.addEventListener('click', function () {
+        if (!latest) { setStatus('Ask first', 'error'); return; }
+        var text = workspaceMarkdown(latest, textarea ? textarea.value : '');
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { setStatus('Answer copied', 'ready'); });
+        else setStatus('Copy unavailable', 'error');
+      });
+    }
+    if (downloadMarkdown) {
+      downloadMarkdown.addEventListener('click', function () {
+        if (!latest) { setStatus('Ask first', 'error'); return; }
+        downloadText('sustainable-catalyst-research-workspace.md', workspaceMarkdown(latest, textarea ? textarea.value : ''), 'text/markdown;charset=utf-8');
+        setStatus('Markdown downloaded', 'ready');
+      });
+    }
+    if (researchNote) {
+      researchNote.addEventListener('click', function () {
+        if (!latest) { setStatus('Ask first', 'error'); return; }
+        var note = workspaceMarkdown(latest, textarea ? textarea.value : '') + '\n\n## Research Notes\n\n- Observation:\n- Question:\n- Assumption:\n- Next action:\n';
+        downloadText('sustainable-catalyst-research-note.md', note, 'text/markdown;charset=utf-8');
+        setStatus('Research note downloaded', 'ready');
+      });
+    }
+    if (printButton) {
+      printButton.addEventListener('click', function () {
+        if (!latest) { setStatus('Ask first', 'error'); return; }
+        root.classList.add('is-printing');
+        window.print();
+        window.setTimeout(function () { root.classList.remove('is-printing'); }, 300);
+      });
+    }
+
     copy.addEventListener('click', function () {
       if (!latest || !latest.route_note) {
         setStatus('Ask first', 'error');
@@ -778,8 +945,39 @@
       });
     }
 
+    modeButtons.forEach(function (button) {
+      button.addEventListener('click', function () { setMode(button.getAttribute('data-sc-rl-mode') || 'auto', true); textarea.focus(); });
+    });
+    setMode(currentMode, true);
+
+    if (resetSession) {
+      resetSession.addEventListener('click', function () {
+        sessionId = '';
+        latest = null;
+        try { window.localStorage.removeItem('sc_rl_ai_session_id'); } catch (e) {}
+        if (sessionBar) sessionBar.hidden = true;
+        if (followUps) { followUps.hidden = true; followUpList.innerHTML = ''; }
+        setStatus('New session ready', 'ready');
+        answer.hidden = false;
+        answer.innerHTML = '<p>The prior conversational context has been cleared. Start a new site-scoped research question.</p>';
+        if (answerUx) { answerUx.hidden = true; answerUx.innerHTML = ''; }
+        textarea.focus();
+      });
+    }
+
+    if (followUpList) {
+      followUpList.addEventListener('click', function (event) {
+        var button = event.target.closest ? event.target.closest('[data-sc-rl-follow-up]') : null;
+        if (!button) return;
+        textarea.value = button.getAttribute('data-sc-rl-follow-up') || '';
+        ask(textarea.value);
+      });
+    }
+
     examples.forEach(function (button) {
       button.addEventListener('click', function () {
+        var exampleMode = button.getAttribute('data-sc-rl-example-mode') || 'auto';
+        setMode(exampleMode, true);
         textarea.value = button.getAttribute('data-sc-rl-example') || '';
         hideSuggestions();
         ask(textarea.value);

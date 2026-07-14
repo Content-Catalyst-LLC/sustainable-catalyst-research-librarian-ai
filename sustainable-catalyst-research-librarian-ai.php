@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Sustainable Catalyst Research Librarian AI
  * Plugin URI: https://sustainablecatalyst.com/platform/research-librarian/
- * Description: AI-powered, site-scoped research guidance for Sustainable Catalyst with live provider status, country-aware Site Intelligence routing, source-aware retrieval, guided paths, typed platform handoffs, governed feedback, and verified deterministic fallback.
- * Version: 6.4.1
+ * Description: Production public research workspace for Sustainable Catalyst with site-scoped retrieval, verified citations, guided paths, bounded follow-up continuity, controlled exports, typed platform handoffs, and deterministic fallback.
+ * Version: 6.5.0
  * Author: Content Catalyst LLC / Tariq Ahmad
  * Author URI: https://sustainablecatalyst.com/
  * License: MIT
@@ -251,7 +251,7 @@ if ( ! function_exists( 'sc_rl6_render_legacy_class_notice' ) ) {
             return;
         }
         $status = sc_rl6_legacy_class_status();
-        echo '<div class="notice notice-warning"><p><strong>Research Librarian AI v6.4.1 compatibility mode:</strong> A legacy Research Librarian class was already loaded before the current plugin. The collision-safe v6 bootstrap is active, so settings and shortcodes remain available.</p>';
+        echo '<div class="notice notice-warning"><p><strong>Research Librarian AI v6.5.0 compatibility mode:</strong> A legacy Research Librarian class was already loaded before the current plugin. The collision-safe v6 bootstrap is active, so settings and shortcodes remain available.</p>';
         if ( ! empty( $status['file'] ) ) {
             echo '<p>Legacy class file: <code>' . esc_html( $status['file'] ) . '</code>';
             if ( ! empty( $status['version'] ) ) {
@@ -259,7 +259,7 @@ if ( ! function_exists( 'sc_rl6_render_legacy_class_notice' ) ) {
             }
             echo '</p>';
         }
-        echo '<p>Remove the legacy duplicate, network plugin, or must-use copy after confirming the active v6.4.1 plugin is working.</p></div>';
+        echo '<p>Remove the legacy duplicate, network plugin, or must-use copy after confirming the active v6.5.0 plugin is working.</p></div>';
     }
 }
 add_action( 'admin_notices', 'sc_rl6_render_legacy_class_notice' );
@@ -274,7 +274,7 @@ final class SC_RL6_Core {
     const MAINTENANCE_HOOK = 'sc_rl_ai_index_maintenance_event';
     const AI_STATUS_OPTION = 'sc_rl_ai_live_provider_status';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const VERSION        = '6.4.1';
+    const VERSION        = '6.5.0';
     const RATE_LIMIT_REGISTRY_OPTION = 'sc_rl_ai_rate_limit_registry';
 
     private static $instance = null;
@@ -790,27 +790,45 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
 
         ob_start();
         ?>
-        <section id="<?php echo esc_attr( $root_id ); ?>" class="sc-rl-ai<?php echo $compact ? ' sc-rl-ai--compact' : ''; ?>" data-endpoint="<?php echo esc_url( $endpoint ); ?>" data-routes-endpoint="<?php echo esc_url( $routes_endpoint ); ?>" data-note-endpoint="<?php echo esc_url( $note_endpoint ); ?>" data-handoff-endpoint="<?php echo esc_url( $handoff_endpoint ); ?>" data-deep-link-endpoint="<?php echo esc_url( $deep_link_endpoint ); ?>" data-session-endpoint="<?php echo esc_url( $session_endpoint ); ?>" data-feedback-endpoint="<?php echo esc_url( $feedback_endpoint ); ?>" data-feedback-bridge-endpoint="<?php echo esc_url( $feedback_bridge_endpoint ); ?>" data-ux-endpoint="<?php echo esc_url( $ux_endpoint ); ?>" data-ai-status-endpoint="<?php echo esc_url( $ai_status_endpoint ); ?>" data-suggest-endpoint="<?php echo esc_url( $suggest_endpoint ); ?>" data-nonce-endpoint="<?php echo esc_url( $nonce_endpoint ); ?>" data-nonce="<?php echo esc_attr( $nonce ); ?>">
+        <section id="<?php echo esc_attr( $root_id ); ?>" class="sc-rl-ai sc-rl-ai--workspace<?php echo $compact ? ' sc-rl-ai--compact' : ''; ?>" data-workspace-version="1.0" data-endpoint="<?php echo esc_url( $endpoint ); ?>" data-routes-endpoint="<?php echo esc_url( $routes_endpoint ); ?>" data-note-endpoint="<?php echo esc_url( $note_endpoint ); ?>" data-handoff-endpoint="<?php echo esc_url( $handoff_endpoint ); ?>" data-deep-link-endpoint="<?php echo esc_url( $deep_link_endpoint ); ?>" data-session-endpoint="<?php echo esc_url( $session_endpoint ); ?>" data-feedback-endpoint="<?php echo esc_url( $feedback_endpoint ); ?>" data-feedback-bridge-endpoint="<?php echo esc_url( $feedback_bridge_endpoint ); ?>" data-ux-endpoint="<?php echo esc_url( $ux_endpoint ); ?>" data-ai-status-endpoint="<?php echo esc_url( $ai_status_endpoint ); ?>" data-suggest-endpoint="<?php echo esc_url( $suggest_endpoint ); ?>" data-nonce-endpoint="<?php echo esc_url( $nonce_endpoint ); ?>" data-nonce="<?php echo esc_attr( $nonce ); ?>">
             <div class="sc-rl-ai__shell">
                 <div class="sc-rl-ai__card sc-rl-ai__ask-card">
                     <p class="sc-rl-ai__eyebrow">AI-Powered Research Guidance</p>
                     <h2 class="sc-rl-ai__title"><?php echo esc_html( $atts['title'] ); ?></h2>
-                    <p class="sc-rl-ai__intro">Ask about an article title, subject, country, source, calculation, dashboard, research path, or decision workflow. The Python knowledge service searches the full Sustainable Catalyst library, ranks exact titles and related paths, and uses grounded AI to explain the strongest next step.</p>
+                    <p class="sc-rl-ai__intro">Begin with a title, subject, evidence need, comparison, analytical question, research path, or decision task. The workspace retrieves verified Sustainable Catalyst records first, then presents a readable answer, evidence cards, a guided path, and controlled next actions.</p>
 
-                    <label class="sc-rl-ai__label" for="<?php echo esc_attr( $root_id ); ?>-question">Question or goal</label>
-                    <textarea class="sc-rl-ai__textarea" id="<?php echo esc_attr( $root_id ); ?>-question" rows="5" maxlength="1400" autocomplete="off" aria-autocomplete="list" aria-controls="<?php echo esc_attr( $root_id ); ?>-suggestions" placeholder="Ask about a title, topic, country, source, calculation, or decision workflow…"></textarea>
+                    <fieldset class="sc-rl-ai__mode-picker" data-sc-rl-mode-picker>
+                        <legend>Choose a research mode</legend>
+                        <div role="radiogroup" aria-label="Research mode">
+                            <button type="button" class="is-active" role="radio" aria-checked="true" data-sc-rl-mode="auto">Auto-detect</button>
+                            <button type="button" role="radio" aria-checked="false" data-sc-rl-mode="title">Find a title</button>
+                            <button type="button" role="radio" aria-checked="false" data-sc-rl-mode="subject">Explore a subject</button>
+                            <button type="button" role="radio" aria-checked="false" data-sc-rl-mode="path">Build a path</button>
+                            <button type="button" role="radio" aria-checked="false" data-sc-rl-mode="evidence">Find evidence</button>
+                            <button type="button" role="radio" aria-checked="false" data-sc-rl-mode="analyze">Analyze</button>
+                            <button type="button" role="radio" aria-checked="false" data-sc-rl-mode="compare">Compare</button>
+                            <button type="button" role="radio" aria-checked="false" data-sc-rl-mode="decision">Prepare a decision</button>
+                        </div>
+                    </fieldset>
+
+                    <label class="sc-rl-ai__label" for="<?php echo esc_attr( $root_id ); ?>-question">Research question or task <span data-sc-rl-mode-label>Auto-detect</span></label>
+                    <textarea class="sc-rl-ai__textarea" id="<?php echo esc_attr( $root_id ); ?>-question" rows="5" maxlength="1400" autocomplete="off" aria-autocomplete="list" aria-expanded="false" aria-controls="<?php echo esc_attr( $root_id ); ?>-suggestions" placeholder="What are you trying to understand, find, compare, analyze, or prepare?"></textarea>
                     <div id="<?php echo esc_attr( $root_id ); ?>-suggestions" class="sc-rl-ai__title-suggestions" data-sc-rl-title-suggestions hidden></div>
                     <input type="text" class="sc-rl-ai__hp" value="" tabindex="-1" autocomplete="off" aria-hidden="true" />
 
                     <div class="sc-rl-ai__actions sc-rl-ai__actions--primary">
-                        <button type="button" class="sc-rl-ai__button sc-rl-ai__button--primary" data-sc-rl-submit>Ask Research Librarian AI</button>
+                        <button type="button" class="sc-rl-ai__button sc-rl-ai__button--primary" data-sc-rl-submit>Build Research Workspace</button>
                         <button type="button" class="sc-rl-ai__button sc-rl-ai__button--ghost" data-sc-rl-clear>Clear</button>
                     </div>
                     <details class="sc-rl-ai__utility-panel">
                         <summary>Save, export, or review this route</summary>
                         <div class="sc-rl-ai__actions">
+                            <button type="button" class="sc-rl-ai__button sc-rl-ai__button--secondary" data-sc-rl-copy-answer>Copy answer</button>
                             <button type="button" class="sc-rl-ai__button sc-rl-ai__button--secondary" data-sc-rl-copy>Copy route note</button>
+                            <button type="button" class="sc-rl-ai__button sc-rl-ai__button--secondary" data-sc-rl-download-markdown>Download Markdown</button>
                             <button type="button" class="sc-rl-ai__button sc-rl-ai__button--secondary" data-sc-rl-download>Download JSON</button>
+                            <button type="button" class="sc-rl-ai__button sc-rl-ai__button--secondary" data-sc-rl-research-note>Research note</button>
+                            <button type="button" class="sc-rl-ai__button sc-rl-ai__button--secondary" data-sc-rl-print>Print workspace</button>
                             <button type="button" class="sc-rl-ai__button sc-rl-ai__button--secondary" data-sc-rl-handoff-download>Download handoff</button>
                             <button type="button" class="sc-rl-ai__button sc-rl-ai__button--secondary" data-sc-rl-save-session>Save session</button>
                             <button type="button" class="sc-rl-ai__button sc-rl-ai__button--secondary" data-sc-rl-feedback-helpful>This helped</button>
@@ -819,11 +837,11 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                     </details>
 
                     <div class="sc-rl-ai__examples" aria-label="Example questions">
-                        <button type="button" data-sc-rl-example="Find the article titled Stability Analysis with Eigenvalues and show me what comes next in the series.">Find an exact title</button>
-                        <button type="button" data-sc-rl-example="Build a research path through Sustainable Catalyst for infrastructure resilience and public systems.">Build a research path</button>
-                        <button type="button" data-sc-rl-example="What Sustainable Catalyst resources should I use to research climate, infrastructure, and development in Pakistan?">Country research</button>
-                        <button type="button" data-sc-rl-example="Which Sustainable Catalyst articles and Workbench tools can help me analyze a formula?">Articles + Workbench</button>
-                        <button type="button" data-sc-rl-example="Help me turn this research question into a Decision Studio packet with sources and assumptions.">Decision workflow</button>
+                        <button type="button" data-sc-rl-example-mode="title" data-sc-rl-example="Find the article titled Stability Analysis with Eigenvalues and show me what comes next in the series.">Find an exact title</button>
+                        <button type="button" data-sc-rl-example-mode="path" data-sc-rl-example="Build a research path through Sustainable Catalyst for infrastructure resilience and public systems.">Build a research path</button>
+                        <button type="button" data-sc-rl-example-mode="subject" data-sc-rl-example="What Sustainable Catalyst resources should I use to research climate, infrastructure, and development in Pakistan?">Country research</button>
+                        <button type="button" data-sc-rl-example-mode="analyze" data-sc-rl-example="Which Sustainable Catalyst articles and Workbench tools can help me analyze a formula?">Articles + Workbench</button>
+                        <button type="button" data-sc-rl-example-mode="decision" data-sc-rl-example="Help me turn this research question into a Decision Studio packet with sources and assumptions.">Decision workflow</button>
                     </div>
                 </div>
 
@@ -838,11 +856,20 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                         </div>
                         <span class="sc-rl-ai__status" data-sc-rl-status>Ready</span>
                     </div>
+                    <div class="sc-rl-ai__workspace-progress" data-sc-rl-progress hidden aria-hidden="true"><span data-sc-rl-progress-bar></span><b data-sc-rl-progress-label>Preparing workspace</b></div>
+                    <div class="sc-rl-ai__session-bar" data-sc-rl-session-bar hidden>
+                        <span><strong data-sc-rl-session-mode>Auto-detect</strong><small data-sc-rl-session-turns>New research session</small></span>
+                        <button type="button" data-sc-rl-reset-session>Reset session</button>
+                    </div>
                     <div class="sc-rl-ai__answer" data-sc-rl-answer>
-                        <p>Ask a question or choose an example. Research Librarian AI will identify exact and related Sustainable Catalyst titles, explain the strongest match, build a research path, and connect public evidence, Workbench analysis, or Decision Studio when relevant.</p>
+                        <p>Choose a research mode, enter a question, or use an example. The workspace will keep the primary answer readable while placing verified sources, research paths, next actions, and retrieval diagnostics in their own sections.</p>
                     </div>
                     <div class="sc-rl-ai__route-summary" data-sc-rl-route-summary hidden></div>
                     <div class="sc-rl-ai__answer-ux" data-sc-rl-answer-ux hidden></div>
+                    <section class="sc-rl-ai__follow-ups" data-sc-rl-follow-ups hidden aria-label="Suggested follow-up questions">
+                        <span>Continue this research</span>
+                        <div data-sc-rl-follow-up-list></div>
+                    </section>
                     <div class="sc-rl-ai__boundary-note">Educational routing only. No legal, financial, medical, tax, engineering, compliance, assurance, ESG/SDG certification, or regulated-information advice.</div>
                 </div>
             </div>
@@ -1701,6 +1728,10 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         }
 
         $question = isset( $params['question'] ) ? trim( sanitize_textarea_field( wp_unslash( $params['question'] ) ) ) : '';
+        $research_mode = isset( $params['research_mode'] ) ? sanitize_key( wp_unslash( $params['research_mode'] ) ) : 'auto';
+        if ( ! in_array( $research_mode, array( 'auto', 'title', 'subject', 'path', 'evidence', 'analyze', 'compare', 'decision' ), true ) ) {
+            $research_mode = 'auto';
+        }
         if ( '' === $question || strlen( $question ) < 3 ) {
             return new WP_Error( 'sc_rl_ai_empty_question', __( 'Please enter a question.', 'sustainable-catalyst-research-librarian-ai' ), array( 'status' => 400 ) );
         }
@@ -1733,7 +1764,8 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                 $question,
                 $route,
                 array( 'version' => self::VERSION, 'local_index_records' => isset( $grounding['sources'] ) && is_array( $grounding['sources'] ) ? count( $grounding['sources'] ) : 0 ),
-                $session_id
+                $session_id,
+                $research_mode
             );
             if ( ! is_wp_error( $backend_answer ) ) {
                 $normalized = SC_RL6_V621_Endpoint_Reliability::normalize_ask_response( $backend_answer, $question, $route, $grounding );

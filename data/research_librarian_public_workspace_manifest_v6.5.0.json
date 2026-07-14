@@ -1,0 +1,54 @@
+{
+  "schema": "sc-research-librarian-release/1.0",
+  "version": "6.5.0",
+  "release_name": "Production Public Research Workspace",
+  "workspace_schema": "sc-research-librarian-public-workspace/1.0",
+  "backend_schema_version": 6,
+  "research_modes": [
+    "auto",
+    "title",
+    "subject",
+    "path",
+    "evidence",
+    "analyze",
+    "compare",
+    "decision"
+  ],
+  "capabilities": {
+    "answer_first_workspace": true,
+    "responsive_two_pane_layout": true,
+    "terminal_prompt": true,
+    "light_answer_and_evidence_cards": true,
+    "accessible_title_suggestions": true,
+    "keyboard_suggestion_navigation": true,
+    "bounded_session_continuity": true,
+    "explicit_session_reset": true,
+    "suggested_follow_up_prompts": true,
+    "cold_start_progress": true,
+    "markdown_export": true,
+    "json_export": true,
+    "research_note_export": true,
+    "print_workspace": true,
+    "typed_handoff_export": true,
+    "feedback_controls": true
+  },
+  "compatibility": {
+    "minimum_previous_release": "6.4.1",
+    "python_runtime": "3.12.12",
+    "wordpress_is_canonical_source": true,
+    "semantic_retrieval_optional": true,
+    "deterministic_fallback_available": true,
+    "paid_vector_database_required": false,
+    "persistent_render_disk_required": false
+  },
+  "release_gates": [
+    "All eight research modes reach the backend and appear in the workspace response",
+    "The primary answer remains readable without opening retrieval diagnostics",
+    "Every visible citation and URL maps to synchronized evidence",
+    "Title suggestions are keyboard operable",
+    "Session reset clears bounded conversational continuity",
+    "Cold-start progress preserves verified fallback messaging",
+    "Mobile layout collapses to one column without horizontal overflow",
+    "Black-and-green prompt styling does not darken answer or source cards"
+  ]
+}

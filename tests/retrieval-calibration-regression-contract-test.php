@@ -1,5 +1,5 @@
 <?php
-/** Static release contract checks for Research Librarian AI v6.4.1. */
+/** Static release contract checks for Research Librarian AI v6.5.0. */
 $root = dirname( __DIR__ );
 $main = file_get_contents( $root . '/sustainable-catalyst-research-librarian-ai.php' );
 $module = file_get_contents( $root . '/includes/class-sc-rl-v630-durable-index.php' );
@@ -10,18 +10,18 @@ $provider = file_get_contents( $root . '/backend/app/provider.py' );
 $backend = file_get_contents( $root . '/backend/app/main.py' );
 $store = file_get_contents( $root . '/backend/app/store.py' );
 $docs = file_get_contents( $root . '/docs/V641_RETRIEVAL_CALIBRATION_REGRESSION.md' );
-$manifest = json_decode( file_get_contents( $root . '/data/research_librarian_retrieval_calibration_manifest_v6.4.1.json' ), true );
-$benchmarks = json_decode( file_get_contents( $root . '/data/research_librarian_retrieval_benchmarks_v6.4.1.json' ), true );
+$manifest = json_decode( file_get_contents( $root . '/data/research_librarian_retrieval_calibration_manifest_v6.5.0.json' ), true );
+$benchmarks = json_decode( file_get_contents( $root . '/data/research_librarian_retrieval_benchmarks_v6.5.0.json' ), true );
 
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 6.4.1' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '6.4.1';" ),
-    'module_version' => false !== strpos( $module, "const VERSION = '6.4.1';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "6.4.1"' ),
+    'version_header' => false !== strpos( $main, 'Version: 6.5.0' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '6.5.0';" ),
+    'module_version' => false !== strpos( $module, "const VERSION = '6.5.0';" ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "6.5.0"' ),
     'schema_version_six' => false !== strpos( $store, 'SCHEMA_VERSION = 6' ),
     'index_schema_six' => false !== strpos( $store, 'sc-research-librarian-knowledge-index/6.0' ),
     'calibration_module' => false !== strpos( $calibration, 'DEFAULT_RETRIEVAL_CONFIG' ),
-    'balanced_profile' => false !== strpos( $calibration, 'balanced-v6.4.1' ),
+    'balanced_profile' => false !== strpos( $calibration, 'balanced-v6.5.0' ),
     'structural_weight' => false !== strpos( $calibration, '"structural": 1.0' ),
     'lexical_weight' => false !== strpos( $calibration, '"lexical": 24.0' ),
     'semantic_weight' => false !== strpos( $calibration, '"semantic": 160.0' ),
@@ -88,15 +88,15 @@ $checks = array(
     'wordpress_benchmark_action' => false !== strpos( $module, 'Run Retrieval Benchmark' ),
     'wordpress_benchmark_history' => false !== strpos( $module, 'Benchmark history' ),
     'release_documentation' => false !== strpos( $docs, 'Minimum-evidence gate' ) && false !== strpos( $docs, 'Unsupported-answer detection' ),
-    'release_manifest' => is_array( $manifest ) && '6.4.1' === ( $manifest['version'] ?? '' ) && 6 === ( $manifest['backend_schema_version'] ?? 0 ),
+    'release_manifest' => is_array( $manifest ) && '6.5.0' === ( $manifest['version'] ?? '' ) && 6 === ( $manifest['backend_schema_version'] ?? 0 ),
     'free_tier_compatibility' => is_array( $manifest ) && false === ( $manifest['compatibility']['paid_vector_database_required'] ?? true ),
-    'benchmark_manifest' => is_array( $benchmarks ) && '6.4.1' === ( $benchmarks['version'] ?? '' ) && count( $benchmarks['cases'] ?? array() ) >= 8,
+    'benchmark_manifest' => is_array( $benchmarks ) && '6.5.0' === ( $benchmarks['version'] ?? '' ) && count( $benchmarks['cases'] ?? array() ) >= 8,
     'benchmark_exact_title_case' => is_array( $benchmarks ) && false !== strpos( json_encode( $benchmarks ), 'exact-title' ),
     'benchmark_platform_route_case' => is_array( $benchmarks ) && false !== strpos( json_encode( $benchmarks ), 'platform-route' ),
 );
 $failed = array_keys( array_filter( $checks, static function ( $value ) { return ! $value; } ) );
 echo json_encode( array(
-    'version' => '6.4.1',
+    'version' => '6.5.0',
     'checks' => $checks,
     'passed' => count( $checks ) - count( $failed ),
     'failed' => count( $failed ),

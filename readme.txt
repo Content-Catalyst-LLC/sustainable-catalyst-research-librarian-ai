@@ -3,16 +3,16 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 6.4.1
+Stable tag: 6.5.0
 License: MIT
 
-A site-scoped Research Librarian for Sustainable Catalyst with calibrated hybrid retrieval, benchmarked ranking, verified citations, durable indexing, and deterministic evidence fallback.
+A site-scoped public research workspace for Sustainable Catalyst with verified retrieval, citations, bounded follow-up continuity, durable indexing, and controlled exports.
 
 == Description ==
 
 Research Librarian AI retrieves Sustainable Catalyst publications and documents through exact-title priority, section-aware BM25 ranking, optional Gemini embeddings, calibrated reciprocal-rank fusion, and citation-verified synthesis. WordPress remains the canonical publishing and recovery source, while FastAPI provides a durable SQLite runtime index compatible with free Render infrastructure.
 
-v6.4.1 adds persistent ranking profiles, lexical-versus-hybrid benchmarks, confusing-title protection, minimum-evidence gates, unsupported-claim detection, source weighting, exclusions, context budgets, and retrieval latency diagnostics.
+v6.5.0 adds a production public research workspace with eight modes, answer-first evidence presentation, accessible title suggestions, bounded follow-up continuity, explicit session reset, cold-start progress, and Markdown, JSON, research-note, print, session, feedback, and handoff controls.
 
 == Shortcodes ==
 
@@ -38,6 +38,16 @@ v6.4.1 adds persistent ranking profiles, lexical-versus-hybrid benchmarks, confu
 
 == Changelog ==
 
+= 6.5.0 =
+* Adds eight explicit research modes: auto-detect, title, subject, path, evidence, analysis, comparison, and decision preparation.
+* Adds a responsive two-pane public workspace with the black-and-green terminal prompt and light answer, evidence, and source cards.
+* Adds answer-first workspace headers, active-mode labels, source counts, related records, paths, and controlled actions.
+* Adds short site-scoped follow-up continuity, suggested next questions, and explicit session reset.
+* Adds accessible indexed-title suggestions with keyboard navigation and automatic title-mode selection.
+* Adds copy, Markdown, JSON, research-note, print, session, feedback, and typed-handoff controls.
+* Adds visible cold-start and recovery progress while verified WordPress fallback remains available.
+* Preserves v6.4.1 calibrated hybrid retrieval, citation verification, and v6.3.x recovery hardening.
+
 = 6.4.1 =
 * Adds persistent, bounded retrieval profiles in SQLite schema version 6.
 * Adds administrator controls for structural, lexical, semantic, and RRF weights, evidence thresholds, context limits, source multipliers, and exclusions.
@@ -46,7 +56,6 @@ v6.4.1 adds persistent ranking profiles, lexical-versus-hybrid benchmarks, confu
 * Detects near-duplicate titles and requests clarification instead of silently choosing.
 * Blocks AI synthesis when evidence count, score, lexical, semantic, or ambiguity requirements are not met.
 * Rejects low-overlap paragraphs, unsupported numeric claims, unknown citation labels, and unknown generated URLs.
-* Preserves v6.4.0 hybrid retrieval, v6.3.x recovery hardening, and the black-and-green prompt with light answer cards.
 
 = 6.3.0 =
 * Replaces the ephemeral JSON runtime index with a transactional SQLite knowledge index.
