@@ -17,12 +17,12 @@ $docs = file_get_contents( $root . '/docs/V640_HYBRID_RETRIEVAL_CITATION_ENGINE.
 $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_hybrid_retrieval_manifest_v6.4.0.json' ), true );
 
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 6.6.0' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '6.6.0';" ),
-    'module_version' => false !== strpos( $module, "const VERSION = '6.6.0';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "6.6.0"' ),
-    'schema_version_six_or_newer' => false !== strpos( $store, 'SCHEMA_VERSION = 7' ),
-    'index_schema_six_or_newer' => false !== strpos( $store, 'sc-research-librarian-knowledge-index/7.0' ),
+    'version_header' => false !== strpos( $main, 'Version: 6.6.1' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '6.6.1';" ),
+    'module_version' => false !== strpos( $module, "const VERSION = '6.6.1';" ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "6.6.1"' ),
+    'schema_version_six_or_newer' => false !== strpos( $store, 'SCHEMA_VERSION = 8' ),
+    'index_schema_six_or_newer' => false !== strpos( $store, 'sc-research-librarian-knowledge-index/8.0' ),
     'knowledge_chunk_model' => false !== strpos( $models, 'class KnowledgeChunk(BaseModel)' ),
     'evidence_citation_model' => false !== strpos( $models, 'class EvidenceCitation(BaseModel)' ),
     'page_aware_models' => substr_count( $models, 'page: int | None = None' ) >= 2,
@@ -82,7 +82,7 @@ $checks = array(
 );
 $failed = array_keys( array_filter( $checks, static function ( $value ) { return ! $value; } ) );
 echo json_encode( array(
-    'version' => '6.6.0',
+    'version' => '6.6.1',
     'checks' => $checks,
     'passed' => count( $checks ) - count( $failed ),
     'failed' => count( $failed ),

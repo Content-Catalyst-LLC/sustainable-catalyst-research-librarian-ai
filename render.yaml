@@ -39,9 +39,19 @@ services:
       - key: SC_RL_MAX_REJECTION_DETAILS
         value: "100"
       - key: SC_RL_RELEASE_VERSION
-        value: "6.6.0"
+        value: "6.6.1"
       - key: SC_RL_HANDOFF_SOURCE_LIMIT
         value: "8"
+      - key: SC_RL_HANDOFF_TTL_SECONDS
+        value: "1800"
+      - key: SC_RL_HANDOFF_RETRY_LIMIT
+        value: "5"
+      - key: SC_RL_HANDOFF_RETRY_BASE_SECONDS
+        value: "30"
+      - key: SC_RL_HANDOFF_EVENT_TTL_SECONDS
+        value: "86400"
+      - key: SC_RL_HANDOFF_MAX_ARTIFACT_BYTES
+        value: "1048576"
       - key: SC_RL_WORKBENCH_ENABLED
         value: "true"
       - key: SC_RL_WORKBENCH_URL

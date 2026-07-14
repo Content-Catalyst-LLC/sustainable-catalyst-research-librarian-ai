@@ -65,7 +65,7 @@
 - Provenance-preserving artifact return
 - Capability discovery and destination-health validation
 
-## v6.6.1 — Cross-Product Reliability Patch
+## v6.6.1 — Cross-Product Reliability Patch — Complete
 
 - Destination-version checks, retry, and recovery
 - Expired-token repair and duplicate-event prevention

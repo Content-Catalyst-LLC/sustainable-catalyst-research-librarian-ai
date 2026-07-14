@@ -1,0 +1,46 @@
+{
+  "schema": "sc-research-librarian-release-manifest/1.0",
+  "version": "6.6.1",
+  "release": "Cross-Product Reliability Patch",
+  "sqlite_schema_version": 8,
+  "contracts": {
+    "capabilities": "sc-platform-capabilities/1.1",
+    "compatibility": "sc-platform-compatibility/1.0",
+    "handoff": "sc-research-handoff/2.0",
+    "route": "sc-research-route/2.0",
+    "delivery": "sc-research-handoff-delivery/1.0",
+    "receipt": "sc-research-handoff-receipt/1.0",
+    "artifact_return": "sc-research-artifact-return/1.0"
+  },
+  "minimum_destination_versions": {
+    "workbench": "4.0.0",
+    "decision_studio": "1.0.0",
+    "site_intelligence": "2.0.0",
+    "lab": "0.6.0",
+    "feature_suggestions": "3.0.0"
+  },
+  "reliability": {
+    "bounded_retry": true,
+    "exponential_backoff_metadata": true,
+    "delivery_token_refresh": true,
+    "idempotency": true,
+    "receipt_validation": true,
+    "immutable_artifact_ids": true,
+    "artifact_size_limit": true,
+    "artifact_fingerprint_validation": true
+  },
+  "safety": {
+    "human_confirmation_required": true,
+    "automatic_destination_execution": false,
+    "integration_key_required": true,
+    "wordpress_nonce_required": true,
+    "tokens_excluded_from_admin_export": true
+  },
+  "compatibility": {
+    "additive_sqlite_migration": true,
+    "paid_vector_database_required": false,
+    "persistent_render_disk_required": false,
+    "black_green_prompt_preserved": true,
+    "light_evidence_cards_preserved": true
+  }
+}

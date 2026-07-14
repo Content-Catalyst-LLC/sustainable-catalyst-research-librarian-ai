@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import datetime, timedelta, timezone
 import asyncio
 import hashlib
 import hmac
@@ -27,6 +28,9 @@ from .models import (
     MaintenanceRequest,
     PlatformHandoffPrepareRequest,
     PlatformHandoffValidateRequest,
+    HandoffRetryRequest,
+    HandoffTokenRefreshRequest,
+    HandoffReceiptRequest,
     ArtifactReturnRequest,
     RetrievalCalibrationUpdate,
     RetrievalRequest,
@@ -43,6 +47,11 @@ from .provider import embeddings_configured, generate_answer, generate_embedding
 from .platform_handoffs import (
     ARTIFACT_SCHEMA,
     HANDOFF_SCHEMA,
+    RECEIPT_SCHEMA,
+    compatibility_report,
+    fingerprint,
+    refresh_handoff_delivery,
+    validate_receipt,
     available_capabilities,
     prepare_handoff,
     prepare_preview_handoffs,
@@ -135,7 +144,7 @@ def _workspace_summary(mode: str, matches: list[RetrievedSource], related: list[
         "exports": ["copy", "markdown", "json", "print", "research-note"],
         "accessibility_profile": "wcag-focused-v6.5.1",
         "rendering_profile": "staged-v6.5.1",
-        "handoff_profile": "typed-platform-handoffs-v6.6.0",
+        "handoff_profile": "cross-product-reliability-v6.6.1",
         "available_destinations": list(available_capabilities().keys()),
     }
 
@@ -152,6 +161,22 @@ def require_key(x_sc_rl_key: str = Header(default="")) -> None:
         )
     if not x_sc_rl_key or not hmac.compare_digest(hashlib.sha256(x_sc_rl_key.encode()).digest(), hashlib.sha256(settings.api_key.encode()).digest()):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid backend integration key.")
+
+
+def _idempotency_payload_hash(payload: dict[str, Any]) -> str:
+    clean = dict(payload)
+    clean.pop("idempotency_key", None)
+    clean.pop("created_utc", None)
+    return fingerprint(clean)
+
+
+def _idempotency_event(event_type: str, key: str, payload: dict[str, Any]) -> tuple[str, str, dict[str, Any] | None]:
+    event_key = f"{event_type}:{key.strip()}" if key and key.strip() else ""
+    payload_hash = _idempotency_payload_hash(payload)
+    existing = store.cross_product_event(event_key) if event_key else None
+    if existing and existing.get("payload_hash") != payload_hash:
+        raise HTTPException(status_code=409, detail="Idempotency key was already used with a different payload.")
+    return event_key, payload_hash, existing
 
 
 def _session_id(value: str) -> str:
@@ -643,42 +668,42 @@ def platform_capabilities_endpoint() -> dict[str, Any]:
     return {
         "ok": True,
         "version": __version__,
-        "schema": "sc-platform-capabilities/1.0",
+        "schema": "sc-platform-capabilities/1.1",
         "capabilities": capabilities,
         "available": [item["id"] for item in capabilities if item.get("available")],
+        "compatibility": compatibility_report(),
         "summary": store.platform_handoff_summary(),
     }
 
 
+@app.get("/v1/platform/compatibility", dependencies=[Depends(require_key)])
+def platform_compatibility_endpoint() -> dict[str, Any]:
+    return {"ok": True, "version": __version__, **compatibility_report()}
+
+
 @app.post("/v1/handoffs/prepare", dependencies=[Depends(require_key)])
 async def platform_handoff_prepare(payload: PlatformHandoffPrepareRequest) -> dict[str, Any]:
+    request_payload = payload.model_dump()
+    event_key, payload_hash, existing = _idempotency_event("handoff-prepare", payload.idempotency_key, request_payload)
+    if existing:
+        response = dict(existing["response"])
+        response["duplicate_event"] = True
+        return response
     matches, diagnostics = await _hybrid_retrieve(payload.question, settings.handoff_source_limit)
     if payload.source_ids:
         wanted = set(payload.source_ids)
         matches = [item for item in matches if item.id in wanted]
     evidence = evidence_from_matches(matches)
     try:
-        handoff = prepare_handoff(
-            payload.destination,
-            payload.question,
-            payload.research_mode,
-            _session_id(payload.session_id),
-            matches,
-            evidence,
-            payload.assumptions,
-            payload.uncertainties,
-            payload.route_hint,
-        )
+        handoff = prepare_handoff(payload.destination, payload.question, payload.research_mode, _session_id(payload.session_id), matches, evidence, payload.assumptions, payload.uncertainties, payload.route_hint, payload.idempotency_key)
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     if payload.persist:
         store.save_platform_handoff(handoff)
-    return {
-        "ok": bool(handoff.get("validation", {}).get("ok")),
-        "version": __version__,
-        "handoff": handoff,
-        "retrieval_diagnostics": diagnostics,
-    }
+    response = {"ok": bool(handoff.get("validation", {}).get("ok")), "version": __version__, "handoff": handoff, "retrieval_diagnostics": diagnostics, "duplicate_event": False}
+    if event_key:
+        store.save_cross_product_event(event_key, "handoff-prepare", payload_hash, response, settings.handoff_event_ttl_seconds)
+    return response
 
 
 @app.post("/v1/handoffs/validate", dependencies=[Depends(require_key)])
@@ -686,20 +711,85 @@ def platform_handoff_validate(payload: PlatformHandoffValidateRequest) -> dict[s
     return {"version": __version__, **validate_handoff(payload.payload)}
 
 
+@app.post("/v1/handoffs/retry", dependencies=[Depends(require_key)])
+def platform_handoff_retry(payload: HandoffRetryRequest) -> dict[str, Any]:
+    request_payload = payload.model_dump()
+    event_key, payload_hash, existing = _idempotency_event("handoff-retry", payload.idempotency_key, request_payload)
+    if existing:
+        response = dict(existing["response"])
+        response["duplicate_event"] = True
+        return response
+    original = store.platform_handoff(payload.handoff_id)
+    if original is None:
+        raise HTTPException(status_code=404, detail="Original handoff was not found.")
+    try:
+        refreshed = refresh_handoff_delivery(original, payload.reason, increment_attempt=True)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    attempt = int((refreshed.get("delivery") or {}).get("attempt") or 0)
+    delay = min(3600, settings.handoff_retry_base_seconds * (2 ** max(0, attempt - 1)))
+    refreshed.setdefault("delivery", {})["next_retry_utc"] = (datetime.now(timezone.utc) + timedelta(seconds=delay)).isoformat()
+    refreshed["delivery"]["last_error"] = payload.reason
+    refreshed.pop("validation", None)
+    copy = json.loads(json.dumps(refreshed))
+    copy.setdefault("provenance", {}).pop("payload_fingerprint", None)
+    refreshed.setdefault("provenance", {})["payload_fingerprint"] = fingerprint(copy)
+    refreshed["validation"] = validate_handoff(refreshed)
+    store.save_platform_handoff(refreshed)
+    response = {"ok": True, "version": __version__, "handoff": refreshed, "retry": {"attempt": attempt, "delay_seconds": delay, "next_retry_utc": refreshed["delivery"]["next_retry_utc"]}, "duplicate_event": False}
+    if event_key:
+        store.save_cross_product_event(event_key, "handoff-retry", payload_hash, response, settings.handoff_event_ttl_seconds)
+    return response
+
+
+@app.post("/v1/handoffs/token/refresh", dependencies=[Depends(require_key)])
+def platform_handoff_token_refresh(payload: HandoffTokenRefreshRequest) -> dict[str, Any]:
+    original = store.platform_handoff(payload.handoff_id)
+    if original is None:
+        raise HTTPException(status_code=404, detail="Original handoff was not found.")
+    try:
+        refreshed = refresh_handoff_delivery(original, payload.reason, increment_attempt=False)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    store.save_platform_handoff(refreshed)
+    return {"ok": True, "version": __version__, "handoff": refreshed, "token": refreshed.get("delivery", {})}
+
+
+@app.post("/v1/handoffs/receipts", dependencies=[Depends(require_key)])
+def platform_handoff_receipt(payload: HandoffReceiptRequest) -> dict[str, Any]:
+    receipt = payload.model_dump(by_alias=True)
+    event_key, payload_hash, existing = _idempotency_event("handoff-receipt", payload.idempotency_key or payload.receipt_id, receipt)
+    if existing:
+        response = dict(existing["response"])
+        response["duplicate_event"] = True
+        return response
+    original = store.platform_handoff(payload.handoff_id)
+    validation = validate_receipt(receipt, original)
+    if not validation.get("ok"):
+        raise HTTPException(status_code=409, detail=validation)
+    try:
+        stored = store.save_handoff_receipt(receipt)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    response = {"ok": True, "version": __version__, "schema": RECEIPT_SCHEMA, "validation": validation, "receipt": stored, "duplicate_event": bool(stored.get("duplicate_event"))}
+    if event_key:
+        store.save_cross_product_event(event_key, "handoff-receipt", payload_hash, response, settings.handoff_event_ttl_seconds)
+    return response
+
+
 @app.get("/v1/handoffs/logs", dependencies=[Depends(require_key)])
 def platform_handoff_logs(limit: int = 50) -> dict[str, Any]:
-    return {
-        "ok": True,
-        "version": __version__,
-        "schema": HANDOFF_SCHEMA,
-        "summary": store.platform_handoff_summary(),
-        "handoffs": store.platform_handoffs(limit),
-    }
+    return {"ok": True, "version": __version__, "schema": HANDOFF_SCHEMA, "summary": store.platform_handoff_summary(), "handoffs": store.platform_handoffs(limit), "receipts": store.handoff_receipts(limit)}
 
 
 @app.post("/v1/handoffs/artifacts/return", dependencies=[Depends(require_key)])
 def platform_artifact_return(payload: ArtifactReturnRequest) -> dict[str, Any]:
     artifact = payload.model_dump(by_alias=True)
+    event_key, payload_hash, existing = _idempotency_event("artifact-return", payload.idempotency_key or payload.artifact_id, artifact)
+    if existing:
+        response = dict(existing["response"])
+        response["duplicate_event"] = True
+        return response
     original = store.platform_handoff(payload.handoff_id)
     if original is None:
         raise HTTPException(status_code=404, detail="Original handoff was not found.")
@@ -707,20 +797,21 @@ def platform_artifact_return(payload: ArtifactReturnRequest) -> dict[str, Any]:
     if not validation.get("ok"):
         raise HTTPException(status_code=409, detail=validation)
     artifact.setdefault("provenance", {})["research_librarian_handoff_fingerprint"] = (original.get("provenance") or {}).get("payload_fingerprint", "")
+    artifact["provenance"]["artifact_fingerprint"] = validation["artifact_fingerprint"]
     artifact["provenance"]["chain"] = list((original.get("provenance") or {}).get("chain", [])) + ["destination_artifact", "research_librarian_return"]
-    store.save_artifact_return(artifact, "accepted")
-    return {"ok": True, "version": __version__, "schema": ARTIFACT_SCHEMA, "validation": validation, "artifact": artifact}
+    try:
+        stored = store.save_artifact_return(artifact, "accepted")
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    response = {"ok": True, "version": __version__, "schema": ARTIFACT_SCHEMA, "validation": validation, "artifact": stored, "duplicate_event": bool(stored.get("duplicate_event"))}
+    if event_key:
+        store.save_cross_product_event(event_key, "artifact-return", payload_hash, response, settings.handoff_event_ttl_seconds)
+    return response
 
 
 @app.get("/v1/handoffs/artifacts", dependencies=[Depends(require_key)])
 def platform_artifact_returns(limit: int = 50) -> dict[str, Any]:
-    return {
-        "ok": True,
-        "version": __version__,
-        "schema": ARTIFACT_SCHEMA,
-        "summary": store.platform_handoff_summary(),
-        "artifacts": store.artifact_returns(limit),
-    }
+    return {"ok": True, "version": __version__, "schema": ARTIFACT_SCHEMA, "summary": store.platform_handoff_summary(), "artifacts": store.artifact_returns(limit)}
 
 
 @app.post("/v1/session/reset", dependencies=[Depends(require_key)])

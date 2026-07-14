@@ -18,8 +18,8 @@ from .config import settings
 from .models import KnowledgeChunk, KnowledgeRecord, utc_now
 
 
-SCHEMA_VERSION = 7
-INDEX_SCHEMA = "sc-research-librarian-knowledge-index/7.0"
+SCHEMA_VERSION = 8
+INDEX_SCHEMA = "sc-research-librarian-knowledge-index/8.0"
 SNAPSHOT_SCHEMA = "sc-research-librarian-runtime-snapshot/4.0"
 
 
@@ -224,9 +224,34 @@ class KnowledgeStore:
                     FOREIGN KEY(handoff_id) REFERENCES platform_handoffs(handoff_id) ON DELETE CASCADE
                 );
                 CREATE INDEX IF NOT EXISTS idx_platform_artifacts_handoff ON platform_artifact_returns(handoff_id, created_utc DESC);
+                CREATE TABLE IF NOT EXISTS platform_handoff_receipts (
+                    receipt_id TEXT PRIMARY KEY,
+                    handoff_id TEXT NOT NULL,
+                    destination TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    created_utc TEXT NOT NULL,
+                    payload_json TEXT NOT NULL,
+                    FOREIGN KEY(handoff_id) REFERENCES platform_handoffs(handoff_id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS idx_platform_receipts_handoff ON platform_handoff_receipts(handoff_id, created_utc DESC);
+                CREATE TABLE IF NOT EXISTS cross_product_events (
+                    event_key TEXT PRIMARY KEY,
+                    event_type TEXT NOT NULL,
+                    payload_hash TEXT NOT NULL,
+                    response_json TEXT NOT NULL,
+                    created_utc TEXT NOT NULL,
+                    expires_utc TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_cross_product_events_expiry ON cross_product_events(expires_utc);
                 """
             )
             self._ensure_column(connection, "sync_jobs", "rejected_records", "INTEGER NOT NULL DEFAULT 0")
+            self._ensure_column(connection, "platform_handoffs", "compatibility_state", "TEXT NOT NULL DEFAULT ''")
+            self._ensure_column(connection, "platform_handoffs", "retry_attempt", "INTEGER NOT NULL DEFAULT 0")
+            self._ensure_column(connection, "platform_handoffs", "token_expires_utc", "TEXT NOT NULL DEFAULT ''")
+            self._ensure_column(connection, "platform_handoffs", "idempotency_key", "TEXT NOT NULL DEFAULT ''")
+            self._ensure_column(connection, "platform_artifact_returns", "artifact_fingerprint", "TEXT NOT NULL DEFAULT ''")
+            self._ensure_column(connection, "platform_artifact_returns", "idempotency_key", "TEXT NOT NULL DEFAULT ''")
             defaults = {
                 "schema_version": str(SCHEMA_VERSION),
                 "index_schema": INDEX_SCHEMA,
@@ -1030,21 +1055,15 @@ class KnowledgeStore:
         if not handoff_id:
             raise ValueError("handoff_id is required")
         encoded = _canonical_json(payload)
-        fingerprint = str((payload.get("provenance") or {}).get("payload_fingerprint") or hashlib.sha256(encoded.encode("utf-8")).hexdigest())
+        fingerprint_value = str((payload.get("provenance") or {}).get("payload_fingerprint") or hashlib.sha256(encoded.encode("utf-8")).hexdigest())
+        route = payload.get("route") if isinstance(payload.get("route"), dict) else {}
+        compatibility = route.get("compatibility") if isinstance(route.get("compatibility"), dict) else {}
+        delivery = payload.get("delivery") if isinstance(payload.get("delivery"), dict) else {}
         with self._lock, self._connection() as connection:
             connection.execute(
-                "INSERT INTO platform_handoffs(handoff_id,created_utc,destination,status,session_id,schema_name,fingerprint,payload_json) "
-                "VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(handoff_id) DO UPDATE SET status=excluded.status,payload_json=excluded.payload_json,fingerprint=excluded.fingerprint",
-                (
-                    handoff_id,
-                    str(payload.get("created_utc") or utc_now()),
-                    str(payload.get("destination") or ""),
-                    str(payload.get("status") or "prepared"),
-                    str(payload.get("session_id") or ""),
-                    str(payload.get("schema") or ""),
-                    fingerprint,
-                    encoded,
-                ),
+                "INSERT INTO platform_handoffs(handoff_id,created_utc,destination,status,session_id,schema_name,fingerprint,payload_json,compatibility_state,retry_attempt,token_expires_utc,idempotency_key) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(handoff_id) DO UPDATE SET status=excluded.status,payload_json=excluded.payload_json,fingerprint=excluded.fingerprint,compatibility_state=excluded.compatibility_state,retry_attempt=excluded.retry_attempt,token_expires_utc=excluded.token_expires_utc,idempotency_key=excluded.idempotency_key",
+                (handoff_id, str(payload.get("created_utc") or utc_now()), str(payload.get("destination") or ""), str(payload.get("status") or "prepared"), str(payload.get("session_id") or ""), str(payload.get("schema") or ""), fingerprint_value, encoded, str(compatibility.get("state") or ""), int(delivery.get("attempt") or 0), str(delivery.get("token_expires_utc") or ""), str(payload.get("idempotency_key") or "")),
             )
         return payload
 
@@ -1053,13 +1072,76 @@ class KnowledgeStore:
             row = connection.execute("SELECT payload_json FROM platform_handoffs WHERE handoff_id=?", (handoff_id,)).fetchone()
             return json.loads(str(row["payload_json"])) if row else None
 
+    def platform_handoff_by_idempotency(self, idempotency_key: str) -> dict[str, Any] | None:
+        if not idempotency_key:
+            return None
+        with self._lock, self._connection() as connection:
+            row = connection.execute("SELECT payload_json FROM platform_handoffs WHERE idempotency_key=? ORDER BY created_utc DESC LIMIT 1", (idempotency_key,)).fetchone()
+            return json.loads(str(row["payload_json"])) if row else None
+
     def platform_handoffs(self, limit: int = 50) -> list[dict[str, Any]]:
         with self._lock, self._connection() as connection:
-            rows = connection.execute(
-                "SELECT payload_json FROM platform_handoffs ORDER BY created_utc DESC LIMIT ?",
-                (max(1, min(500, int(limit))),),
-            )
+            rows = connection.execute("SELECT payload_json FROM platform_handoffs ORDER BY created_utc DESC LIMIT ?", (max(1, min(500, int(limit))),))
             return [json.loads(str(row["payload_json"])) for row in rows]
+
+    def cleanup_cross_product_events(self) -> int:
+        now = utc_now()
+        with self._lock, self._connection() as connection:
+            cursor = connection.execute("DELETE FROM cross_product_events WHERE expires_utc<=?", (now,))
+            return int(cursor.rowcount or 0)
+
+    def cross_product_event(self, event_key: str) -> dict[str, Any] | None:
+        if not event_key:
+            return None
+        self.cleanup_cross_product_events()
+        with self._lock, self._connection() as connection:
+            row = connection.execute("SELECT * FROM cross_product_events WHERE event_key=?", (event_key,)).fetchone()
+            if not row:
+                return None
+            return {"event_key": str(row["event_key"]), "event_type": str(row["event_type"]), "payload_hash": str(row["payload_hash"]), "response": json.loads(str(row["response_json"])), "created_utc": str(row["created_utc"]), "expires_utc": str(row["expires_utc"])}
+
+    def save_cross_product_event(self, event_key: str, event_type: str, payload_hash: str, response: dict[str, Any], ttl_seconds: int) -> dict[str, Any]:
+        if not event_key:
+            return response
+        created = datetime.now(timezone.utc)
+        expires = (created + timedelta(seconds=max(300, int(ttl_seconds)))).isoformat()
+        with self._lock, self._connection() as connection:
+            existing = connection.execute("SELECT payload_hash FROM cross_product_events WHERE event_key=?", (event_key,)).fetchone()
+            if existing and str(existing["payload_hash"]) != payload_hash:
+                raise ValueError("Idempotency key was already used with a different payload.")
+            connection.execute("INSERT INTO cross_product_events(event_key,event_type,payload_hash,response_json,created_utc,expires_utc) VALUES(?,?,?,?,?,?) ON CONFLICT(event_key) DO UPDATE SET response_json=excluded.response_json,expires_utc=excluded.expires_utc", (event_key, event_type, payload_hash, _canonical_json(response), created.isoformat(), expires))
+        return response
+
+    def save_handoff_receipt(self, payload: dict[str, Any]) -> dict[str, Any]:
+        receipt_id = str(payload.get("receipt_id") or "").strip()
+        if not receipt_id:
+            raise ValueError("receipt_id is required")
+        encoded = _canonical_json(payload)
+        with self._lock, self._connection() as connection:
+            row = connection.execute("SELECT payload_json FROM platform_handoff_receipts WHERE receipt_id=?", (receipt_id,)).fetchone()
+            if row:
+                existing = json.loads(str(row["payload_json"]))
+                if _canonical_json(existing) != encoded:
+                    raise ValueError("Receipt ID is immutable and already exists with different contents.")
+                existing["duplicate_event"] = True
+                return existing
+            connection.execute("INSERT INTO platform_handoff_receipts(receipt_id,handoff_id,destination,status,created_utc,payload_json) VALUES(?,?,?,?,?,?)", (receipt_id, str(payload.get("handoff_id") or ""), str(payload.get("destination") or ""), str(payload.get("status") or ""), str(payload.get("created_utc") or utc_now()), encoded))
+            connection.execute("UPDATE platform_handoffs SET status=? WHERE handoff_id=?", ("receipt-" + str(payload.get("status") or "received"), str(payload.get("handoff_id") or "")))
+        return payload
+
+    def handoff_receipts(self, limit: int = 50) -> list[dict[str, Any]]:
+        with self._lock, self._connection() as connection:
+            rows = connection.execute("SELECT payload_json FROM platform_handoff_receipts ORDER BY created_utc DESC LIMIT ?", (max(1, min(500, int(limit))),))
+            return [json.loads(str(row["payload_json"])) for row in rows]
+
+    def artifact_return(self, artifact_id: str) -> dict[str, Any] | None:
+        with self._lock, self._connection() as connection:
+            row = connection.execute("SELECT payload_json,status FROM platform_artifact_returns WHERE artifact_id=?", (artifact_id,)).fetchone()
+            if not row:
+                return None
+            payload = json.loads(str(row["payload_json"]))
+            payload["storage_status"] = str(row["status"])
+            return payload
 
     def save_artifact_return(self, payload: dict[str, Any], status: str = "accepted") -> dict[str, Any]:
         artifact_id = str(payload.get("artifact_id", "")).strip()
@@ -1067,29 +1149,23 @@ class KnowledgeStore:
         if not artifact_id or not handoff_id:
             raise ValueError("artifact_id and handoff_id are required")
         encoded = _canonical_json(payload)
+        artifact_fingerprint = str((payload.get("provenance") or {}).get("artifact_fingerprint") or hashlib.sha256(encoded.encode("utf-8")).hexdigest())
         with self._lock, self._connection() as connection:
-            connection.execute(
-                "INSERT INTO platform_artifact_returns(artifact_id,handoff_id,destination,artifact_type,created_utc,status,payload_json) "
-                "VALUES(?,?,?,?,?,?,?) ON CONFLICT(artifact_id) DO UPDATE SET status=excluded.status,payload_json=excluded.payload_json",
-                (
-                    artifact_id,
-                    handoff_id,
-                    str(payload.get("destination") or ""),
-                    str(payload.get("artifact_type") or ""),
-                    str(payload.get("created_utc") or utc_now()),
-                    status,
-                    encoded,
-                ),
-            )
+            row = connection.execute("SELECT payload_json,artifact_fingerprint FROM platform_artifact_returns WHERE artifact_id=?", (artifact_id,)).fetchone()
+            if row:
+                existing = json.loads(str(row["payload_json"]))
+                existing_fp = str(row["artifact_fingerprint"] or (existing.get("provenance") or {}).get("artifact_fingerprint") or "")
+                if existing_fp != artifact_fingerprint:
+                    raise ValueError("Artifact ID is immutable and already exists with different contents.")
+                existing["duplicate_event"] = True
+                return existing
+            connection.execute("INSERT INTO platform_artifact_returns(artifact_id,handoff_id,destination,artifact_type,created_utc,status,payload_json,artifact_fingerprint,idempotency_key) VALUES(?,?,?,?,?,?,?,?,?)", (artifact_id, handoff_id, str(payload.get("destination") or ""), str(payload.get("artifact_type") or ""), str(payload.get("created_utc") or utc_now()), status, encoded, artifact_fingerprint, str(payload.get("idempotency_key") or "")))
             connection.execute("UPDATE platform_handoffs SET status='artifact-returned' WHERE handoff_id=?", (handoff_id,))
         return payload
 
     def artifact_returns(self, limit: int = 50) -> list[dict[str, Any]]:
         with self._lock, self._connection() as connection:
-            rows = connection.execute(
-                "SELECT payload_json,status FROM platform_artifact_returns ORDER BY created_utc DESC LIMIT ?",
-                (max(1, min(500, int(limit))),),
-            )
+            rows = connection.execute("SELECT payload_json,status FROM platform_artifact_returns ORDER BY created_utc DESC LIMIT ?", (max(1, min(500, int(limit))),))
             result: list[dict[str, Any]] = []
             for row in rows:
                 payload = json.loads(str(row["payload_json"]))
@@ -1101,18 +1177,12 @@ class KnowledgeStore:
         with self._lock, self._connection() as connection:
             handoffs = int(connection.execute("SELECT COUNT(*) FROM platform_handoffs").fetchone()[0])
             artifacts = int(connection.execute("SELECT COUNT(*) FROM platform_artifact_returns").fetchone()[0])
-            destination_rows = connection.execute(
-                "SELECT destination,COUNT(*) AS total FROM platform_handoffs GROUP BY destination ORDER BY total DESC"
-            )
-            latest = connection.execute(
-                "SELECT handoff_id,destination,status,created_utc FROM platform_handoffs ORDER BY created_utc DESC LIMIT 1"
-            ).fetchone()
-            return {
-                "handoff_count": handoffs,
-                "artifact_return_count": artifacts,
-                "destination_counts": {str(row["destination"]): int(row["total"]) for row in destination_rows},
-                "latest_handoff": dict(latest) if latest else {},
-            }
+            receipts = int(connection.execute("SELECT COUNT(*) FROM platform_handoff_receipts").fetchone()[0])
+            events = int(connection.execute("SELECT COUNT(*) FROM cross_product_events WHERE expires_utc>?", (utc_now(),)).fetchone()[0])
+            destination_rows = connection.execute("SELECT destination,COUNT(*) AS total FROM platform_handoffs GROUP BY destination ORDER BY total DESC")
+            compatibility_rows = connection.execute("SELECT compatibility_state,COUNT(*) AS total FROM platform_handoffs GROUP BY compatibility_state ORDER BY total DESC")
+            latest = connection.execute("SELECT handoff_id,destination,status,created_utc,retry_attempt,token_expires_utc FROM platform_handoffs ORDER BY created_utc DESC LIMIT 1").fetchone()
+            return {"handoff_count": handoffs, "artifact_return_count": artifacts, "receipt_count": receipts, "active_idempotency_events": events, "destination_counts": {str(row["destination"]): int(row["total"]) for row in destination_rows}, "compatibility_counts": {str(row["compatibility_state"] or "unknown"): int(row["total"]) for row in compatibility_rows}, "latest_handoff": dict(latest) if latest else {}}
 
 
 store = KnowledgeStore()

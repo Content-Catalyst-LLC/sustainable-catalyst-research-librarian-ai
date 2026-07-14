@@ -242,10 +242,37 @@ class PlatformHandoffPrepareRequest(BaseModel):
     uncertainties: list[str] = Field(default_factory=list, max_length=25)
     source_ids: list[str] = Field(default_factory=list, max_length=25)
     persist: bool = True
+    idempotency_key: str = Field(default="", max_length=220)
 
 
 class PlatformHandoffValidateRequest(BaseModel):
     payload: dict[str, Any] = Field(default_factory=dict)
+
+
+class HandoffRetryRequest(BaseModel):
+    handoff_id: str = Field(min_length=1, max_length=220)
+    reason: str = Field(default="delivery-retry", max_length=240)
+    idempotency_key: str = Field(default="", max_length=220)
+
+
+class HandoffTokenRefreshRequest(BaseModel):
+    handoff_id: str = Field(min_length=1, max_length=220)
+    reason: str = Field(default="expired-token", max_length=240)
+
+
+class HandoffReceiptRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    schema_name: str = Field(default="sc-research-handoff-receipt/1.0", alias="schema", max_length=120)
+    receipt_id: str = Field(min_length=1, max_length=220)
+    handoff_id: str = Field(min_length=1, max_length=220)
+    destination: str = Field(min_length=1, max_length=100)
+    status: str = Field(min_length=1, max_length=80)
+    created_utc: str = Field(default_factory=utc_now)
+    handoff_fingerprint: str = Field(default="", max_length=128)
+    delivery_token: str = Field(default="", max_length=256)
+    detail: dict[str, Any] = Field(default_factory=dict)
+    idempotency_key: str = Field(default="", max_length=220)
 
 
 class ArtifactReturnRequest(BaseModel):
@@ -259,6 +286,7 @@ class ArtifactReturnRequest(BaseModel):
     created_utc: str = Field(default_factory=utc_now)
     artifact: dict[str, Any] = Field(default_factory=dict)
     provenance: dict[str, Any] = Field(default_factory=dict)
+    idempotency_key: str = Field(default="", max_length=220)
 
 
 class StatusResponse(BaseModel):
@@ -275,7 +303,7 @@ class StatusResponse(BaseModel):
     last_sync_utc: str
     source_site: str
     storage_engine: str = "sqlite"
-    schema_version: int = 7
+    schema_version: int = 8
     index_version: int = 0
     checksum: str = ""
     snapshot_count: int = 0

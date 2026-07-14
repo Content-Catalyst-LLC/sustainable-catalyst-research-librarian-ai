@@ -89,9 +89,9 @@ def test_capabilities_endpoint() -> None:
     response = client.get("/v1/platform/capabilities", headers=HEADERS)
     assert response.status_code == 200
     body = response.json()
-    assert body["version"] == "6.6.0"
+    assert body["version"] == "6.6.1"
     assert "workbench" in body["available"]
-    assert body["schema"] == "sc-platform-capabilities/1.0"
+    assert body["schema"] == "sc-platform-capabilities/1.1"
 
 
 def test_prepare_validate_and_return_artifact_round_trip() -> None:

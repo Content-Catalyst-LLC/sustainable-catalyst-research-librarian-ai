@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 6.6.0
+Stable tag: 6.6.1
 License: MIT
 
 A site-scoped public research workspace for Sustainable Catalyst with verified retrieval, citations, bounded follow-up continuity, durable indexing, and controlled exports.
@@ -12,7 +12,7 @@ A site-scoped public research workspace for Sustainable Catalyst with verified r
 
 Research Librarian AI retrieves Sustainable Catalyst publications and documents through exact-title priority, section-aware BM25 ranking, optional Gemini embeddings, calibrated reciprocal-rank fusion, and citation-verified synthesis. WordPress remains the canonical publishing and recovery source, while FastAPI provides a durable SQLite runtime index compatible with free Render infrastructure.
 
-v6.6.0 adds versioned typed research handoffs, destination capability discovery, provenance-preserving artifact returns, and destination-specific payloads for Workbench, Decision Studio, Site Intelligence, Lab, and Feature Suggestions while preserving the accessible production workspace.
+v6.6.1 hardens typed research handoffs with destination-version compatibility checks, delivery-token recovery, bounded retries, idempotent events, validated receipts, and immutable artifact returns while preserving the accessible production workspace.
 
 == Shortcodes ==
 
@@ -38,6 +38,13 @@ v6.6.0 adds versioned typed research handoffs, destination capability discovery,
 [sc_research_librarian_platform_handoffs]
 
 == Changelog ==
+
+= 6.6.1 =
+* Added destination-version compatibility and minimum-version reporting.
+* Added expiring delivery tokens, refresh, bounded retry metadata, and idempotency.
+* Added validated intake receipts and immutable artifact-return handling.
+* Advanced the additive SQLite index to schema version 8.
+* Preserved the terminal prompt, light evidence cards, accessibility, and free-tier architecture.
 
 = 6.6.0 =
 * Adds common handoff, route, capability, and artifact-return contracts.

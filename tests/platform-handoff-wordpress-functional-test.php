@@ -1,5 +1,5 @@
 <?php
-/** Functional WordPress-fallback handoff and tamper-validation test for v6.6.0. */
+/** Functional WordPress-fallback handoff and tamper-validation test for v6.6.1. */
 define( 'ABSPATH', '/tmp/sc-rl-wordpress/' );
 class WP_Error { public function __construct( $code='', $message='', $data=null ) {} }
 function add_action() {}
@@ -12,6 +12,7 @@ function sanitize_key( $v ) { return preg_replace( '/[^a-z0-9_\-]/', '', strtolo
 function sanitize_text_field( $v ) { return trim( strip_tags( (string) $v ) ); }
 function sanitize_textarea_field( $v ) { return trim( strip_tags( (string) $v ) ); }
 function esc_url_raw( $v ) { return (string) $v; }
+function absint( $v ) { return abs( intval( $v ) ); }
 function wp_generate_uuid4() { return '66000000-0000-4000-8000-000000000001'; }
 function wp_json_encode( $v, $flags = 0 ) { return json_encode( $v, $flags ); }
 function apply_filters( $tag, $value ) { return $value; }
@@ -40,7 +41,7 @@ $result = array(
     'tamper_rejected' => empty( $invalid['ok'] ) && in_array( 'Payload fingerprint does not match the handoff contents.', $invalid['errors'] ?? array(), true ),
 );
 echo json_encode( $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . PHP_EOL;
-$passed = '6.6.0' === $result['version']
+$passed = '6.6.1' === $result['version']
     && 'sc-research-handoff/2.0' === $result['schema']
     && 'sc-workbench-task/1.0' === $result['destination_contract']
     && $result['fingerprint_present']

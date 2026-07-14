@@ -1,12 +1,23 @@
-# Sustainable Catalyst Research Librarian AI v6.6.0
+# Sustainable Catalyst Research Librarian AI v6.6.1
 
-## Platform Intelligence and Typed Research Handoffs
+## Cross-Product Reliability Patch
 
 Research Librarian AI is the site-scoped discovery and research-guidance layer for Sustainable Catalyst. WordPress remains the canonical publishing and recovery source. FastAPI provides durable calibrated retrieval, verified citations, deterministic fallback, destination capability discovery, and versioned typed handoffs.
 
-v6.6.0 connects verified research context to Workbench, Decision Studio, Site Intelligence, Sustainable Catalyst Lab, and Feature Suggestions. Handoffs are reviewable, destination-specific payloads with source records, assumptions, uncertainty, human-confirmation boundaries, and tamper-evident provenance. Unavailable products are removed from public actions rather than presented as broken destinations.
+v6.6.1 hardens the typed handoffs introduced in v6.6.0 with destination-version compatibility checks, short-lived delivery tokens, bounded retry metadata, idempotent event handling, intake receipts, and immutable artifact returns. Existing retrieval, recovery, accessibility, and public-workspace behavior remains intact.
 
-## v6.6.0 highlights
+## v6.6.1 highlights
+
+- Adds compatibility states and minimum supported versions for every connected destination.
+- Adds short-lived HMAC delivery tokens with explicit refresh and bounded retry operations.
+- Adds idempotency protection for preparation, retry, receipt, and artifact-return events.
+- Adds destination intake receipts bound to handoff ID, fingerprint, token, and status.
+- Adds artifact type, size, destination, and fingerprint validation with immutable artifact IDs.
+- Adds SQLite schema version 8 receipts, event ledger, retry state, token expiry, and artifact fingerprints.
+- Adds public Retry delivery and Refresh token controls while preserving explicit human confirmation.
+- Preserves the black-and-green prompt, light evidence cards, free-tier deployment, calibrated retrieval, and durable recovery.
+
+## v6.6.0 foundation
 
 - Adds `sc-research-handoff/2.0`, `sc-research-route/2.0`, and `sc-research-artifact-return/1.0` contracts.
 - Adds capability discovery for Workbench, Decision Studio, Site Intelligence, Lab, and Feature Suggestions.

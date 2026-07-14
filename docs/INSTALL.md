@@ -1,8 +1,8 @@
-# Install Research Librarian AI v6.6.0
+# Install Research Librarian AI v6.6.1
 
 ## 1. Push the repository
 
-Use `PUSH_RESEARCH_LIBRARIAN_V660_PY312.sh`. The script requires and verifies Python 3.12, clears macOS launcher overrides, validates both Python import layouts, runs every WordPress release contract, verifies the accessibility/performance manifest, and creates tag `v6.6.0`.
+Use `PUSH_RESEARCH_LIBRARIAN_V661_PY312.sh`. The script requires and verifies Python 3.12, clears macOS launcher overrides, validates both Python import layouts, runs every WordPress release contract, verifies the cross-product reliability manifest, and creates tag `v6.6.1`.
 
 ## 2. Deploy or update Render
 
@@ -40,7 +40,7 @@ No paid vector database or persistent Render disk is required.
 
 ## 3. Install the WordPress plugin
 
-Upload `sustainable-catalyst-research-librarian-ai-wordpress-v6.6.0.zip`, replace the installed plugin, and activate it. Existing settings, snapshots, records, chunks, embeddings, calibration profiles, benchmarks, ledgers, and queued editorial changes are retained.
+Upload `sustainable-catalyst-research-librarian-ai-wordpress-v6.6.1.zip`, replace the installed plugin, and activate it. Existing settings, snapshots, records, chunks, embeddings, calibration profiles, benchmarks, ledgers, and queued editorial changes are retained.
 
 ## 4. Synchronize and verify
 
@@ -111,3 +111,8 @@ Confirm that repeated title queries can return `X-SC-RL-Suggestion-Cache: HIT`, 
 5. Confirm the payload contains `sc-research-handoff/2.0`, a destination contract, verified evidence, and a provenance fingerprint.
 6. Test an artifact return against the original handoff in a staging environment.
 7. Export the administrator handoff ledger and confirm it contains no provider or integration secrets.
+
+
+## v6.6.1 verification
+
+After deploying the backend and WordPress update, open **Settings → Research Librarian Handoffs** and confirm each destination version. Unknown versions remain usable but explicitly unverified; versions below the configured minimum are removed from public handoff actions. Prepare one handoff, test **Refresh token**, test one bounded retry, submit an intake receipt, and return one permitted artifact type. Replaying the same event should be safe; changing an existing artifact ID must be rejected.

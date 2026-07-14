@@ -323,11 +323,14 @@
         var routeInfo = handoff.route || {};
         var validation = handoff.validation || {};
         var destination = handoff.destination || routeInfo.destination || 'platform';
-        html += '<article><div><span>' + escapeHtml((routeInfo.destination_version || 'version unknown')) + '</span><b>' + escapeHtml(validation.ok === false ? 'Needs review' : 'Validated') + '</b></div><h4>' + escapeHtml(routeInfo.destination_label || destination.replace(/_/g, ' ')) + '</h4><p>' + escapeHtml(routeInfo.reason || 'Prepared from verified Sustainable Catalyst evidence.') + '</p><small>' + escapeHtml((handoff.evidence || []).length + ' verified source' + ((handoff.evidence || []).length === 1 ? '' : 's') + ' · ' + (handoff.payload && handoff.payload.contract ? handoff.payload.contract : handoff.schema || 'typed contract')) + '</small><div><button type="button" data-sc-rl-download-typed-handoff="' + escapeHtml(handoff.handoff_id || destination) + '">Download payload</button><a href="' + escapeHtml(routeInfo.destination_url || '#') + '">Open destination →</a></div></article>';
+        var compatibility = routeInfo.compatibility || validation.compatibility || {};
+        var delivery = handoff.delivery || {};
+        var reliabilityLabel = compatibility.state || (validation.ok === false ? 'needs review' : 'compatible');
+        html += '<article><div><span>' + escapeHtml((routeInfo.destination_version || 'version unknown')) + '</span><b>' + escapeHtml(reliabilityLabel) + '</b></div><h4>' + escapeHtml(routeInfo.destination_label || destination.replace(/_/g, ' ')) + '</h4><p>' + escapeHtml(routeInfo.reason || 'Prepared from verified Sustainable Catalyst evidence.') + '</p><small>' + escapeHtml((handoff.evidence || []).length + ' verified source' + ((handoff.evidence || []).length === 1 ? '' : 's') + ' · ' + (handoff.payload && handoff.payload.contract ? handoff.payload.contract : handoff.schema || 'typed contract') + (delivery.token_expires_utc ? ' · token expires ' + delivery.token_expires_utc : '')) + '</small><div><button type="button" data-sc-rl-download-typed-handoff="' + escapeHtml(handoff.handoff_id || destination) + '">Download payload</button><button type="button" data-sc-rl-retry-typed-handoff="' + escapeHtml(handoff.handoff_id || '') + '">Retry delivery</button><button type="button" data-sc-rl-refresh-handoff-token="' + escapeHtml(handoff.handoff_id || '') + '">Refresh token</button><a href="' + escapeHtml(routeInfo.destination_url || '#') + '">Open destination →</a></div></article>';
       });
       if (!typedHandoffs.length) {
         capabilities.slice(0, 4).forEach(function (capability) {
-          html += '<article><div><span>' + escapeHtml(capability.version || 'version unknown') + '</span><b>Available</b></div><h4>' + escapeHtml(capability.label || capability.id) + '</h4><p>Prepare a versioned handoff with verified evidence and provenance.</p><div><button type="button" data-sc-rl-prepare-typed-handoff="' + escapeHtml(capability.id || '') + '" data-destination-url="' + escapeHtml(capability.url || '#') + '">Prepare payload</button><a href="' + escapeHtml(capability.url || '#') + '">Open destination →</a></div></article>';
+          html += '<article><div><span>' + escapeHtml(capability.version || 'version unknown') + '</span><b>' + escapeHtml(capability.state || 'unverified') + '</b></div><h4>' + escapeHtml(capability.label || capability.id) + '</h4><p>Prepare a versioned handoff with verified evidence, compatibility status, and provenance.</p><div><button type="button" data-sc-rl-prepare-typed-handoff="' + escapeHtml(capability.id || '') + '" data-destination-url="' + escapeHtml(capability.url || '#') + '">Prepare payload</button><a href="' + escapeHtml(capability.url || '#') + '">Open destination →</a></div></article>';
         });
       }
       html += '</div></section>';
@@ -384,8 +387,12 @@
     var feedbackBridgeEndpoint = root.getAttribute('data-feedback-bridge-endpoint');
     var deepLinkEndpoint = root.getAttribute('data-deep-link-endpoint');
     var platformCapabilitiesEndpoint = root.getAttribute('data-platform-capabilities-endpoint');
+    var platformCompatibilityEndpoint = root.getAttribute('data-platform-compatibility-endpoint');
     var platformHandoffEndpoint = root.getAttribute('data-platform-handoff-endpoint');
     var platformHandoffValidateEndpoint = root.getAttribute('data-platform-handoff-validate-endpoint');
+    var platformHandoffRetryEndpoint = root.getAttribute('data-platform-handoff-retry-endpoint');
+    var platformHandoffTokenEndpoint = root.getAttribute('data-platform-handoff-token-endpoint');
+    var platformHandoffReceiptEndpoint = root.getAttribute('data-platform-handoff-receipt-endpoint');
     var artifactReturnEndpoint = root.getAttribute('data-artifact-return-endpoint');
     var nonce = root.getAttribute('data-nonce');
     var textarea = root.querySelector('.sc-rl-ai__textarea');
@@ -649,7 +656,7 @@
         return { label: 'Invalid endpoint response', intro: 'WordPress returned a response that the Research Librarian could not read.', detail: 'Check caching, security, or REST-response modification plugins.' };
       }
       if (statusCode === 404) {
-        return { label: 'WordPress route unavailable', intro: 'The Research Librarian REST route was not found.', detail: 'Resave WordPress permalinks and confirm that the active v6.6.0 plugin registered its routes.' };
+        return { label: 'WordPress route unavailable', intro: 'The Research Librarian REST route was not found.', detail: 'Resave WordPress permalinks and confirm that the active v6.6.1 plugin registered its routes.' };
       }
       if (statusCode >= 500) {
         return { label: 'WordPress endpoint error', intro: 'WordPress reached the Research Librarian route but returned a server error.', detail: 'The Python provider status is separate from this WordPress failure.' };
@@ -1009,6 +1016,7 @@
           question: textarea ? textarea.value : '',
           research_mode: currentMode,
           session_id: sessionId,
+          idempotency_key: 'prepare-' + String(sessionId || 'session') + '-' + String(destination || 'platform') + '-' + String(latest && latest.generated_utc || 'current'),
           source_ids: sources.map(function (source) { return source.id || source.record_id || ''; }).filter(Boolean),
           evidence: latest.evidence || (latest.grounding && latest.grounding.evidence) || [],
           route_hint: {
@@ -1035,6 +1043,48 @@
       });
     }
 
+    function replaceTypedHandoff(updated) {
+      if (!latest || !updated) return;
+      latest.typed_handoffs = latest.typed_handoffs || [];
+      latest.typed_handoffs = latest.typed_handoffs.filter(function (item) { return item.handoff_id !== updated.handoff_id; });
+      latest.typed_handoffs.unshift(updated);
+      if (answerUx) renderAnswerUx(answerUx, latest, latest.answer ? renderMarkdownLite(latest.answer) : '');
+    }
+
+    function retryTypedHandoff(handoffId, button) {
+      if (!platformHandoffRetryEndpoint || !handoffId) { setStatus('Retry unavailable', 'error'); return; }
+      var originalText = button ? button.textContent : '';
+      if (button) { button.disabled = true; button.textContent = 'Retrying…'; }
+      fetchWithNonce(platformHandoffRetryEndpoint, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ handoff_id: handoffId, reason: 'public-workspace-retry', idempotency_key: 'retry-' + handoffId + '-' + String(nowMs()) })
+      }, true).then(function (result) {
+        if (!result.handoff) throw new Error('The retry endpoint returned no handoff.');
+        replaceTypedHandoff(result.handoff);
+        setStatus('Delivery retry prepared', 'ready');
+        announce('A bounded delivery retry was prepared with a refreshed token.', false);
+      }).catch(function (error) {
+        setStatus('Retry unavailable', 'error'); announce(error.message || 'Unable to retry the handoff.', true);
+      }).finally(function () { if (button) { button.disabled = false; button.textContent = originalText; } });
+    }
+
+    function refreshTypedHandoffToken(handoffId, button) {
+      if (!platformHandoffTokenEndpoint || !handoffId) { setStatus('Token refresh unavailable', 'error'); return; }
+      var originalText = button ? button.textContent : '';
+      if (button) { button.disabled = true; button.textContent = 'Refreshing…'; }
+      fetchWithNonce(platformHandoffTokenEndpoint, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ handoff_id: handoffId, reason: 'public-workspace-token-refresh' })
+      }, true).then(function (result) {
+        if (!result.handoff) throw new Error('The token endpoint returned no handoff.');
+        replaceTypedHandoff(result.handoff);
+        setStatus('Delivery token refreshed', 'ready');
+        announce('The typed handoff delivery token was refreshed.', false);
+      }).catch(function (error) {
+        setStatus('Token refresh unavailable', 'error'); announce(error.message || 'Unable to refresh the handoff token.', true);
+      }).finally(function () { if (button) { button.disabled = false; button.textContent = originalText; } });
+    }
+
     root.addEventListener('click', function (event) {
       var target = event.target;
       if (!target || !target.matches) return;
@@ -1052,6 +1102,12 @@
         if (!handoff) { setStatus('Handoff preview unavailable', 'error'); return; }
         downloadJson('sustainable-catalyst-' + String(handoff.destination || 'platform').replace(/_/g, '-') + '-handoff.json', handoff);
         setStatus('Typed handoff downloaded', 'ready');
+      }
+      if (target.matches('[data-sc-rl-retry-typed-handoff]')) {
+        retryTypedHandoff(target.getAttribute('data-sc-rl-retry-typed-handoff') || '', target);
+      }
+      if (target.matches('[data-sc-rl-refresh-handoff-token]')) {
+        refreshTypedHandoffToken(target.getAttribute('data-sc-rl-refresh-handoff-token') || '', target);
       }
       if (target.matches('[data-sc-rl-prepare-typed-handoff]')) {
         prepareTypedHandoff(target.getAttribute('data-sc-rl-prepare-typed-handoff') || '', target);

@@ -1,3 +1,15 @@
+## 6.6.1 — Cross-Product Reliability Patch
+
+- Added destination-version compatibility states and minimum supported versions.
+- Added expiring HMAC delivery tokens, explicit refresh, bounded retries, and exponential backoff metadata.
+- Added idempotent preparation, retry, receipt, and artifact-return handling.
+- Added intake receipt validation and durable receipt/event ledgers.
+- Added artifact type, size, destination, and provenance-fingerprint validation.
+- Made artifact and receipt IDs immutable while allowing safe identical replay.
+- Advanced the additive SQLite schema to version 8.
+- Added WordPress compatibility reporting, retry, token-refresh, and receipt routes.
+- Preserved all v6.6.0 typed handoffs and v6.5.1 accessibility/performance behavior.
+
 ## 6.6.0 — Platform Intelligence and Typed Research Handoffs
 
 - Added versioned common handoff, route, capability, and artifact-return contracts.
