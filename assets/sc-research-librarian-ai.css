@@ -1626,3 +1626,13 @@
   .sc-rl-production-answer__handoff-grid button,
   .sc-rl-production-answer__handoff-grid a { border: 1px solid ButtonText; }
 }
+
+
+/* v6.7.0 — Research Quality and Governance Center */
+.sc-rl-governance { margin: 2rem 0; padding: clamp(1.25rem, 3vw, 2rem); border: 1px solid rgba(17,17,17,.15); border-radius: 18px; background: #fff; color: #171717; }
+.sc-rl-governance h2 { margin-top: .25rem; }
+.sc-rl-governance ul { margin: .8rem 0 0 1.1rem; }
+.sc-rl-governance li + li { margin-top: .45rem; }
+.sc-rl-governance .sc-rl-product__grid { align-items: stretch; }
+.sc-rl-governance .sc-rl-product__grid article { min-width: 0; }
+@media (max-width: 760px) { .sc-rl-governance { padding: 1rem; border-radius: 14px; } }

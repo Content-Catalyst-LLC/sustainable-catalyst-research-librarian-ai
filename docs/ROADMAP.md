@@ -87,3 +87,10 @@
 ## Completed foundation
 
 v6.2.1 repaired WordPress indexing, endpoint diagnostics, rate limiting, nonce retry, and the terminal prompt. v6.2.0 introduced the Render-ready knowledge-intelligence service. v6.1.x restored live AI and provider diagnostics. v6.0.x established the integrated research-guidance platform and collision-safe bootstrap.
+
+
+## v6.7.0 — Research Quality and Governance Center — Complete
+
+Answer traceability, source approval and freshness controls, retention, quality evaluation, release gates, governance export, and public methodology.
+
+## v7.0.0 — Connected Research Intelligence Platform — Planned

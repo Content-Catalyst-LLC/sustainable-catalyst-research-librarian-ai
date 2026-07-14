@@ -1,33 +1,29 @@
-# Sustainable Catalyst Research Librarian AI v6.6.1
+# Sustainable Catalyst Research Librarian AI v6.7.0
 
-## Cross-Product Reliability Patch
+WordPress remains the canonical publishing, administration, governance, recovery, and public-interface layer. FastAPI provides durable hybrid retrieval, citation-verified synthesis, typed platform handoffs, answer traceability, quality evaluation, and release gates.
 
-Research Librarian AI is the site-scoped discovery and research-guidance layer for Sustainable Catalyst. WordPress remains the canonical publishing and recovery source. FastAPI provides durable calibrated retrieval, verified citations, deterministic fallback, destination capability discovery, and versioned typed handoffs.
+## v6.7.0 highlights
 
-v6.6.1 hardens the typed handoffs introduced in v6.6.0 with destination-version compatibility checks, short-lived delivery tokens, bounded retry metadata, idempotent event handling, intake receipts, and immutable artifact returns. Existing retrieval, recovery, accessibility, and public-workspace behavior remains intact.
+- Versioned research-governance policy
+- Source approval, exclusion, expiration, and freshness review
+- Privacy-minimized answer traces with model, prompt, index, policy, citation, and evidence provenance
+- Quality evaluations and release-readiness gates
+- Human-reviewed overrides and immutable audit events
+- Configurable retention enforcement and governance export
+- Public methodology and limitations shortcodes
+- Additive SQLite schema version 9
 
-## v6.6.1 highlights
+## Trust boundary
 
-- Adds compatibility states and minimum supported versions for every connected destination.
-- Adds short-lived HMAC delivery tokens with explicit refresh and bounded retry operations.
-- Adds idempotency protection for preparation, retry, receipt, and artifact-return events.
-- Adds destination intake receipts bound to handoff ID, fingerprint, token, and status.
-- Adds artifact type, size, destination, and fingerprint validation with immutable artifact IDs.
-- Adds SQLite schema version 8 receipts, event ledger, retry state, token expiry, and artifact fingerprints.
-- Adds public Retry delivery and Refresh token controls while preserving explicit human confirmation.
-- Preserves the black-and-green prompt, light evidence cards, free-tier deployment, calibrated retrieval, and durable recovery.
+Research Librarian may retrieve, rank, synthesize, evaluate, and propose routes. It cannot autonomously publish content, exclude sources, approve ranking changes, or override a failed release gate. Query and answer text are not stored in governance traces unless an administrator explicitly enables those fields.
 
-## v6.6.0 foundation
+## Current architecture
 
-- Adds `sc-research-handoff/2.0`, `sc-research-route/2.0`, and `sc-research-artifact-return/1.0` contracts.
-- Adds capability discovery for Workbench, Decision Studio, Site Intelligence, Lab, and Feature Suggestions.
-- Adds destination-specific task contracts for calculations, decisions, place-based intelligence, experiments, and platform requests.
-- Adds prepared-handoff and returned-artifact ledgers in additive SQLite schema version 7.
-- Adds provenance fingerprints, source IDs, URLs, evidence labels, sections, pages, assumptions, uncertainty, and chain history.
-- Adds authenticated prepare, validate, log, artifact-return, and artifact-list backend endpoints.
-- Adds a nonce-protected WordPress bridge and administrator capability configuration.
-- Adds typed handoff previews and explicit preparation/download controls to the public workspace.
-- Preserves v6.5.1 accessibility/performance behavior, the black-and-green prompt, and light evidence cards.
+- WordPress owns canonical public records and compressed recovery snapshots.
+- SQLite provides the recoverable runtime index, chunks, embeddings, traces, reviews, evaluations, and gate history.
+- Gemini synthesis is permitted only after retrieval and evidence gates pass.
+- Citation and unsupported-claim verification can replace generated prose with deterministic evidence fallback.
+- Typed handoffs preserve verified evidence and require explicit user action.
 
 ## Public workspace sequence
 

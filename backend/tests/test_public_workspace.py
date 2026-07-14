@@ -44,7 +44,7 @@ def test_session_reset_endpoint() -> None:
     )
     assert response.status_code == 200
     body = response.json()
-    assert body["version"] == "6.6.1"
+    assert body["version"] == "6.7.0"
     assert body["session_id"] == "workspace-session"
     assert body["removed_turns"] >= 0
 

@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 6.6.1
+Stable tag: 6.7.0
 License: MIT
 
 A site-scoped public research workspace for Sustainable Catalyst with verified retrieval, citations, bounded follow-up continuity, durable indexing, and controlled exports.
@@ -12,7 +12,7 @@ A site-scoped public research workspace for Sustainable Catalyst with verified r
 
 Research Librarian AI retrieves Sustainable Catalyst publications and documents through exact-title priority, section-aware BM25 ranking, optional Gemini embeddings, calibrated reciprocal-rank fusion, and citation-verified synthesis. WordPress remains the canonical publishing and recovery source, while FastAPI provides a durable SQLite runtime index compatible with free Render infrastructure.
 
-v6.6.1 hardens typed research handoffs with destination-version compatibility checks, delivery-token recovery, bounded retries, idempotent events, validated receipts, and immutable artifact returns while preserving the accessible production workspace.
+v6.7.0 adds answer traceability, source governance, quality evaluation, release gates, privacy-minimized retention, audit exports, and a public methodology layer while preserving typed handoffs and the accessible production workspace.
 
 == Shortcodes ==
 
@@ -38,6 +38,11 @@ v6.6.1 hardens typed research handoffs with destination-version compatibility ch
 [sc_research_librarian_platform_handoffs]
 
 == Changelog ==
+= 6.7.0 =
+* Adds the Research Quality and Governance Center.
+* Adds answer traces, source review, quality evaluation, release gates, retention enforcement, and public methodology.
+* Advances SQLite to schema version 9.
+
 
 = 6.6.1 =
 * Added destination-version compatibility and minimum-version reporting.
@@ -226,6 +231,11 @@ v6.6.1 hardens typed research handoffs with destination-version compatibility ch
 
 
 == Changelog ==
+= 6.7.0 =
+* Adds the Research Quality and Governance Center.
+* Adds answer traces, source review, quality evaluation, release gates, retention enforcement, and public methodology.
+* Advances SQLite to schema version 9.
+
 
 = 5.5.0 =
 * Added stable operations readiness dashboard, daily checks, migration and recovery validation, integration health, operations exports, audit history, and public release notes.
@@ -309,6 +319,11 @@ v6.6.1 hardens typed research handoffs with destination-version compatibility ch
 
 
 == Changelog ==
+= 6.7.0 =
+* Adds the Research Quality and Governance Center.
+* Adds answer traces, source review, quality evaluation, release gates, retention enforcement, and public methodology.
+* Advances SQLite to schema version 9.
+
 
 = 5.5.0 =
 * Added stable operations readiness dashboard, daily checks, migration and recovery validation, integration health, operations exports, audit history, and public release notes.

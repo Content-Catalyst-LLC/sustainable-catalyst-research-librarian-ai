@@ -1,3 +1,8 @@
+## 6.7.0 — Research Quality and Governance Center
+
+- Added versioned governance policies, source approval and freshness review, privacy-minimized answer traces, quality evaluations, release gates, retention enforcement, methodology publishing, audit exports, and human-controlled overrides.
+- Advanced SQLite to schema version 9 while preserving all v6.6.1 handoff reliability and v6.5.1 public workspace behavior.
+
 ## 6.6.1 — Cross-Product Reliability Patch
 
 - Added destination-version compatibility states and minimum supported versions.

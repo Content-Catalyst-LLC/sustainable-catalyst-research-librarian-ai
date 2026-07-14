@@ -303,7 +303,7 @@ class StatusResponse(BaseModel):
     last_sync_utc: str
     source_site: str
     storage_engine: str = "sqlite"
-    schema_version: int = 8
+    schema_version: int = 9
     index_version: int = 0
     checksum: str = ""
     snapshot_count: int = 0
@@ -331,3 +331,36 @@ class StatusResponse(BaseModel):
     embedding_model: str = ""
     retrieval_profile: str = "balanced-v6.5.0"
     benchmark_runs: int = 0
+
+
+class GovernancePolicyUpdate(BaseModel):
+    policy: dict[str, Any] = Field(default_factory=dict)
+    reviewer: str = Field(default="", max_length=160)
+    reason: str = Field(default="policy-update", max_length=300)
+
+
+class SourceReviewRequest(BaseModel):
+    record_id: str = Field(min_length=1, max_length=220)
+    state: str = Field(default="review", pattern="^(approved|review|excluded)$")
+    reviewer: str = Field(default="", max_length=160)
+    note: str = Field(default="", max_length=2000)
+    expires_utc: str = Field(default="", max_length=80)
+
+
+class QualityEvaluationRequest(BaseModel):
+    trace_id: str = Field(default="", max_length=220)
+    metrics: dict[str, Any] = Field(default_factory=dict)
+    reviewer: str = Field(default="", max_length=160)
+    note: str = Field(default="", max_length=2000)
+
+
+class ReleaseGateRequest(BaseModel):
+    release_version: str = Field(default="", max_length=80)
+    metrics: dict[str, Any] = Field(default_factory=dict)
+    persist: bool = True
+    override: bool = False
+    reviewer: str = Field(default="", max_length=160)
+
+
+class RetentionRunRequest(BaseModel):
+    dry_run: bool = True

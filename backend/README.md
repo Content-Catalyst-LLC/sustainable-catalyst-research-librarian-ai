@@ -1,4 +1,4 @@
-# Research Librarian AI Python Backend v6.6.1
+# Research Librarian AI Python Backend v6.7.0
 
 This FastAPI service provides exact-title, section-aware BM25, optional semantic, and calibrated reciprocal-rank retrieval with evidence-gated, citation-verified Gemini synthesis. WordPress remains the canonical publishing, snapshot, and recovery layer.
 
@@ -48,7 +48,7 @@ SC_RL_MAX_RUNTIME_SNAPSHOTS=5
 SC_RL_STARTUP_WARMUP_SECONDS=12
 SC_RL_STALLED_JOB_SECONDS=1800
 SC_RL_MAX_REJECTION_DETAILS=100
-SC_RL_RELEASE_VERSION=6.6.1
+SC_RL_RELEASE_VERSION=6.7.0
 SC_RL_HANDOFF_SOURCE_LIMIT=8
 SC_RL_WORKBENCH_ENABLED=true
 SC_RL_DECISION_STUDIO_ENABLED=true
@@ -101,7 +101,7 @@ Before generation, the evidence gate checks source count, score, optional lexica
 The root `render.yaml` pins Python 3.12.12. No paid persistent disk or vector database is required. A persistent disk may be added later as an optimization, not as the canonical source of truth.
 
 
-## v6.6.1 cross-product reliability endpoints
+## v6.7.0 cross-product reliability endpoints
 
 - `GET /v1/platform/compatibility`
 - `POST /v1/handoffs/retry`

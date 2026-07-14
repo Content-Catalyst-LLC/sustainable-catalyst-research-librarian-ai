@@ -31,6 +31,11 @@ from .models import (
     HandoffRetryRequest,
     HandoffTokenRefreshRequest,
     HandoffReceiptRequest,
+    GovernancePolicyUpdate,
+    SourceReviewRequest,
+    QualityEvaluationRequest,
+    ReleaseGateRequest,
+    RetentionRunRequest,
     ArtifactReturnRequest,
     RetrievalCalibrationUpdate,
     RetrievalRequest,
@@ -60,6 +65,7 @@ from .platform_handoffs import (
     validate_handoff,
 )
 from .retrieval import confidence, evidence_from_matches, related_titles, retrieve, retrieve_with_diagnostics
+from .governance import build_answer_trace, evaluate_release_gate, public_methodology, sanitize_governance_policy, source_governance
 from .store import store
 
 
@@ -145,6 +151,7 @@ def _workspace_summary(mode: str, matches: list[RetrievedSource], related: list[
         "accessibility_profile": "wcag-focused-v6.5.1",
         "rendering_profile": "staged-v6.5.1",
         "handoff_profile": "cross-product-reliability-v6.6.1",
+        "governance_profile": store.governance_policy().get("profile", "public-trust-v6.7.0"),
         "available_destinations": list(available_capabilities().keys()),
     }
 
@@ -382,6 +389,11 @@ async def _hybrid_retrieve(
             semantic_error = str(exc)[:500]
         embedding_latency_ms = (time.perf_counter() - embedding_started) * 1000
     matches, diagnostics = retrieve_with_diagnostics(query, records, chunks, limit, query_embedding, config)
+    policy = store.governance_policy()
+    matches, source_review = source_governance(matches, records, store.source_review_map(), policy)
+    matches = matches[:limit]
+    diagnostics["source_governance"] = source_review
+    diagnostics["governance_policy_profile"] = policy.get("profile", "")
     diagnostics["semantic_error"] = semantic_error
     diagnostics["semantic_coverage"] = embedding_status.get("semantic_coverage", 0.0)
     diagnostics["embedding_model"] = settings.gemini_embedding_model
@@ -814,6 +826,109 @@ def platform_artifact_returns(limit: int = 50) -> dict[str, Any]:
     return {"ok": True, "version": __version__, "schema": ARTIFACT_SCHEMA, "summary": store.platform_handoff_summary(), "artifacts": store.artifact_returns(limit)}
 
 
+@app.get("/v1/governance/policy", dependencies=[Depends(require_key)])
+def governance_policy_endpoint() -> dict[str, Any]:
+    return {"ok": True, "version": __version__, "policy": store.governance_policy()}
+
+
+@app.post("/v1/governance/policy", dependencies=[Depends(require_key)])
+def governance_policy_update(payload: GovernancePolicyUpdate) -> dict[str, Any]:
+    if not payload.reviewer:
+        raise HTTPException(status_code=409, detail="A human reviewer is required for governance policy changes.")
+    policy = store.save_governance_policy(payload.policy, payload.reviewer, payload.reason)
+    return {"ok": True, "version": __version__, "policy": policy}
+
+
+@app.get("/v1/governance/sources", dependencies=[Depends(require_key)])
+def governance_sources(limit: int = 200) -> dict[str, Any]:
+    return {"ok": True, "version": __version__, "schema": "sc-research-source-review/1.0", "reviews": store.source_reviews(limit)}
+
+
+@app.post("/v1/governance/sources", dependencies=[Depends(require_key)])
+def governance_source_review(payload: SourceReviewRequest) -> dict[str, Any]:
+    if payload.state == "excluded" and not payload.reviewer:
+        raise HTTPException(status_code=409, detail="A human reviewer is required to exclude a source.")
+    try:
+        review = store.save_source_review(payload.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"ok": True, "version": __version__, "review": review}
+
+
+@app.get("/v1/governance/traces", dependencies=[Depends(require_key)])
+def governance_traces(limit: int = 50) -> dict[str, Any]:
+    return {"ok": True, "version": __version__, "schema": "sc-research-answer-trace/1.0", "traces": store.answer_traces(limit)}
+
+
+@app.get("/v1/governance/traces/{trace_id}", dependencies=[Depends(require_key)])
+def governance_trace(trace_id: str) -> dict[str, Any]:
+    trace = store.answer_trace(trace_id)
+    if trace is None:
+        raise HTTPException(status_code=404, detail="Answer trace not found.")
+    return {"ok": True, "version": __version__, "trace": trace}
+
+
+@app.post("/v1/governance/evaluate", dependencies=[Depends(require_key)])
+def governance_evaluate(payload: QualityEvaluationRequest) -> dict[str, Any]:
+    evaluation = {
+        "schema": "sc-research-quality-evaluation/1.0",
+        "trace_id": payload.trace_id,
+        "metrics": payload.metrics,
+        "quality_score": float(payload.metrics.get("quality_score") or 0),
+        "reviewer": payload.reviewer,
+        "note": payload.note,
+    }
+    return {"ok": True, "version": __version__, "evaluation": store.save_quality_evaluation(evaluation)}
+
+
+@app.get("/v1/governance/metrics", dependencies=[Depends(require_key)])
+def governance_metrics() -> dict[str, Any]:
+    return {"ok": True, "version": __version__, **store.governance_metrics()}
+
+
+@app.post("/v1/governance/release-gate", dependencies=[Depends(require_key)])
+def governance_release_gate(payload: ReleaseGateRequest) -> dict[str, Any]:
+    if payload.override and not payload.reviewer:
+        raise HTTPException(status_code=409, detail="A named human reviewer is required for a release-gate override.")
+    metrics = payload.metrics or store.governance_metrics().get("metrics", {})
+    report = evaluate_release_gate(metrics, store.governance_policy(), payload.release_version or __version__, payload.override, payload.reviewer)
+    if payload.persist:
+        store.save_release_gate(report)
+    return {"ok": report["decision"] in {"pass", "human-override"}, "version": __version__, "report": report}
+
+
+@app.get("/v1/governance/release-gate/history", dependencies=[Depends(require_key)])
+def governance_release_gate_history(limit: int = 20) -> dict[str, Any]:
+    return {"ok": True, "version": __version__, "schema": "sc-research-release-gate/1.0", "runs": store.release_gate_history(limit)}
+
+
+@app.post("/v1/governance/retention/run", dependencies=[Depends(require_key)])
+def governance_retention_run(payload: RetentionRunRequest) -> dict[str, Any]:
+    return {"version": __version__, **store.governance_retention(payload.dry_run)}
+
+
+@app.get("/v1/governance/methodology")
+def governance_methodology() -> dict[str, Any]:
+    return {"ok": True, "version": __version__, "methodology": public_methodology(store.governance_policy())}
+
+
+@app.get("/v1/governance/export", dependencies=[Depends(require_key)])
+def governance_export() -> dict[str, Any]:
+    return {
+        "ok": True,
+        "version": __version__,
+        "schema": "sc-research-governance-export/1.0",
+        "policy": store.governance_policy(),
+        "source_reviews": store.source_reviews(500),
+        "recent_traces": store.answer_traces(100),
+        "quality_evaluations": store.quality_evaluations(100),
+        "quality_metrics": store.governance_metrics(),
+        "release_gates": store.release_gate_history(50),
+        "events": store.governance_events(100),
+        "generated_utc": utc_now(),
+    }
+
+
 @app.post("/v1/session/reset", dependencies=[Depends(require_key)])
 def reset_session(payload: SessionResetRequest) -> dict[str, Any]:
     session_id = _session_id(payload.session_id)
@@ -907,14 +1022,39 @@ async def ask(payload: AskRequest) -> AskResponse:
         evidence,
         payload.route_hint,
     )
+    summary = store.summary()
+    policy = store.governance_policy()
+    trace = build_answer_trace(
+        query=payload.question,
+        answer=answer,
+        session_id=session_id,
+        policy=policy,
+        model=model,
+        provider=provider,
+        ai_used=ai_used,
+        source=source,
+        research_mode=research_mode,
+        matches=matches,
+        citation_verification=citation_verification,
+        evidence_gate=gate,
+        retrieval_diagnostics=retrieval_diagnostics,
+        index_version=int(summary.get("index_version", 0)),
+        index_checksum=str(summary.get("checksum", "")),
+        retrieval_profile=str(summary.get("retrieval_profile", "")),
+    )
+    store.save_answer_trace(trace)
     provenance = {
-        "schema": "sc-research-provenance/1.0",
+        "schema": "sc-research-provenance/1.1",
         "index_version": int(store.summary().get("index_version", 0)),
         "index_checksum": str(store.summary().get("checksum", "")),
         "source_record_ids": [item.id for item in matches],
         "citation_labels": [item.citation_label for item in matches if item.citation_label],
         "handoff_ids": [item.get("handoff_id", "") for item in typed_handoffs],
-        "chain": ["question", "hybrid_retrieval", "verified_answer", "typed_handoff_preview"],
+        "answer_trace_id": trace["trace_id"],
+        "answer_trace_fingerprint": trace["trace_fingerprint"],
+        "quality": trace["quality"],
+        "governance_policy_profile": policy.get("profile", ""),
+        "chain": ["question", "hybrid_retrieval", "governance_evaluation", "verified_answer", "typed_handoff_preview"],
     }
 
     return AskResponse(

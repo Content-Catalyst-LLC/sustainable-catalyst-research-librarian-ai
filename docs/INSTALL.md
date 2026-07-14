@@ -1,8 +1,8 @@
-# Install Research Librarian AI v6.6.1
+# Install Research Librarian AI v6.7.0
 
 ## 1. Push the repository
 
-Use `PUSH_RESEARCH_LIBRARIAN_V661_PY312.sh`. The script requires and verifies Python 3.12, clears macOS launcher overrides, validates both Python import layouts, runs every WordPress release contract, verifies the cross-product reliability manifest, and creates tag `v6.6.1`.
+Use `PUSH_RESEARCH_LIBRARIAN_V670_PY312.sh`. The script requires and verifies Python 3.12, clears macOS launcher overrides, validates both Python import layouts, runs every WordPress release contract, verifies the research-quality governance manifest, and creates tag `v6.7.0`.
 
 ## 2. Deploy or update Render
 
@@ -40,7 +40,7 @@ No paid vector database or persistent Render disk is required.
 
 ## 3. Install the WordPress plugin
 
-Upload `sustainable-catalyst-research-librarian-ai-wordpress-v6.6.1.zip`, replace the installed plugin, and activate it. Existing settings, snapshots, records, chunks, embeddings, calibration profiles, benchmarks, ledgers, and queued editorial changes are retained.
+Upload `sustainable-catalyst-research-librarian-ai-wordpress-v6.7.0.zip`, replace the installed plugin, and activate it. Existing settings, snapshots, records, chunks, embeddings, calibration profiles, benchmarks, ledgers, and queued editorial changes are retained.
 
 ## 4. Synchronize and verify
 
@@ -113,6 +113,15 @@ Confirm that repeated title queries can return `X-SC-RL-Suggestion-Cache: HIT`, 
 7. Export the administrator handoff ledger and confirm it contains no provider or integration secrets.
 
 
-## v6.6.1 verification
+## 10. v6.7.0 governance verification
 
-After deploying the backend and WordPress update, open **Settings → Research Librarian Handoffs** and confirm each destination version. Unknown versions remain usable but explicitly unverified; versions below the configured minimum are removed from public handoff actions. Prepare one handoff, test **Refresh token**, test one bounded retry, submit an intake receipt, and return one permitted artifact type. Replaying the same event should be safe; changing an existing artifact ID must be rejected.
+1. Open **Settings → Research Quality & Governance**.
+2. Confirm the active profile is `public-trust-v6.7.0`.
+3. Keep query-text and answer-text retention disabled unless there is a documented need.
+4. Save the policy with the authenticated administrator as reviewer.
+5. Ask a public Research Librarian question and confirm the response provenance contains an answer trace ID and quality summary.
+6. Review `/v1/governance/traces` through the authenticated backend or governance export.
+7. Approve one test record, place one record under review, and confirm an excluded test record is removed from retrieval.
+8. Run a release gate with passing metrics and one with a critical citation failure; confirm the latter is blocked.
+9. Run retention first with `dry_run=true` and review candidate counts before deletion.
+10. Publish `[sc_research_librarian_methodology]` on the public methodology or Research Librarian page.

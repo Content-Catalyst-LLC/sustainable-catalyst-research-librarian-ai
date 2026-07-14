@@ -16,10 +16,11 @@ from .calibration import DEFAULT_RETRIEVAL_CONFIG, sanitize_retrieval_config
 from .chunking import chunk_record
 from .config import settings
 from .models import KnowledgeChunk, KnowledgeRecord, utc_now
+from .governance import DEFAULT_GOVERNANCE_POLICY, sanitize_governance_policy
 
 
-SCHEMA_VERSION = 8
-INDEX_SCHEMA = "sc-research-librarian-knowledge-index/8.0"
+SCHEMA_VERSION = 9
+INDEX_SCHEMA = "sc-research-librarian-knowledge-index/9.0"
 SNAPSHOT_SCHEMA = "sc-research-librarian-runtime-snapshot/4.0"
 
 
@@ -243,6 +244,63 @@ class KnowledgeStore:
                     expires_utc TEXT NOT NULL
                 );
                 CREATE INDEX IF NOT EXISTS idx_cross_product_events_expiry ON cross_product_events(expires_utc);
+
+                CREATE TABLE IF NOT EXISTS governance_policies (
+                    policy_id TEXT PRIMARY KEY,
+                    created_utc TEXT NOT NULL,
+                    reviewer TEXT NOT NULL DEFAULT '',
+                    reason TEXT NOT NULL DEFAULT '',
+                    policy_fingerprint TEXT NOT NULL,
+                    payload_json TEXT NOT NULL,
+                    active INTEGER NOT NULL DEFAULT 0
+                );
+                CREATE INDEX IF NOT EXISTS idx_governance_policies_active ON governance_policies(active, created_utc DESC);
+                CREATE TABLE IF NOT EXISTS source_governance_reviews (
+                    record_id TEXT PRIMARY KEY,
+                    state TEXT NOT NULL,
+                    reviewer TEXT NOT NULL DEFAULT '',
+                    note TEXT NOT NULL DEFAULT '',
+                    reviewed_utc TEXT NOT NULL,
+                    expires_utc TEXT NOT NULL DEFAULT '',
+                    payload_json TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_source_governance_state ON source_governance_reviews(state, reviewed_utc DESC);
+                CREATE TABLE IF NOT EXISTS answer_traces (
+                    trace_id TEXT PRIMARY KEY,
+                    created_utc TEXT NOT NULL,
+                    query_hash TEXT NOT NULL,
+                    quality_score REAL NOT NULL DEFAULT 0,
+                    review_required INTEGER NOT NULL DEFAULT 0,
+                    trace_fingerprint TEXT NOT NULL,
+                    payload_json TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_answer_traces_created ON answer_traces(created_utc DESC);
+                CREATE TABLE IF NOT EXISTS quality_evaluations (
+                    evaluation_id TEXT PRIMARY KEY,
+                    trace_id TEXT NOT NULL DEFAULT '',
+                    created_utc TEXT NOT NULL,
+                    reviewer TEXT NOT NULL DEFAULT '',
+                    quality_score REAL NOT NULL DEFAULT 0,
+                    payload_json TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_quality_evaluations_created ON quality_evaluations(created_utc DESC);
+                CREATE TABLE IF NOT EXISTS release_gate_runs (
+                    gate_id TEXT PRIMARY KEY,
+                    created_utc TEXT NOT NULL,
+                    release_version TEXT NOT NULL,
+                    decision TEXT NOT NULL,
+                    gate_fingerprint TEXT NOT NULL,
+                    payload_json TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_release_gate_created ON release_gate_runs(created_utc DESC);
+                CREATE TABLE IF NOT EXISTS governance_events (
+                    event_id TEXT PRIMARY KEY,
+                    event_type TEXT NOT NULL,
+                    created_utc TEXT NOT NULL,
+                    actor TEXT NOT NULL DEFAULT '',
+                    payload_json TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_governance_events_created ON governance_events(created_utc DESC);
                 """
             )
             self._ensure_column(connection, "sync_jobs", "rejected_records", "INTEGER NOT NULL DEFAULT 0")
@@ -264,6 +322,7 @@ class KnowledgeStore:
                 "last_recovery_utc": "",
                 "last_rollback_utc": "",
                 "retrieval_config": _canonical_json(DEFAULT_RETRIEVAL_CONFIG),
+                "governance_policy": _canonical_json(sanitize_governance_policy(DEFAULT_GOVERNANCE_POLICY)),
             }
             for key, value in defaults.items():
                 connection.execute("INSERT OR IGNORE INTO meta(key,value) VALUES(?,?)", (key, value))
@@ -482,6 +541,9 @@ class KnowledgeStore:
         benchmark_runs = int(connection.execute("SELECT COUNT(*) FROM retrieval_benchmark_runs").fetchone()[0])
         handoff_count = int(connection.execute("SELECT COUNT(*) FROM platform_handoffs").fetchone()[0])
         artifact_return_count = int(connection.execute("SELECT COUNT(*) FROM platform_artifact_returns").fetchone()[0])
+        answer_trace_count = int(connection.execute("SELECT COUNT(*) FROM answer_traces").fetchone()[0])
+        release_gate_count = int(connection.execute("SELECT COUNT(*) FROM release_gate_runs").fetchone()[0])
+        source_review_count = int(connection.execute("SELECT COUNT(*) FROM source_governance_reviews").fetchone()[0])
         retrieval_config = self._retrieval_config_from_connection(connection)
         return {
             **meta,
@@ -503,6 +565,9 @@ class KnowledgeStore:
             "benchmark_runs": benchmark_runs,
             "handoff_count": handoff_count,
             "artifact_return_count": artifact_return_count,
+            "answer_trace_count": answer_trace_count,
+            "release_gate_count": release_gate_count,
+            "source_review_count": source_review_count,
             "recovery_needed": total_records == 0,
         }
 
@@ -1183,6 +1248,188 @@ class KnowledgeStore:
             compatibility_rows = connection.execute("SELECT compatibility_state,COUNT(*) AS total FROM platform_handoffs GROUP BY compatibility_state ORDER BY total DESC")
             latest = connection.execute("SELECT handoff_id,destination,status,created_utc,retry_attempt,token_expires_utc FROM platform_handoffs ORDER BY created_utc DESC LIMIT 1").fetchone()
             return {"handoff_count": handoffs, "artifact_return_count": artifacts, "receipt_count": receipts, "active_idempotency_events": events, "destination_counts": {str(row["destination"]): int(row["total"]) for row in destination_rows}, "compatibility_counts": {str(row["compatibility_state"] or "unknown"): int(row["total"]) for row in compatibility_rows}, "latest_handoff": dict(latest) if latest else {}}
+
+
+    def governance_policy(self) -> dict[str, Any]:
+        with self._lock, self._connection() as connection:
+            row = connection.execute("SELECT payload_json FROM governance_policies WHERE active=1 ORDER BY created_utc DESC LIMIT 1").fetchone()
+            if row:
+                try:
+                    return sanitize_governance_policy(json.loads(str(row["payload_json"])))
+                except (ValueError, TypeError):
+                    pass
+            meta = self._meta(connection)
+            try:
+                return sanitize_governance_policy(json.loads(meta.get("governance_policy", "{}")))
+            except (ValueError, TypeError):
+                return sanitize_governance_policy(DEFAULT_GOVERNANCE_POLICY)
+
+    def save_governance_policy(self, policy: dict[str, Any], reviewer: str = "", reason: str = "policy-update") -> dict[str, Any]:
+        clean = sanitize_governance_policy(policy)
+        policy_id = "policy-" + uuid.uuid4().hex
+        created = utc_now()
+        with self._lock, self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            connection.execute("UPDATE governance_policies SET active=0 WHERE active=1")
+            connection.execute(
+                "INSERT INTO governance_policies(policy_id,created_utc,reviewer,reason,policy_fingerprint,payload_json,active) VALUES(?,?,?,?,?,?,1)",
+                (policy_id, created, str(reviewer)[:160], str(reason)[:300], clean["policy_fingerprint"], _canonical_json(clean)),
+            )
+            self._set_meta(connection, {"governance_policy": _canonical_json(clean)})
+            connection.execute("COMMIT")
+        self.save_governance_event("policy-updated", {"policy_id": policy_id, "policy_fingerprint": clean["policy_fingerprint"], "reason": reason}, reviewer)
+        return {**clean, "policy_id": policy_id, "created_utc": created, "reviewer": str(reviewer)[:160], "reason": str(reason)[:300]}
+
+    def save_source_review(self, payload: dict[str, Any]) -> dict[str, Any]:
+        clean = {
+            "schema": "sc-research-source-review/1.0",
+            "record_id": str(payload.get("record_id") or "")[:220],
+            "state": str(payload.get("state") or "review")[:40],
+            "reviewer": str(payload.get("reviewer") or "")[:160],
+            "note": str(payload.get("note") or "")[:2000],
+            "reviewed_utc": utc_now(),
+            "expires_utc": str(payload.get("expires_utc") or "")[:80],
+        }
+        if clean["state"] not in {"approved", "review", "excluded"}:
+            raise ValueError("Unsupported source-governance state.")
+        with self._lock, self._connection() as connection:
+            connection.execute(
+                "INSERT INTO source_governance_reviews(record_id,state,reviewer,note,reviewed_utc,expires_utc,payload_json) VALUES(?,?,?,?,?,?,?) "
+                "ON CONFLICT(record_id) DO UPDATE SET state=excluded.state,reviewer=excluded.reviewer,note=excluded.note,reviewed_utc=excluded.reviewed_utc,expires_utc=excluded.expires_utc,payload_json=excluded.payload_json",
+                (clean["record_id"], clean["state"], clean["reviewer"], clean["note"], clean["reviewed_utc"], clean["expires_utc"], _canonical_json(clean)),
+            )
+        self.save_governance_event("source-review", clean, clean["reviewer"])
+        return clean
+
+    def source_reviews(self, limit: int = 1000) -> list[dict[str, Any]]:
+        with self._lock, self._connection() as connection:
+            rows = connection.execute("SELECT payload_json FROM source_governance_reviews ORDER BY reviewed_utc DESC LIMIT ?", (max(1, min(5000, int(limit))),))
+            output = []
+            for row in rows:
+                try:
+                    output.append(json.loads(str(row["payload_json"])))
+                except (ValueError, TypeError):
+                    continue
+            return output
+
+    def source_review_map(self) -> dict[str, dict[str, Any]]:
+        return {str(item.get("record_id") or ""): item for item in self.source_reviews(5000) if item.get("record_id")}
+
+    def save_answer_trace(self, trace: dict[str, Any]) -> dict[str, Any]:
+        with self._lock, self._connection() as connection:
+            connection.execute(
+                "INSERT OR REPLACE INTO answer_traces(trace_id,created_utc,query_hash,quality_score,review_required,trace_fingerprint,payload_json) VALUES(?,?,?,?,?,?,?)",
+                (str(trace.get("trace_id") or ""), str(trace.get("created_utc") or utc_now()), str(trace.get("query_hash") or ""), float((trace.get("quality") or {}).get("quality_score") or 0), 1 if (trace.get("quality") or {}).get("review_required") else 0, str(trace.get("trace_fingerprint") or ""), _canonical_json(trace)),
+            )
+        return trace
+
+    def answer_trace(self, trace_id: str) -> dict[str, Any] | None:
+        with self._lock, self._connection() as connection:
+            row = connection.execute("SELECT payload_json FROM answer_traces WHERE trace_id=?", (trace_id,)).fetchone()
+            return json.loads(str(row["payload_json"])) if row else None
+
+    def answer_traces(self, limit: int = 50) -> list[dict[str, Any]]:
+        with self._lock, self._connection() as connection:
+            rows = connection.execute("SELECT payload_json FROM answer_traces ORDER BY created_utc DESC LIMIT ?", (max(1, min(500, int(limit))),))
+            return [json.loads(str(row["payload_json"])) for row in rows]
+
+    def save_quality_evaluation(self, payload: dict[str, Any]) -> dict[str, Any]:
+        evaluation_id = str(payload.get("evaluation_id") or "evaluation-" + uuid.uuid4().hex)
+        clean = {**payload, "evaluation_id": evaluation_id, "created_utc": str(payload.get("created_utc") or utc_now())}
+        with self._lock, self._connection() as connection:
+            connection.execute("INSERT OR REPLACE INTO quality_evaluations(evaluation_id,trace_id,created_utc,reviewer,quality_score,payload_json) VALUES(?,?,?,?,?,?)", (evaluation_id, str(clean.get("trace_id") or ""), clean["created_utc"], str(clean.get("reviewer") or "")[:160], float(clean.get("quality_score") or 0), _canonical_json(clean)))
+        return clean
+
+    def quality_evaluations(self, limit: int = 50) -> list[dict[str, Any]]:
+        with self._lock, self._connection() as connection:
+            rows = connection.execute("SELECT payload_json FROM quality_evaluations ORDER BY created_utc DESC LIMIT ?", (max(1, min(500, int(limit))),))
+            return [json.loads(str(row["payload_json"])) for row in rows]
+
+    def save_release_gate(self, report: dict[str, Any]) -> dict[str, Any]:
+        with self._lock, self._connection() as connection:
+            connection.execute("INSERT OR REPLACE INTO release_gate_runs(gate_id,created_utc,release_version,decision,gate_fingerprint,payload_json) VALUES(?,?,?,?,?,?)", (str(report.get("gate_id") or ""), str(report.get("created_utc") or utc_now()), str(report.get("release_version") or ""), str(report.get("decision") or "review"), str(report.get("gate_fingerprint") or ""), _canonical_json(report)))
+        return report
+
+    def release_gate_history(self, limit: int = 20) -> list[dict[str, Any]]:
+        with self._lock, self._connection() as connection:
+            rows = connection.execute("SELECT payload_json FROM release_gate_runs ORDER BY created_utc DESC LIMIT ?", (max(1, min(200, int(limit))),))
+            return [json.loads(str(row["payload_json"])) for row in rows]
+
+    def save_governance_event(self, event_type: str, payload: dict[str, Any], actor: str = "") -> dict[str, Any]:
+        event = {"event_id": "governance-" + uuid.uuid4().hex, "event_type": str(event_type)[:100], "created_utc": utc_now(), "actor": str(actor)[:160], "payload": payload}
+        with self._lock, self._connection() as connection:
+            connection.execute("INSERT INTO governance_events(event_id,event_type,created_utc,actor,payload_json) VALUES(?,?,?,?,?)", (event["event_id"], event["event_type"], event["created_utc"], event["actor"], _canonical_json(event)))
+        return event
+
+    def governance_events(self, limit: int = 100) -> list[dict[str, Any]]:
+        with self._lock, self._connection() as connection:
+            rows = connection.execute("SELECT payload_json FROM governance_events ORDER BY created_utc DESC LIMIT ?", (max(1, min(500, int(limit))),))
+            return [json.loads(str(row["payload_json"])) for row in rows]
+
+    def governance_metrics(self, trace_limit: int = 500) -> dict[str, Any]:
+        traces = self.answer_traces(trace_limit)
+        evaluations = self.quality_evaluations(200)
+        benchmarks = self.benchmark_history(1)
+        count = len(traces)
+        if count:
+            citation_precision = sum(1 for item in traces if (item.get("quality") or {}).get("citation_verified")) / count
+            citation_completeness = sum(float((item.get("quality") or {}).get("citation_coverage") or 0) for item in traces) / count
+            unsupported_claims = sum(int((item.get("quality") or {}).get("unsupported_claims") or 0) for item in traces)
+            unsupported_rate = unsupported_claims / count
+            fallback_success = sum(1 for item in traces if (item.get("quality") or {}).get("generation_mode") in {"citation-verified-ai", "deterministic-evidence-fallback"}) / count
+            mean_quality = sum(float((item.get("quality") or {}).get("quality_score") or 0) for item in traces) / count
+        else:
+            citation_precision = citation_completeness = fallback_success = mean_quality = 0.0
+            unsupported_rate = 1.0
+        latest_benchmark = benchmarks[0] if benchmarks else {}
+        metrics_from_reviews: dict[str, list[float]] = {"route_accuracy": [], "pdf_page_accuracy": []}
+        for item in evaluations:
+            raw = item.get("metrics") if isinstance(item.get("metrics"), dict) else {}
+            for key in metrics_from_reviews:
+                if key in raw:
+                    try:
+                        metrics_from_reviews[key].append(float(raw[key]))
+                    except (TypeError, ValueError):
+                        pass
+        exact_title = float((latest_benchmark.get("metrics") or {}).get("hybrid", {}).get("hit_at_1") or latest_benchmark.get("hybrid_hit_at_1") or 0)
+        hit_at_3 = float((latest_benchmark.get("metrics") or {}).get("hybrid", {}).get("hit_at_3") or 0)
+        return {
+            "schema": "sc-research-quality-metrics/1.0",
+            "generated_utc": utc_now(),
+            "sample_sizes": {"answer_traces": count, "quality_evaluations": len(evaluations), "benchmark_runs": len(benchmarks)},
+            "metrics": {
+                "exact_title_accuracy": round(exact_title, 4),
+                "hit_at_3": round(hit_at_3, 4),
+                "citation_precision": round(citation_precision, 4),
+                "citation_completeness": round(citation_completeness, 4),
+                "unsupported_claim_rate": round(unsupported_rate, 4),
+                "route_accuracy": round(sum(metrics_from_reviews["route_accuracy"]) / len(metrics_from_reviews["route_accuracy"]), 4) if metrics_from_reviews["route_accuracy"] else 0.0,
+                "pdf_page_accuracy": round(sum(metrics_from_reviews["pdf_page_accuracy"]) / len(metrics_from_reviews["pdf_page_accuracy"]), 4) if metrics_from_reviews["pdf_page_accuracy"] else 0.0,
+                "fallback_success": round(fallback_success, 4),
+                "mean_answer_quality": round(mean_quality, 4),
+            },
+            "unmeasured": [key for key, values in metrics_from_reviews.items() if not values] + ([] if benchmarks else ["exact_title_accuracy", "hit_at_3"]),
+        }
+
+    def governance_retention(self, dry_run: bool = True) -> dict[str, Any]:
+        policy = self.governance_policy()
+        now = datetime.now(timezone.utc)
+        cutoffs = {
+            "answer_traces": (now - timedelta(days=int(policy["retention"]["answer_trace_days"]))).isoformat(),
+            "quality_evaluations": (now - timedelta(days=int(policy["retention"]["quality_evaluation_days"]))).isoformat(),
+            "governance_events": (now - timedelta(days=int(policy["retention"]["governance_event_days"]))).isoformat(),
+        }
+        with self._lock, self._connection() as connection:
+            candidates = {
+                "answer_traces": int(connection.execute("SELECT COUNT(*) FROM answer_traces WHERE created_utc < ?", (cutoffs["answer_traces"],)).fetchone()[0]),
+                "quality_evaluations": int(connection.execute("SELECT COUNT(*) FROM quality_evaluations WHERE created_utc < ?", (cutoffs["quality_evaluations"],)).fetchone()[0]),
+                "governance_events": int(connection.execute("SELECT COUNT(*) FROM governance_events WHERE created_utc < ?", (cutoffs["governance_events"],)).fetchone()[0]),
+            }
+            if not dry_run:
+                connection.execute("DELETE FROM answer_traces WHERE created_utc < ?", (cutoffs["answer_traces"],))
+                connection.execute("DELETE FROM quality_evaluations WHERE created_utc < ?", (cutoffs["quality_evaluations"],))
+                connection.execute("DELETE FROM governance_events WHERE created_utc < ?", (cutoffs["governance_events"],))
+        return {"ok": True, "dry_run": bool(dry_run), "cutoffs": cutoffs, "candidates": candidates, "deleted": {key: (0 if dry_run else value) for key, value in candidates.items()}}
 
 
 store = KnowledgeStore()
