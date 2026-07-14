@@ -14,12 +14,12 @@ $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_pu
 
 $modes = array( 'auto', 'title', 'subject', 'path', 'evidence', 'analyze', 'compare', 'decision' );
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 6.7.0' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '6.7.0';" ),
-    'module_version' => false !== strpos( $module, "const VERSION = '6.7.0';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "6.7.0"' ),
+    'version_header' => false !== strpos( $main, 'Version: 7.0.0' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '7.0.0';" ),
+    'module_version' => false !== strpos( $module, "const VERSION = '7.0.0';" ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.0.0"' ),
     'workspace_root_class' => false !== strpos( $main, 'sc-rl-ai--workspace' ),
-    'workspace_data_version' => false !== strpos( $main, 'data-workspace-version="1.2"' ),
+    'workspace_data_version' => false !== strpos( $main, 'data-workspace-version="2.0"' ),
     'mode_picker' => false !== strpos( $main, 'data-sc-rl-mode-picker' ),
     'mode_radiogroup' => false !== strpos( $main, 'role="radiogroup"' ),
     'mode_label' => false !== strpos( $main, 'data-sc-rl-mode-label' ),
@@ -49,7 +49,7 @@ $checks = array(
     'mode_resolver' => false !== strpos( $backend, 'def _resolve_research_mode' ),
     'followup_builder' => false !== strpos( $backend, 'def _follow_up_prompts' ),
     'workspace_builder' => false !== strpos( $backend, 'def _workspace_summary' ),
-    'workspace_schema' => false !== strpos( $backend, 'sc-research-librarian-public-workspace/1.2' ),
+    'workspace_schema' => false !== strpos( $backend, 'sc-research-librarian-public-workspace/2.0' ),
     'session_reset_endpoint' => false !== strpos( $backend, '@app.post("/v1/session/reset"' ),
     'ask_resolves_mode' => false !== strpos( $backend, 'research_mode = _resolve_research_mode' ),
     'ask_returns_followups' => false !== strpos( $backend, 'follow_up_prompts=_follow_up_prompts' ),
@@ -59,7 +59,7 @@ $checks = array(
     'wordpress_normalizes_followups' => false !== strpos( $module, "\$grounding['follow_up_prompts']" ),
     'wordpress_normalizes_workspace' => false !== strpos( $module, "\$grounding['workspace']" ),
     'wordpress_normalizes_turns' => false !== strpos( $module, "\$grounding['session_turns']" ),
-    'route_note_version' => false !== strpos( $module, 'sc-research-librarian-route-note/6.7.0' ),
+    'route_note_version' => false !== strpos( $module, 'sc-research-librarian-route-note/7.0.0' ),
     'public_handler_sanitizes_mode' => false !== strpos( $main, "\$research_mode = isset( \$params['research_mode'] )" ),
     'js_sends_mode' => false !== strpos( $js, 'research_mode: currentMode' ),
     'js_mode_persistence' => false !== strpos( $js, 'sc_rl_ai_research_mode' ),
@@ -102,7 +102,7 @@ foreach ( $modes as $mode ) {
 }
 $failed = array_keys( array_filter( $checks, static function ( $value ) { return ! $value; } ) );
 echo json_encode( array(
-    'version' => '6.7.0',
+    'version' => '7.0.0',
     'checks' => $checks,
     'passed' => count( $checks ) - count( $failed ),
     'failed' => count( $failed ),

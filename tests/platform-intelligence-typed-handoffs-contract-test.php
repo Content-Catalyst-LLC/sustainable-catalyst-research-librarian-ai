@@ -1,5 +1,5 @@
 <?php
-/** Static release contract checks for Research Librarian AI v6.7.0 compatibility regression. */
+/** Static release contract checks for Research Librarian AI v7.0.0 compatibility regression. */
 $root = dirname( __DIR__ );
 $main = file_get_contents( $root . '/sustainable-catalyst-research-librarian-ai.php' );
 $module = file_get_contents( $root . '/includes/class-sc-rl-v630-durable-index.php' );
@@ -17,13 +17,13 @@ $roadmap = file_get_contents( $root . '/docs/ROADMAP.md' );
 $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_platform_handoffs_manifest_v6.6.0.json' ), true );
 
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 6.7.0' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '6.7.0';" ),
-    'bridge_version' => false !== strpos( $bridge, "const VERSION = '6.7.0';" ),
-    'durable_module_version' => false !== strpos( $module, "const VERSION = '6.7.0';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "6.7.0"' ),
-    'sqlite_schema_seven' => false !== strpos( $store, 'SCHEMA_VERSION = 9' ),
-    'index_schema_seven' => false !== strpos( $store, 'sc-research-librarian-knowledge-index/9.0' ),
+    'version_header' => false !== strpos( $main, 'Version: 7.0.0' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '7.0.0';" ),
+    'bridge_version' => false !== strpos( $bridge, "const VERSION = '7.0.0';" ),
+    'durable_module_version' => false !== strpos( $module, "const VERSION = '7.0.0';" ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.0.0"' ),
+    'sqlite_schema_seven' => false !== strpos( $store, 'SCHEMA_VERSION = 10' ),
+    'index_schema_seven' => false !== strpos( $store, 'sc-research-librarian-knowledge-index/10.0' ),
     'handoff_table' => false !== strpos( $store, 'CREATE TABLE IF NOT EXISTS platform_handoffs' ),
     'artifact_table' => false !== strpos( $store, 'CREATE TABLE IF NOT EXISTS platform_artifact_returns' ),
     'handoff_storage' => false !== strpos( $store, 'def save_platform_handoff' ) && false !== strpos( $store, 'def platform_handoffs' ),
@@ -50,7 +50,7 @@ $checks = array(
     'ask_capabilities' => false !== strpos( $models, 'capabilities: list[dict[str, Any]]' ),
     'ask_typed_handoffs' => false !== strpos( $models, 'typed_handoffs: list[dict[str, Any]]' ),
     'ask_provenance' => false !== strpos( $models, 'provenance: dict[str, Any]' ),
-    'workspace_schema' => false !== strpos( $backend, 'sc-research-librarian-public-workspace/1.2' ),
+    'workspace_schema' => false !== strpos( $backend, 'sc-research-librarian-public-workspace/2.0' ),
     'backend_capabilities_endpoint' => false !== strpos( $backend, '@app.get("/v1/platform/capabilities"' ),
     'backend_prepare_endpoint' => false !== strpos( $backend, '@app.post("/v1/handoffs/prepare"' ),
     'backend_validate_endpoint' => false !== strpos( $backend, '@app.post("/v1/handoffs/validate"' ),
@@ -81,7 +81,7 @@ $checks = array(
     'main_data_endpoints' => false !== strpos( $main, 'data-platform-capabilities-endpoint' ) && false !== strpos( $main, 'data-platform-handoff-endpoint' ),
     'main_artifact_endpoint' => false !== strpos( $main, 'data-artifact-return-endpoint' ),
     'wordpress_normalizes_handoffs' => false !== strpos( $module, "'typed_handoffs'" ) && false !== strpos( $module, "'capabilities'" ) && false !== strpos( $module, "'provenance'" ),
-    'route_note_handoff' => false !== strpos( $module, "'handoff_payload'" ) && false !== strpos( $module, 'sc-research-librarian-route-note/6.7.0' ),
+    'route_note_handoff' => false !== strpos( $module, "'handoff_payload'" ) && false !== strpos( $module, 'sc-research-librarian-route-note/7.0.0' ),
     'js_typed_cards' => false !== strpos( $js, 'Typed research handoffs' ) && false !== strpos( $js, 'typedHandoffs' ),
     'js_available_capabilities' => false !== strpos( $js, 'item && item.available' ),
     'js_prepare_action' => false !== strpos( $js, 'platformHandoffEndpoint' ) && false !== strpos( $js, 'Prepare payload' ),
@@ -89,7 +89,7 @@ $checks = array(
     'css_handoff_cards' => false !== strpos( $css, '.sc-rl-production-answer__handoff-grid' ),
     'css_handoff_mobile' => false !== strpos( $css, '@media (max-width: 720px)' ),
     'css_handoff_focus' => false !== strpos( $css, '.sc-rl-production-answer__handoff-grid button:focus-visible' ),
-    'render_release_version' => false !== strpos( $render, 'SC_RL_RELEASE_VERSION' ) && false !== strpos( $render, '6.7.0' ),
+    'render_release_version' => false !== strpos( $render, 'SC_RL_RELEASE_VERSION' ) && false !== strpos( $render, '7.0.0' ),
     'render_destinations' => false !== strpos( $render, 'SC_RL_WORKBENCH_ENABLED' ) && false !== strpos( $render, 'SC_RL_LAB_ENABLED' ),
     'release_docs' => false !== strpos( $docs, 'Platform Intelligence and Typed Research Handoffs' ),
     'roadmap_complete' => false !== strpos( $roadmap, 'v6.6.0 — Platform Intelligence and Typed Research Handoffs — Complete' ),
@@ -102,7 +102,7 @@ $checks = array(
 );
 $failed = array_keys( array_filter( $checks, static function ( $value ) { return ! $value; } ) );
 echo json_encode( array(
-    'version' => '6.7.0',
+    'version' => '7.0.0',
     'checks' => $checks,
     'passed' => count( $checks ) - count( $failed ),
     'failed' => count( $failed ),

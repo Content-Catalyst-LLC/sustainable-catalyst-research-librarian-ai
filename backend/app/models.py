@@ -303,7 +303,7 @@ class StatusResponse(BaseModel):
     last_sync_utc: str
     source_site: str
     storage_engine: str = "sqlite"
-    schema_version: int = 9
+    schema_version: int = 10
     index_version: int = 0
     checksum: str = ""
     snapshot_count: int = 0
@@ -363,4 +363,55 @@ class ReleaseGateRequest(BaseModel):
 
 
 class RetentionRunRequest(BaseModel):
+    dry_run: bool = True
+
+
+class ResearchProjectRequest(BaseModel):
+    project_id: str = Field(default="", max_length=220)
+    title: str = Field(default="", max_length=240)
+    objective: str = Field(default="", max_length=4000)
+    status: str = Field(default="active", max_length=60)
+    visibility: str = Field(default="private", max_length=40)
+    tags: list[str] = Field(default_factory=list, max_length=30)
+    owner_ref: str = Field(default="", max_length=220)
+    governance: dict[str, Any] = Field(default_factory=dict)
+
+class ResearchInvestigationRequest(BaseModel):
+    investigation_id: str = Field(default="", max_length=220)
+    project_id: str = Field(min_length=1, max_length=220)
+    title: str = Field(default="", max_length=240)
+    question: str = Field(default="", max_length=4000)
+    status: str = Field(default="open", max_length=60)
+    steps: list[dict[str, Any]] = Field(default_factory=list, max_length=100)
+    evidence_collection_ids: list[str] = Field(default_factory=list, max_length=100)
+    reading_path_ids: list[str] = Field(default_factory=list, max_length=50)
+    workflow_ids: list[str] = Field(default_factory=list, max_length=50)
+    artifact_ids: list[str] = Field(default_factory=list, max_length=200)
+
+class ProjectEntityRequest(BaseModel):
+    project_id: str = Field(min_length=1, max_length=220)
+    entity_id: str = Field(default="", max_length=220)
+    entity_type: str = Field(min_length=1, max_length=80)
+    title: str = Field(default="", max_length=240)
+    payload: dict[str, Any] = Field(default_factory=dict)
+
+class WorkflowTemplateRequest(BaseModel):
+    project_id: str = Field(default="", max_length=220)
+    investigation_id: str = Field(default="", max_length=220)
+    kind: str = Field(default="evidence-review", max_length=100)
+    title: str = Field(default="", max_length=240)
+    persist: bool = True
+
+class ContradictionRequest(BaseModel):
+    project_id: str = Field(default="", max_length=220)
+    items: list[dict[str, Any]] = Field(default_factory=list, max_length=500)
+    persist: bool = True
+
+class UncertaintyRegisterRequest(BaseModel):
+    project_id: str = Field(default="", max_length=220)
+    items: list[dict[str, Any]] = Field(default_factory=list, max_length=200)
+    persist: bool = True
+
+class PlatformBackupImportRequest(BaseModel):
+    envelope: dict[str, Any] = Field(default_factory=dict)
     dry_run: bool = True

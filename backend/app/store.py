@@ -19,8 +19,8 @@ from .models import KnowledgeChunk, KnowledgeRecord, utc_now
 from .governance import DEFAULT_GOVERNANCE_POLICY, sanitize_governance_policy
 
 
-SCHEMA_VERSION = 9
-INDEX_SCHEMA = "sc-research-librarian-knowledge-index/9.0"
+SCHEMA_VERSION = 10
+INDEX_SCHEMA = "sc-research-librarian-knowledge-index/10.0"
 SNAPSHOT_SCHEMA = "sc-research-librarian-runtime-snapshot/4.0"
 
 
@@ -301,6 +301,58 @@ class KnowledgeStore:
                     payload_json TEXT NOT NULL
                 );
                 CREATE INDEX IF NOT EXISTS idx_governance_events_created ON governance_events(created_utc DESC);
+                CREATE TABLE IF NOT EXISTS research_projects (
+                    project_id TEXT PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    owner_ref TEXT NOT NULL DEFAULT '',
+                    status TEXT NOT NULL,
+                    created_utc TEXT NOT NULL,
+                    updated_utc TEXT NOT NULL,
+                    fingerprint TEXT NOT NULL,
+                    payload_json TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_research_projects_updated ON research_projects(updated_utc DESC);
+                CREATE TABLE IF NOT EXISTS research_investigations (
+                    investigation_id TEXT PRIMARY KEY,
+                    project_id TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    created_utc TEXT NOT NULL,
+                    updated_utc TEXT NOT NULL,
+                    fingerprint TEXT NOT NULL,
+                    payload_json TEXT NOT NULL,
+                    FOREIGN KEY(project_id) REFERENCES research_projects(project_id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS idx_research_investigations_project ON research_investigations(project_id, updated_utc DESC);
+                CREATE TABLE IF NOT EXISTS research_project_entities (
+                    entity_id TEXT PRIMARY KEY,
+                    project_id TEXT NOT NULL,
+                    entity_type TEXT NOT NULL,
+                    title TEXT NOT NULL DEFAULT '',
+                    created_utc TEXT NOT NULL,
+                    updated_utc TEXT NOT NULL,
+                    fingerprint TEXT NOT NULL,
+                    payload_json TEXT NOT NULL,
+                    FOREIGN KEY(project_id) REFERENCES research_projects(project_id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS idx_research_entities_project ON research_project_entities(project_id, entity_type, updated_utc DESC);
+                CREATE TABLE IF NOT EXISTS research_project_events (
+                    event_id TEXT PRIMARY KEY,
+                    project_id TEXT NOT NULL,
+                    event_type TEXT NOT NULL,
+                    created_utc TEXT NOT NULL,
+                    actor TEXT NOT NULL DEFAULT '',
+                    payload_json TEXT NOT NULL,
+                    FOREIGN KEY(project_id) REFERENCES research_projects(project_id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS idx_research_events_project ON research_project_events(project_id, created_utc DESC);
+                CREATE TABLE IF NOT EXISTS connected_platform_backups (
+                    backup_id TEXT PRIMARY KEY,
+                    created_utc TEXT NOT NULL,
+                    checksum TEXT NOT NULL,
+                    state TEXT NOT NULL,
+                    payload_json TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_connected_backups_created ON connected_platform_backups(created_utc DESC);
                 """
             )
             self._ensure_column(connection, "sync_jobs", "rejected_records", "INTEGER NOT NULL DEFAULT 0")
@@ -310,6 +362,8 @@ class KnowledgeStore:
             self._ensure_column(connection, "platform_handoffs", "idempotency_key", "TEXT NOT NULL DEFAULT ''")
             self._ensure_column(connection, "platform_artifact_returns", "artifact_fingerprint", "TEXT NOT NULL DEFAULT ''")
             self._ensure_column(connection, "platform_artifact_returns", "idempotency_key", "TEXT NOT NULL DEFAULT ''")
+            self._ensure_column(connection, "research_projects", "owner_ref", "TEXT NOT NULL DEFAULT ''")
+            connection.execute("CREATE INDEX IF NOT EXISTS idx_research_projects_owner ON research_projects(owner_ref, updated_utc DESC)")
             defaults = {
                 "schema_version": str(SCHEMA_VERSION),
                 "index_schema": INDEX_SCHEMA,
@@ -330,6 +384,10 @@ class KnowledgeStore:
                 "INSERT INTO meta(key,value) VALUES('schema_version',?) "
                 "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
                 (str(SCHEMA_VERSION),),
+            )
+            connection.execute(
+                "INSERT INTO meta(key,value) VALUES('index_schema',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                (INDEX_SCHEMA,),
             )
             record_count = int(connection.execute("SELECT COUNT(*) FROM records").fetchone()[0])
             chunk_count = int(connection.execute("SELECT COUNT(*) FROM retrieval_chunks").fetchone()[0])
@@ -1430,6 +1488,91 @@ class KnowledgeStore:
                 connection.execute("DELETE FROM quality_evaluations WHERE created_utc < ?", (cutoffs["quality_evaluations"],))
                 connection.execute("DELETE FROM governance_events WHERE created_utc < ?", (cutoffs["governance_events"],))
         return {"ok": True, "dry_run": bool(dry_run), "cutoffs": cutoffs, "candidates": candidates, "deleted": {key: (0 if dry_run else value) for key, value in candidates.items()}}
+
+
+    def save_research_project(self, project: dict[str, Any]) -> dict[str, Any]:
+        with self._lock, self._connection() as connection:
+            connection.execute(
+                "INSERT OR REPLACE INTO research_projects(project_id,title,owner_ref,status,created_utc,updated_utc,fingerprint,payload_json) VALUES(?,?,?,?,?,?,?,?)",
+                (str(project.get("project_id") or ""), str(project.get("title") or ""), str(project.get("owner_ref") or ""), str(project.get("status") or "active"), str(project.get("created_utc") or utc_now()), str(project.get("updated_utc") or utc_now()), str(project.get("fingerprint") or ""), _canonical_json(project)),
+            )
+        return project
+
+    def research_project(self, project_id: str) -> dict[str, Any] | None:
+        with self._lock, self._connection() as connection:
+            row=connection.execute("SELECT payload_json FROM research_projects WHERE project_id=?",(project_id,)).fetchone()
+            return json.loads(str(row["payload_json"])) if row else None
+
+    def research_projects(self, limit: int = 100, owner_ref: str = "") -> list[dict[str, Any]]:
+        with self._lock, self._connection() as connection:
+            if owner_ref:
+                rows=connection.execute("SELECT payload_json FROM research_projects WHERE owner_ref=? ORDER BY updated_utc DESC LIMIT ?",(owner_ref,max(1,min(500,int(limit)))))
+            else:
+                rows=connection.execute("SELECT payload_json FROM research_projects ORDER BY updated_utc DESC LIMIT ?",(max(1,min(500,int(limit))),))
+            return [json.loads(str(row["payload_json"])) for row in rows]
+
+    def save_research_investigation(self, investigation: dict[str, Any]) -> dict[str, Any]:
+        if not self.research_project(str(investigation.get("project_id") or "")):
+            raise ValueError("Unknown research project.")
+        with self._lock, self._connection() as connection:
+            connection.execute(
+                "INSERT OR REPLACE INTO research_investigations(investigation_id,project_id,status,created_utc,updated_utc,fingerprint,payload_json) VALUES(?,?,?,?,?,?,?)",
+                (str(investigation.get("investigation_id") or ""),str(investigation.get("project_id") or ""),str(investigation.get("status") or "open"),str(investigation.get("created_utc") or utc_now()),str(investigation.get("updated_utc") or utc_now()),str(investigation.get("fingerprint") or ""),_canonical_json(investigation)),
+            )
+        return investigation
+
+    def research_investigations(self, project_id: str, limit: int = 100) -> list[dict[str, Any]]:
+        with self._lock, self._connection() as connection:
+            rows=connection.execute("SELECT payload_json FROM research_investigations WHERE project_id=? ORDER BY updated_utc DESC LIMIT ?",(project_id,max(1,min(500,int(limit)))))
+            return [json.loads(str(row["payload_json"])) for row in rows]
+
+    def save_project_entity(self, entity: dict[str, Any]) -> dict[str, Any]:
+        project_id=str(entity.get("project_id") or "")
+        if not self.research_project(project_id): raise ValueError("Unknown research project.")
+        entity_id=str(entity.get("entity_id") or "entity-"+uuid.uuid4().hex)
+        now=utc_now(); clean={**entity,"entity_id":entity_id,"created_utc":str(entity.get("created_utc") or now),"updated_utc":now}
+        clean["fingerprint"]=hashlib.sha256(_canonical_json({k:v for k,v in clean.items() if k!="fingerprint"}).encode()).hexdigest()
+        with self._lock, self._connection() as connection:
+            connection.execute("INSERT OR REPLACE INTO research_project_entities(entity_id,project_id,entity_type,title,created_utc,updated_utc,fingerprint,payload_json) VALUES(?,?,?,?,?,?,?,?)",(entity_id,project_id,str(clean.get("entity_type") or "record"),str(clean.get("title") or ""),clean["created_utc"],clean["updated_utc"],clean["fingerprint"],_canonical_json(clean)))
+        return clean
+
+    def project_entities(self, project_id: str, entity_type: str = "", limit: int = 500) -> list[dict[str, Any]]:
+        with self._lock, self._connection() as connection:
+            if entity_type:
+                rows=connection.execute("SELECT payload_json FROM research_project_entities WHERE project_id=? AND entity_type=? ORDER BY updated_utc DESC LIMIT ?",(project_id,entity_type,max(1,min(1000,int(limit)))))
+            else:
+                rows=connection.execute("SELECT payload_json FROM research_project_entities WHERE project_id=? ORDER BY updated_utc DESC LIMIT ?",(project_id,max(1,min(1000,int(limit)))))
+            return [json.loads(str(row["payload_json"])) for row in rows]
+
+    def save_project_event(self, project_id: str, event_type: str, payload: dict[str, Any], actor: str = "") -> dict[str, Any]:
+        event={"event_id":"project-event-"+uuid.uuid4().hex,"project_id":project_id,"event_type":event_type[:100],"created_utc":utc_now(),"actor":actor[:160],"payload":payload}
+        with self._lock, self._connection() as connection:
+            connection.execute("INSERT INTO research_project_events(event_id,project_id,event_type,created_utc,actor,payload_json) VALUES(?,?,?,?,?,?)",(event["event_id"],project_id,event["event_type"],event["created_utc"],event["actor"],_canonical_json(event)))
+        return event
+
+    def project_bundle(self, project_id: str) -> dict[str, Any]:
+        project=self.research_project(project_id)
+        if not project: raise ValueError("Unknown research project.")
+        handoffs=[x for x in self.platform_handoffs(1000) if str(x.get("payload",{}).get("project_id") or x.get("project_id") or "")==project_id]
+        handoff_ids={str(x.get("handoff_id") or "") for x in handoffs}
+        artifacts=[x for x in self.artifact_returns(1000) if str(x.get("handoff_id") or "") in handoff_ids]
+        return {"project":project,"investigations":self.research_investigations(project_id,500),"entities":self.project_entities(project_id,"",1000),"handoffs":handoffs,"artifacts":artifacts}
+
+    def save_connected_backup(self, envelope: dict[str, Any], state: str = "created") -> dict[str, Any]:
+        backup_id=str(envelope.get("backup_id") or "backup-"+uuid.uuid4().hex); clean={**envelope,"backup_id":backup_id}
+        with self._lock, self._connection() as connection:
+            connection.execute("INSERT OR REPLACE INTO connected_platform_backups(backup_id,created_utc,checksum,state,payload_json) VALUES(?,?,?,?,?)",(backup_id,str(clean.get("created_utc") or utc_now()),str(clean.get("checksum") or ""),state,_canonical_json(clean)))
+        return clean
+
+    def connected_backups(self, limit: int = 20) -> list[dict[str, Any]]:
+        with self._lock, self._connection() as connection:
+            rows=connection.execute("SELECT payload_json FROM connected_platform_backups ORDER BY created_utc DESC LIMIT ?",(max(1,min(100,int(limit))),))
+            return [json.loads(str(row["payload_json"])) for row in rows]
+
+    def connected_platform_summary(self) -> dict[str, Any]:
+        with self._lock, self._connection() as connection:
+            counts={name:int(connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]) for name,table in {"projects":"research_projects","investigations":"research_investigations","entities":"research_project_entities","backups":"connected_platform_backups"}.items()}
+        return {"schema":"sc-connected-research-platform-summary/1.0","version":"7.0.0","counts":counts,"workspace_schema":"sc-research-librarian-public-workspace/2.0","api_schema":"sc-connected-research-api/1.0"}
 
 
 store = KnowledgeStore()

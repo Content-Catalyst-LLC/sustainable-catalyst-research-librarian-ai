@@ -71,7 +71,7 @@
 - Expired-token repair and duplicate-event prevention
 - Artifact-return validation and end-to-end integration tests
 
-## v6.7.0 — Research Quality and Governance Center
+## v7.0.0 — Research Quality and Governance Center
 
 - Retrieval, citation, route, latency, and fallback benchmarks
 - Source approval, freshness controls, prompt/model/index provenance, and rollback
@@ -89,8 +89,12 @@
 v6.2.1 repaired WordPress indexing, endpoint diagnostics, rate limiting, nonce retry, and the terminal prompt. v6.2.0 introduced the Render-ready knowledge-intelligence service. v6.1.x restored live AI and provider diagnostics. v6.0.x established the integrated research-guidance platform and collision-safe bootstrap.
 
 
-## v6.7.0 — Research Quality and Governance Center — Complete
+## v7.0.0 — Research Quality and Governance Center — Complete
 
 Answer traceability, source approval and freshness controls, retention, quality evaluation, release gates, governance export, and public methodology.
 
-## v7.0.0 — Connected Research Intelligence Platform — Planned
+## v7.0.0 — Connected Research Intelligence Platform — Complete
+
+## Beyond v7.0.0
+
+Future work should be maintenance-led: destination intake adoption, project collaboration permissions, structured conflict resolution, long-running workflow orchestration, and production usage evaluation. These should extend the stable v7 contracts rather than replace them.

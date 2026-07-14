@@ -36,6 +36,7 @@ from .models import (
     QualityEvaluationRequest,
     ReleaseGateRequest,
     RetentionRunRequest,
+    ResearchProjectRequest, ResearchInvestigationRequest, ProjectEntityRequest, WorkflowTemplateRequest, ContradictionRequest, UncertaintyRegisterRequest, PlatformBackupImportRequest,
     ArtifactReturnRequest,
     RetrievalCalibrationUpdate,
     RetrievalRequest,
@@ -48,7 +49,8 @@ from .models import (
     utc_now,
 )
 from .provider import configured as provider_configured
-from .provider import embeddings_configured, generate_answer, generate_embedding, provider_state, verify_citations
+from .provider import embeddings_configured, generate_embedding, provider_state, verify_citations
+from .generation_adapter import adapter_status, generate as generate_answer
 from .platform_handoffs import (
     ARTIFACT_SCHEMA,
     HANDOFF_SCHEMA,
@@ -67,6 +69,7 @@ from .platform_handoffs import (
 from .retrieval import confidence, evidence_from_matches, related_titles, retrieve, retrieve_with_diagnostics
 from .governance import build_answer_trace, evaluate_release_gate, public_methodology, sanitize_governance_policy, source_governance
 from .store import store
+from .platform_v7 import API_SCHEMA, BACKUP_SCHEMA, backup_envelope, contradiction_report, normalize_investigation, normalize_project, uncertainty_register, verify_backup, workflow_template
 
 
 app = FastAPI(
@@ -140,7 +143,7 @@ def _follow_up_prompts(mode: str, best: RetrievedSource | None, related: list[Re
 
 def _workspace_summary(mode: str, matches: list[RetrievedSource], related: list[RetrievedSource], ai_used: bool, gate: dict[str, Any]) -> dict[str, Any]:
     return {
-        "schema": "sc-research-librarian-public-workspace/1.2",
+        "schema": "sc-research-librarian-public-workspace/2.0",
         "mode": mode,
         "mode_label": _RESEARCH_MODES.get(mode, _RESEARCH_MODES["auto"])["label"],
         "verified_sources": len(matches),
@@ -151,8 +154,10 @@ def _workspace_summary(mode: str, matches: list[RetrievedSource], related: list[
         "accessibility_profile": "wcag-focused-v6.5.1",
         "rendering_profile": "staged-v6.5.1",
         "handoff_profile": "cross-product-reliability-v6.6.1",
-        "governance_profile": store.governance_policy().get("profile", "public-trust-v6.7.0"),
+        "governance_profile": store.governance_policy().get("profile", "public-trust-v7.0.0"),
         "available_destinations": list(available_capabilities().keys()),
+        "connected_platform": store.connected_platform_summary(),
+        "generation_boundary": adapter_status(),
     }
 
 
@@ -928,6 +933,93 @@ def governance_export() -> dict[str, Any]:
         "generated_utc": utc_now(),
     }
 
+
+@app.get("/v1/platform/api", dependencies=[Depends(require_key)])
+def connected_api_manifest() -> dict[str, Any]:
+    return {"schema": API_SCHEMA, "version": __version__, "stability": "stable-v7", "resources": ["projects", "investigations", "entities", "workflows", "contradictions", "uncertainties", "backups", "handoffs", "artifacts"], "generation_boundary": adapter_status()}
+
+@app.get("/v1/platform/summary", dependencies=[Depends(require_key)])
+def connected_platform_summary() -> dict[str, Any]:
+    return store.connected_platform_summary()
+
+@app.get("/v1/projects", dependencies=[Depends(require_key)])
+def list_projects(limit: int = 100, owner_ref: str = "") -> dict[str, Any]:
+    return {"schema":"sc-research-project-list/1.0","projects":store.research_projects(limit, owner_ref),"summary":store.connected_platform_summary()}
+
+@app.post("/v1/projects", dependencies=[Depends(require_key)])
+def save_project(payload: ResearchProjectRequest) -> dict[str, Any]:
+    existing=store.research_project(payload.project_id) if payload.project_id else None
+    project=normalize_project(payload.model_dump(),existing)
+    store.save_research_project(project); store.save_project_event(project["project_id"],"project-saved",{"fingerprint":project["fingerprint"]})
+    return project
+
+@app.get("/v1/projects/{project_id}", dependencies=[Depends(require_key)])
+def get_project(project_id: str) -> dict[str, Any]:
+    try: return {"schema":"sc-research-project-bundle/1.0",**store.project_bundle(project_id)}
+    except ValueError as exc: raise HTTPException(status_code=404,detail=str(exc)) from exc
+
+@app.post("/v1/investigations", dependencies=[Depends(require_key)])
+def save_investigation(payload: ResearchInvestigationRequest) -> dict[str, Any]:
+    existing=next((x for x in store.research_investigations(payload.project_id,500) if x.get("investigation_id")==payload.investigation_id),None) if payload.investigation_id else None
+    inv=normalize_investigation(payload.model_dump(),payload.project_id,existing)
+    try: store.save_research_investigation(inv)
+    except ValueError as exc: raise HTTPException(status_code=404,detail=str(exc)) from exc
+    store.save_project_event(payload.project_id,"investigation-saved",{"investigation_id":inv["investigation_id"],"fingerprint":inv["fingerprint"]})
+    return inv
+
+@app.post("/v1/projects/entities", dependencies=[Depends(require_key)])
+def save_project_entity(payload: ProjectEntityRequest) -> dict[str, Any]:
+    try: return store.save_project_entity(payload.model_dump())
+    except ValueError as exc: raise HTTPException(status_code=404,detail=str(exc)) from exc
+
+@app.get("/v1/projects/{project_id}/entities", dependencies=[Depends(require_key)])
+def list_project_entities(project_id: str, entity_type: str = "", limit: int = 500) -> dict[str, Any]:
+    return {"schema":"sc-project-entity-list/1.0","project_id":project_id,"entities":store.project_entities(project_id,entity_type,limit)}
+
+@app.post("/v1/workflows/template", dependencies=[Depends(require_key)])
+def create_workflow(payload: WorkflowTemplateRequest) -> dict[str, Any]:
+    workflow=workflow_template(payload.kind,payload.title)
+    workflow.update({"project_id":payload.project_id,"investigation_id":payload.investigation_id})
+    if payload.persist and payload.project_id:
+        try: workflow=store.save_project_entity({"project_id":payload.project_id,"entity_id":workflow["workflow_id"],"entity_type":"workflow","title":workflow["title"],"payload":workflow})
+        except ValueError as exc: raise HTTPException(status_code=404,detail=str(exc)) from exc
+    return workflow
+
+@app.post("/v1/research/contradictions", dependencies=[Depends(require_key)])
+def analyze_contradictions(payload: ContradictionRequest) -> dict[str, Any]:
+    report=contradiction_report(payload.items)
+    if payload.persist and payload.project_id: store.save_project_entity({"project_id":payload.project_id,"entity_type":"contradiction-report","title":"Contradiction report","payload":report})
+    return report
+
+@app.post("/v1/research/uncertainties", dependencies=[Depends(require_key)])
+def build_uncertainties(payload: UncertaintyRegisterRequest) -> dict[str, Any]:
+    register=uncertainty_register(payload.items)
+    if payload.persist and payload.project_id: store.save_project_entity({"project_id":payload.project_id,"entity_type":"uncertainty-register","title":"Uncertainty register","payload":register})
+    return register
+
+@app.post("/v1/projects/{project_id}/backup", dependencies=[Depends(require_key)])
+def export_project_backup(project_id: str) -> dict[str, Any]:
+    try: envelope=backup_envelope(store.project_bundle(project_id))
+    except ValueError as exc: raise HTTPException(status_code=404,detail=str(exc)) from exc
+    return store.save_connected_backup(envelope)
+
+@app.get("/v1/platform/backups", dependencies=[Depends(require_key)])
+def list_platform_backups(limit: int = 20) -> dict[str, Any]:
+    return {"schema":"sc-connected-research-backup-list/1.0","backups":store.connected_backups(limit)}
+
+@app.post("/v1/platform/backups/import", dependencies=[Depends(require_key)])
+def import_platform_backup(payload: PlatformBackupImportRequest) -> dict[str, Any]:
+    verification=verify_backup(payload.envelope)
+    if not verification["ok"]: raise HTTPException(status_code=422,detail="Backup checksum validation failed.")
+    body=payload.envelope.get("payload") or {}; project=body.get("project") or {}
+    result={"ok":True,"dry_run":payload.dry_run,"verification":verification,"counts":{"investigations":len(body.get("investigations") or []),"entities":len(body.get("entities") or [])}}
+    if not payload.dry_run:
+        saved=normalize_project(project,store.research_project(str(project.get("project_id") or "")))
+        store.save_research_project(saved)
+        for item in body.get("investigations") or []: store.save_research_investigation(normalize_investigation(item,saved["project_id"],item))
+        for item in body.get("entities") or []: store.save_project_entity({**item,"project_id":saved["project_id"]})
+        result["project_id"]=saved["project_id"]
+    return result
 
 @app.post("/v1/session/reset", dependencies=[Depends(require_key)])
 def reset_session(payload: SessionResetRequest) -> dict[str, Any]:

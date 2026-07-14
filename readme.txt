@@ -3,16 +3,16 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 6.7.0
+Stable tag: 7.0.0
 License: MIT
 
-A site-scoped public research workspace for Sustainable Catalyst with verified retrieval, citations, bounded follow-up continuity, durable indexing, and controlled exports.
+A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
 
 == Description ==
 
 Research Librarian AI retrieves Sustainable Catalyst publications and documents through exact-title priority, section-aware BM25 ranking, optional Gemini embeddings, calibrated reciprocal-rank fusion, and citation-verified synthesis. WordPress remains the canonical publishing and recovery source, while FastAPI provides a durable SQLite runtime index compatible with free Render infrastructure.
 
-v6.7.0 adds answer traceability, source governance, quality evaluation, release gates, privacy-minimized retention, audit exports, and a public methodology layer while preserving typed handoffs and the accessible production workspace.
+v7.0.0 adds persistent research projects, multi-step investigations, evidence and uncertainty structures, reusable workflows, artifact history, a stable API, provider-independent generation boundaries, and checksum-verified portable backups.
 
 == Shortcodes ==
 
@@ -38,10 +38,11 @@ v6.7.0 adds answer traceability, source governance, quality evaluation, release 
 [sc_research_librarian_platform_handoffs]
 
 == Changelog ==
-= 6.7.0 =
-* Adds the Research Quality and Governance Center.
-* Adds answer traces, source review, quality evaluation, release gates, retention enforcement, and public methodology.
-* Advances SQLite to schema version 9.
+= 7.0.0 =
+* Adds the Connected Research Intelligence Platform.
+* Adds persistent projects, investigations, project entities, reusable workflows, contradiction and uncertainty tracking, and artifact history.
+* Adds stable connected-platform APIs, workspace schema 2.0, provider-independent generation adapter, and portable project backup and import.
+* Advances SQLite to schema version 10 while preserving all governance, handoff, retrieval, accessibility, and recovery controls.
 
 
 = 6.6.1 =
@@ -231,7 +232,7 @@ v6.7.0 adds answer traceability, source governance, quality evaluation, release 
 
 
 == Changelog ==
-= 6.7.0 =
+= 7.0.0 =
 * Adds the Research Quality and Governance Center.
 * Adds answer traces, source review, quality evaluation, release gates, retention enforcement, and public methodology.
 * Advances SQLite to schema version 9.
@@ -319,7 +320,7 @@ v6.7.0 adds answer traceability, source governance, quality evaluation, release 
 
 
 == Changelog ==
-= 6.7.0 =
+= 7.0.0 =
 * Adds the Research Quality and Governance Center.
 * Adds answer traces, source review, quality evaluation, release gates, retention enforcement, and public methodology.
 * Advances SQLite to schema version 9.

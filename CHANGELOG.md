@@ -1,4 +1,15 @@
-## 6.7.0 — Research Quality and Governance Center
+## 7.0.0 — Connected Research Intelligence Platform
+
+- Added persistent private-by-default research projects and multi-step investigations.
+- Added generic project entities for evidence collections, annotations, reading paths, workflows, contradiction reports, uncertainty registers, and artifact references.
+- Added stable `sc-connected-research-api/1.0` resource discovery and workspace schema 2.0.
+- Added provider-independent `sc-generation-adapter/1.0` while preserving deterministic fallback.
+- Added checksum-verified portable project backups, dry-run import, and project event history.
+- Added public, editorial, and institutional WordPress workspace modes and three new shortcodes.
+- Advanced SQLite additively to schema version 10.
+- Preserved v6.7 governance, v6.6.1 cross-product reliability, v6.5.1 accessibility, v6.4.1 retrieval calibration, and v6.3.1 recovery hardening.
+
+## 7.0.0 — Research Quality and Governance Center
 
 - Added versioned governance policies, source approval and freshness review, privacy-minimized answer traces, quality evaluations, release gates, retention enforcement, methodology publishing, audit exports, and human-controlled overrides.
 - Advanced SQLite to schema version 9 while preserving all v6.6.1 handoff reliability and v6.5.1 public workspace behavior.
