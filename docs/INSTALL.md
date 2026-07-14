@@ -1,8 +1,8 @@
-# Install Research Librarian AI v6.5.1
+# Install Research Librarian AI v6.6.0
 
 ## 1. Push the repository
 
-Use `PUSH_RESEARCH_LIBRARIAN_V651_PY312.sh`. The script requires and verifies Python 3.12, clears macOS launcher overrides, validates both Python import layouts, runs every WordPress release contract, verifies the accessibility/performance manifest, and creates tag `v6.5.1`.
+Use `PUSH_RESEARCH_LIBRARIAN_V660_PY312.sh`. The script requires and verifies Python 3.12, clears macOS launcher overrides, validates both Python import layouts, runs every WordPress release contract, verifies the accessibility/performance manifest, and creates tag `v6.6.0`.
 
 ## 2. Deploy or update Render
 
@@ -40,7 +40,7 @@ No paid vector database or persistent Render disk is required.
 
 ## 3. Install the WordPress plugin
 
-Upload `sustainable-catalyst-research-librarian-ai-wordpress-v6.5.1.zip`, replace the installed plugin, and activate it. Existing settings, snapshots, records, chunks, embeddings, calibration profiles, benchmarks, ledgers, and queued editorial changes are retained.
+Upload `sustainable-catalyst-research-librarian-ai-wordpress-v6.6.0.zip`, replace the installed plugin, and activate it. Existing settings, snapshots, records, chunks, embeddings, calibration profiles, benchmarks, ledgers, and queued editorial changes are retained.
 
 ## 4. Synchronize and verify
 
@@ -101,3 +101,13 @@ The v6.3.x recovery controls remain available:
 ## 8. v6.5.1 performance verification
 
 Confirm that repeated title queries can return `X-SC-RL-Suggestion-Cache: HIT`, stale suggestion requests are cancelled while typing, duplicate answer submissions do not create duplicate in-flight requests, and the FastAPI response headers indicate gzip compression for sufficiently large responses when the client requests it.
+
+## 9. v6.6.0 platform-handoff verification
+
+1. Open **Settings → Research Librarian Handoffs** and confirm each intended destination has an enabled state, URL, and declared version.
+2. Open the public Research Librarian and ask one calculation, decision, country-indicator, and experiment question.
+3. Confirm only configured destinations appear.
+4. Prepare and download a typed handoff, then validate it through the WordPress bridge.
+5. Confirm the payload contains `sc-research-handoff/2.0`, a destination contract, verified evidence, and a provenance fingerprint.
+6. Test an artifact return against the original handoff in a staging environment.
+7. Export the administrator handoff ledger and confirm it contains no provider or integration secrets.

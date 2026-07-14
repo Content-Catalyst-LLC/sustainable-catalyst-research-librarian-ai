@@ -17,7 +17,7 @@ client = TestClient(app)
 def test_health() -> None:
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json()["version"] == "6.5.1"
+    assert response.json()["version"] == "6.6.0"
 
 
 def test_sync_requires_key() -> None:
@@ -57,7 +57,7 @@ def test_manifest_and_runtime_snapshots() -> None:
     assert manifest.status_code == 200
     body = manifest.json()
     assert body["manifest"]["storage_engine"] == "sqlite"
-    assert body["manifest"]["schema_version"] == 6
+    assert body["manifest"]["schema_version"] == 7
     snapshots = client.get("/v1/knowledge/snapshots", headers=headers)
     assert snapshots.status_code == 200
     assert isinstance(snapshots.json()["snapshots"], list)
@@ -83,7 +83,7 @@ def test_startup_status_is_exposed() -> None:
     response = client.get("/startup")
     assert response.status_code == 200
     body = response.json()
-    assert body["version"] == "6.5.1"
+    assert body["version"] == "6.6.0"
     assert body["startup_state"] in {"warming", "ready"}
     assert 0 <= body["startup_progress"] <= 100
 
@@ -151,5 +151,5 @@ def test_embedding_status_is_available_without_provider_call() -> None:
     response = client.get("/v1/knowledge/embeddings/status", headers=headers)
     assert response.status_code == 200
     body = response.json()
-    assert body["version"] == "6.5.1"
+    assert body["version"] == "6.6.0"
     assert "semantic_coverage" in body

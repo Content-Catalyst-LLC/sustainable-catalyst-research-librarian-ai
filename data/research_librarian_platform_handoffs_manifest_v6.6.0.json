@@ -1,0 +1,60 @@
+{
+  "schema": "sc-research-librarian-release-manifest/1.0",
+  "version": "6.6.0",
+  "release": "Platform Intelligence and Typed Research Handoffs",
+  "workspace_schema": "sc-research-librarian-public-workspace/1.2",
+  "handoff_schema": "sc-research-handoff/2.0",
+  "route_schema": "sc-research-route/2.0",
+  "artifact_return_schema": "sc-research-artifact-return/1.0",
+  "capability_schema": "sc-platform-capabilities/1.0",
+  "destinations": {
+    "workbench": {
+      "input_contract": "sc-workbench-task/1.0",
+      "accepted_context": ["question", "equations", "variables", "units", "assumptions", "datasets", "evidence"],
+      "return_types": ["calculation_report", "graph", "validation_record", "reproducible_code"]
+    },
+    "decision_studio": {
+      "input_contract": "sc-decision-packet-seed/1.0",
+      "accepted_context": ["decision_question", "evidence", "alternatives", "criteria", "assumptions", "uncertainties"],
+      "return_types": ["decision_packet", "scenario_comparison", "audit_appendix", "brief"]
+    },
+    "site_intelligence": {
+      "input_contract": "sc-site-intelligence-query/1.0",
+      "accepted_context": ["places", "countries", "indicators", "time_range", "source_requirements", "evidence"],
+      "return_types": ["country_brief", "indicator_dashboard", "map_view", "source_ledger"]
+    },
+    "lab": {
+      "input_contract": "sc-lab-workflow/1.0",
+      "accepted_context": ["research_question", "hypotheses", "datasets", "instrumentation", "calculations", "evidence"],
+      "return_types": ["experiment_record", "calculation_notebook", "validation_report", "reproducibility_bundle"]
+    },
+    "feature_suggestions": {
+      "input_contract": "sc-feature-suggestion/1.0",
+      "accepted_context": ["requested_capability", "workflow_context", "evidence"],
+      "return_types": ["suggestion_record"]
+    }
+  },
+  "safety": {
+    "human_confirmation_required": true,
+    "automatic_destination_execution": false,
+    "payload_fingerprint_required": true,
+    "destination_capability_validation": true,
+    "unavailable_actions_hidden": true,
+    "artifact_return_requires_original_handoff": true
+  },
+  "storage": {
+    "sqlite_schema_version": 7,
+    "handoff_ledger": true,
+    "artifact_return_ledger": true,
+    "provenance_chain": true
+  },
+  "compatibility": {
+    "wordpress_canonical_source": true,
+    "free_render_compatible": true,
+    "paid_vector_database_required": false,
+    "persistent_render_disk_required": false,
+    "black_green_prompt_preserved": true,
+    "light_answer_and_source_cards_preserved": true,
+    "v6_5_1_accessibility_preserved": true
+  }
+}

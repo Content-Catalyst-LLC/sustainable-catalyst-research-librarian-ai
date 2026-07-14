@@ -222,11 +222,43 @@ class AskResponse(BaseModel):
     follow_up_prompts: list[str] = Field(default_factory=list)
     workspace: dict[str, Any] = Field(default_factory=dict)
     session_turns: int = 0
+    capabilities: list[dict[str, Any]] = Field(default_factory=list)
+    typed_handoffs: list[dict[str, Any]] = Field(default_factory=list)
+    provenance: dict[str, Any] = Field(default_factory=dict)
     generated_utc: str = Field(default_factory=utc_now)
 
 
 class SessionResetRequest(BaseModel):
     session_id: str = Field(default="", max_length=180)
+
+
+class PlatformHandoffPrepareRequest(BaseModel):
+    destination: str = Field(default="", max_length=100)
+    question: str = Field(min_length=3, max_length=3000)
+    research_mode: str = Field(default="auto", max_length=100)
+    session_id: str = Field(default="", max_length=180)
+    route_hint: dict[str, Any] = Field(default_factory=dict)
+    assumptions: list[str] = Field(default_factory=list, max_length=25)
+    uncertainties: list[str] = Field(default_factory=list, max_length=25)
+    source_ids: list[str] = Field(default_factory=list, max_length=25)
+    persist: bool = True
+
+
+class PlatformHandoffValidateRequest(BaseModel):
+    payload: dict[str, Any] = Field(default_factory=dict)
+
+
+class ArtifactReturnRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    schema_name: str = Field(default="sc-research-artifact-return/1.0", alias="schema", max_length=120)
+    artifact_id: str = Field(min_length=1, max_length=220)
+    handoff_id: str = Field(min_length=1, max_length=220)
+    destination: str = Field(min_length=1, max_length=100)
+    artifact_type: str = Field(min_length=1, max_length=160)
+    created_utc: str = Field(default_factory=utc_now)
+    artifact: dict[str, Any] = Field(default_factory=dict)
+    provenance: dict[str, Any] = Field(default_factory=dict)
 
 
 class StatusResponse(BaseModel):
@@ -243,7 +275,7 @@ class StatusResponse(BaseModel):
     last_sync_utc: str
     source_site: str
     storage_engine: str = "sqlite"
-    schema_version: int = 6
+    schema_version: int = 7
     index_version: int = 0
     checksum: str = ""
     snapshot_count: int = 0
@@ -258,6 +290,10 @@ class StatusResponse(BaseModel):
     startup_state: str = "ready"
     startup_phase: str = "ready"
     startup_progress: int = 100
+    platform_capabilities: int = 0
+    available_platform_capabilities: int = 0
+    handoff_count: int = 0
+    artifact_return_count: int = 0
     service_started_utc: str = ""
     uptime_seconds: int = 0
     ready: bool = True

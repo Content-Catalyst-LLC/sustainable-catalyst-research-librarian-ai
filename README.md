@@ -1,23 +1,22 @@
-# Sustainable Catalyst Research Librarian AI v6.5.1
+# Sustainable Catalyst Research Librarian AI v6.6.0
 
-## Accessibility, Performance, and Interface Reliability
+## Platform Intelligence and Typed Research Handoffs
 
-Research Librarian AI is the site-scoped discovery and research-guidance layer for Sustainable Catalyst. WordPress remains the canonical publishing and recovery source. FastAPI provides a restart-safe SQLite retrieval index, exact-title and section-aware BM25 ranking, optional Gemini semantic similarity, calibrated reciprocal-rank fusion, verified citations, and deterministic evidence fallback.
+Research Librarian AI is the site-scoped discovery and research-guidance layer for Sustainable Catalyst. WordPress remains the canonical publishing and recovery source. FastAPI provides durable calibrated retrieval, verified citations, deterministic fallback, destination capability discovery, and versioned typed handoffs.
 
-v6.5.1 hardens the production public workspace for keyboard, screen-reader, reduced-motion, forced-colors, mobile, and WordPress-theme use. It also reduces duplicate REST traffic, caches title suggestions, cancels superseded requests, stages answer rendering, and replaces browser prompts with an accessible feedback dialog.
+v6.6.0 connects verified research context to Workbench, Decision Studio, Site Intelligence, Sustainable Catalyst Lab, and Feature Suggestions. Handoffs are reviewable, destination-specific payloads with source records, assumptions, uncertainty, human-confirmation boundaries, and tamper-evident provenance. Unavailable products are removed from public actions rather than presented as broken destinations.
 
-## v6.5.1 highlights
+## v6.6.0 highlights
 
-- Adds roving-tabindex radio behavior and complete arrow-key navigation for all eight research modes.
-- Upgrades title suggestions to a combobox/listbox pattern with active-descendant navigation and result-count announcements.
-- Adds progressbar semantics, result focus management, accessible failure focus, reduced-motion support, and forced-colors support.
-- Replaces browser prompt feedback with a labeled, keyboard-operable feedback dialog.
-- Coalesces and caches health and route requests across shortcode instances.
-- Adds five-minute browser and WordPress title-suggestion caches tied to the canonical index checksum.
-- Cancels superseded suggestion, answer, and guided-path requests and prevents duplicate in-flight questions.
-- Stages direct-answer and evidence rendering, defers the WordPress script, and enables FastAPI gzip responses.
-- Adds clipboard fallback, safer download cleanup, theme-scoped controls, admin-bar-aware sticky positioning, and stronger mobile behavior.
-- Preserves the black-and-green prompt, light answer/source cards, v6.5.0 research modes, v6.4.x retrieval, and v6.3.x recovery controls.
+- Adds `sc-research-handoff/2.0`, `sc-research-route/2.0`, and `sc-research-artifact-return/1.0` contracts.
+- Adds capability discovery for Workbench, Decision Studio, Site Intelligence, Lab, and Feature Suggestions.
+- Adds destination-specific task contracts for calculations, decisions, place-based intelligence, experiments, and platform requests.
+- Adds prepared-handoff and returned-artifact ledgers in additive SQLite schema version 7.
+- Adds provenance fingerprints, source IDs, URLs, evidence labels, sections, pages, assumptions, uncertainty, and chain history.
+- Adds authenticated prepare, validate, log, artifact-return, and artifact-list backend endpoints.
+- Adds a nonce-protected WordPress bridge and administrator capability configuration.
+- Adds typed handoff previews and explicit preparation/download controls to the public workspace.
+- Preserves v6.5.1 accessibility/performance behavior, the black-and-green prompt, and light evidence cards.
 
 ## Public workspace sequence
 
@@ -66,6 +65,7 @@ The Render blueprint pins Python 3.12.12. Required production secrets are `SC_RL
 
 ## Release documentation
 
+- `docs/V660_PLATFORM_INTELLIGENCE_TYPED_HANDOFFS.md`
 - `docs/V651_ACCESSIBILITY_PERFORMANCE_INTERFACE_RELIABILITY.md`
 - `docs/V650_PRODUCTION_PUBLIC_RESEARCH_WORKSPACE.md`
 - `docs/V641_RETRIEVAL_CALIBRATION_REGRESSION.md`
@@ -75,13 +75,19 @@ The Render blueprint pins Python 3.12.12. Required production secrets are `SC_RL
 - `docs/INSTALL.md`
 - `docs/ROADMAP.md`
 
-## v6.5.1 API and response notes
+## v6.6.0 API and response notes
 
 ```text
+GET  /v1/platform/capabilities
+POST /v1/handoffs/prepare
+POST /v1/handoffs/validate
+GET  /v1/handoffs/logs
+POST /v1/handoffs/artifacts/return
+GET  /v1/handoffs/artifacts
 POST /v1/session/reset
 ```
 
-The ask response retains `research_mode`, `follow_up_prompts`, `workspace`, and `session_turns`. The workspace schema is now `sc-research-librarian-public-workspace/1.1` and advertises accessibility and staged-rendering profiles. Existing health, startup, status, synchronization, manifest, snapshot, maintenance, rollback, embedding, retrieval, benchmark, related-title, and ask endpoints remain available.
+The ask response retains `research_mode`, `follow_up_prompts`, `workspace`, and `session_turns`, and adds `capabilities`, `typed_handoffs`, and `provenance`. The workspace schema is `sc-research-librarian-public-workspace/1.2`. Existing accessibility profiles remain `wcag-focused-v6.5.1` and `staged-v6.5.1` because v6.6.0 preserves that interface contract.
 
 ## License
 

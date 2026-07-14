@@ -94,7 +94,7 @@ $core = SC_RL6_Core::instance();
 $pakistan = $core->resolve_route( 'What Sustainable Catalyst resources should I use to research climate and infrastructure in Pakistan?' );
 $dashboard = $core->resolve_route( 'Show me a climate dashboard with public indicators and Earth observation data.' );
 
-$required_shortcodes = array( 'sustainable_catalyst_research_librarian_ai', 'sc_research_librarian', 'sc_research_guidance_platform', 'sc_research_guidance_journey' );
+$required_shortcodes = array( 'sustainable_catalyst_research_librarian_ai', 'sc_research_librarian', 'sc_research_guidance_platform', 'sc_research_guidance_journey', 'sc_research_librarian_platform_handoffs' );
 $missing_shortcodes = array_values( array_filter( $required_shortcodes, function( $tag ){ return empty( $GLOBALS['sc_rl_test_shortcodes'][ $tag ] ); } ) );
 $required_rest = array(
     'sc-research-librarian-ai/v1/ai/status',
@@ -113,6 +113,11 @@ $required_rest = array(
     'sc-research-librarian-ai/v1/nonce',
     'sc-research-librarian-ai/v1/rate-limit/status',
     'sc-research-librarian-ai/v1/rate-limit/reset',
+    'sc-research-librarian-ai/v1/platform/capabilities',
+    'sc-research-librarian-ai/v1/platform/handoff/prepare',
+    'sc-research-librarian-ai/v1/platform/handoff/validate',
+    'sc-research-librarian-ai/v1/platform/artifact/return',
+    'sc-research-librarian-ai/v1/platform/handoffs/export',
 );
 $missing_rest = array_values( array_filter( $required_rest, function( $route ){ return empty( $GLOBALS['sc_rl_test_rest'][ $route ] ); } ) );
 
@@ -134,7 +139,7 @@ $result = array(
 
 echo json_encode( $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . PHP_EOL;
 
-$passed = '6.5.1' === $result['version']
+$passed = '6.6.0' === $result['version']
     && $result['core_loaded']
     && $result['legacy_class_detected']
     && empty( $result['missing_shortcodes'] )

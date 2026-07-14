@@ -1,10 +1,10 @@
-# Research Librarian AI Python Backend v6.5.1
+# Research Librarian AI Python Backend v6.6.0
 
 This FastAPI service provides exact-title, section-aware BM25, optional semantic, and calibrated reciprocal-rank retrieval with evidence-gated, citation-verified Gemini synthesis. WordPress remains the canonical publishing, snapshot, and recovery layer.
 
 ## Storage model
 
-SQLite schema version 6 stores:
+SQLite schema version 7 stores:
 
 - active knowledge records and metadata;
 - transactional staging jobs and rejected-record history;
@@ -12,7 +12,9 @@ SQLite schema version 6 stores:
 - deterministic section/page retrieval chunks;
 - retained chunk embeddings and embedding-run history;
 - the active sanitized retrieval profile;
-- bounded retrieval benchmark history.
+- bounded retrieval benchmark history;
+- prepared typed handoffs and provenance fingerprints;
+- validated returned-artifact metadata.
 
 The filesystem may be ephemeral. WordPress can restore an empty runtime index from its latest verified private gzip snapshot. Chunks are rebuilt automatically, and embeddings can be repopulated through bounded batches.
 
@@ -46,6 +48,13 @@ SC_RL_MAX_RUNTIME_SNAPSHOTS=5
 SC_RL_STARTUP_WARMUP_SECONDS=12
 SC_RL_STALLED_JOB_SECONDS=1800
 SC_RL_MAX_REJECTION_DETAILS=100
+SC_RL_RELEASE_VERSION=6.6.0
+SC_RL_HANDOFF_SOURCE_LIMIT=8
+SC_RL_WORKBENCH_ENABLED=true
+SC_RL_DECISION_STUDIO_ENABLED=true
+SC_RL_SITE_INTELLIGENCE_ENABLED=true
+SC_RL_LAB_ENABLED=true
+SC_RL_FEATURE_SUGGESTIONS_ENABLED=true
 ```
 
 Calibration is persisted through the authenticated retrieval-config endpoint, not environment variables.
@@ -71,6 +80,12 @@ GET  /v1/retrieval/benchmark/history
 POST /v1/retrieve
 POST /v1/retrieve/explain
 POST /v1/ask
+GET  /v1/platform/capabilities
+POST /v1/handoffs/prepare
+POST /v1/handoffs/validate
+GET  /v1/handoffs/logs
+POST /v1/handoffs/artifacts/return
+GET  /v1/handoffs/artifacts
 ```
 
 Knowledge and calibration endpoints require `X-SC-RL-Key` when `SC_RL_BACKEND_API_KEY` is configured.

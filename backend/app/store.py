@@ -18,8 +18,8 @@ from .config import settings
 from .models import KnowledgeChunk, KnowledgeRecord, utc_now
 
 
-SCHEMA_VERSION = 6
-INDEX_SCHEMA = "sc-research-librarian-knowledge-index/6.0"
+SCHEMA_VERSION = 7
+INDEX_SCHEMA = "sc-research-librarian-knowledge-index/7.0"
 SNAPSHOT_SCHEMA = "sc-research-librarian-runtime-snapshot/4.0"
 
 
@@ -201,6 +201,29 @@ class KnowledgeStore:
                     report_json TEXT NOT NULL
                 );
                 CREATE INDEX IF NOT EXISTS idx_retrieval_benchmark_created ON retrieval_benchmark_runs(created_utc DESC);
+                CREATE TABLE IF NOT EXISTS platform_handoffs (
+                    handoff_id TEXT PRIMARY KEY,
+                    created_utc TEXT NOT NULL,
+                    destination TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    session_id TEXT NOT NULL DEFAULT '',
+                    schema_name TEXT NOT NULL,
+                    fingerprint TEXT NOT NULL,
+                    payload_json TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_platform_handoffs_created ON platform_handoffs(created_utc DESC);
+                CREATE INDEX IF NOT EXISTS idx_platform_handoffs_destination ON platform_handoffs(destination, created_utc DESC);
+                CREATE TABLE IF NOT EXISTS platform_artifact_returns (
+                    artifact_id TEXT PRIMARY KEY,
+                    handoff_id TEXT NOT NULL,
+                    destination TEXT NOT NULL,
+                    artifact_type TEXT NOT NULL,
+                    created_utc TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    payload_json TEXT NOT NULL,
+                    FOREIGN KEY(handoff_id) REFERENCES platform_handoffs(handoff_id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS idx_platform_artifacts_handoff ON platform_artifact_returns(handoff_id, created_utc DESC);
                 """
             )
             self._ensure_column(connection, "sync_jobs", "rejected_records", "INTEGER NOT NULL DEFAULT 0")
@@ -432,6 +455,8 @@ class KnowledgeStore:
         indexed_chunks = int(connection.execute("SELECT COUNT(*) FROM retrieval_chunks").fetchone()[0])
         embedded_chunks = int(connection.execute("SELECT COUNT(*) FROM retrieval_chunks WHERE embedding_json<>''").fetchone()[0])
         benchmark_runs = int(connection.execute("SELECT COUNT(*) FROM retrieval_benchmark_runs").fetchone()[0])
+        handoff_count = int(connection.execute("SELECT COUNT(*) FROM platform_handoffs").fetchone()[0])
+        artifact_return_count = int(connection.execute("SELECT COUNT(*) FROM platform_artifact_returns").fetchone()[0])
         retrieval_config = self._retrieval_config_from_connection(connection)
         return {
             **meta,
@@ -451,6 +476,8 @@ class KnowledgeStore:
             "embedding_model": settings.gemini_embedding_model,
             "retrieval_profile": retrieval_config.get("profile", "balanced-v6.5.0"),
             "benchmark_runs": benchmark_runs,
+            "handoff_count": handoff_count,
+            "artifact_return_count": artifact_return_count,
             "recovery_needed": total_records == 0,
         }
 
@@ -996,6 +1023,96 @@ class KnowledgeStore:
                 connection.rollback()
                 raise
             return {"ok": True, "snapshot_id": snapshot_id, "integrity": {"ok": True, "checksum": integrity["checksum"]}, "summary": self.summary()}
+
+
+    def save_platform_handoff(self, payload: dict[str, Any]) -> dict[str, Any]:
+        handoff_id = str(payload.get("handoff_id", "")).strip()
+        if not handoff_id:
+            raise ValueError("handoff_id is required")
+        encoded = _canonical_json(payload)
+        fingerprint = str((payload.get("provenance") or {}).get("payload_fingerprint") or hashlib.sha256(encoded.encode("utf-8")).hexdigest())
+        with self._lock, self._connection() as connection:
+            connection.execute(
+                "INSERT INTO platform_handoffs(handoff_id,created_utc,destination,status,session_id,schema_name,fingerprint,payload_json) "
+                "VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(handoff_id) DO UPDATE SET status=excluded.status,payload_json=excluded.payload_json,fingerprint=excluded.fingerprint",
+                (
+                    handoff_id,
+                    str(payload.get("created_utc") or utc_now()),
+                    str(payload.get("destination") or ""),
+                    str(payload.get("status") or "prepared"),
+                    str(payload.get("session_id") or ""),
+                    str(payload.get("schema") or ""),
+                    fingerprint,
+                    encoded,
+                ),
+            )
+        return payload
+
+    def platform_handoff(self, handoff_id: str) -> dict[str, Any] | None:
+        with self._lock, self._connection() as connection:
+            row = connection.execute("SELECT payload_json FROM platform_handoffs WHERE handoff_id=?", (handoff_id,)).fetchone()
+            return json.loads(str(row["payload_json"])) if row else None
+
+    def platform_handoffs(self, limit: int = 50) -> list[dict[str, Any]]:
+        with self._lock, self._connection() as connection:
+            rows = connection.execute(
+                "SELECT payload_json FROM platform_handoffs ORDER BY created_utc DESC LIMIT ?",
+                (max(1, min(500, int(limit))),),
+            )
+            return [json.loads(str(row["payload_json"])) for row in rows]
+
+    def save_artifact_return(self, payload: dict[str, Any], status: str = "accepted") -> dict[str, Any]:
+        artifact_id = str(payload.get("artifact_id", "")).strip()
+        handoff_id = str(payload.get("handoff_id", "")).strip()
+        if not artifact_id or not handoff_id:
+            raise ValueError("artifact_id and handoff_id are required")
+        encoded = _canonical_json(payload)
+        with self._lock, self._connection() as connection:
+            connection.execute(
+                "INSERT INTO platform_artifact_returns(artifact_id,handoff_id,destination,artifact_type,created_utc,status,payload_json) "
+                "VALUES(?,?,?,?,?,?,?) ON CONFLICT(artifact_id) DO UPDATE SET status=excluded.status,payload_json=excluded.payload_json",
+                (
+                    artifact_id,
+                    handoff_id,
+                    str(payload.get("destination") or ""),
+                    str(payload.get("artifact_type") or ""),
+                    str(payload.get("created_utc") or utc_now()),
+                    status,
+                    encoded,
+                ),
+            )
+            connection.execute("UPDATE platform_handoffs SET status='artifact-returned' WHERE handoff_id=?", (handoff_id,))
+        return payload
+
+    def artifact_returns(self, limit: int = 50) -> list[dict[str, Any]]:
+        with self._lock, self._connection() as connection:
+            rows = connection.execute(
+                "SELECT payload_json,status FROM platform_artifact_returns ORDER BY created_utc DESC LIMIT ?",
+                (max(1, min(500, int(limit))),),
+            )
+            result: list[dict[str, Any]] = []
+            for row in rows:
+                payload = json.loads(str(row["payload_json"]))
+                payload["storage_status"] = str(row["status"])
+                result.append(payload)
+            return result
+
+    def platform_handoff_summary(self) -> dict[str, Any]:
+        with self._lock, self._connection() as connection:
+            handoffs = int(connection.execute("SELECT COUNT(*) FROM platform_handoffs").fetchone()[0])
+            artifacts = int(connection.execute("SELECT COUNT(*) FROM platform_artifact_returns").fetchone()[0])
+            destination_rows = connection.execute(
+                "SELECT destination,COUNT(*) AS total FROM platform_handoffs GROUP BY destination ORDER BY total DESC"
+            )
+            latest = connection.execute(
+                "SELECT handoff_id,destination,status,created_utc FROM platform_handoffs ORDER BY created_utc DESC LIMIT 1"
+            ).fetchone()
+            return {
+                "handoff_count": handoffs,
+                "artifact_return_count": artifacts,
+                "destination_counts": {str(row["destination"]): int(row["total"]) for row in destination_rows},
+                "latest_handoff": dict(latest) if latest else {},
+            }
 
 
 store = KnowledgeStore()

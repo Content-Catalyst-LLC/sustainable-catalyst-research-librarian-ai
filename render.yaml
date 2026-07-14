@@ -38,6 +38,30 @@ services:
         value: "1800"
       - key: SC_RL_MAX_REJECTION_DETAILS
         value: "100"
+      - key: SC_RL_RELEASE_VERSION
+        value: "6.6.0"
+      - key: SC_RL_HANDOFF_SOURCE_LIMIT
+        value: "8"
+      - key: SC_RL_WORKBENCH_ENABLED
+        value: "true"
+      - key: SC_RL_WORKBENCH_URL
+        value: https://sustainablecatalyst.com/modeling-analytics/workbench/
+      - key: SC_RL_DECISION_STUDIO_ENABLED
+        value: "true"
+      - key: SC_RL_DECISION_STUDIO_URL
+        value: https://sustainablecatalyst.com/platform/decision-studio/
+      - key: SC_RL_SITE_INTELLIGENCE_ENABLED
+        value: "true"
+      - key: SC_RL_SITE_INTELLIGENCE_URL
+        value: https://sustainablecatalyst.com/platform/site-intelligence/
+      - key: SC_RL_LAB_ENABLED
+        value: "true"
+      - key: SC_RL_LAB_URL
+        value: https://sustainablecatalyst.com/lab/
+      - key: SC_RL_FEATURE_SUGGESTIONS_ENABLED
+        value: "true"
+      - key: SC_RL_FEATURE_SUGGESTIONS_URL
+        value: https://sustainablecatalyst.com/platform/feature-suggestions/
       - key: SC_RL_CORS_ORIGINS
         value: https://sustainablecatalyst.com
       - key: SC_RL_BACKEND_API_KEY

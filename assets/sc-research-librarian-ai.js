@@ -240,6 +240,8 @@
     var related = (data.related_titles || grounding.related_titles || []).slice(0, 8);
     var researchPath = (data.research_path || grounding.research_path || []).slice(0, 6);
     var actions = (data.actions || grounding.actions || []).slice(0, 6);
+    var typedHandoffs = (data.typed_handoffs || grounding.typed_handoffs || note.typed_handoffs || []).slice(0, 4);
+    var capabilities = (data.capabilities || grounding.capabilities || note.capabilities || []).filter(function (item) { return item && item.available; });
     var reasonCodes = grounding.reason_codes || note.reason_codes || [];
     var citationVerification = data.citation_verification || grounding.citation_verification || note.citation_verification || {};
     var retrievalDiagnostics = data.retrieval_diagnostics || grounding.retrieval_diagnostics || note.retrieval_diagnostics || {};
@@ -303,12 +305,33 @@
     html += '<section class="sc-rl-production-answer__actions"><div class="sc-rl-production-answer__section-head"><div><span>Continue</span><h3>Next actions</h3></div></div><div>';
     if (actions.length) {
       actions.forEach(function (action) {
-        html += '<a href="' + escapeHtml(action.url || '#') + '">' + escapeHtml(action.label || 'Open action') + '</a>';
+        if (action.handoff) {
+          html += '<button type="button" data-sc-rl-prepare-typed-handoff="' + escapeHtml(action.handoff) + '" data-destination-url="' + escapeHtml(action.url || '#') + '">' + escapeHtml(action.label || 'Prepare handoff') + '</button>';
+        } else {
+          html += '<a href="' + escapeHtml(action.url || '#') + '">' + escapeHtml(action.label || 'Open action') + '</a>';
+        }
       });
     } else {
       html += '<a href="' + escapeHtml(routeUrl) + '">Open best match</a><a href="/platform/feature-suggestions/">Report a missing route</a>';
     }
     html += '</div></section>';
+
+    if (typedHandoffs.length || capabilities.length) {
+      html += '<section class="sc-rl-production-answer__section sc-rl-production-answer__handoffs"><div class="sc-rl-production-answer__section-head"><div><span>Connected platform</span><h3>Typed research handoffs</h3></div><strong>' + escapeHtml(typedHandoffs.length + ' prepared') + '</strong></div>';
+      html += '<div class="sc-rl-production-answer__handoff-grid">';
+      typedHandoffs.forEach(function (handoff) {
+        var routeInfo = handoff.route || {};
+        var validation = handoff.validation || {};
+        var destination = handoff.destination || routeInfo.destination || 'platform';
+        html += '<article><div><span>' + escapeHtml((routeInfo.destination_version || 'version unknown')) + '</span><b>' + escapeHtml(validation.ok === false ? 'Needs review' : 'Validated') + '</b></div><h4>' + escapeHtml(routeInfo.destination_label || destination.replace(/_/g, ' ')) + '</h4><p>' + escapeHtml(routeInfo.reason || 'Prepared from verified Sustainable Catalyst evidence.') + '</p><small>' + escapeHtml((handoff.evidence || []).length + ' verified source' + ((handoff.evidence || []).length === 1 ? '' : 's') + ' · ' + (handoff.payload && handoff.payload.contract ? handoff.payload.contract : handoff.schema || 'typed contract')) + '</small><div><button type="button" data-sc-rl-download-typed-handoff="' + escapeHtml(handoff.handoff_id || destination) + '">Download payload</button><a href="' + escapeHtml(routeInfo.destination_url || '#') + '">Open destination →</a></div></article>';
+      });
+      if (!typedHandoffs.length) {
+        capabilities.slice(0, 4).forEach(function (capability) {
+          html += '<article><div><span>' + escapeHtml(capability.version || 'version unknown') + '</span><b>Available</b></div><h4>' + escapeHtml(capability.label || capability.id) + '</h4><p>Prepare a versioned handoff with verified evidence and provenance.</p><div><button type="button" data-sc-rl-prepare-typed-handoff="' + escapeHtml(capability.id || '') + '" data-destination-url="' + escapeHtml(capability.url || '#') + '">Prepare payload</button><a href="' + escapeHtml(capability.url || '#') + '">Open destination →</a></div></article>';
+        });
+      }
+      html += '</div></section>';
+    }
 
     html += '<details class="sc-rl-production-answer__details"><summary>Why these results?</summary>';
     html += '<p><strong>Confidence:</strong> ' + escapeHtml(confidence.explanation || 'Based on title, slug, heading, series, article-map, taxonomy, and content matches.') + '</p>';
@@ -360,6 +383,10 @@
     var feedbackEndpoint = root.getAttribute('data-feedback-endpoint');
     var feedbackBridgeEndpoint = root.getAttribute('data-feedback-bridge-endpoint');
     var deepLinkEndpoint = root.getAttribute('data-deep-link-endpoint');
+    var platformCapabilitiesEndpoint = root.getAttribute('data-platform-capabilities-endpoint');
+    var platformHandoffEndpoint = root.getAttribute('data-platform-handoff-endpoint');
+    var platformHandoffValidateEndpoint = root.getAttribute('data-platform-handoff-validate-endpoint');
+    var artifactReturnEndpoint = root.getAttribute('data-artifact-return-endpoint');
     var nonce = root.getAttribute('data-nonce');
     var textarea = root.querySelector('.sc-rl-ai__textarea');
     var submit = root.querySelector('[data-sc-rl-submit]');
@@ -622,7 +649,7 @@
         return { label: 'Invalid endpoint response', intro: 'WordPress returned a response that the Research Librarian could not read.', detail: 'Check caching, security, or REST-response modification plugins.' };
       }
       if (statusCode === 404) {
-        return { label: 'WordPress route unavailable', intro: 'The Research Librarian REST route was not found.', detail: 'Resave WordPress permalinks and confirm that the active v6.5.1 plugin registered its routes.' };
+        return { label: 'WordPress route unavailable', intro: 'The Research Librarian REST route was not found.', detail: 'Resave WordPress permalinks and confirm that the active v6.6.0 plugin registered its routes.' };
       }
       if (statusCode >= 500) {
         return { label: 'WordPress endpoint error', intro: 'WordPress reached the Research Librarian route but returned a server error.', detail: 'The Python provider status is separate from this WordPress failure.' };
@@ -954,9 +981,57 @@
           setStatus('Ask first', 'error');
           return;
         }
-        var target = latest.route_note.handoff_payload.target || 'handoff';
+        var target = latest.route_note.handoff_payload.destination || latest.route_note.handoff_payload.target || 'handoff';
         downloadJson('sustainable-catalyst-' + target.replace(/_/g, '-') + '-handoff.json', latest.route_note.handoff_payload);
         setStatus('Handoff downloaded', 'ready');
+      });
+    }
+
+    function typedHandoffById(handoffId) {
+      var list = (latest && (latest.typed_handoffs || (latest.grounding && latest.grounding.typed_handoffs))) || [];
+      for (var i = 0; i < list.length; i += 1) {
+        if (String(list[i].handoff_id || '') === String(handoffId || '')) return list[i];
+      }
+      return null;
+    }
+
+    function prepareTypedHandoff(destination, button) {
+      if (!latest || !platformHandoffEndpoint) { setStatus('Ask a question first', 'error'); return; }
+      var sources = latest.matches || (latest.grounding && latest.grounding.sources) || [];
+      var originalText = button ? button.textContent : '';
+      if (button) { button.disabled = true; button.textContent = 'Preparing…'; }
+      setStatus('Preparing typed handoff…', 'loading');
+      fetchWithNonce(platformHandoffEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          destination: destination,
+          question: textarea ? textarea.value : '',
+          research_mode: currentMode,
+          session_id: sessionId,
+          source_ids: sources.map(function (source) { return source.id || source.record_id || ''; }).filter(Boolean),
+          evidence: latest.evidence || (latest.grounding && latest.grounding.evidence) || [],
+          route_hint: {
+            destination: destination,
+            reason: 'Prepared from the public Research Librarian workspace after explicit user confirmation.',
+            parent_handoff_id: latest.provenance && latest.provenance.handoff_ids ? latest.provenance.handoff_ids[0] || '' : ''
+          }
+        })
+      }, true).then(function (result) {
+        var handoff = result.handoff || (result.data && result.data.handoff);
+        if (!handoff) throw new Error('The platform handoff endpoint returned no payload.');
+        latest.typed_handoffs = latest.typed_handoffs || [];
+        latest.typed_handoffs = latest.typed_handoffs.filter(function (item) { return item.destination !== handoff.destination; });
+        latest.typed_handoffs.unshift(handoff);
+        if (latest.route_note) latest.route_note.handoff_payload = handoff;
+        downloadJson('sustainable-catalyst-' + String(handoff.destination || destination || 'platform').replace(/_/g, '-') + '-handoff.json', handoff);
+        setStatus('Typed handoff prepared', 'ready');
+        announce('Typed handoff prepared and downloaded for ' + String((handoff.route && handoff.route.destination_label) || handoff.destination || destination) + '.', false);
+      }).catch(function (error) {
+        setStatus('Handoff unavailable', 'error');
+        announce(error.message || 'Unable to prepare the typed handoff.', true);
+      }).finally(function () {
+        if (button) { button.disabled = false; button.textContent = originalText; }
       });
     }
 
@@ -971,6 +1046,15 @@
       }
       if (target.matches('[data-sc-rl-handoff-download-inline]')) {
         if (handoffDownload) handoffDownload.click();
+      }
+      if (target.matches('[data-sc-rl-download-typed-handoff]')) {
+        var handoff = typedHandoffById(target.getAttribute('data-sc-rl-download-typed-handoff'));
+        if (!handoff) { setStatus('Handoff preview unavailable', 'error'); return; }
+        downloadJson('sustainable-catalyst-' + String(handoff.destination || 'platform').replace(/_/g, '-') + '-handoff.json', handoff);
+        setStatus('Typed handoff downloaded', 'ready');
+      }
+      if (target.matches('[data-sc-rl-prepare-typed-handoff]')) {
+        prepareTypedHandoff(target.getAttribute('data-sc-rl-prepare-typed-handoff') || '', target);
       }
       if (target.matches('[data-sc-rl-deep-link]')) {
         if (!latest || !deepLinkEndpoint) {

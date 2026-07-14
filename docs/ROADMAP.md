@@ -59,7 +59,7 @@
 - Staged answer rendering and performance budgets
 - Browser, theme, and mobile compatibility regression suite
 
-## v6.6.0 — Platform Intelligence and Typed Research Handoffs
+## v6.6.0 — Platform Intelligence and Typed Research Handoffs — Complete
 
 - Versioned handoffs to Workbench, Decision Studio, Site Intelligence, and Lab
 - Provenance-preserving artifact return

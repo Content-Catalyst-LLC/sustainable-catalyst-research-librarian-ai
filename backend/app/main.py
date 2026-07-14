@@ -25,6 +25,9 @@ from .models import (
     BenchmarkRequest,
     EmbeddingProcessRequest,
     MaintenanceRequest,
+    PlatformHandoffPrepareRequest,
+    PlatformHandoffValidateRequest,
+    ArtifactReturnRequest,
     RetrievalCalibrationUpdate,
     RetrievalRequest,
     RetrievedSource,
@@ -37,6 +40,16 @@ from .models import (
 )
 from .provider import configured as provider_configured
 from .provider import embeddings_configured, generate_answer, generate_embedding, provider_state, verify_citations
+from .platform_handoffs import (
+    ARTIFACT_SCHEMA,
+    HANDOFF_SCHEMA,
+    available_capabilities,
+    prepare_handoff,
+    prepare_preview_handoffs,
+    public_capabilities,
+    validate_artifact_return,
+    validate_handoff,
+)
 from .retrieval import confidence, evidence_from_matches, related_titles, retrieve, retrieve_with_diagnostics
 from .store import store
 
@@ -112,7 +125,7 @@ def _follow_up_prompts(mode: str, best: RetrievedSource | None, related: list[Re
 
 def _workspace_summary(mode: str, matches: list[RetrievedSource], related: list[RetrievedSource], ai_used: bool, gate: dict[str, Any]) -> dict[str, Any]:
     return {
-        "schema": "sc-research-librarian-public-workspace/1.1",
+        "schema": "sc-research-librarian-public-workspace/1.2",
         "mode": mode,
         "mode_label": _RESEARCH_MODES.get(mode, _RESEARCH_MODES["auto"])["label"],
         "verified_sources": len(matches),
@@ -122,6 +135,8 @@ def _workspace_summary(mode: str, matches: list[RetrievedSource], related: list[
         "exports": ["copy", "markdown", "json", "print", "research-note"],
         "accessibility_profile": "wcag-focused-v6.5.1",
         "rendering_profile": "staged-v6.5.1",
+        "handoff_profile": "typed-platform-handoffs-v6.6.0",
+        "available_destinations": list(available_capabilities().keys()),
     }
 
 
@@ -205,19 +220,28 @@ def _research_path(matches: list[RetrievedSource], related: list[RetrievedSource
 
 def _actions(question: str, best: RetrievedSource | None, research_mode: str = "auto") -> list[dict[str, str]]:
     q = question.lower()
+    capabilities = available_capabilities()
     actions: list[dict[str, str]] = []
     if best:
         actions.append({"label": "Open best match", "url": best.url, "type": "source"})
     if research_mode == "evidence" and best:
         actions.append({"label": "Open cited evidence", "url": best.url, "type": "evidence"})
-    if any(term in q for term in ["country", "pakistan", "climate", "indicator", "public evidence", "compare countries"]):
-        actions.append({"label": "Open Site Intelligence", "url": "/platform/site-intelligence/", "type": "evidence"})
-    if research_mode == "analyze" or any(term in q for term in ["calculate", "formula", "graph", "model", "analysis", "simulate"]):
-        actions.append({"label": "Use Workbench", "url": "/modeling-analytics/workbench/", "type": "analysis"})
-    if research_mode == "decision" or any(term in q for term in ["decision", "brief", "scenario", "tradeoff", "recommendation"]):
-        actions.append({"label": "Open Decision Studio", "url": "/platform/decision-studio/", "type": "decision"})
-    actions.append({"label": "Report a missing route", "url": "/platform/feature-suggestions/", "type": "feedback"})
-    return actions[:5]
+    if "site_intelligence" in capabilities and any(term in q for term in ["country", "climate", "indicator", "public evidence", "compare countries", "map", "earth observation"]):
+        item = capabilities["site_intelligence"]
+        actions.append({"label": "Prepare Site Intelligence handoff", "url": item["url"], "type": "site_intelligence", "handoff": "site_intelligence"})
+    if "workbench" in capabilities and (research_mode == "analyze" or any(term in q for term in ["calculate", "formula", "graph", "model", "analysis", "simulate", "equation"])):
+        item = capabilities["workbench"]
+        actions.append({"label": "Prepare Workbench handoff", "url": item["url"], "type": "workbench", "handoff": "workbench"})
+    if "lab" in capabilities and any(term in q for term in ["experiment", "hypothesis", "laboratory", "instrument", "spectrometry", "biology", "chemistry", "physics"]):
+        item = capabilities["lab"]
+        actions.append({"label": "Prepare Lab handoff", "url": item["url"], "type": "lab", "handoff": "lab"})
+    if "decision_studio" in capabilities and (research_mode == "decision" or any(term in q for term in ["decision", "brief", "scenario", "tradeoff", "recommendation", "alternative"])):
+        item = capabilities["decision_studio"]
+        actions.append({"label": "Prepare Decision Studio handoff", "url": item["url"], "type": "decision_studio", "handoff": "decision_studio"})
+    if "feature_suggestions" in capabilities:
+        item = capabilities["feature_suggestions"]
+        actions.append({"label": "Report a missing route", "url": item["url"], "type": "feedback", "handoff": "feature_suggestions"})
+    return actions[:6]
 
 
 def _startup_snapshot(summary: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -252,6 +276,9 @@ def _status() -> StatusResponse:
     ai_ready = provider_configured()
     index_ready = int(summary.get("total_records", 0)) > 0
     startup = _startup_snapshot(summary)
+    capabilities = public_capabilities()
+    available_count = sum(1 for item in capabilities if item.get("available"))
+    handoff_summary = store.platform_handoff_summary()
     if startup["startup_state"] == "warming":
         state, label = "backend-warming", "Python Backend Warming"
     elif ai_ready and index_ready and provider_state.last_success_utc:
@@ -294,6 +321,10 @@ def _status() -> StatusResponse:
         embedding_model=str(summary.get("embedding_model", settings.gemini_embedding_model)),
         retrieval_profile=str(summary.get("retrieval_profile", "balanced-v6.5.0")),
         benchmark_runs=int(summary.get("benchmark_runs", 0)),
+        platform_capabilities=len(capabilities),
+        available_platform_capabilities=available_count,
+        handoff_count=int(handoff_summary.get("handoff_count", 0)),
+        artifact_return_count=int(handoff_summary.get("artifact_return_count", 0)),
         **startup,
     )
 
@@ -606,6 +637,92 @@ async def retrieval_benchmark(payload: BenchmarkRequest) -> dict[str, Any]:
     return report
 
 
+@app.get("/v1/platform/capabilities", dependencies=[Depends(require_key)])
+def platform_capabilities_endpoint() -> dict[str, Any]:
+    capabilities = public_capabilities()
+    return {
+        "ok": True,
+        "version": __version__,
+        "schema": "sc-platform-capabilities/1.0",
+        "capabilities": capabilities,
+        "available": [item["id"] for item in capabilities if item.get("available")],
+        "summary": store.platform_handoff_summary(),
+    }
+
+
+@app.post("/v1/handoffs/prepare", dependencies=[Depends(require_key)])
+async def platform_handoff_prepare(payload: PlatformHandoffPrepareRequest) -> dict[str, Any]:
+    matches, diagnostics = await _hybrid_retrieve(payload.question, settings.handoff_source_limit)
+    if payload.source_ids:
+        wanted = set(payload.source_ids)
+        matches = [item for item in matches if item.id in wanted]
+    evidence = evidence_from_matches(matches)
+    try:
+        handoff = prepare_handoff(
+            payload.destination,
+            payload.question,
+            payload.research_mode,
+            _session_id(payload.session_id),
+            matches,
+            evidence,
+            payload.assumptions,
+            payload.uncertainties,
+            payload.route_hint,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if payload.persist:
+        store.save_platform_handoff(handoff)
+    return {
+        "ok": bool(handoff.get("validation", {}).get("ok")),
+        "version": __version__,
+        "handoff": handoff,
+        "retrieval_diagnostics": diagnostics,
+    }
+
+
+@app.post("/v1/handoffs/validate", dependencies=[Depends(require_key)])
+def platform_handoff_validate(payload: PlatformHandoffValidateRequest) -> dict[str, Any]:
+    return {"version": __version__, **validate_handoff(payload.payload)}
+
+
+@app.get("/v1/handoffs/logs", dependencies=[Depends(require_key)])
+def platform_handoff_logs(limit: int = 50) -> dict[str, Any]:
+    return {
+        "ok": True,
+        "version": __version__,
+        "schema": HANDOFF_SCHEMA,
+        "summary": store.platform_handoff_summary(),
+        "handoffs": store.platform_handoffs(limit),
+    }
+
+
+@app.post("/v1/handoffs/artifacts/return", dependencies=[Depends(require_key)])
+def platform_artifact_return(payload: ArtifactReturnRequest) -> dict[str, Any]:
+    artifact = payload.model_dump(by_alias=True)
+    original = store.platform_handoff(payload.handoff_id)
+    if original is None:
+        raise HTTPException(status_code=404, detail="Original handoff was not found.")
+    validation = validate_artifact_return(artifact, original)
+    if not validation.get("ok"):
+        raise HTTPException(status_code=409, detail=validation)
+    artifact.setdefault("provenance", {})["research_librarian_handoff_fingerprint"] = (original.get("provenance") or {}).get("payload_fingerprint", "")
+    artifact["provenance"]["chain"] = list((original.get("provenance") or {}).get("chain", [])) + ["destination_artifact", "research_librarian_return"]
+    store.save_artifact_return(artifact, "accepted")
+    return {"ok": True, "version": __version__, "schema": ARTIFACT_SCHEMA, "validation": validation, "artifact": artifact}
+
+
+@app.get("/v1/handoffs/artifacts", dependencies=[Depends(require_key)])
+def platform_artifact_returns(limit: int = 50) -> dict[str, Any]:
+    return {
+        "ok": True,
+        "version": __version__,
+        "schema": ARTIFACT_SCHEMA,
+        "summary": store.platform_handoff_summary(),
+        "artifacts": store.artifact_returns(limit),
+    }
+
+
 @app.post("/v1/session/reset", dependencies=[Depends(require_key)])
 def reset_session(payload: SessionResetRequest) -> dict[str, Any]:
     session_id = _session_id(payload.session_id)
@@ -690,6 +807,24 @@ async def ask(payload: AskRequest) -> AskResponse:
         ]
     )
     _sessions[session_id] = _sessions[session_id][-settings.max_session_turns * 2 :]
+    capabilities = public_capabilities()
+    typed_handoffs = prepare_preview_handoffs(
+        payload.question,
+        research_mode,
+        session_id,
+        matches,
+        evidence,
+        payload.route_hint,
+    )
+    provenance = {
+        "schema": "sc-research-provenance/1.0",
+        "index_version": int(store.summary().get("index_version", 0)),
+        "index_checksum": str(store.summary().get("checksum", "")),
+        "source_record_ids": [item.id for item in matches],
+        "citation_labels": [item.citation_label for item in matches if item.citation_label],
+        "handoff_ids": [item.get("handoff_id", "") for item in typed_handoffs],
+        "chain": ["question", "hybrid_retrieval", "verified_answer", "typed_handoff_preview"],
+    }
 
     return AskResponse(
         answer=answer,
@@ -714,5 +849,8 @@ async def ask(payload: AskRequest) -> AskResponse:
         follow_up_prompts=_follow_up_prompts(research_mode, best, related),
         workspace=_workspace_summary(research_mode, matches, related, ai_used, gate),
         session_turns=len(_sessions[session_id]) // 2,
+        capabilities=capabilities,
+        typed_handoffs=typed_handoffs,
+        provenance=provenance,
         status=_status().model_dump(),
     )

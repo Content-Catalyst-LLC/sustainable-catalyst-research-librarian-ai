@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 6.5.1
+Stable tag: 6.6.0
 License: MIT
 
 A site-scoped public research workspace for Sustainable Catalyst with verified retrieval, citations, bounded follow-up continuity, durable indexing, and controlled exports.
@@ -12,7 +12,7 @@ A site-scoped public research workspace for Sustainable Catalyst with verified r
 
 Research Librarian AI retrieves Sustainable Catalyst publications and documents through exact-title priority, section-aware BM25 ranking, optional Gemini embeddings, calibrated reciprocal-rank fusion, and citation-verified synthesis. WordPress remains the canonical publishing and recovery source, while FastAPI provides a durable SQLite runtime index compatible with free Render infrastructure.
 
-v6.5.1 hardens the public workspace with keyboard-complete research modes, combobox/listbox title suggestions, live progress and result announcements, reduced-motion and forced-colors support, request caching and cancellation, staged rendering, a feedback dialog, and stronger mobile and theme compatibility.
+v6.6.0 adds versioned typed research handoffs, destination capability discovery, provenance-preserving artifact returns, and destination-specific payloads for Workbench, Decision Studio, Site Intelligence, Lab, and Feature Suggestions while preserving the accessible production workspace.
 
 == Shortcodes ==
 
@@ -35,8 +35,18 @@ v6.5.1 hardens the public workspace with keyboard-complete research modes, combo
 [sc_research_librarian_article_path_embed]
 [sc_research_librarian_article_map_summary]
 [sc_research_librarian_article_route_cards]
+[sc_research_librarian_platform_handoffs]
 
 == Changelog ==
+
+= 6.6.0 =
+* Adds common handoff, route, capability, and artifact-return contracts.
+* Adds typed payloads for Workbench, Decision Studio, Site Intelligence, Lab, and Feature Suggestions.
+* Adds capability discovery and hides unavailable destination actions.
+* Adds provenance fingerprints, evidence context, assumptions, uncertainty, and human-confirmation boundaries.
+* Adds backend and WordPress prepare, validate, ledger, export, and artifact-return interfaces.
+* Adds additive SQLite schema version 7 handoff and artifact ledgers.
+* Preserves v6.5.1 accessibility, performance, black-and-green prompt, and light evidence/source cards.
 
 = 6.5.1 =
 * Adds roving-tabindex and arrow-key navigation for research modes.

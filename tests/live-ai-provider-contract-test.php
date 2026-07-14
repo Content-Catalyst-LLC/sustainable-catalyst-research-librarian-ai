@@ -22,7 +22,7 @@ $assert = static function ( $name, $condition, $detail = '' ) use ( &$checks, &$
     }
 };
 
-$assert( 'plugin_version_651', 1 === preg_match( "/const\s+VERSION\s*=\s*'6\.5\.1';/", $main ) );
+$assert( 'plugin_version_660', 1 === preg_match( "/const\s+VERSION\s*=\s*'6\.6\.0';/", $main ) );
 $assert( 'public_ai_status_endpoint', false !== strpos( $main, "'/ai/status'" ) );
 $assert( 'admin_ai_test_endpoint', false !== strpos( $main, "'/ai/test'" ) );
 $assert( 'admin_ai_models_endpoint', false !== strpos( $main, "'/ai/models'" ) );
@@ -60,7 +60,7 @@ foreach ( (array) ( $countries['countries'] ?? array() ) as $country ) {
 $assert( 'pakistan_registry_record', is_array( $pakistan ) && 'Pakistan' === ( $pakistan['name'] ?? '' ) && 'PK' === ( $pakistan['alpha2'] ?? '' ) );
 
 $result = array(
-    'version' => '6.5.1',
+    'version' => '6.6.0',
     'checks' => $checks,
     'passed' => count( $checks ) - count( $failures ),
     'failed' => count( $failures ),

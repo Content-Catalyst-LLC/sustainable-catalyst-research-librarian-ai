@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Sustainable Catalyst Research Librarian AI
  * Plugin URI: https://sustainablecatalyst.com/platform/research-librarian/
- * Description: Production public research workspace for Sustainable Catalyst with site-scoped retrieval, verified citations, guided paths, bounded follow-up continuity, controlled exports, typed platform handoffs, and deterministic fallback.
- * Version: 6.5.1
+ * Description: Connected platform intelligence for Sustainable Catalyst with verified retrieval, versioned typed handoffs, capability discovery, provenance-preserving artifact returns, and deterministic fallback.
+ * Version: 6.6.0
  * Author: Content Catalyst LLC / Tariq Ahmad
  * Author URI: https://sustainablecatalyst.com/
  * License: MIT
@@ -251,7 +251,7 @@ if ( ! function_exists( 'sc_rl6_render_legacy_class_notice' ) ) {
             return;
         }
         $status = sc_rl6_legacy_class_status();
-        echo '<div class="notice notice-warning"><p><strong>Research Librarian AI v6.5.1 compatibility mode:</strong> A legacy Research Librarian class was already loaded before the current plugin. The collision-safe v6 bootstrap is active, so settings and shortcodes remain available.</p>';
+        echo '<div class="notice notice-warning"><p><strong>Research Librarian AI v6.6.0 compatibility mode:</strong> A legacy Research Librarian class was already loaded before the current plugin. The collision-safe v6 bootstrap is active, so settings and shortcodes remain available.</p>';
         if ( ! empty( $status['file'] ) ) {
             echo '<p>Legacy class file: <code>' . esc_html( $status['file'] ) . '</code>';
             if ( ! empty( $status['version'] ) ) {
@@ -259,7 +259,7 @@ if ( ! function_exists( 'sc_rl6_render_legacy_class_notice' ) ) {
             }
             echo '</p>';
         }
-        echo '<p>Remove the legacy duplicate, network plugin, or must-use copy after confirming the active v6.5.1 plugin is working.</p></div>';
+        echo '<p>Remove the legacy duplicate, network plugin, or must-use copy after confirming the active v6.6.0 plugin is working.</p></div>';
     }
 }
 add_action( 'admin_notices', 'sc_rl6_render_legacy_class_notice' );
@@ -274,7 +274,7 @@ final class SC_RL6_Core {
     const MAINTENANCE_HOOK = 'sc_rl_ai_index_maintenance_event';
     const AI_STATUS_OPTION = 'sc_rl_ai_live_provider_status';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const VERSION        = '6.5.1';
+    const VERSION        = '6.6.0';
     const RATE_LIMIT_REGISTRY_OPTION = 'sc_rl_ai_rate_limit_registry';
 
     private static $instance = null;
@@ -780,6 +780,10 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         $routes_endpoint = rest_url( self::REST_NAMESPACE . '/routes' );
         $note_endpoint = rest_url( self::REST_NAMESPACE . '/route-note' );
         $handoff_endpoint = rest_url( self::REST_NAMESPACE . '/handoff/prepare' );
+        $platform_capabilities_endpoint = rest_url( self::REST_NAMESPACE . '/platform/capabilities' );
+        $platform_handoff_endpoint = rest_url( self::REST_NAMESPACE . '/platform/handoff/prepare' );
+        $platform_handoff_validate_endpoint = rest_url( self::REST_NAMESPACE . '/platform/handoff/validate' );
+        $artifact_return_endpoint = rest_url( self::REST_NAMESPACE . '/platform/artifact/return' );
         $deep_link_endpoint = rest_url( 'sc-research-librarian/v1/handoff/deep-link' );
         $session_endpoint = rest_url( self::REST_NAMESPACE . '/session/save' );
         $feedback_endpoint = rest_url( self::REST_NAMESPACE . '/feedback/submit' );
@@ -793,7 +797,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
 
         ob_start();
         ?>
-        <section id="<?php echo esc_attr( $root_id ); ?>" class="sc-rl-ai sc-rl-ai--workspace<?php echo $compact ? ' sc-rl-ai--compact' : ''; ?>" aria-labelledby="<?php echo esc_attr( $root_id ); ?>-title" data-workspace-version="1.1" data-endpoint="<?php echo esc_url( $endpoint ); ?>" data-routes-endpoint="<?php echo esc_url( $routes_endpoint ); ?>" data-note-endpoint="<?php echo esc_url( $note_endpoint ); ?>" data-handoff-endpoint="<?php echo esc_url( $handoff_endpoint ); ?>" data-deep-link-endpoint="<?php echo esc_url( $deep_link_endpoint ); ?>" data-session-endpoint="<?php echo esc_url( $session_endpoint ); ?>" data-feedback-endpoint="<?php echo esc_url( $feedback_endpoint ); ?>" data-feedback-bridge-endpoint="<?php echo esc_url( $feedback_bridge_endpoint ); ?>" data-ux-endpoint="<?php echo esc_url( $ux_endpoint ); ?>" data-ai-status-endpoint="<?php echo esc_url( $ai_status_endpoint ); ?>" data-suggest-endpoint="<?php echo esc_url( $suggest_endpoint ); ?>" data-nonce-endpoint="<?php echo esc_url( $nonce_endpoint ); ?>" data-nonce="<?php echo esc_attr( $nonce ); ?>">
+        <section id="<?php echo esc_attr( $root_id ); ?>" class="sc-rl-ai sc-rl-ai--workspace<?php echo $compact ? ' sc-rl-ai--compact' : ''; ?>" aria-labelledby="<?php echo esc_attr( $root_id ); ?>-title" data-workspace-version="1.2" data-endpoint="<?php echo esc_url( $endpoint ); ?>" data-routes-endpoint="<?php echo esc_url( $routes_endpoint ); ?>" data-note-endpoint="<?php echo esc_url( $note_endpoint ); ?>" data-handoff-endpoint="<?php echo esc_url( $handoff_endpoint ); ?>" data-platform-capabilities-endpoint="<?php echo esc_url( $platform_capabilities_endpoint ); ?>" data-platform-handoff-endpoint="<?php echo esc_url( $platform_handoff_endpoint ); ?>" data-platform-handoff-validate-endpoint="<?php echo esc_url( $platform_handoff_validate_endpoint ); ?>" data-artifact-return-endpoint="<?php echo esc_url( $artifact_return_endpoint ); ?>" data-deep-link-endpoint="<?php echo esc_url( $deep_link_endpoint ); ?>" data-session-endpoint="<?php echo esc_url( $session_endpoint ); ?>" data-feedback-endpoint="<?php echo esc_url( $feedback_endpoint ); ?>" data-feedback-bridge-endpoint="<?php echo esc_url( $feedback_bridge_endpoint ); ?>" data-ux-endpoint="<?php echo esc_url( $ux_endpoint ); ?>" data-ai-status-endpoint="<?php echo esc_url( $ai_status_endpoint ); ?>" data-suggest-endpoint="<?php echo esc_url( $suggest_endpoint ); ?>" data-nonce-endpoint="<?php echo esc_url( $nonce_endpoint ); ?>" data-nonce="<?php echo esc_attr( $nonce ); ?>">
             <div class="sc-rl-ai__shell">
                 <div class="sc-rl-ai__card sc-rl-ai__ask-card">
                     <p class="sc-rl-ai__eyebrow">AI-Powered Research Guidance</p>
@@ -833,7 +837,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                             <button type="button" class="sc-rl-ai__button sc-rl-ai__button--secondary" data-sc-rl-download>Download JSON</button>
                             <button type="button" class="sc-rl-ai__button sc-rl-ai__button--secondary" data-sc-rl-research-note>Research note</button>
                             <button type="button" class="sc-rl-ai__button sc-rl-ai__button--secondary" data-sc-rl-print>Print workspace</button>
-                            <button type="button" class="sc-rl-ai__button sc-rl-ai__button--secondary" data-sc-rl-handoff-download>Download handoff</button>
+                            <button type="button" class="sc-rl-ai__button sc-rl-ai__button--secondary" data-sc-rl-handoff-download>Download typed handoff</button>
                             <button type="button" class="sc-rl-ai__button sc-rl-ai__button--secondary" data-sc-rl-save-session>Save session</button>
                             <button type="button" class="sc-rl-ai__button sc-rl-ai__button--secondary" data-sc-rl-feedback-helpful>This helped</button>
                             <button type="button" class="sc-rl-ai__button sc-rl-ai__button--secondary" data-sc-rl-feedback-issue>Report issue</button>
@@ -9731,6 +9735,8 @@ require_once plugin_dir_path( __FILE__ ) . 'includes/class-sc-rl-v600-integrated
 SC_RL6_V600_Integrated_Research_Guidance_Platform::init();
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-sc-rl-v630-durable-index.php';
 SC_RL6_V630_Durable_Index::init();
+require_once plugin_dir_path( __FILE__ ) . 'includes/class-sc-rl-v660-platform-handoffs.php';
+SC_RL6_V660_Platform_Handoffs::init();
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-sc-rl-v610-live-ai-admin.php';
 SC_RL6_V610_Live_AI_Admin::init();
 
@@ -9751,6 +9757,7 @@ SC_RL6_V410_Recovery::init();
 register_activation_hook( __FILE__, array( 'SC_RL6_Core', 'activate' ) );
 register_activation_hook( __FILE__, array( 'SC_RL6_V550_Stable_Operations', 'activate' ) );
 register_activation_hook( __FILE__, array( 'SC_RL6_V630_Durable_Index', 'activate' ) );
+register_activation_hook( __FILE__, array( 'SC_RL6_V660_Platform_Handoffs', 'activate' ) );
 register_deactivation_hook( __FILE__, array( 'SC_RL6_Core', 'deactivate' ) );
 register_deactivation_hook( __FILE__, array( 'SC_RL6_V550_Stable_Operations', 'deactivate' ) );
 register_deactivation_hook( __FILE__, array( 'SC_RL6_V630_Durable_Index', 'deactivate' ) );

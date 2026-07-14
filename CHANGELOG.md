@@ -1,3 +1,15 @@
+## 6.6.0 — Platform Intelligence and Typed Research Handoffs
+
+- Added versioned common handoff, route, capability, and artifact-return contracts.
+- Added typed destination payloads for Workbench, Decision Studio, Site Intelligence, Lab, and Feature Suggestions.
+- Added capability discovery and removal of unavailable destination actions.
+- Added provenance fingerprints, verified source context, assumptions, uncertainty, and explicit human-confirmation boundaries.
+- Added authenticated backend prepare, validate, log, artifact-return, and artifact-list endpoints.
+- Added a nonce-protected WordPress bridge, administrator destination configuration, and handoff export.
+- Added SQLite schema version 7 handoff and artifact-return ledgers.
+- Advanced the public workspace response to `sc-research-librarian-public-workspace/1.2`.
+- Preserved v6.5.1 accessibility, performance, terminal prompt, light evidence cards, and all retrieval/recovery behavior.
+
 ## 6.5.1 — Accessibility, Performance, and Interface Reliability
 
 - Added keyboard-complete research-mode radio behavior and roving tabindex.

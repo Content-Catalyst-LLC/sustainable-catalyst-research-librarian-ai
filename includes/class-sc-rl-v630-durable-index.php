@@ -1,6 +1,6 @@
 <?php
 /**
- * Research Librarian AI v6.5.1 — Accessibility, Performance, and Interface Reliability.
+ * Research Librarian AI v6.6.0 — Platform Intelligence and Typed Research Handoffs.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class SC_RL6_V630_Durable_Index {
-    const VERSION = '6.5.1';
+    const VERSION = '6.6.0';
     const OPTION_NAME = 'sc_rl_v620_python_options';
     const STATUS_OPTION = 'sc_rl_v620_python_status';
     const SYNC_HOOK = 'sc_rl_v620_python_sync_event';
@@ -575,7 +575,7 @@ final class SC_RL6_V630_Durable_Index {
         $recovery_next = wp_next_scheduled( self::RECOVERY_HOOK );
         $retry_next = wp_next_scheduled( self::SYNC_RETRY_HOOK );
         return array(
-            'schema' => 'sc-research-librarian-sync-recovery-export/6.5.1',
+            'schema' => 'sc-research-librarian-sync-recovery-export/6.6.0',
             'version' => self::VERSION,
             'site' => home_url( '/' ),
             'generated_utc' => gmdate( 'c' ),
@@ -808,10 +808,13 @@ final class SC_RL6_V630_Durable_Index {
         $grounding['workspace'] = isset( $backend['workspace'] ) && is_array( $backend['workspace'] ) ? self::sanitize_diagnostic_map( $backend['workspace'] ) : array();
         $grounding['session_turns'] = absint( isset( $backend['session_turns'] ) ? $backend['session_turns'] : 0 );
         $grounding['evidence_gate'] = isset( $backend['evidence_gate'] ) && is_array( $backend['evidence_gate'] ) ? self::sanitize_diagnostic_map( $backend['evidence_gate'] ) : array();
+        $grounding['capabilities'] = isset( $backend['capabilities'] ) && is_array( $backend['capabilities'] ) ? self::sanitize_diagnostic_map( $backend['capabilities'] ) : array();
+        $grounding['typed_handoffs'] = isset( $backend['typed_handoffs'] ) && is_array( $backend['typed_handoffs'] ) ? self::sanitize_diagnostic_map( $backend['typed_handoffs'] ) : array();
+        $grounding['provenance'] = isset( $backend['provenance'] ) && is_array( $backend['provenance'] ) ? self::sanitize_diagnostic_map( $backend['provenance'] ) : array();
         $grounding['reason_codes'] = array_values( array_unique( array_merge( $grounding['reason_codes'], array( 'bm25-section-retrieval', 'citation-verification' ), ! empty( $grounding['retrieval_diagnostics']['semantic_used'] ) ? array( 'semantic-retrieval' ) : array() ) ) );
 
         $note = array(
-            'schema' => 'sc-research-librarian-route-note/6.5.1',
+            'schema' => 'sc-research-librarian-route-note/6.6.0',
             'created_at_utc' => gmdate( 'c' ),
             'question' => sanitize_textarea_field( $question ),
             'source' => sanitize_key( isset( $backend['source'] ) ? $backend['source'] : 'python-backend' ),
@@ -826,7 +829,19 @@ final class SC_RL6_V630_Durable_Index {
             'citation_verification' => $grounding['citation_verification'],
             'retrieval_diagnostics' => $grounding['retrieval_diagnostics'],
             'evidence_gate' => $grounding['evidence_gate'],
-            'handoffs' => array(),
+            'capabilities' => $grounding['capabilities'],
+            'typed_handoffs' => $grounding['typed_handoffs'],
+            'provenance' => $grounding['provenance'],
+            'handoffs' => array_values( array_map( function( $handoff ) {
+                return array(
+                    'id' => sanitize_text_field( isset( $handoff['handoff_id'] ) ? $handoff['handoff_id'] : '' ),
+                    'label' => sanitize_text_field( isset( $handoff['route']['destination_label'] ) ? $handoff['route']['destination_label'] : ( isset( $handoff['destination'] ) ? $handoff['destination'] : 'Platform handoff' ) ),
+                    'url' => esc_url_raw( isset( $handoff['route']['destination_url'] ) ? $handoff['route']['destination_url'] : '' ),
+                    'reason' => sanitize_text_field( isset( $handoff['route']['reason'] ) ? $handoff['route']['reason'] : 'Typed platform handoff available.' ),
+                    'target' => sanitize_key( isset( $handoff['destination'] ) ? $handoff['destination'] : '' ),
+                );
+            }, $grounding['typed_handoffs'] ) ),
+            'handoff_payload' => ! empty( $grounding['typed_handoffs'][0] ) ? $grounding['typed_handoffs'][0] : array(),
             'next_step' => isset( $route['next_step'] ) ? $route['next_step'] : 'Open the best match and continue through the related titles.',
             'boundaries' => array(
                 'Use only verified Sustainable Catalyst links and records shown in the response.',
@@ -843,6 +858,9 @@ final class SC_RL6_V630_Durable_Index {
                 'follow_up_prompts' => $grounding['follow_up_prompts'],
                 'workspace' => $grounding['workspace'],
                 'session_turns' => $grounding['session_turns'],
+                'capabilities' => $grounding['capabilities'],
+                'typed_handoffs' => $grounding['typed_handoffs'],
+                'provenance' => $grounding['provenance'],
             ),
         );
         return array(
@@ -868,6 +886,9 @@ final class SC_RL6_V630_Durable_Index {
             'follow_up_prompts' => $grounding['follow_up_prompts'],
             'workspace' => $grounding['workspace'],
             'session_turns' => $grounding['session_turns'],
+            'capabilities' => $grounding['capabilities'],
+            'typed_handoffs' => $grounding['typed_handoffs'],
+            'provenance' => $grounding['provenance'],
             'clarification' => sanitize_textarea_field( isset( $backend['clarification'] ) ? $backend['clarification'] : '' ),
             'endpoint_status' => self::endpoint_status_from_backend( isset( $backend['status'] ) && is_array( $backend['status'] ) ? $backend['status'] : array(), ! empty( $backend['ai_used'] ) ),
         );
@@ -1207,7 +1228,7 @@ final class SC_RL6_V630_Durable_Index {
         $deleted_ids = array_values( array_diff( array_keys( $ledger['records'] ), array_keys( $current_ids ) ) );
         $report = array_merge( array(
             'version' => self::VERSION,
-            'schema' => 'sc-rl-sync-report/6.5.1',
+            'schema' => 'sc-rl-sync-report/6.6.0',
             'job_id' => $job_id,
             'state' => 'running',
             'mode' => 'transactional-replace',
