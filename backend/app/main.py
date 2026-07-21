@@ -12,7 +12,7 @@ import time
 from typing import Any
 import uuid
 
-from fastapi import Depends, FastAPI, Header, HTTPException, status
+from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 
@@ -154,7 +154,7 @@ def _workspace_summary(mode: str, matches: list[RetrievedSource], related: list[
         "accessibility_profile": "wcag-focused-v6.5.1",
         "rendering_profile": "staged-v6.5.1",
         "handoff_profile": "cross-product-reliability-v6.6.1",
-        "governance_profile": store.governance_policy().get("profile", "public-trust-v7.0.5"),
+        "governance_profile": store.governance_policy().get("profile", "public-trust-v7.0.6"),
         "available_destinations": list(available_capabilities().keys()),
         "connected_platform": store.connected_platform_summary(),
         "generation_boundary": adapter_status(),
@@ -533,6 +533,7 @@ def sync_knowledge(payload: SyncRequest) -> SyncResponse:
         batch_count=payload.batch_count,
         deleted_ids=payload.deleted_ids,
         reason=payload.reason,
+        defer_commit=payload.defer_commit,
     )
     summary = result.summary
     return SyncResponse(
@@ -571,6 +572,22 @@ def sync_job_status(job_id: str) -> dict[str, Any]:
 @app.delete("/v1/knowledge/sync/jobs/{job_id}", dependencies=[Depends(require_key)])
 def reset_sync_job(job_id: str) -> dict[str, Any]:
     return store.reset_sync_job(job_id)
+
+
+@app.post("/v1/knowledge/sync/jobs/{job_id}/commit", dependencies=[Depends(require_key)])
+def queue_sync_job_commit(job_id: str, background_tasks: BackgroundTasks) -> dict[str, Any]:
+    """Queue activation of a fully staged replacement and return immediately."""
+    try:
+        queued = store.queue_sync_commit(job_id, "wordpress-async-backend-commit-v7.0.6")
+    except ValueError as exc:
+        message = str(exc)
+        code = status.HTTP_404_NOT_FOUND if "does not exist" in message else status.HTTP_409_CONFLICT
+        raise HTTPException(status_code=code, detail=message) from exc
+    if queued.get("committed"):
+        return {"ok": True, "version": __version__, **queued}
+    if queued.get("queued"):
+        background_tasks.add_task(store.commit_sync_job, job_id, "wordpress-async-backend-commit-v7.0.6")
+    return {"ok": True, "version": __version__, **queued}
 
 
 @app.get("/v1/knowledge/summary", response_model=StatusResponse, dependencies=[Depends(require_key)])
@@ -625,7 +642,7 @@ async def test_embeddings_endpoint() -> dict[str, Any]:
     if not embeddings_configured():
         raise HTTPException(status_code=503, detail="Gemini embeddings are not configured or semantic retrieval is disabled.")
     try:
-        vector = await generate_embedding("Research Librarian v7.0.5 embedding connection test", "RETRIEVAL_DOCUMENT")
+        vector = await generate_embedding("Research Librarian v7.0.6 embedding connection test", "RETRIEVAL_DOCUMENT")
     except RuntimeError as exc:
         raise HTTPException(status_code=502, detail=f"Gemini embedding test failed: {str(exc)[:900]}") from exc
     return {

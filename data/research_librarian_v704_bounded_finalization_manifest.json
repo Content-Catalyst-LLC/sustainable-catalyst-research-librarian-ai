@@ -1,6 +1,6 @@
 {
   "name": "Research Librarian AI",
-  "version": "7.0.5",
+  "version": "7.0.6",
   "release": "Bounded Discovery Finalization and Index Activation",
   "features": [
     "legacy migration skipped by default",

@@ -1,6 +1,6 @@
 {
   "schema": "sc-research-librarian-v705-release/1.0",
-  "version": "7.0.5",
+  "version": "7.0.6",
   "title": "Transaction Reconciliation and Public Interface Repair",
   "transaction_recovery": {
     "status_endpoint": "/v1/knowledge/sync/jobs/{job_id}",

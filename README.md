@@ -1,23 +1,19 @@
-# Sustainable Catalyst Research Librarian AI v7.0.5
+# Sustainable Catalyst Research Librarian AI v7.0.6
 
 A site-scoped connected research intelligence platform with transaction reconciliation, resumable knowledge-index recovery, and a visible public research workspace. See `docs/V705_TRANSACTION_RECONCILIATION_PUBLIC_INTERFACE.md`.
 
-## v7.0.5 highlights
+## v7.0.6 highlights
 
-- Repairs v7.0.4 final-batch failures without rediscovering the source library
-- Authenticated backend transaction status with received and missing batch diagnostics
-- Durable local staging replay with bounded batches and two-attempt recovery limit
-- **Repair and Resume Commit** action for stopped production jobs
-- Visible single-column public research workspace with eight readable mode cards
-- Light question surface, prominent Start Research action, and secondary tools behind progressive disclosure
-- Visitor-safe verified-fallback status language instead of provider-oriented failure copy
-- Broader discovery of published document-style custom post types from v7.0.2
-- Persistent, private-by-default research projects
-- Multi-step investigations and project event history
-- Stable `sc-connected-research-api/1.0` resource contract
-- Provider-independent generation adapter with deterministic fallback
-- Existing hybrid retrieval, verified citations, typed handoffs, governance, and portable recovery retained
-- Additive SQLite schema version 10
+- Stages all 24 synchronization batches before index activation begins
+- Queues backend activation through a short authenticated endpoint
+- Runs the heavy SQLite replacement commit outside the WordPress request
+- Polls durable commit status instead of waiting on a proxy-sensitive final response
+- Reconciles empty 5xx and transport failures before declaring the rebuild failed
+- Detects and safely retries stale activation after a Render restart
+- Shows activation phase, progress, activated records, and retrieval chunks in the administration screen
+- Retains the v7.0.5 visible public workspace and transaction-replay recovery
+- Preserves the previous committed index until the replacement verifies
+- Requires no paid vector database or persistent Render disk
 
 ## Architecture
 

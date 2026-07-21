@@ -1,6 +1,6 @@
 {
   "schema": "sc-connected-research-platform-manifest/1.0",
-  "version": "7.0.5",
+  "version": "7.0.6",
   "sqlite_schema": 10,
   "workspace_schema": "sc-research-librarian-public-workspace/2.0",
   "api_schema": "sc-connected-research-api/1.0",

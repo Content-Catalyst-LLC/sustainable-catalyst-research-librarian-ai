@@ -1,0 +1,26 @@
+{
+  "schema": "sc-research-librarian-release-manifest/1.0",
+  "version": "7.0.6",
+  "title": "Asynchronous Backend Commit and Ambiguous-Failure Recovery",
+  "transaction_activation": {
+    "deferred_final_commit": true,
+    "background_commit_endpoint": "/v1/knowledge/sync/jobs/{job_id}/commit",
+    "status_polling": true,
+    "idempotent_requeue": true,
+    "stalled_commit_detection_seconds": 300,
+    "previous_index_retained_until_commit": true
+  },
+  "ambiguous_failure_recovery": {
+    "final_transport_reconciliation": true,
+    "empty_5xx_detail_preserved": true,
+    "missing_batch_replay_retained": true,
+    "wordpress_staging_file_retained": true
+  },
+  "admin_interface": {
+    "activation_phase": true,
+    "activation_progress": true,
+    "activated_record_count": true,
+    "retrieval_chunk_count": true
+  },
+  "paid_infrastructure_required": false
+}

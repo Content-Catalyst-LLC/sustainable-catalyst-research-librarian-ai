@@ -1,5 +1,16 @@
 # Changelog
 
+## 7.0.6 — Asynchronous Backend Commit and Ambiguous-Failure Recovery
+
+- Stages all source batches without activating the replacement index inside the final WordPress request.
+- Adds a short authenticated commit-queue endpoint and durable backend commit states.
+- Runs snapshot, record activation, retrieval-chunk rebuilding, checksum generation, and SQLite commit outside the WordPress HTTP request.
+- Polls backend transaction status until activation completes.
+- Reconciles ambiguous final-batch transport failures before marking a rebuild failed.
+- Detects stale backend commit workers and safely requeues idempotent activation.
+- Shows backend activation phase, progress, activated records, and retrieval chunks in the rebuild interface.
+- Preserves the previous active index and the complete WordPress staging file until verification succeeds.
+
 ## 7.0.5 — Transaction Reconciliation and Public Interface Repair
 
 - Adds authenticated backend transaction-status and incomplete-transaction reset endpoints.

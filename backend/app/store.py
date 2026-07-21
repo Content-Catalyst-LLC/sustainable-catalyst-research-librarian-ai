@@ -149,7 +149,14 @@ class KnowledgeStore:
                     updated_utc TEXT NOT NULL,
                     completed_utc TEXT NOT NULL DEFAULT '',
                     result TEXT NOT NULL DEFAULT '{}',
-                    error TEXT NOT NULL DEFAULT ''
+                    error TEXT NOT NULL DEFAULT '',
+                    commit_phase TEXT NOT NULL DEFAULT '',
+                    commit_progress INTEGER NOT NULL DEFAULT 0,
+                    commit_started_utc TEXT NOT NULL DEFAULT '',
+                    commit_heartbeat_utc TEXT NOT NULL DEFAULT '',
+                    activation_records INTEGER NOT NULL DEFAULT 0,
+                    activation_total INTEGER NOT NULL DEFAULT 0,
+                    indexed_chunks INTEGER NOT NULL DEFAULT 0
                 );
                 CREATE TABLE IF NOT EXISTS staging_records (
                     job_id TEXT NOT NULL,
@@ -356,6 +363,13 @@ class KnowledgeStore:
                 """
             )
             self._ensure_column(connection, "sync_jobs", "rejected_records", "INTEGER NOT NULL DEFAULT 0")
+            self._ensure_column(connection, "sync_jobs", "commit_phase", "TEXT NOT NULL DEFAULT ''")
+            self._ensure_column(connection, "sync_jobs", "commit_progress", "INTEGER NOT NULL DEFAULT 0")
+            self._ensure_column(connection, "sync_jobs", "commit_started_utc", "TEXT NOT NULL DEFAULT ''")
+            self._ensure_column(connection, "sync_jobs", "commit_heartbeat_utc", "TEXT NOT NULL DEFAULT ''")
+            self._ensure_column(connection, "sync_jobs", "activation_records", "INTEGER NOT NULL DEFAULT 0")
+            self._ensure_column(connection, "sync_jobs", "activation_total", "INTEGER NOT NULL DEFAULT 0")
+            self._ensure_column(connection, "sync_jobs", "indexed_chunks", "INTEGER NOT NULL DEFAULT 0")
             self._ensure_column(connection, "platform_handoffs", "compatibility_state", "TEXT NOT NULL DEFAULT ''")
             self._ensure_column(connection, "platform_handoffs", "retry_attempt", "INTEGER NOT NULL DEFAULT 0")
             self._ensure_column(connection, "platform_handoffs", "token_expires_utc", "TEXT NOT NULL DEFAULT ''")
@@ -696,6 +710,13 @@ class KnowledgeStore:
                 "started_utc": "",
                 "updated_utc": "",
                 "completed_utc": "",
+                "commit_phase": "",
+                "commit_progress": 0,
+                "commit_started_utc": "",
+                "commit_heartbeat_utc": "",
+                "activation_records": 0,
+                "activation_total": 0,
+                "indexed_chunks": 0,
                 "error": "A synchronization job ID is required.",
             }
         with self._lock, self._connection() as connection:
@@ -716,6 +737,13 @@ class KnowledgeStore:
                     "started_utc": "",
                     "updated_utc": "",
                     "completed_utc": "",
+                    "commit_phase": "",
+                    "commit_progress": 0,
+                    "commit_started_utc": "",
+                    "commit_heartbeat_utc": "",
+                    "activation_records": 0,
+                    "activation_total": 0,
+                    "indexed_chunks": 0,
                     "error": "",
                 }
             try:
@@ -725,6 +753,14 @@ class KnowledgeStore:
             batch_count = max(0, int(row["batch_count"] or 0))
             missing = [value for value in range(1, batch_count + 1) if value not in received]
             state = str(row["state"] or "staging")
+            heartbeat = str(row["commit_heartbeat_utc"] or row["updated_utc"] or "")
+            if state in {"commit-queued", "committing"} and heartbeat:
+                try:
+                    heartbeat_dt = datetime.fromisoformat(heartbeat.replace("Z", "+00:00"))
+                    if (datetime.now(timezone.utc) - heartbeat_dt).total_seconds() >= 300:
+                        state = "commit-stalled"
+                except ValueError:
+                    pass
             return {
                 "ok": True,
                 "exists": True,
@@ -741,8 +777,113 @@ class KnowledgeStore:
                 "started_utc": str(row["started_utc"] or ""),
                 "updated_utc": str(row["updated_utc"] or ""),
                 "completed_utc": str(row["completed_utc"] or ""),
+                "commit_phase": str(row["commit_phase"] or ""),
+                "commit_progress": int(row["commit_progress"] or 0),
+                "commit_started_utc": str(row["commit_started_utc"] or ""),
+                "commit_heartbeat_utc": str(row["commit_heartbeat_utc"] or ""),
+                "activation_records": int(row["activation_records"] or 0),
+                "activation_total": int(row["activation_total"] or 0),
+                "indexed_chunks": int(row["indexed_chunks"] or 0),
                 "error": str(row["error"] or ""),
             }
+
+    def queue_sync_commit(self, job_id: str, reason: str = "wordpress-async-commit") -> dict[str, Any]:
+        """Mark a fully staged transaction for asynchronous activation.
+
+        This operation is idempotent. A fresh request returns immediately, while
+        the API schedules ``commit_sync_job`` outside the HTTP response path.
+        """
+        job_id = str(job_id or "").strip()
+        if not job_id:
+            raise ValueError("A synchronization job ID is required.")
+        now = utc_now()
+        with self._lock, self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                row = connection.execute("SELECT * FROM sync_jobs WHERE job_id=?", (job_id,)).fetchone()
+                if row is None:
+                    raise ValueError("The synchronization transaction does not exist.")
+                state = str(row["state"] or "")
+                if state in {"completed", "completed-with-rejections"}:
+                    connection.commit()
+                    return {**self.sync_job_status(job_id), "queued": False, "reason": "already-committed"}
+                try:
+                    received = {int(value) for value in json.loads(str(row["received_batches"] or "[]"))}
+                except (TypeError, ValueError, json.JSONDecodeError):
+                    received = set()
+                batch_count = max(0, int(row["batch_count"] or 0))
+                missing = [value for value in range(1, batch_count + 1) if value not in received]
+                if missing:
+                    raise ValueError("The transaction is missing staged batch(es): " + ", ".join(str(value) for value in missing))
+                # Do not enqueue a duplicate worker while a recent commit is active.
+                heartbeat = str(row["commit_heartbeat_utc"] or row["updated_utc"] or "")
+                heartbeat_dt = None
+                try:
+                    heartbeat_dt = datetime.fromisoformat(heartbeat.replace("Z", "+00:00")) if heartbeat else None
+                except ValueError:
+                    heartbeat_dt = None
+                recent = heartbeat_dt is not None and (datetime.now(timezone.utc) - heartbeat_dt).total_seconds() < 300
+                if state in {"commit-queued", "committing"} and recent:
+                    connection.commit()
+                    return {**self.sync_job_status(job_id), "queued": False, "reason": "already-running"}
+                connection.execute(
+                    "UPDATE sync_jobs SET state='commit-queued',commit_phase='queued',commit_progress=0,commit_started_utc=CASE WHEN commit_started_utc='' THEN ? ELSE commit_started_utc END,commit_heartbeat_utc=?,activation_records=0,activation_total=staged_records,indexed_chunks=0,updated_utc=?,error='' WHERE job_id=?",
+                    (now, now, now, job_id),
+                )
+                connection.commit()
+            except Exception:
+                connection.rollback()
+                raise
+        return {**self.sync_job_status(job_id), "queued": True, "reason": reason}
+
+    def commit_sync_job(self, job_id: str, reason: str = "wordpress-async-commit") -> dict[str, Any]:
+        """Activate one fully staged transaction outside the caller's HTTP request."""
+        job_id = str(job_id or "").strip()
+        if not job_id:
+            raise ValueError("A synchronization job ID is required.")
+        now = utc_now()
+        with self._lock, self._connection() as connection:
+            row = connection.execute("SELECT * FROM sync_jobs WHERE job_id=?", (job_id,)).fetchone()
+            if row is None:
+                raise ValueError("The synchronization transaction does not exist.")
+            state = str(row["state"] or "")
+            if state in {"completed", "completed-with-rejections"}:
+                return self.sync_job_status(job_id)
+            try:
+                received = {int(value) for value in json.loads(str(row["received_batches"] or "[]"))}
+            except (TypeError, ValueError, json.JSONDecodeError):
+                received = set()
+            batch_count = max(1, int(row["batch_count"] or 1))
+            missing = [value for value in range(1, batch_count + 1) if value not in received]
+            if missing:
+                raise ValueError("The transaction is missing staged batch(es): " + ", ".join(str(value) for value in missing))
+            mode = str(row["mode"] or "replace")
+            source_site = str(row["source_site"] or "")
+            connection.execute(
+                "UPDATE sync_jobs SET state='committing',commit_phase='activating',commit_progress=10,commit_started_utc=CASE WHEN commit_started_utc='' THEN ? ELSE commit_started_utc END,commit_heartbeat_utc=?,activation_total=staged_records,updated_utc=?,error='' WHERE job_id=?",
+                (now, now, now, job_id),
+            )
+        try:
+            result = self.sync(
+                records=[],
+                mode=mode,
+                source_site=source_site,
+                job_id=job_id,
+                batch_index=batch_count,
+                batch_count=batch_count,
+                deleted_ids=[],
+                reason=reason,
+                defer_commit=False,
+            )
+            return {**self.sync_job_status(job_id), "result_committed": result.committed}
+        except Exception as exc:
+            with self._lock, self._connection() as connection:
+                failed_at = utc_now()
+                connection.execute(
+                    "UPDATE sync_jobs SET state='failed',commit_phase='failed',commit_heartbeat_utc=?,updated_utc=?,error=? WHERE job_id=?",
+                    (failed_at, failed_at, str(exc)[:1000], job_id),
+                )
+            return self.sync_job_status(job_id)
 
     def reset_sync_job(self, job_id: str) -> dict[str, Any]:
         """Remove an incomplete transaction so WordPress can replay its durable staging file."""
@@ -776,6 +917,7 @@ class KnowledgeStore:
         batch_count: int = 1,
         deleted_ids: Iterable[str] | None = None,
         reason: str = "wordpress-sync",
+        defer_commit: bool = False,
     ) -> SyncResult:
         raw_incoming = list(records)
         valid_records: list[KnowledgeRecord] = []
@@ -833,7 +975,7 @@ class KnowledgeStore:
                         connection.execute("DELETE FROM sync_rejections WHERE job_id=?", (job_id,))
                         received_batches = set()
                         connection.execute(
-                            "UPDATE sync_jobs SET state='staging',received_batches='[]',staged_records=0,staged_deletions=0,rejected_records=0,started_utc=?,updated_utc=?,completed_utc='',result='{}',error='' WHERE job_id=?",
+                            "UPDATE sync_jobs SET state='staging',received_batches='[]',staged_records=0,staged_deletions=0,rejected_records=0,started_utc=?,updated_utc=?,completed_utc='',result='{}',error='',commit_phase='',commit_progress=0,commit_started_utc='',commit_heartbeat_utc='',activation_records=0,activation_total=0,indexed_chunks=0 WHERE job_id=?",
                             (now, now, job_id),
                         )
                 else:
@@ -906,6 +1048,30 @@ class KnowledgeStore:
                     connection.commit()
                     return SyncResult(
                         state="staging-with-rejections" if rejected_total else "staging",
+                        committed=False,
+                        received=len(raw_incoming),
+                        accepted=len(valid_records),
+                        rejected=len(rejected_records),
+                        rejected_records=rejected_records[: settings.max_rejection_details],
+                        inserted=0,
+                        updated=0,
+                        unchanged=0,
+                        deleted=0,
+                        staged_records=staged_records,
+                        staged_deletions=staged_deletions,
+                        duplicate_batch=duplicate_batch,
+                        summary=summary,
+                    )
+
+                if defer_commit:
+                    connection.execute(
+                        "UPDATE sync_jobs SET state='ready-to-commit',commit_phase='staged',commit_progress=0,activation_records=0,activation_total=?,indexed_chunks=0,updated_utc=?,error='' WHERE job_id=?",
+                        (staged_records, now, job_id),
+                    )
+                    summary = self._summary_from_connection(connection)
+                    connection.commit()
+                    return SyncResult(
+                        state="ready-to-commit-with-rejections" if rejected_total else "ready-to-commit",
                         committed=False,
                         received=len(raw_incoming),
                         accepted=len(valid_records),
@@ -1005,8 +1171,8 @@ class KnowledgeStore:
                     "indexed_chunks": indexed_chunks,
                 }
                 connection.execute(
-                    "UPDATE sync_jobs SET state=?,completed_utc=?,updated_utc=?,result=?,error='' WHERE job_id=?",
-                    (final_state, now, now, _canonical_json(result), job_id),
+                    "UPDATE sync_jobs SET state=?,completed_utc=?,updated_utc=?,result=?,error='',commit_phase='completed',commit_progress=100,commit_heartbeat_utc=?,activation_records=?,activation_total=?,indexed_chunks=? WHERE job_id=?",
+                    (final_state, now, now, _canonical_json(result), now, total_records, staged_records, indexed_chunks, job_id),
                 )
                 connection.execute("DELETE FROM staging_records WHERE job_id=?", (job_id,))
                 connection.execute("DELETE FROM staging_deletions WHERE job_id=?", (job_id,))
@@ -1032,8 +1198,8 @@ class KnowledgeStore:
                 connection.rollback()
                 with self._connection() as failure_connection:
                     failure_connection.execute(
-                        "UPDATE sync_jobs SET state='failed',updated_utc=?,error=? WHERE job_id=?",
-                        (utc_now(), str(exc)[:1000], job_id),
+                        "UPDATE sync_jobs SET state='failed',updated_utc=?,error=?,commit_phase='failed',commit_heartbeat_utc=? WHERE job_id=?",
+                        (utc_now(), str(exc)[:1000], utc_now(), job_id),
                     )
                 raise
 
@@ -1667,7 +1833,7 @@ class KnowledgeStore:
     def connected_platform_summary(self) -> dict[str, Any]:
         with self._lock, self._connection() as connection:
             counts={name:int(connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]) for name,table in {"projects":"research_projects","investigations":"research_investigations","entities":"research_project_entities","backups":"connected_platform_backups"}.items()}
-        return {"schema":"sc-connected-research-platform-summary/1.0","version":"7.0.5","counts":counts,"workspace_schema":"sc-research-librarian-public-workspace/2.0","api_schema":"sc-connected-research-api/1.0"}
+        return {"schema":"sc-connected-research-platform-summary/1.0","version":"7.0.6","counts":counts,"workspace_schema":"sc-research-librarian-public-workspace/2.0","api_schema":"sc-connected-research-api/1.0"}
 
 
 store = KnowledgeStore()

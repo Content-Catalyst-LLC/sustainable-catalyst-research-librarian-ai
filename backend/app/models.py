@@ -51,6 +51,7 @@ class SyncRequest(BaseModel):
     batch_count: int = Field(default=1, ge=1)
     deleted_ids: list[str] = Field(default_factory=list)
     reason: str = Field(default="wordpress-sync", max_length=220)
+    defer_commit: bool = False
 
     @model_validator(mode="after")
     def validate_batch_position(self) -> "SyncRequest":

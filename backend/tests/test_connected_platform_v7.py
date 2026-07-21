@@ -14,7 +14,7 @@ def test_stable_api_manifest_and_summary():
     assert body['stability']=='stable-v7'
     assert body['generation_boundary']['fallback']=='deterministic'
     summary=client.get('/v1/platform/summary',headers=HEADERS).json()
-    assert summary['version']=='7.0.5'
+    assert summary['version']=='7.0.6'
     assert summary['workspace_schema']=='sc-research-librarian-public-workspace/2.0'
 
 def test_project_investigation_entities_and_bundle():

@@ -1,6 +1,6 @@
 {
   "schema": "sc-research-librarian-release-manifest/1.0",
-  "version": "7.0.5",
+  "version": "7.0.6",
   "release": "Asynchronous Index Rebuild and Recovery",
   "status": "stable",
   "paid_infrastructure_required": false,

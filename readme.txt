@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 7.0.5
+Stable tag: 7.0.6
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
@@ -12,7 +12,7 @@ A connected, site-scoped research intelligence platform for Sustainable Catalyst
 
 Research Librarian AI retrieves Sustainable Catalyst publications and documents through exact-title priority, section-aware BM25 ranking, optional Gemini embeddings, calibrated reciprocal-rank fusion, and citation-verified synthesis. WordPress remains the canonical publishing and recovery source, while FastAPI provides a durable SQLite runtime index compatible with free Render infrastructure.
 
-v7.0.5 reconciles incomplete final replacement transactions from the durable WordPress staging file and redesigns the public assistant so every research mode, question field, primary action, example, and service state remains readable. Bounded background processing continues while the previous working index remains active.
+v7.0.6 stages every source batch first, queues durable-index activation through a short authenticated endpoint, and polls backend commit status instead of waiting for a long final WordPress request. Ambiguous transport failures are reconciled before the rebuild stops, while the previous working index remains active.
 
 == Shortcodes ==
 
@@ -38,13 +38,14 @@ v7.0.5 reconciles incomplete final replacement transactions from the durable Wor
 [sc_research_librarian_platform_handoffs]
 
 == Changelog ==
-= 7.0.5 =
-* Adds authenticated backend transaction status with received and missing batch diagnostics.
-* Adds Repair and Resume Commit for v7.0.4 final-batch failures.
-* Replays the durable WordPress staging file as a fresh bounded transaction without rediscovering sources.
-* Preserves the previous committed Python index until the replacement commits and verifies.
-* Redesigns the public workspace with eight visible research modes, a light question field, a prominent Start Research action, and collapsed secondary tools.
-* Replaces provider-oriented public error copy with visitor-facing verified-fallback language.
+= 7.0.6 =
+* Defers final durable-index activation until all synchronization batches are staged.
+* Adds an authenticated background commit endpoint and durable commit-status polling.
+* Removes snapshot, rechunking, checksum, and SQLite activation work from the final WordPress request.
+* Reconciles empty 5xx and transport failures before stopping the rebuild.
+* Detects stale commit workers and safely requeues idempotent activation.
+* Shows activation phase, progress, activated records, and retrieval chunks in the rebuild panel.
+* Preserves the previous committed index and the complete WordPress staging file until verification succeeds.
 
 = 7.0.2 =
 * Added broader published-document discovery, four-stage readiness, and simplified index controls.
