@@ -1,13 +1,17 @@
-# Research Librarian AI v7.0.1
+# Research Librarian AI v7.0.2
 
-Canonical index, credential, and resumable embedding queue repair. See `docs/V701_CANONICAL_INDEX_CREDENTIAL_EMBEDDING_REPAIR.md`.
+Knowledge-index recovery and interface redesign with a verified one-click build pipeline. See `docs/V702_INDEX_RECOVERY_INTERFACE_REDESIGN.md`.
 
-# Sustainable Catalyst Research Librarian AI v7.0.0
+# Sustainable Catalyst Research Librarian AI v7.0.2
 
 A site-scoped connected research intelligence platform for Sustainable Catalyst.
 
-## v7.0.0 highlights
+## v7.0.2 highlights
 
+- One-click authenticated knowledge-index build and post-commit verification
+- Broader discovery of published document custom post types
+- Four-stage readiness interface with source, index, and embedding progress
+- Automatic snapshot recovery and resumable semantic-index completion
 - Persistent, private-by-default research projects
 - Multi-step investigations and project event history
 - Evidence, annotation, reading-path, contradiction, uncertainty, workflow, and artifact entities

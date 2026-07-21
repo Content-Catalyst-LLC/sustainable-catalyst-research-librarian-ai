@@ -1,5 +1,5 @@
 <?php
-/** Functional WordPress governance defaults and methodology checks for v7.0.1. */
+/** Functional WordPress governance defaults and methodology checks for v7.0.2. */
 define( 'ABSPATH', '/tmp/sc-rl-wordpress/' );
 class WP_Error { public function __construct($c='',$m='',$d=null){} }
 function add_action() {}
@@ -26,9 +26,9 @@ $result = array(
     'limitations' => count( $methodology['limitations'] ?? array() ),
 );
 echo json_encode( $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . PHP_EOL;
-$passed = '7.0.1' === $result['version']
+$passed = '7.0.2' === $result['version']
     && 'sc-research-governance-policy/1.0' === $result['policy_schema']
-    && 'public-trust-v7.0.1' === $result['profile']
+    && 'public-trust-v7.0.2' === $result['profile']
     && ! $result['query_text_stored']
     && ! $result['answer_text_stored']
     && ! $result['automatic_publication']

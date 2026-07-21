@@ -17,10 +17,10 @@ $docs = file_get_contents( $root . '/docs/V640_HYBRID_RETRIEVAL_CITATION_ENGINE.
 $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_hybrid_retrieval_manifest_v6.4.0.json' ), true );
 
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 7.0.1' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '7.0.1';" ),
-    'module_version' => false !== strpos( $module, "const VERSION = '7.0.1';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.0.1"' ),
+    'version_header' => false !== strpos( $main, 'Version: 7.0.2' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '7.0.2';" ),
+    'module_version' => false !== strpos( $module, "const VERSION = '7.0.2';" ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.0.2"' ),
     'schema_version_six_or_newer' => false !== strpos( $store, 'SCHEMA_VERSION = 10' ),
     'index_schema_six_or_newer' => false !== strpos( $store, 'sc-research-librarian-knowledge-index/10.0' ),
     'knowledge_chunk_model' => false !== strpos( $models, 'class KnowledgeChunk(BaseModel)' ),
@@ -65,7 +65,7 @@ $checks = array(
     'wordpress_section_metadata' => false !== strpos( $module, "'sections' => '1' === (string) \$options['include_content'] ? self::extract_content_sections( \$raw_content, \$limit ) : array()" ),
     'wordpress_section_budget' => false !== strpos( $module, '$remaining = max( 0, min( 60000, absint( $character_limit ) ) )' ),
     'wordpress_evidence_normalization' => false !== strpos( $module, 'sanitize_evidence_record' ) && false !== strpos( $module, "'citation_verification'" ),
-    'embedding_admin_action' => false !== strpos( $module, 'Process and Continue Embedding Queue' ) && false !== strpos( $module, '/v1/knowledge/embeddings/process' ) && false !== strpos( $module, 'Full Sync and Complete Embedding Queue' ),
+    'embedding_admin_action' => false !== strpos( $module, 'Continue Semantic Indexing' ) && false !== strpos( $module, '/v1/knowledge/embeddings/process' ) && false !== strpos( $module, 'Build Knowledge Index' ),
     'embedding_admin_status' => false !== strpos( $module, 'Semantic coverage' ) && false !== strpos( $module, '/v1/knowledge/embeddings/status' ),
     'public_evidence_location' => false !== strpos( $js, 'source.section' ) && false !== strpos( $js, 'source.page' ) && false !== strpos( $js, 'source.passage' ),
     'public_citation_verification' => false !== strpos( $js, 'citationVerification' ) && false !== strpos( $js, 'retrievalDiagnostics' ),
@@ -82,7 +82,7 @@ $checks = array(
 );
 $failed = array_keys( array_filter( $checks, static function ( $value ) { return ! $value; } ) );
 echo json_encode( array(
-    'version' => '7.0.1',
+    'version' => '7.0.2',
     'checks' => $checks,
     'passed' => count( $checks ) - count( $failed ),
     'failed' => count( $failed ),

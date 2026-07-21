@@ -1,6 +1,6 @@
 <?php
 /**
- * Research Librarian AI v7.0.1 — Platform Intelligence and Typed Research Handoffs.
+ * Research Librarian AI v7.0.2 — Knowledge Index Recovery and Interface Redesign.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class SC_RL6_V630_Durable_Index {
-    const VERSION = '7.0.1';
+    const VERSION = '7.0.2';
     const OPTION_NAME = 'sc_rl_v620_python_options';
     const STATUS_OPTION = 'sc_rl_v620_python_status';
     const SYNC_HOOK = 'sc_rl_v620_python_sync_event';
@@ -27,6 +27,7 @@ final class SC_RL6_V630_Durable_Index {
     const ALERT_STATE_OPTION = 'sc_rl_v631_public_alert_state';
     const EMBEDDING_HOOK = 'sc_rl_v701_embedding_queue_event';
     const EMBEDDING_STATE_OPTION = 'sc_rl_v701_embedding_queue_state';
+    const BUILD_STATE_OPTION = 'sc_rl_v702_index_build_state';
 
     public static function init() {
         add_action( 'admin_menu', array( __CLASS__, 'register_admin_menu' ), 1010 );
@@ -583,7 +584,7 @@ final class SC_RL6_V630_Durable_Index {
         $recovery_next = wp_next_scheduled( self::RECOVERY_HOOK );
         $retry_next = wp_next_scheduled( self::SYNC_RETRY_HOOK );
         return array(
-            'schema' => 'sc-research-librarian-sync-recovery-export/7.0.1',
+            'schema' => 'sc-research-librarian-sync-recovery-export/7.0.2',
             'version' => self::VERSION,
             'site' => home_url( '/' ),
             'generated_utc' => gmdate( 'c' ),
@@ -822,7 +823,7 @@ final class SC_RL6_V630_Durable_Index {
         $grounding['reason_codes'] = array_values( array_unique( array_merge( $grounding['reason_codes'], array( 'bm25-section-retrieval', 'citation-verification' ), ! empty( $grounding['retrieval_diagnostics']['semantic_used'] ) ? array( 'semantic-retrieval' ) : array() ) ) );
 
         $note = array(
-            'schema' => 'sc-research-librarian-route-note/7.0.1',
+            'schema' => 'sc-research-librarian-route-note/7.0.2',
             'created_at_utc' => gmdate( 'c' ),
             'question' => sanitize_textarea_field( $question ),
             'source' => sanitize_key( isset( $backend['source'] ) ? $backend['source'] : 'python-backend' ),
@@ -1068,12 +1069,12 @@ final class SC_RL6_V630_Durable_Index {
         $ai_configured = ! empty( $status['ai_configured'] );
         $index_ready = ! empty( $status['index_ready'] );
         $public_state = 'offline';
-        if ( 'online' === $state && $ai_configured && $index_ready ) {
-            $public_state = 'online';
-        } elseif ( 'ready' === $state && $ai_configured && $index_ready ) {
-            $public_state = 'not-tested';
+        if ( in_array( $state, array( 'online', 'ready', 'retrieval-only', 'index-empty', 'indexing', 'backend-warming' ), true ) ) {
+            $public_state = $state;
         } elseif ( $index_ready ) {
-            $public_state = 'retrieval-only';
+            $public_state = $ai_configured ? 'ready' : 'retrieval-only';
+        } elseif ( $ai_configured ) {
+            $public_state = 'index-empty';
         }
         return array(
             'version' => self::VERSION,
@@ -1087,6 +1088,12 @@ final class SC_RL6_V630_Durable_Index {
             'indexed_records' => absint( isset( $status['indexed_records'] ) ? $status['indexed_records'] : 0 ),
             'indexed_titles' => absint( isset( $status['indexed_titles'] ) ? $status['indexed_titles'] : 0 ),
             'last_sync_utc' => sanitize_text_field( isset( $status['last_sync_utc'] ) ? $status['last_sync_utc'] : '' ),
+            'generation_state' => sanitize_key( $status['generation_state'] ?? ( $ai_configured ? 'configured' : 'not-configured' ) ),
+            'index_state' => sanitize_key( $status['index_state'] ?? ( $index_ready ? 'ready' : 'empty' ) ),
+            'embedding_state' => sanitize_key( $status['embedding_state'] ?? 'unknown' ),
+            'pending_chunks' => absint( $status['pending_chunks'] ?? 0 ),
+            'readiness_percent' => max( 0, min( 100, absint( $status['readiness_percent'] ?? 0 ) ) ),
+            'recommended_action' => sanitize_key( $status['recommended_action'] ?? '' ),
             'backend' => 'render-python',
         );
     }
@@ -1100,8 +1107,10 @@ final class SC_RL6_V630_Durable_Index {
             return $status;
         }
         if ( empty( $status['indexed_records'] ) && 'warming' !== sanitize_key( $status['startup_state'] ?? '' ) ) {
-            $status['state'] = 'needs-sync';
-            $status['label'] = 'Knowledge Index Needs Sync';
+            $status['state'] = 'index-empty';
+            $status['label'] = ! empty( $status['ai_configured'] ) ? 'Gemini connected — build the knowledge index' : 'Build the knowledge index';
+            $status['index_state'] = 'empty';
+            $status['recommended_action'] = 'build-index';
             $status['endpoint_status'] = array( 'state' => 'index-empty', 'error_type' => 'index-empty' );
         }
         if ( ! $admin && isset( $status['last_ai_error'] ) ) {
@@ -1236,7 +1245,7 @@ final class SC_RL6_V630_Durable_Index {
         $deleted_ids = array_values( array_diff( array_keys( $ledger['records'] ), array_keys( $current_ids ) ) );
         $report = array_merge( array(
             'version' => self::VERSION,
-            'schema' => 'sc-rl-sync-report/7.0.1',
+            'schema' => 'sc-rl-sync-report/7.0.2',
             'job_id' => $job_id,
             'state' => 'running',
             'mode' => 'transactional-replace',
@@ -1472,8 +1481,133 @@ final class SC_RL6_V630_Durable_Index {
         return self::process_embedding_batch( true );
     }
 
+    public static function build_state() {
+        $state = get_option( self::BUILD_STATE_OPTION, array() );
+        return is_array( $state ) ? $state : array();
+    }
+
+    private static function update_build_state( $values ) {
+        $state = array_merge( self::build_state(), is_array( $values ) ? $values : array() );
+        $state['updated_utc'] = gmdate( 'c' );
+        update_option( self::BUILD_STATE_OPTION, $state, false );
+        return $state;
+    }
+
+    public static function build_index_pipeline() {
+        self::update_build_state( array(
+            'state' => 'running',
+            'stage' => 'testing-backend',
+            'progress' => 5,
+            'message' => 'Testing the authenticated Python connection.',
+            'last_error' => '',
+            'warnings' => array(),
+            'started_utc' => gmdate( 'c' ),
+        ) );
+        $test = self::test_backend();
+        if ( is_wp_error( $test ) ) {
+            self::update_build_state( array( 'state' => 'failed', 'stage' => 'testing-backend', 'progress' => 5, 'last_error' => $test->get_error_message() ) );
+            return $test;
+        }
+
+        self::update_build_state( array( 'stage' => 'discovering-sources', 'progress' => 15, 'message' => 'Discovering public Sustainable Catalyst records.' ) );
+        $source_summary = self::source_discovery_summary();
+        if ( empty( $source_summary['published_records'] ) ) {
+            $error = new WP_Error( 'sc_rl_v702_no_sources', 'No published, indexable WordPress records were discovered. Review the registered post types and publishing status.' );
+            self::update_build_state( array( 'state' => 'failed', 'stage' => 'discovering-sources', 'progress' => 15, 'last_error' => $error->get_error_message(), 'source_summary' => $source_summary ) );
+            return $error;
+        }
+
+        self::update_build_state( array( 'stage' => 'synchronizing-records', 'progress' => 30, 'message' => 'Sending records to the durable Python index.', 'source_summary' => $source_summary ) );
+        $sync = self::sync_all_records( 'manual-v7.0.2-index-build' );
+        if ( is_wp_error( $sync ) ) {
+            self::update_build_state( array( 'state' => 'failed', 'stage' => 'synchronizing-records', 'progress' => 35, 'last_error' => $sync->get_error_message() ) );
+            return $sync;
+        }
+
+        self::update_build_state( array( 'stage' => 'verifying-index', 'progress' => 65, 'message' => 'Verifying the committed runtime index.' ) );
+        $summary = self::request( '/v1/knowledge/summary', 'GET' );
+        if ( is_wp_error( $summary ) || empty( $summary['total_records'] ) ) {
+            $recovered = false;
+            if ( self::latest_wordpress_snapshot() ) {
+                $recovery = self::recover_backend_from_snapshot( 'v7.0.2-post-sync-verification' );
+                $recovered = ! is_wp_error( $recovery );
+                if ( $recovered ) {
+                    $summary = self::request( '/v1/knowledge/summary', 'GET' );
+                }
+            }
+            if ( is_wp_error( $summary ) || empty( $summary['total_records'] ) ) {
+                $message = is_wp_error( $summary ) ? $summary->get_error_message() : 'The backend accepted the synchronization but still reports an empty knowledge index.';
+                $error = new WP_Error( 'sc_rl_v702_index_verification_failed', $message, array( 'sync' => $sync, 'recovery_attempted' => (bool) self::latest_wordpress_snapshot(), 'recovered' => $recovered ) );
+                self::update_build_state( array( 'state' => 'failed', 'stage' => 'verifying-index', 'progress' => 65, 'last_error' => $message ) );
+                return $error;
+            }
+        }
+
+        $warnings = array();
+        self::update_build_state( array( 'stage' => 'testing-embeddings', 'progress' => 78, 'message' => 'Testing semantic indexing.' ) );
+        $embedding_test = self::test_backend_embeddings();
+        $embedding_batches = array();
+        $embedding_state = array();
+        if ( is_wp_error( $embedding_test ) ) {
+            $warnings[] = 'Knowledge records were indexed, but semantic embeddings could not start: ' . $embedding_test->get_error_message();
+            $embedding_state = array( 'state' => 'configuration-error', 'last_error' => $embedding_test->get_error_message() );
+        } else {
+            $started = microtime( true );
+            for ( $batch_number = 1; $batch_number <= 5; $batch_number++ ) {
+                if ( microtime( true ) - $started > 18 ) {
+                    break;
+                }
+                $batch = self::process_embedding_batch( false );
+                if ( is_wp_error( $batch ) ) {
+                    $warnings[] = 'Knowledge records were indexed, but an embedding batch stopped: ' . $batch->get_error_message();
+                    break;
+                }
+                $embedding_batches[] = $batch;
+                if ( empty( $batch['pending_chunks'] ) ) {
+                    break;
+                }
+            }
+            $embedding_state = self::schedule_embedding_queue( 'v7.0.2-index-build', 15 );
+            if ( is_wp_error( $embedding_state ) ) {
+                $warnings[] = 'The index is ready, but the remaining embedding queue could not be scheduled: ' . $embedding_state->get_error_message();
+                $embedding_state = array( 'state' => 'manual-continuation-required', 'last_error' => end( $warnings ) );
+            }
+        }
+
+        $final_status = self::backend_status( true );
+        $result = array(
+            'ok' => true,
+            'version' => self::VERSION,
+            'state' => 'completed',
+            'stage' => 'ready',
+            'progress' => 100,
+            'source_summary' => $source_summary,
+            'sync' => $sync,
+            'summary' => $summary,
+            'status' => is_wp_error( $final_status ) ? array() : $final_status,
+            'embedding_test' => is_wp_error( $embedding_test ) ? array( 'ok' => false, 'error' => $embedding_test->get_error_message() ) : $embedding_test,
+            'embedding_batches' => $embedding_batches,
+            'embedding_state' => $embedding_state,
+            'warnings' => $warnings,
+            'completed_utc' => gmdate( 'c' ),
+        );
+        self::update_build_state( array(
+            'state' => $warnings ? 'ready-with-warnings' : 'ready',
+            'stage' => 'ready',
+            'progress' => 100,
+            'message' => $warnings ? 'Knowledge index ready; semantic indexing needs attention.' : 'Knowledge index and semantic indexing are ready.',
+            'warnings' => $warnings,
+            'last_error' => '',
+            'source_summary' => $source_summary,
+            'indexed_records' => absint( $summary['total_records'] ?? 0 ),
+            'indexed_chunks' => absint( $summary['indexed_chunks'] ?? 0 ),
+            'completed_utc' => gmdate( 'c' ),
+        ) );
+        return $result;
+    }
+
     public static function sync_and_complete_embeddings() {
-        $sync = self::sync_all_records( 'manual-v7.0.1-repair' );
+        $sync = self::sync_all_records( 'manual-v7.0.2-repair' );
         if ( is_wp_error( $sync ) ) {
             return $sync;
         }
@@ -1517,6 +1651,67 @@ final class SC_RL6_V630_Durable_Index {
         return is_array( $history ) ? $history : array();
     }
 
+
+    private static function indexable_post_types( &$details = null ) {
+        $objects = get_post_types( array(), 'objects' );
+        $objects = is_array( $objects ) ? $objects : array();
+        $excluded = array( 'attachment', 'revision', 'nav_menu_item', 'wp_block', 'wp_template', 'wp_template_part', 'wp_navigation', 'custom_css', 'customize_changeset', 'oembed_cache', 'user_request' );
+        $types = array();
+        $reasons = array();
+        foreach ( $objects as $name => $object ) {
+            $name = sanitize_key( $name );
+            if ( ! $name || in_array( $name, $excluded, true ) || ! is_object( $object ) ) {
+                continue;
+            }
+            $reason = '';
+            if ( ! empty( $object->public ) ) {
+                $reason = 'public';
+            } elseif ( ! empty( $object->publicly_queryable ) ) {
+                $reason = 'publicly-queryable';
+            } elseif ( ! empty( $object->show_in_rest ) && false !== $object->rewrite ) {
+                // Several Sustainable Catalyst document products intentionally use a
+                // conservative CPT registration while still publishing public permalinks.
+                $reason = 'rest-and-rewrite';
+            }
+            if ( ! $reason ) {
+                continue;
+            }
+            $types[] = $name;
+            $reasons[ $name ] = $reason;
+        }
+        $types = apply_filters( 'sc_rl_indexable_post_types', array_values( array_unique( $types ) ), $objects );
+        $types = array_values( array_filter( array_unique( array_map( 'sanitize_key', (array) $types ) ), function( $type ) use ( $objects, $excluded ) {
+            return isset( $objects[ $type ] ) && ! in_array( $type, $excluded, true );
+        } ) );
+        if ( is_array( $details ) ) {
+            $details['eligibility_reasons'] = $reasons;
+        } else {
+            $details = array( 'eligibility_reasons' => $reasons );
+        }
+        return $types;
+    }
+
+    public static function source_discovery_summary() {
+        $details = array();
+        $types = self::indexable_post_types( $details );
+        $counts = array();
+        $total = 0;
+        foreach ( $types as $post_type ) {
+            $published = wp_count_posts( $post_type );
+            $count = is_object( $published ) && isset( $published->publish ) ? absint( $published->publish ) : 0;
+            $counts[ $post_type ] = $count;
+            $total += $count;
+        }
+        arsort( $counts );
+        return array(
+            'post_types' => $types,
+            'published_records' => $total,
+            'records_by_post_type' => $counts,
+            'eligibility_reasons' => $details['eligibility_reasons'] ?? array(),
+            'generated_utc' => gmdate( 'c' ),
+        );
+    }
+
     public static function collect_records( $max_records = 5000, &$report = null ) {
         $max_records = max( 100, min( 10000, absint( $max_records ) ) );
         $records = array();
@@ -1536,12 +1731,13 @@ final class SC_RL6_V630_Durable_Index {
         // v6.5.0 continues to index canonical published WordPress records first. The older
         // route/index registry is appended only when it contributes a unique URL.
         // This prevents a summary-only legacy entry from masking the full article.
-        $all_public_post_types = get_post_types( array( 'public' => true ), 'names' );
-        $all_public_post_types = is_array( $all_public_post_types ) ? $all_public_post_types : array();
-        $excluded = array( 'attachment', 'revision', 'nav_menu_item', 'wp_block', 'wp_template', 'wp_template_part', 'wp_navigation', 'custom_css', 'customize_changeset' );
-        $post_types = array_values( array_diff( $all_public_post_types, $excluded ) );
+        $type_details = array();
+        $post_types = self::indexable_post_types( $type_details );
+        $all_registered_post_types = get_post_types( array(), 'names' );
+        $all_registered_post_types = is_array( $all_registered_post_types ) ? $all_registered_post_types : array();
         $report['eligible_post_types'] = $post_types;
-        $report['unsupported_post_types'] = array_values( array_intersect( $all_public_post_types, $excluded ) );
+        $report['post_type_eligibility_reasons'] = $type_details['eligibility_reasons'] ?? array();
+        $report['unsupported_post_types'] = array_values( array_diff( $all_registered_post_types, $post_types ) );
         $expected = array( 'post', 'page', 'article', 'library', 'foundation_document', 'channel' );
         $registered = get_post_types( array(), 'names' );
         $registered = is_array( $registered ) ? array_values( $registered ) : array();
@@ -1654,8 +1850,12 @@ final class SC_RL6_V630_Durable_Index {
     }
 
     private static function is_public_post_type( $post_type ) {
-        $object = get_post_type_object( $post_type );
-        return $object && ! empty( $object->public ) && 'attachment' !== $post_type;
+        static $types = null;
+        if ( null === $types ) {
+            $details = array();
+            $types = self::indexable_post_types( $details );
+        }
+        return in_array( sanitize_key( $post_type ), $types, true );
     }
 
     private static function extract_content_sections( $raw_content, $character_limit = 60000 ) {
@@ -2342,6 +2542,27 @@ final class SC_RL6_V630_Durable_Index {
                         $notice .= ' The runtime index is empty, so automatic snapshot recovery was scheduled.';
                     }
                 }
+            } elseif ( isset( $_POST['sc_rl_v702_build_index'] ) ) {
+                if ( $input ) {
+                    self::save_options( $input );
+                    self::sync_cron();
+                }
+                $build = self::build_index_pipeline();
+                if ( is_wp_error( $build ) ) {
+                    $notice_type = 'error';
+                    $notice = 'Index build stopped: ' . $build->get_error_message();
+                } else {
+                    $record_count = absint( $build['summary']['total_records'] ?? $build['sync']['synced_records'] ?? 0 );
+                    $pending = absint( $build['embedding_state']['pending_chunks'] ?? 0 );
+                    $notice = 'Knowledge index built and verified with ' . $record_count . ' records.';
+                    if ( $pending ) {
+                        $notice .= ' Semantic indexing is continuing with ' . $pending . ' chunk(s) remaining.';
+                    }
+                    if ( ! empty( $build['warnings'] ) ) {
+                        $notice_type = 'warning';
+                        $notice .= ' ' . implode( ' ', array_map( 'sanitize_text_field', $build['warnings'] ) );
+                    }
+                }
             } elseif ( isset( $_POST['sc_rl_v701_sync_embed'] ) ) {
                 self::save_options( $input );
                 $repair = self::sync_and_complete_embeddings();
@@ -2483,30 +2704,68 @@ final class SC_RL6_V630_Durable_Index {
         $embedding_status = self::request( '/v1/knowledge/embeddings/status', 'GET' );
         $provider_diagnostics = self::provider_diagnostics();
         $embedding_queue_state = self::embedding_queue_state();
+        $build_state = self::build_state();
+        $source_discovery = self::source_discovery_summary();
         $retrieval_config_response = self::request( '/v1/retrieval/config', 'GET' );
         $benchmark_history_response = self::request( '/v1/retrieval/benchmark/history', 'GET' );
         $retrieval_config = ! is_wp_error( $retrieval_config_response ) && isset( $retrieval_config_response['config'] ) ? $retrieval_config_response['config'] : array();
         $benchmark_runs = ! is_wp_error( $benchmark_history_response ) && isset( $benchmark_history_response['runs'] ) && is_array( $benchmark_history_response['runs'] ) ? $benchmark_history_response['runs'] : array();
         $export_url = wp_nonce_url( admin_url( 'admin-post.php?action=sc_rl_v631_export_sync_log' ), 'sc_rl_v631_export_sync_log' );
+        $backend_connected = ! is_wp_error( $status );
+        $provider_connected = $backend_connected && in_array( sanitize_key( $status['generation_state'] ?? '' ), array( 'online', 'configured' ), true );
+        $indexed_records = $backend_connected ? absint( $status['indexed_records'] ?? 0 ) : 0;
+        $indexed_chunks = $backend_connected ? absint( $status['indexed_chunks'] ?? 0 ) : 0;
+        $embedded_chunks = $backend_connected ? absint( $status['embedded_chunks'] ?? 0 ) : 0;
+        $pending_chunks = $backend_connected ? absint( $status['pending_chunks'] ?? max( 0, $indexed_chunks - $embedded_chunks ) ) : 0;
+        $source_count = absint( $source_discovery['published_records'] ?? 0 );
+        $readiness = $backend_connected ? max( 0, min( 100, absint( $status['readiness_percent'] ?? ( $indexed_records ? 75 : 50 ) ) ) ) : 10;
+        $build_message = sanitize_text_field( $build_state['message'] ?? '' );
+        $primary_state = $indexed_records ? ( $pending_chunks ? 'indexing' : 'ready' ) : ( $backend_connected ? 'action-required' : 'offline' );
         ?>
-        <div class="wrap">
-            <h1>Python Intelligence, Retrieval Calibration, and Durable Index</h1>
-            <p>Research Librarian AI v7.0.1 uses the Python durable index as the canonical knowledge index and retains benchmark-driven retrieval calibration, minimum-evidence gates, near-duplicate-title protection, unsupported-answer detection, source weighting, exclusions, and latency diagnostics to the v6.4.0 hybrid retrieval engine.</p>
+        <div class="wrap sc-rl-v702-admin">
+            <style>
+                .sc-rl-v702-admin{max-width:1320px}.sc-rl-v702-hero{background:#111;color:#fff;border-radius:18px;padding:28px 30px;margin:18px 0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:24px;align-items:center}.sc-rl-v702-hero h1{color:#fff;font-size:30px;line-height:1.15;margin:4px 0 10px}.sc-rl-v702-hero p{color:#d7d7d7;max-width:760px;font-size:15px}.sc-rl-v702-eyebrow{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#ff6b6b}.sc-rl-v702-badge{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:8px 12px;font-weight:700}.sc-rl-v702-badge:before{content:"";width:9px;height:9px;border-radius:50%;background:#d63638}.sc-rl-v702-hero[data-state="ready"] .sc-rl-v702-badge:before{background:#00a32a}.sc-rl-v702-hero[data-state="indexing"] .sc-rl-v702-badge:before,.sc-rl-v702-hero[data-state="action-required"] .sc-rl-v702-badge:before{background:#dba617}.sc-rl-v702-progress{height:8px;background:rgba(255,255,255,.16);border-radius:999px;overflow:hidden;margin-top:18px}.sc-rl-v702-progress span{display:block;height:100%;background:#fff;border-radius:999px}.sc-rl-v702-primary{min-width:260px;text-align:right}.sc-rl-v702-primary .button{min-height:46px;padding:8px 18px;font-size:15px;font-weight:800}.sc-rl-v702-primary small{display:block;color:#bdbdbd;margin-top:10px;max-width:280px}.sc-rl-v702-stages{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:18px 0}.sc-rl-v702-stage{background:#fff;border:1px solid #dcdcde;border-radius:14px;padding:18px;box-shadow:0 1px 2px rgba(0,0,0,.03)}.sc-rl-v702-stage span{display:block;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#646970}.sc-rl-v702-stage strong{display:block;font-size:25px;line-height:1.15;margin:8px 0}.sc-rl-v702-stage p{margin:0;color:#50575e}.sc-rl-v702-stage[data-state="ready"]{border-top:4px solid #00a32a}.sc-rl-v702-stage[data-state="attention"],.sc-rl-v702-stage[data-state="running"]{border-top:4px solid #dba617}.sc-rl-v702-stage[data-state="offline"]{border-top:4px solid #d63638}.sc-rl-v702-source-panel{background:#fff;border:1px solid #dcdcde;border-radius:14px;padding:18px 20px;margin:18px 0}.sc-rl-v702-source-panel h2{margin:0 0 4px}.sc-rl-v702-source-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.sc-rl-v702-source-grid span{background:#f0f0f1;border-radius:999px;padding:7px 10px;font-weight:700}.sc-rl-v702-settings,.sc-rl-v702-diagnostics{background:#fff;border:1px solid #dcdcde;border-radius:14px;padding:0 20px;margin:18px 0}.sc-rl-v702-settings>summary,.sc-rl-v702-diagnostics>summary{cursor:pointer;font-size:16px;font-weight:800;padding:18px 0}.sc-rl-v702-actions{display:flex;flex-wrap:wrap;gap:8px;padding:16px 0 20px;border-top:1px solid #eee}.sc-rl-v702-callout{border-left:4px solid #b00000;background:#fff;padding:14px 16px;margin:16px 0}.sc-rl-v702-build-message{margin-top:10px;color:#d7d7d7}.sc-rl-v702-admin .form-table th{width:250px}.sc-rl-v702-admin code{word-break:break-all}@media(max-width:900px){.sc-rl-v702-hero{grid-template-columns:1fr}.sc-rl-v702-primary{text-align:left}.sc-rl-v702-stages{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.sc-rl-v702-stages{grid-template-columns:1fr}.sc-rl-v702-hero{padding:22px}}
+            </style>
             <?php if ( $notice ) : ?><div class="notice notice-<?php echo esc_attr( $notice_type ); ?> is-dismissible"><p><?php echo esc_html( $notice ); ?></p></div><?php endif; ?>
 
-            <div class="sc-rl-admin-grid">
-                <article class="sc-rl-admin-card" data-state="<?php echo esc_attr( is_wp_error( $status ) ? 'offline' : ( $status['state'] ?? 'unknown' ) ); ?>">
-                    <h2><?php echo esc_html( is_wp_error( $status ) ? 'Backend unavailable' : ( $status['label'] ?? 'Backend status' ) ); ?></h2>
-                    <span class="sc-rl-admin-metric"><?php echo esc_html( is_wp_error( $status ) ? 'Offline' : 'v' . ( $status['version'] ?? self::VERSION ) ); ?></span>
-                    <p><?php echo esc_html( is_wp_error( $status ) ? $status->get_error_message() : ( ( $status['storage_engine'] ?? 'sqlite' ) . ' · index v' . absint( $status['index_version'] ?? 0 ) . ' · ' . sanitize_text_field( $status['startup_phase'] ?? 'ready' ) . ' ' . absint( $status['startup_progress'] ?? 100 ) . '%' ) ); ?></p>
-                </article>
-                <article class="sc-rl-admin-card"><h2>Indexed records</h2><span class="sc-rl-admin-metric"><?php echo esc_html( is_wp_error( $status ) ? 0 : absint( $status['indexed_records'] ?? 0 ) ); ?></span><p><?php echo esc_html( is_wp_error( $status ) ? 'Run a full sync or recovery.' : absint( $status['indexed_titles'] ?? 0 ) . ' distinct titles' ); ?></p></article>
-                <article class="sc-rl-admin-card"><h2>Canonical snapshots</h2><span class="sc-rl-admin-metric"><?php echo esc_html( count( $wp_snapshots ) ); ?></span><p><?php echo esc_html( $wp_snapshots ? ( $wp_snapshots[0]['record_count'] . ' records · ' . $wp_snapshots[0]['created_utc'] ) : 'Create a snapshot or run a full sync.' ); ?></p></article>
-                <article class="sc-rl-admin-card"><h2>Incremental queue</h2><span class="sc-rl-admin-metric"><?php echo esc_html( count( $queue ) ); ?></span><p><?php echo esc_html( count( $ledger['records'] ) . ' records in the WordPress sync ledger' ); ?></p></article>
+            <section class="sc-rl-v702-hero" data-state="<?php echo esc_attr( $primary_state ); ?>">
+                <div>
+                    <div class="sc-rl-v702-eyebrow">Research Librarian v7.0.2</div>
+                    <h1>Knowledge Index and AI Readiness</h1>
+                    <p>One operational view for the Python connection, WordPress source discovery, durable knowledge synchronization, and Gemini semantic indexing.</p>
+                    <div class="sc-rl-v702-badge"><?php echo esc_html( $indexed_records ? ( $pending_chunks ? 'Index ready · semantic indexing in progress' : 'Research service ready' ) : ( $backend_connected ? 'Connection ready · index build required' : 'Python connection needs attention' ) ); ?></div>
+                    <div class="sc-rl-v702-progress" aria-label="Research Librarian readiness" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<?php echo esc_attr( $readiness ); ?>"><span style="width:<?php echo esc_attr( $readiness ); ?>%"></span></div>
+                    <?php if ( $build_message ) : ?><div class="sc-rl-v702-build-message"><?php echo esc_html( $build_message ); ?></div><?php endif; ?>
+                </div>
+                <div class="sc-rl-v702-primary">
+                    <form method="post">
+                        <?php wp_nonce_field( 'sc_rl_v620_admin_action' ); ?>
+                        <button class="button button-primary" type="submit" name="sc_rl_v702_build_index" value="1"><?php echo esc_html( $indexed_records ? 'Verify and Rebuild Index' : 'Build Knowledge Index' ); ?></button>
+                    </form>
+                    <small>Tests the backend, discovers sources, synchronizes records, verifies the committed index, and starts semantic indexing.</small>
+                </div>
+            </section>
+
+            <div class="sc-rl-v702-stages">
+                <article class="sc-rl-v702-stage" data-state="<?php echo esc_attr( $backend_connected ? 'ready' : 'offline' ); ?>"><span>1 · Python connection</span><strong><?php echo esc_html( $backend_connected ? 'Connected' : 'Offline' ); ?></strong><p><?php echo esc_html( $backend_connected ? ( 'Backend v' . sanitize_text_field( $status['version'] ?? self::VERSION ) ) : $status->get_error_message() ); ?></p></article>
+                <article class="sc-rl-v702-stage" data-state="<?php echo esc_attr( $source_count ? 'ready' : 'attention' ); ?>"><span>2 · WordPress sources</span><strong><?php echo esc_html( number_format_i18n( $source_count ) ); ?></strong><p><?php echo esc_html( count( $source_discovery['post_types'] ?? array() ) . ' indexable content type(s) discovered' ); ?></p></article>
+                <article class="sc-rl-v702-stage" data-state="<?php echo esc_attr( $indexed_records ? 'ready' : 'attention' ); ?>"><span>3 · Knowledge index</span><strong><?php echo esc_html( number_format_i18n( $indexed_records ) ); ?></strong><p><?php echo esc_html( $indexed_records ? absint( $status['indexed_titles'] ?? 0 ) . ' distinct titles in Python' : 'Build the index to activate retrieval' ); ?></p></article>
+                <article class="sc-rl-v702-stage" data-state="<?php echo esc_attr( $pending_chunks ? 'running' : ( $indexed_records ? 'ready' : 'attention' ) ); ?>"><span>4 · Semantic search</span><strong><?php echo esc_html( $indexed_chunks ? number_format_i18n( $embedded_chunks ) . '/' . number_format_i18n( $indexed_chunks ) : 'Waiting' ); ?></strong><p><?php echo esc_html( $pending_chunks ? number_format_i18n( $pending_chunks ) . ' chunk(s) remaining' : ( $indexed_records ? 'Embedding queue complete or not required' : 'Starts after the knowledge sync' ) ); ?></p></article>
             </div>
+
+            <section class="sc-rl-v702-source-panel">
+                <h2>Source coverage</h2>
+                <p>The index now includes public, publicly queryable, and published REST/rewrite document types instead of only standard posts and pages.</p>
+                <div class="sc-rl-v702-source-grid">
+                    <?php foreach ( array_slice( $source_discovery['records_by_post_type'] ?? array(), 0, 16, true ) as $post_type => $count ) : ?><span><?php echo esc_html( $post_type . ' · ' . number_format_i18n( $count ) ); ?></span><?php endforeach; ?>
+                    <?php if ( empty( $source_discovery['records_by_post_type'] ) ) : ?><span>No published sources discovered</span><?php endif; ?>
+                </div>
+            </section>
 
             <form method="post">
                 <?php wp_nonce_field( 'sc_rl_v620_admin_action' ); ?>
+                <details class="sc-rl-v702-settings">
+                    <summary>Connection and advanced settings</summary>
                 <table class="form-table sc-rl-provider-table" role="presentation">
                     <tr><th>Enable Python intelligence</th><td><input type="hidden" name="sc_rl_v620[enabled]" value="0"><label><input type="checkbox" name="sc_rl_v620[enabled]" value="1" <?php checked( $options['enabled'], '1' ); ?>> Use the Render/FastAPI backend for public answers and title-aware retrieval</label></td></tr>
                     <tr><th><label for="sc-rl-v620-url">Backend URL</label></th><td><input id="sc-rl-v620-url" class="regular-text" type="url" name="sc_rl_v620[backend_url]" value="<?php echo esc_attr( $options['backend_url'] ); ?>" placeholder="https://sustainable-catalyst-research-librarian-ai.onrender.com"><p class="description">Do not add a trailing endpoint path.</p></td></tr>
@@ -2538,7 +2797,12 @@ final class SC_RL6_V630_Durable_Index {
                     <tr><th><label for="sc-rl-v650-excluded-sources">Excluded sources</label></th><td><input id="sc-rl-v650-excluded-sources" class="large-text" name="sc_rl_v620[retrieval_excluded_sources]" value="<?php echo esc_attr( $options['retrieval_excluded_sources'] ); ?>"></td></tr>
                     <tr><th><label for="sc-rl-v650-excluded-prefixes">Excluded URL prefixes</label></th><td><textarea id="sc-rl-v650-excluded-prefixes" class="large-text" rows="3" name="sc_rl_v620[retrieval_excluded_url_prefixes]"><?php echo esc_textarea( $options['retrieval_excluded_url_prefixes'] ); ?></textarea><p class="description">One prefix per line.</p></td></tr>
                 </table>
-                <p class="submit"><button class="button button-primary" type="submit" name="sc_rl_v620_save" value="1">Save Settings</button> <button class="button" type="submit" name="sc_rl_v620_test" value="1">Test Backend</button> <button class="button button-primary" type="submit" name="sc_rl_v701_sync_embed" value="1">Full Sync and Complete Embedding Queue</button> <button class="button button-secondary" type="submit" name="sc_rl_v620_sync" value="1">Transactional Full Sync</button> <button class="button" type="submit" name="sc_rl_v630_sync_incremental" value="1">Process Incremental Queue</button> <button class="button" type="submit" name="sc_rl_v630_create_snapshot" value="1">Create WordPress Snapshot</button> <button class="button button-secondary" type="submit" name="sc_rl_v630_recover" value="1">Recover Empty Backend</button> <button class="button" type="submit" name="sc_rl_v631_repair_stalled" value="1">Repair Stalled Jobs</button> <button class="button" type="submit" name="sc_rl_v631_validate_snapshots" value="1">Validate Snapshots</button> <button class="button" type="submit" name="sc_rl_v631_clear_retries" value="1">Clear Pending Retries</button> <button class="button button-secondary" type="submit" name="sc_rl_v640_process_embeddings" value="1">Process and Continue Embedding Queue</button> <button class="button button-secondary" type="submit" name="sc_rl_v650_run_benchmark" value="1">Run Retrieval Benchmark</button> <button class="button" type="submit" name="sc_rl_v621_repair" value="1">Repair and Resynchronize</button> <button class="button" type="submit" name="sc_rl_v621_reset_rate_limits" value="1">Reset Public Rate Limits</button> <a class="button" href="<?php echo esc_url( $export_url ); ?>">Export Sync and Recovery Log</a></p>
+                <div class="sc-rl-v702-actions"><button class="button button-primary" type="submit" name="sc_rl_v620_save" value="1">Save Settings</button><button class="button" type="submit" name="sc_rl_v620_test" value="1">Test Python Connection</button><button class="button button-secondary" type="submit" name="sc_rl_v640_process_embeddings" value="1">Continue Semantic Indexing</button></div>
+                </details>
+                <details class="sc-rl-v702-settings">
+                    <summary>Maintenance and recovery tools</summary>
+                    <div class="sc-rl-v702-actions"><button class="button" type="submit" name="sc_rl_v620_sync" value="1">Transactional Full Sync</button><button class="button" type="submit" name="sc_rl_v630_sync_incremental" value="1">Process Incremental Queue</button><button class="button" type="submit" name="sc_rl_v630_create_snapshot" value="1">Create WordPress Snapshot</button><button class="button" type="submit" name="sc_rl_v630_recover" value="1">Recover Empty Backend</button><button class="button" type="submit" name="sc_rl_v631_repair_stalled" value="1">Repair Stalled Jobs</button><button class="button" type="submit" name="sc_rl_v631_validate_snapshots" value="1">Validate Snapshots</button><button class="button" type="submit" name="sc_rl_v631_clear_retries" value="1">Clear Pending Retries</button><button class="button" type="submit" name="sc_rl_v650_run_benchmark" value="1">Run Retrieval Benchmark</button><button class="button" type="submit" name="sc_rl_v621_repair" value="1">Legacy Repair and Resynchronize</button><button class="button" type="submit" name="sc_rl_v621_reset_rate_limits" value="1">Reset Public Rate Limits</button><a class="button" href="<?php echo esc_url( $export_url ); ?>">Export Diagnostics</a></div>
+                </details>
 
                 <?php if ( $backend_snapshots ) : ?>
                     <h2>Runtime Rollback</h2>
@@ -2546,8 +2810,9 @@ final class SC_RL6_V630_Durable_Index {
                 <?php endif; ?>
             </form>
 
-            <h2>Durability and Synchronization Diagnostics</h2>
-            <table class="widefat striped" style="max-width:1100px;margin-bottom:18px"><tbody>
+            <details class="sc-rl-v702-diagnostics">
+                <summary>Technical diagnostics and transaction history</summary>
+            <table class="widefat striped" style="margin-bottom:18px"><tbody>
                 <tr><th>Runtime storage</th><td><?php echo esc_html( is_wp_error( $status ) ? 'Unavailable' : ( $status['storage_engine'] ?? 'sqlite' ) ); ?><?php if ( ! is_wp_error( $status ) ) : ?> · schema <?php echo esc_html( absint( $status['schema_version'] ?? 0 ) ); ?> · index version <?php echo esc_html( absint( $status['index_version'] ?? 0 ) ); ?><?php endif; ?></td></tr>
                 <tr><th>Retrieval chunks</th><td><?php echo esc_html( is_wp_error( $status ) ? 'Unavailable' : absint( $status['indexed_chunks'] ?? 0 ) . ' section-aware chunk(s)' ); ?></td></tr>
                 <tr><th>Semantic coverage</th><td><?php echo esc_html( is_wp_error( $embedding_status ) ? $embedding_status->get_error_message() : ( number_format_i18n( (float) ( $embedding_status['semantic_coverage'] ?? 0 ), 2 ) . '% · ' . absint( $embedding_status['embedded_chunks'] ?? 0 ) . '/' . absint( $embedding_status['indexed_chunks'] ?? 0 ) . ' chunks · ' . sanitize_text_field( $embedding_status['embedding_model'] ?? '' ) ) ); ?></td></tr>
@@ -2579,7 +2844,8 @@ final class SC_RL6_V630_Durable_Index {
                 <?php foreach ( $sync_report['batches'] as $batch ) : ?><tr><td><?php echo esc_html( absint( $batch['batch'] ) . ' / ' . absint( $batch['batch_count'] ) ); ?></td><td><?php echo esc_html( $batch['mode'] ); ?></td><td><?php echo esc_html( absint( $batch['records_sent'] ) ); ?></td><td><?php echo esc_html( absint( $batch['rejected_records'] ?? 0 ) ); ?></td><td><?php echo esc_html( $batch['backend_state'] ?? '' ); ?></td><td><?php echo esc_html( $batch['state'] ); ?></td></tr><?php endforeach; ?>
                 </tbody></table>
             <?php endif; ?>
-            <div class="sc-rl-admin-note"><strong>Free-tier recovery boundary:</strong> Render's local SQLite file may be replaced when an instance restarts. WordPress therefore retains the canonical compressed snapshot and automatically rehydrates an empty runtime index. No paid database is required for this release.</div>
+            <div class="sc-rl-admin-note"><strong>Free-tier recovery boundary:</strong> Render's local SQLite file may be replaced when an instance restarts. WordPress retains the canonical compressed snapshot and automatically rehydrates an empty runtime index.</div>
+            </details>
         </div>
         <?php
     }

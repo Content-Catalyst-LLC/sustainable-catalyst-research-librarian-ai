@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 7.0.1
+Stable tag: 7.0.2
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
@@ -12,7 +12,7 @@ A connected, site-scoped research intelligence platform for Sustainable Catalyst
 
 Research Librarian AI retrieves Sustainable Catalyst publications and documents through exact-title priority, section-aware BM25 ranking, optional Gemini embeddings, calibrated reciprocal-rank fusion, and citation-verified synthesis. WordPress remains the canonical publishing and recovery source, while FastAPI provides a durable SQLite runtime index compatible with free Render infrastructure.
 
-v7.0.0 adds persistent research projects, multi-step investigations, evidence and uncertainty structures, reusable workflows, artifact history, a stable API, provider-independent generation boundaries, and checksum-verified portable backups.
+v7.0.2 adds a verified one-click index build, broader public-document discovery, four-stage readiness, automatic snapshot recovery, and resumable semantic-index completion while preserving the connected research platform introduced in v7.0.0.
 
 == Shortcodes ==
 

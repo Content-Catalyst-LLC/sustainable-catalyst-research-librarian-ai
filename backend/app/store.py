@@ -1578,7 +1578,7 @@ class KnowledgeStore:
     def connected_platform_summary(self) -> dict[str, Any]:
         with self._lock, self._connection() as connection:
             counts={name:int(connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]) for name,table in {"projects":"research_projects","investigations":"research_investigations","entities":"research_project_entities","backups":"connected_platform_backups"}.items()}
-        return {"schema":"sc-connected-research-platform-summary/1.0","version":"7.0.1","counts":counts,"workspace_schema":"sc-research-librarian-public-workspace/2.0","api_schema":"sc-connected-research-api/1.0"}
+        return {"schema":"sc-connected-research-platform-summary/1.0","version":"7.0.2","counts":counts,"workspace_schema":"sc-research-librarian-public-workspace/2.0","api_schema":"sc-connected-research-api/1.0"}
 
 
 store = KnowledgeStore()

@@ -477,12 +477,12 @@ final class SC_RL6_V621_Endpoint_Reliability {
         $ai_configured = ! empty( $status['ai_configured'] );
         $index_ready = ! empty( $status['index_ready'] );
         $public_state = 'offline';
-        if ( 'online' === $state && $ai_configured && $index_ready ) {
-            $public_state = 'online';
-        } elseif ( 'ready' === $state && $ai_configured && $index_ready ) {
-            $public_state = 'not-tested';
+        if ( in_array( $state, array( 'online', 'ready', 'retrieval-only', 'index-empty', 'indexing', 'backend-warming' ), true ) ) {
+            $public_state = $state;
         } elseif ( $index_ready ) {
-            $public_state = 'retrieval-only';
+            $public_state = $ai_configured ? 'ready' : 'retrieval-only';
+        } elseif ( $ai_configured ) {
+            $public_state = 'index-empty';
         }
         return array(
             'version' => self::VERSION,
@@ -496,6 +496,12 @@ final class SC_RL6_V621_Endpoint_Reliability {
             'indexed_records' => absint( isset( $status['indexed_records'] ) ? $status['indexed_records'] : 0 ),
             'indexed_titles' => absint( isset( $status['indexed_titles'] ) ? $status['indexed_titles'] : 0 ),
             'last_sync_utc' => sanitize_text_field( isset( $status['last_sync_utc'] ) ? $status['last_sync_utc'] : '' ),
+            'generation_state' => sanitize_key( $status['generation_state'] ?? ( $ai_configured ? 'configured' : 'not-configured' ) ),
+            'index_state' => sanitize_key( $status['index_state'] ?? ( $index_ready ? 'ready' : 'empty' ) ),
+            'embedding_state' => sanitize_key( $status['embedding_state'] ?? 'unknown' ),
+            'pending_chunks' => absint( $status['pending_chunks'] ?? 0 ),
+            'readiness_percent' => max( 0, min( 100, absint( $status['readiness_percent'] ?? 0 ) ) ),
+            'recommended_action' => sanitize_key( $status['recommended_action'] ?? '' ),
             'backend' => 'render-python',
         );
     }
@@ -509,8 +515,10 @@ final class SC_RL6_V621_Endpoint_Reliability {
             return $status;
         }
         if ( empty( $status['indexed_records'] ) ) {
-            $status['state'] = 'needs-sync';
-            $status['label'] = 'Knowledge Index Needs Sync';
+            $status['state'] = 'index-empty';
+            $status['label'] = ! empty( $status['ai_configured'] ) ? 'Gemini connected — build the knowledge index' : 'Build the knowledge index';
+            $status['index_state'] = 'empty';
+            $status['recommended_action'] = 'build-index';
             $status['endpoint_status'] = array( 'state' => 'index-empty', 'error_type' => 'index-empty' );
         }
         if ( ! $admin && isset( $status['last_ai_error'] ) ) {

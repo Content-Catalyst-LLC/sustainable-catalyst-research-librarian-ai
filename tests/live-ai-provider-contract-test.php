@@ -22,7 +22,7 @@ $assert = static function ( $name, $condition, $detail = '' ) use ( &$checks, &$
     }
 };
 
-$assert( 'plugin_version_701', 1 === preg_match( "/const\s+VERSION\s*=\s*'7\.0\.1';/", $main ) );
+$assert( 'plugin_version_702', 1 === preg_match( "/const\s+VERSION\s*=\s*'7\.0\.2';/", $main ) );
 $assert( 'public_ai_status_endpoint', false !== strpos( $main, "'/ai/status'" ) );
 $assert( 'admin_ai_test_endpoint', false !== strpos( $main, "'/ai/test'" ) );
 $assert( 'admin_ai_models_endpoint', false !== strpos( $main, "'/ai/models'" ) );
@@ -44,7 +44,7 @@ $assert( 'python_admin_submenu', false !== strpos( $v630, "'sc-rl-python-intelli
 $assert( 'full_library_limit', false !== strpos( $v630, "'max_records' => 5000" ) );
 $assert( 'render_fastapi_backend', false !== strpos( $backend, 'FastAPI(' ) && false !== strpos( $backend, '/v1/knowledge/sync' ) && false !== strpos( $backend, '/v1/ask' ) );
 $assert( 'exact_title_ranking', false !== strpos( $retrieval, 'exact_title' ) && false !== strpos( $retrieval, '1000.0' ) );
-$assert( 'public_status_label_passthrough', false !== strpos( $js, "healthLabel.textContent = payload.label" ) );
+$assert( 'public_status_simplified', false !== strpos( $js, "publicLabels" ) && false !== strpos( $js, "Research service online" ) );
 $assert( 'public_status_state_handling', false !== strpos( $js, "state === 'not-configured'" ) && false !== strpos( $js, "state === 'offline'" ) );
 $assert( 'public_status_styles', false !== strpos( $css, 'data-ai-health="online"' ) && false !== strpos( $css, 'data-ai-health="offline"' ) );
 $assert( 'country_registry_shape', is_array( $countries ) && isset( $countries['countries'] ) && is_array( $countries['countries'] ) );
@@ -60,7 +60,7 @@ foreach ( (array) ( $countries['countries'] ?? array() ) as $country ) {
 $assert( 'pakistan_registry_record', is_array( $pakistan ) && 'Pakistan' === ( $pakistan['name'] ?? '' ) && 'PK' === ( $pakistan['alpha2'] ?? '' ) );
 
 $result = array(
-    'version' => '7.0.1',
+    'version' => '7.0.2',
     'checks' => $checks,
     'passed' => count( $checks ) - count( $failures ),
     'failed' => count( $failures ),

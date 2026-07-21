@@ -1,6 +1,6 @@
 <?php
 /**
- * Research Librarian AI v7.0.1 — consolidated administration and Python intelligence operations.
+ * Research Librarian AI v7.0.2 — consolidated administration and Python intelligence operations.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -129,7 +129,7 @@ final class SC_RL6_V610_Live_AI_Admin {
             <?php if ( 'standard' === $gemini_key_type ) : ?>
                 <div class="notice notice-warning"><p><strong>Gemini key migration:</strong> This saved key uses the older standard-key format. Google rejects unrestricted standard keys after June 19, 2026 and plans to end standard-key support in September 2026. Restrict it to the Gemini API in Google AI Studio or replace it with a new authorization key.</p></div>
             <?php elseif ( 'authorization' === $gemini_key_type ) : ?>
-                <div class="notice notice-info"><p><strong>Gemini authorization key detected.</strong> Research Librarian AI v7.0.1 retains support for modern Google AI Studio authorization keys, including keys that contain periods.</p></div>
+                <div class="notice notice-info"><p><strong>Gemini authorization key detected.</strong> Research Librarian AI v7.0.2 retains support for modern Google AI Studio authorization keys, including keys that contain periods.</p></div>
             <?php endif; ?>
 
             <?php if ( ! empty( $status['last_error_message'] ) ) : ?>
@@ -185,15 +185,16 @@ final class SC_RL6_V610_Live_AI_Admin {
         $openai_saved = ! empty( $full_options['openai_api_key'] );
         ?>
         <div class="wrap">
-            <h1><?php esc_html_e( 'WordPress AI Provider Fallback', 'sustainable-catalyst-research-librarian-ai' ); ?></h1>
-            <p><?php esc_html_e( 'Optional fallback provider configuration for direct WordPress operation when the Python/Render service is disabled. When Python Intelligence is enabled, generation and semantic indexing use Render SC_RL_GEMINI_API_KEY; this saved WordPress key is not used by the canonical backend index.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
+            <h1><?php esc_html_e( 'Optional WordPress Fallback Provider', 'sustainable-catalyst-research-librarian-ai' ); ?></h1>
+            <p><?php esc_html_e( 'This page configures only the emergency WordPress-direct fallback. The production Research Librarian index and Gemini connection are managed under Python Intelligence and use Render SC_RL_GEMINI_API_KEY.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
+            <div class="notice notice-info inline"><p><strong>Production path:</strong> Use <em>Research Librarian → Python Intelligence</em> to build the knowledge index. A successful fallback-provider test here does not build or verify the Python index.</p></div>
 
             <?php if ( $notice ) : ?><div class="notice notice-<?php echo esc_attr( $notice_type ); ?> is-dismissible"><p><?php echo esc_html( $notice ); ?></p></div><?php endif; ?>
 
             <div class="sc-rl-admin-grid">
-                <article class="sc-rl-admin-card" data-state="<?php echo esc_attr( $status['state'] ); ?>"><h2><?php echo esc_html( $status['label'] ); ?></h2><p><?php echo esc_html( ucfirst( $status['provider'] ) . ( $status['model'] ? ' · ' . $status['model'] : '' ) ); ?></p></article>
-                <article class="sc-rl-admin-card"><h2>Last success</h2><p><?php echo esc_html( $status['last_success_utc'] ?: 'No successful provider request recorded.' ); ?></p></article>
-                <article class="sc-rl-admin-card"><h2>Last failure</h2><p><?php echo esc_html( $status['last_failure_utc'] ?: 'No provider failure recorded.' ); ?></p></article>
+                <article class="sc-rl-admin-card" data-state="<?php echo esc_attr( $status['state'] ); ?>"><h2>Fallback connection</h2><span class="sc-rl-admin-metric"><?php echo esc_html( 'online' === $status['state'] ? 'Connected' : ( 'disabled' === $status['provider'] ? 'Disabled' : 'Not verified' ) ); ?></span><p><?php echo esc_html( 'disabled' === $status['provider'] ? 'Verified deterministic fallback only' : ucfirst( $status['provider'] ) . ( $status['model'] ? ' · model configured' : '' ) ); ?></p></article>
+                <article class="sc-rl-admin-card"><h2>Purpose</h2><span class="sc-rl-admin-metric">Fallback only</span><p>Does not control the Python durable index.</p></article>
+                <article class="sc-rl-admin-card"><h2>Last successful test</h2><p><?php echo esc_html( $status['last_success_utc'] ?: 'No successful fallback test recorded.' ); ?></p></article>
                 <article class="sc-rl-admin-card"><h2>Request latency</h2><p><?php echo esc_html( $status['latency_ms'] ? $status['latency_ms'] . ' ms' : 'Not recorded' ); ?></p></article>
             </div>
 
@@ -201,6 +202,8 @@ final class SC_RL6_V610_Live_AI_Admin {
                 <div class="notice notice-error"><p><strong>Exact administrator diagnostic:</strong> <?php echo esc_html( $status['last_error_message'] ); ?><?php if ( $status['last_http_status'] ) : ?> <?php echo esc_html( '(HTTP ' . $status['last_http_status'] . ')' ); ?><?php endif; ?><?php if ( ! empty( $status['transport_error'] ) ) : ?> <?php echo esc_html( 'Transport: ' . $status['transport_error'] ); ?><?php endif; ?></p></div>
             <?php endif; ?>
 
+            <details class="sc-rl-v702-settings" style="background:#fff;border:1px solid #dcdcde;border-radius:14px;padding:0 20px;margin:18px 0">
+                <summary style="cursor:pointer;font-size:16px;font-weight:800;padding:18px 0">Configure optional fallback</summary>
             <form method="post">
                 <?php wp_nonce_field( 'sc_rl_v610_provider_action' ); ?>
                 <table class="form-table sc-rl-provider-table" role="presentation">
@@ -219,6 +222,7 @@ final class SC_RL6_V610_Live_AI_Admin {
                 </table>
                 <p class="submit"><button class="button button-primary" type="submit" name="sc_rl_v610_save_provider" value="1">Save AI Provider Settings</button> <button class="button" type="submit" name="sc_rl_v610_test_provider" value="1">Test AI Connection</button> <button class="button" type="button" id="sc-rl-list-models">List Available Gemini Models</button></p>
             </form>
+            </details>
 
             <div id="sc-rl-model-results" class="sc-rl-model-results" hidden aria-live="polite"></div>
             <p class="sc-rl-admin-note"><strong>Important:</strong> Saving a provider and key does not prove the route is online. Use <em>Test AI Connection</em>. The public interface reports AI Online only after a successful provider response; otherwise it states that verified fallback routing is active.</p>

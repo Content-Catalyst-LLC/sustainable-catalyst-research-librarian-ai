@@ -1,0 +1,29 @@
+{
+  "schema": "sc-research-librarian-index-experience-repair/1.0",
+  "version": "7.0.2",
+  "title": "Knowledge Index Recovery and Interface Redesign",
+  "canonical_index": "python-durable-sqlite",
+  "source_discovery": [
+    "public",
+    "publicly-queryable",
+    "rest-and-rewrite"
+  ],
+  "build_pipeline": [
+    "authenticated-backend-test",
+    "source-discovery",
+    "transactional-sync",
+    "post-commit-verification",
+    "snapshot-recovery",
+    "bounded-embedding-start",
+    "resumable-queue"
+  ],
+  "interface": [
+    "four-stage-readiness",
+    "one-primary-build-action",
+    "source-coverage-summary",
+    "collapsed-advanced-settings",
+    "collapsed-diagnostics",
+    "public-friendly-service-status"
+  ],
+  "paid_infrastructure_required": false
+}

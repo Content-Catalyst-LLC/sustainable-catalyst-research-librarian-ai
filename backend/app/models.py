@@ -327,6 +327,12 @@ class StatusResponse(BaseModel):
     ready: bool = True
     indexed_chunks: int = 0
     embedded_chunks: int = 0
+    pending_chunks: int = 0
+    generation_state: str = "not-configured"
+    index_state: str = "empty"
+    embedding_state: str = "waiting-for-index"
+    recommended_action: str = "build-index"
+    readiness_percent: int = 0
     semantic_coverage: float = 0.0
     embedding_model: str = ""
     retrieval_profile: str = "balanced-v6.5.0"

@@ -14,10 +14,10 @@ $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_re
 $benchmarks = json_decode( file_get_contents( $root . '/data/research_librarian_retrieval_benchmarks_v6.5.0.json' ), true );
 
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 7.0.1' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '7.0.1';" ),
-    'module_version' => false !== strpos( $module, "const VERSION = '7.0.1';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.0.1"' ),
+    'version_header' => false !== strpos( $main, 'Version: 7.0.2' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '7.0.2';" ),
+    'module_version' => false !== strpos( $module, "const VERSION = '7.0.2';" ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.0.2"' ),
     'schema_version_six' => false !== strpos( $store, 'SCHEMA_VERSION = 10' ),
     'index_schema_six' => false !== strpos( $store, 'sc-research-librarian-knowledge-index/10.0' ),
     'calibration_module' => false !== strpos( $calibration, 'DEFAULT_RETRIEVAL_CONFIG' ),
@@ -80,7 +80,7 @@ $checks = array(
     'wordpress_config_apply' => false !== strpos( $module, 'public static function apply_retrieval_config' ),
     'wordpress_weight_parser' => false !== strpos( $module, 'private static function parse_weight_map' ),
     'wordpress_list_parser' => false !== strpos( $module, 'private static function parse_list' ),
-    'wordpress_calibration_heading' => false !== strpos( $module, 'Python Intelligence, Retrieval Calibration, and Durable Index' ),
+    'wordpress_calibration_heading' => false !== strpos( $module, 'Knowledge Index and AI Readiness' ) && false !== strpos( $module, 'Retrieval Calibration' ),
     'wordpress_evidence_controls' => false !== strpos( $module, 'Fusion and evidence gates' ),
     'wordpress_verification_controls' => false !== strpos( $module, 'Answer verification' ),
     'wordpress_post_type_controls' => false !== strpos( $module, 'Post-type weights' ),
@@ -96,7 +96,7 @@ $checks = array(
 );
 $failed = array_keys( array_filter( $checks, static function ( $value ) { return ! $value; } ) );
 echo json_encode( array(
-    'version' => '7.0.1',
+    'version' => '7.0.2',
     'checks' => $checks,
     'passed' => count( $checks ) - count( $failed ),
     'failed' => count( $failed ),

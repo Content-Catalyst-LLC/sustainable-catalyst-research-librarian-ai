@@ -538,29 +538,41 @@
       var detail = '';
       root.setAttribute('data-ai-health', state);
       health.setAttribute('data-ai-health-state', state);
-      healthLabel.textContent = payload.label || 'AI status unavailable';
+      var publicLabels = {
+        online: 'Research service online',
+        indexing: 'Research service updating',
+        'index-empty': 'Verified routing available',
+        'needs-sync': 'Verified routing available',
+        'retrieval-only': 'Verified retrieval available',
+        ready: 'Research service ready',
+        'backend-warming': 'Research service starting',
+        offline: 'Research service temporarily limited',
+        'not-configured': 'Verified routing available',
+        'backend-not-configured': 'Verified routing available'
+      };
+      healthLabel.textContent = publicLabels[state] || 'Research service status';
       if (state === 'online') {
-        detail = (provider !== 'disabled' ? provider.charAt(0).toUpperCase() + provider.slice(1) : 'AI') + (model ? ' · ' + model : '');
-        if (payload.semantic_retrieval) detail += ' · ' + payload.semantic_retrieval;
+        detail = 'Verified AI generation and source-aware retrieval are available';
         if (payload.indexed_titles !== undefined) detail += ' · ' + payload.indexed_titles + ' indexed titles';
         else if (payload.indexed_records !== undefined) detail += ' · ' + payload.indexed_records + ' indexed records';
-        if (payload.last_sync_utc) detail += ' · library synced ' + formatHealthTime(payload.last_sync_utc);
-        else if (payload.last_success_utc) detail += ' · last success ' + formatHealthTime(payload.last_success_utc);
+        if (payload.last_sync_utc) detail += ' · sources updated ' + formatHealthTime(payload.last_sync_utc);
+      } else if (state === 'indexing') {
+        detail = 'The knowledge index is ready while semantic source matching finishes in the background';
+        if (payload.pending_chunks !== undefined) detail += ' · ' + payload.pending_chunks + ' chunks remaining';
       } else if (state === 'retrieval-only') {
-        detail = 'Python title-aware retrieval is online';
+        detail = 'Verified title-aware retrieval is online';
         if (payload.indexed_titles !== undefined) detail += ' · ' + payload.indexed_titles + ' indexed titles';
-        detail += ' · AI generation is unavailable';
+        detail += ' · AI generation is temporarily unavailable';
       } else if (state === 'ready') {
-        detail = 'Python knowledge index is ready';
+        detail = 'The knowledge index is ready and the AI connection is configured';
         if (payload.indexed_titles !== undefined) detail += ' · ' + payload.indexed_titles + ' indexed titles';
-        detail += ' · awaiting first successful AI answer';
       } else if (state === 'offline') {
         detail = 'AI or Python backend request failed · verified title-aware fallback remains active when available';
         if (payload.last_failure_utc) detail += ' · checked ' + formatHealthTime(payload.last_failure_utc);
       } else if (state === 'not-configured' || state === 'backend-not-configured') {
         detail = 'No live provider or authenticated Python connection is configured · verified local routing remains active';
       } else if (state === 'needs-sync' || state === 'index-empty') {
-        detail = 'The Python service is reachable, but the Knowledge Library index is empty · run Repair Endpoint and Resynchronize';
+        detail = 'The live source index is being built or restored · verified WordPress title-aware routing remains available';
       } else if (state === 'backend-warming') {
         detail = 'The free Render service is starting';
         if (payload.startup_phase) detail += ' · ' + String(payload.startup_phase).replace(/-/g, ' ');
@@ -579,7 +591,7 @@
       } else if (state === 'hidden') {
         detail = 'Verified fallback routing remains available.';
       } else {
-        detail = (provider !== 'disabled' ? provider.charAt(0).toUpperCase() + provider.slice(1) : 'AI') + (model ? ' · ' + model : '') + ' · knowledge service status is being verified';
+        detail = 'Verified routing remains available while the research service status is checked';
       }
       healthDetail.textContent = detail;
       if (state === 'backend-warming') setProgress(true, payload.startup_progress || 20, 'Starting knowledge service · verified fallback remains available');
@@ -656,7 +668,7 @@
         return { label: 'Invalid endpoint response', intro: 'WordPress returned a response that the Research Librarian could not read.', detail: 'Check caching, security, or REST-response modification plugins.' };
       }
       if (statusCode === 404) {
-        return { label: 'WordPress route unavailable', intro: 'The Research Librarian REST route was not found.', detail: 'Resave WordPress permalinks and confirm that the active v7.0.1 plugin registered its routes.' };
+        return { label: 'WordPress route unavailable', intro: 'The Research Librarian REST route was not found.', detail: 'Resave WordPress permalinks and confirm that the active v7.0.2 plugin registered its routes.' };
       }
       if (statusCode >= 500) {
         return { label: 'WordPress endpoint error', intro: 'WordPress reached the Research Librarian route but returned a server error.', detail: 'The Python provider status is separate from this WordPress failure.' };

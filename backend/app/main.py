@@ -154,7 +154,7 @@ def _workspace_summary(mode: str, matches: list[RetrievedSource], related: list[
         "accessibility_profile": "wcag-focused-v6.5.1",
         "rendering_profile": "staged-v6.5.1",
         "handoff_profile": "cross-product-reliability-v6.6.1",
-        "governance_profile": store.governance_policy().get("profile", "public-trust-v7.0.1"),
+        "governance_profile": store.governance_policy().get("profile", "public-trust-v7.0.2"),
         "available_destinations": list(available_capabilities().keys()),
         "connected_platform": store.connected_platform_summary(),
         "generation_boundary": adapter_status(),
@@ -316,16 +316,51 @@ def _status() -> StatusResponse:
     capabilities = public_capabilities()
     available_count = sum(1 for item in capabilities if item.get("available"))
     handoff_summary = store.platform_handoff_summary()
+    indexed_chunks = int(summary.get("indexed_chunks", 0))
+    embedded_chunks = int(summary.get("embedded_chunks", 0))
+    pending_chunks = max(0, indexed_chunks - embedded_chunks)
+    provider_online = bool(provider_state.last_success_utc) and not (
+        provider_state.last_failure_utc
+        and provider_state.last_failure_utc > provider_state.last_success_utc
+    )
     if startup["startup_state"] == "warming":
-        state, label = "backend-warming", "Python Backend Warming"
-    elif ai_ready and index_ready and provider_state.last_success_utc:
-        state, label = "online", "AI and Knowledge Index Online"
-    elif ai_ready and index_ready:
-        state, label = "ready", "AI Configured — Knowledge Index Ready"
-    elif index_ready:
-        state, label = "retrieval-only", "Knowledge Index Online — AI Not Configured"
+        state, label = "backend-warming", "Research service starting"
+        recommended_action = "wait-for-backend"
+    elif not index_ready and ai_ready:
+        state, label = "index-empty", "Gemini connected — build the knowledge index"
+        recommended_action = "build-index"
+    elif not index_ready:
+        state, label = "index-empty", "Build the knowledge index"
+        recommended_action = "configure-provider-and-build-index" if not ai_ready else "build-index"
+    elif pending_chunks and ai_ready:
+        state, label = "indexing", "Knowledge index ready — semantic indexing in progress"
+        recommended_action = "continue-embeddings"
+    elif ai_ready and provider_online:
+        state, label = "online", "Research service online"
+        recommended_action = "none"
+    elif ai_ready:
+        state, label = "ready", "Knowledge index ready — Gemini configured"
+        recommended_action = "test-provider"
     else:
-        state, label = "needs-sync", "Knowledge Index Needs Sync"
+        state, label = "retrieval-only", "Knowledge index ready — deterministic retrieval active"
+        recommended_action = "configure-provider"
+    generation_state = "online" if provider_online else ("configured" if ai_ready else "not-configured")
+    index_state = "ready" if index_ready else "empty"
+    if not index_ready:
+        embedding_state = "waiting-for-index"
+    elif indexed_chunks <= 0:
+        embedding_state = "not-required"
+    elif pending_chunks:
+        embedding_state = "pending"
+    else:
+        embedding_state = "complete"
+    readiness_percent = 25
+    if ai_ready:
+        readiness_percent += 25
+    if index_ready:
+        readiness_percent += 25
+    if index_ready and (indexed_chunks <= 0 or pending_chunks == 0):
+        readiness_percent += 25
     return StatusResponse(
         version=__version__,
         state=state,
@@ -352,8 +387,14 @@ def _status() -> StatusResponse:
         last_ai_success_utc=provider_state.last_success_utc,
         last_ai_failure_utc=provider_state.last_failure_utc,
         last_ai_error=provider_state.last_error,
-        indexed_chunks=int(summary.get("indexed_chunks", 0)),
-        embedded_chunks=int(summary.get("embedded_chunks", 0)),
+        indexed_chunks=indexed_chunks,
+        embedded_chunks=embedded_chunks,
+        pending_chunks=pending_chunks,
+        generation_state=generation_state,
+        index_state=index_state,
+        embedding_state=embedding_state,
+        recommended_action=recommended_action,
+        readiness_percent=readiness_percent,
         semantic_coverage=float(summary.get("semantic_coverage", 0.0)),
         embedding_model=str(summary.get("embedding_model", settings.gemini_embedding_model)),
         retrieval_profile=str(summary.get("retrieval_profile", "balanced-v6.5.0")),
@@ -574,7 +615,7 @@ async def test_embeddings_endpoint() -> dict[str, Any]:
     if not embeddings_configured():
         raise HTTPException(status_code=503, detail="Gemini embeddings are not configured or semantic retrieval is disabled.")
     try:
-        vector = await generate_embedding("Research Librarian v7.0.1 embedding connection test", "RETRIEVAL_DOCUMENT")
+        vector = await generate_embedding("Research Librarian v7.0.2 embedding connection test", "RETRIEVAL_DOCUMENT")
     except RuntimeError as exc:
         raise HTTPException(status_code=502, detail=f"Gemini embedding test failed: {str(exc)[:900]}") from exc
     return {

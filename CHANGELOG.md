@@ -1,3 +1,12 @@
+## 7.0.2 — Knowledge Index Recovery and Interface Redesign
+
+- Adds a verified one-click knowledge-index build pipeline.
+- Verifies the committed Python runtime after synchronization and attempts snapshot recovery when needed.
+- Expands source discovery beyond `public => true` custom post types.
+- Introduces four-stage readiness, source coverage, and simplified operational controls.
+- Moves advanced settings and diagnostics behind progressive disclosure.
+- Replaces raw public provider/model status with visitor-facing research-service states.
+
 ## 7.0.1 — Canonical Index, Credential, and Embedding Queue Repair
 
 - Makes the Python durable index the authoritative production index whenever Python Intelligence is enabled.
