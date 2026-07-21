@@ -19,8 +19,8 @@ from .models import KnowledgeChunk, KnowledgeRecord, utc_now
 from .governance import DEFAULT_GOVERNANCE_POLICY, sanitize_governance_policy
 
 
-SCHEMA_VERSION = 11
-INDEX_SCHEMA = "sc-research-librarian-knowledge-index/11.0"
+SCHEMA_VERSION = 12
+INDEX_SCHEMA = "sc-research-librarian-knowledge-index/12.0"
 SNAPSHOT_SCHEMA = "sc-research-librarian-runtime-snapshot/4.0"
 
 
@@ -727,6 +727,17 @@ class KnowledgeStore:
             connection.executemany("DELETE FROM snapshots WHERE snapshot_id=?", [(snapshot_id,) for snapshot_id in old_ids])
         return snapshot_id
 
+    @staticmethod
+    def _batch_manifest_state(batch_count: int, received: list[int], missing: list[int], staged_records: int) -> str:
+        """Classify backend transaction completeness without treating an empty list as success."""
+        if batch_count <= 0:
+            return "empty-shell" if not received and staged_records <= 0 else "unknown"
+        if missing:
+            return "incomplete"
+        if len(received) == batch_count:
+            return "complete"
+        return "unknown"
+
     def sync_job_status(self, job_id: str) -> dict[str, Any]:
         """Return reconciliation-safe state for one staged synchronization job."""
         job_id = str(job_id or "").strip()
@@ -790,6 +801,11 @@ class KnowledgeStore:
                     "activation_restart_count": 0,
                     "storage_path": str(self.path),
                     "storage_persistent": not str(self.path).startswith("/tmp/"),
+                    "batch_manifest_state": "missing",
+                    "received_batch_count": 0,
+                    "can_activate": False,
+                    "needs_full_replay": True,
+                    "storage_warning": "Attach a persistent disk and set SC_RL_DATA_DIR=/var/data/sc-research-librarian." if str(self.path).startswith("/tmp/") else "",
                     "error": "",
                 }
             try:
@@ -807,6 +823,12 @@ class KnowledgeStore:
                         state = "commit-stalled"
                 except ValueError:
                     pass
+            manifest_state = self._batch_manifest_state(
+                batch_count=batch_count,
+                received=received,
+                missing=missing,
+                staged_records=int(row["staged_records"] or 0),
+            )
             return {
                 "ok": True,
                 "exists": True,
@@ -840,8 +862,60 @@ class KnowledgeStore:
                 "activation_restart_count": int(row["activation_restart_count"] or 0),
                 "storage_path": str(self.path),
                 "storage_persistent": not str(self.path).startswith("/tmp/"),
+                "batch_manifest_state": manifest_state,
+                "received_batch_count": len(received),
+                "can_activate": manifest_state == "complete",
+                "needs_full_replay": manifest_state in {"empty-shell", "unknown"},
+                "storage_warning": "Attach a persistent disk and set SC_RL_DATA_DIR=/var/data/sc-research-librarian." if str(self.path).startswith("/tmp/") else "",
                 "error": str(row["error"] or ""),
             }
+
+    def reconcile_sync_job(self, job_id: str, expected_batch_count: int = 0) -> dict[str, Any]:
+        """Return an explicit recovery action for WordPress transaction reconciliation.
+
+        An empty ``missing_batches`` list is not enough to prove completeness: a
+        lost/empty transaction also reports no missing values when its backend
+        batch count is zero. This method compares backend state with the
+        WordPress-owned expected batch count and returns a deterministic action.
+        """
+        status = self.sync_job_status(job_id)
+        expected = max(0, int(expected_batch_count or 0))
+        actual = max(0, int(status.get("batch_count", 0) or 0))
+        received = sorted({int(value) for value in status.get("received_batches", []) if int(value) > 0})
+        missing = [int(value) for value in status.get("missing_batches", []) if int(value) > 0]
+
+        if not status.get("exists"):
+            action = "replay-all"
+            transaction_state = "missing"
+        elif status.get("committed"):
+            action = "committed"
+            transaction_state = "committed"
+        elif expected > 0 and actual == expected and len(received) == expected and not missing:
+            action = "activate"
+            transaction_state = "complete"
+        elif actual <= 0 and not received:
+            action = "replay-all"
+            transaction_state = "empty-shell"
+        elif expected > 0 and actual != expected:
+            action = "replay-all"
+            transaction_state = "batch-count-mismatch"
+        elif missing:
+            action = "replay-missing"
+            transaction_state = "incomplete"
+        else:
+            action = "replay-all"
+            transaction_state = "indeterminate"
+
+        return {
+            **status,
+            "reconciliation_action": action,
+            "transaction_state": transaction_state,
+            "expected_batch_count": expected,
+            "backend_batch_count": actual,
+            "received_batch_count": len(received),
+            "missing_batches": missing,
+            "complete_for_expected_count": action in {"activate", "committed"},
+        }
 
     @staticmethod
     def _activation_checksum_seed() -> str:
@@ -871,7 +945,7 @@ class KnowledgeStore:
             "switching",
         }
 
-    def queue_sync_commit(self, job_id: str, reason: str = "wordpress-durable-incremental-commit-v7.0.7") -> dict[str, Any]:
+    def queue_sync_commit(self, job_id: str, reason: str = "wordpress-transaction-reconciliation-v7.0.8") -> dict[str, Any]:
         """Prepare a fully staged replacement for restart-safe incremental activation.
 
         No long-lived process is created here. WordPress advances the durable
@@ -896,6 +970,8 @@ class KnowledgeStore:
                 except (TypeError, ValueError, json.JSONDecodeError):
                     received = set()
                 batch_count = max(0, int(row["batch_count"] or 0))
+                if batch_count <= 0 or not received:
+                    raise ValueError("The transaction contains no staged source batches and must be replayed from WordPress.")
                 missing = [value for value in range(1, batch_count + 1) if value not in received]
                 if missing:
                     raise ValueError("The transaction is missing staged batch(es): " + ", ".join(str(value) for value in missing))
@@ -941,7 +1017,7 @@ class KnowledgeStore:
             "resumed": durable and shadow_count > 0,
         }
 
-    def advance_sync_commit(self, job_id: str, reason: str = "wordpress-durable-incremental-commit-v7.0.7") -> dict[str, Any]:
+    def advance_sync_commit(self, job_id: str, reason: str = "wordpress-transaction-reconciliation-v7.0.8") -> dict[str, Any]:
         """Advance one bounded, restart-safe activation step.
 
         Each call persists its cursor before returning. The active ``records`` and
@@ -1295,7 +1371,7 @@ class KnowledgeStore:
                         "index_version": version,
                         "checksum": checksum,
                         "indexed_chunks": chunk_count,
-                        "activation_strategy": "durable-incremental-shadow-v7.0.7",
+                        "activation_strategy": "durable-incremental-shadow-v7.0.8",
                     }
                     connection.execute(
                         "UPDATE sync_jobs SET state=?,completed_utc=?,updated_utc=?,result=?,error='',"
@@ -1332,7 +1408,7 @@ class KnowledgeStore:
                     )
                 raise
 
-    def commit_sync_job(self, job_id: str, reason: str = "compatibility-loop-v7.0.7") -> dict[str, Any]:
+    def commit_sync_job(self, job_id: str, reason: str = "compatibility-loop-v7.0.8") -> dict[str, Any]:
         """Compatibility helper for tests and command-line maintenance.
 
         Production HTTP traffic advances only one bounded step per request.
@@ -2295,7 +2371,7 @@ class KnowledgeStore:
     def connected_platform_summary(self) -> dict[str, Any]:
         with self._lock, self._connection() as connection:
             counts={name:int(connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]) for name,table in {"projects":"research_projects","investigations":"research_investigations","entities":"research_project_entities","backups":"connected_platform_backups"}.items()}
-        return {"schema":"sc-connected-research-platform-summary/1.0","version":"7.0.7","counts":counts,"workspace_schema":"sc-research-librarian-public-workspace/2.0","api_schema":"sc-connected-research-api/1.0"}
+        return {"schema":"sc-connected-research-platform-summary/1.0","version":"7.0.8","counts":counts,"workspace_schema":"sc-research-librarian-public-workspace/2.0","api_schema":"sc-connected-research-api/1.0"}
 
 
 store = KnowledgeStore()

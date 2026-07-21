@@ -106,3 +106,12 @@ Future work should be maintenance-led: destination intake adoption, project coll
 - Atomic verified index switch
 - v7.0.6 transaction migration and WordPress replay recovery
 - Persistent data-directory support and activation diagnostics
+
+## v7.0.8 — Transaction-State Reconciliation and Durable Recovery — Complete
+
+- WordPress/backend expected-batch manifest comparison
+- Explicit committed, activate, replay-missing, and replay-all actions
+- Empty-shell and mismatched-transaction recovery
+- Missing-batch byte-offset replay
+- Recovery-generation reset for exhausted v7.0.7 jobs
+- Persistent Render disk auto-detection and transaction diagnostics

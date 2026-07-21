@@ -28,11 +28,21 @@ def _float(name: str, default: float, minimum: float, maximum: float) -> float:
     return max(minimum, min(maximum, value))
 
 
+def _data_dir() -> Path:
+    configured = os.getenv("SC_RL_DATA_DIR", "").strip()
+    if configured:
+        return Path(configured)
+    render_disk = Path("/var/data")
+    if render_disk.exists() and os.access(render_disk, os.W_OK):
+        return render_disk / "sc-research-librarian"
+    return Path("/tmp/sc-research-librarian")
+
+
 @dataclass(frozen=True)
 class Settings:
     environment: str = os.getenv("SC_RL_ENVIRONMENT", "production")
     api_key: str = os.getenv("SC_RL_BACKEND_API_KEY", "")
-    data_dir: Path = Path(os.getenv("SC_RL_DATA_DIR", "/tmp/sc-research-librarian"))
+    data_dir: Path = _data_dir()
     cors_origins: tuple[str, ...] = tuple(
         origin.strip()
         for origin in os.getenv("SC_RL_CORS_ORIGINS", "https://sustainablecatalyst.com").split(",")
@@ -64,7 +74,7 @@ class Settings:
     activation_chunk_record_batch_limit: int = _int("SC_RL_ACTIVATION_CHUNK_RECORD_BATCH_LIMIT", 20, 1, 100)
     activation_checksum_batch_limit: int = _int("SC_RL_ACTIVATION_CHECKSUM_BATCH_LIMIT", 250, 25, 1000)
     activation_snapshot_record_limit: int = _int("SC_RL_ACTIVATION_SNAPSHOT_RECORD_LIMIT", 500, 0, 5000)
-    release_version: str = os.getenv("SC_RL_RELEASE_VERSION", "7.0.7")
+    release_version: str = os.getenv("SC_RL_RELEASE_VERSION", "7.0.8")
     handoff_source_limit: int = _int("SC_RL_HANDOFF_SOURCE_LIMIT", 8, 1, 25)
     handoff_ttl_seconds: int = _int("SC_RL_HANDOFF_TTL_SECONDS", 1800, 300, 86400)
     handoff_retry_limit: int = _int("SC_RL_HANDOFF_RETRY_LIMIT", 5, 1, 20)

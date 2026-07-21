@@ -88,6 +88,11 @@ class SyncResponse(BaseModel):
     source_site: str = ""
 
 
+class SyncReconcileRequest(BaseModel):
+    expected_batch_count: int = Field(default=0, ge=0, le=100000)
+    recovery_generation: int = Field(default=0, ge=0, le=1000)
+
+
 class RollbackRequest(BaseModel):
     snapshot_id: str = Field(min_length=1, max_length=220)
 
@@ -304,7 +309,7 @@ class StatusResponse(BaseModel):
     last_sync_utc: str
     source_site: str
     storage_engine: str = "sqlite"
-    schema_version: int = 10
+    schema_version: int = 12
     index_version: int = 0
     checksum: str = ""
     snapshot_count: int = 0

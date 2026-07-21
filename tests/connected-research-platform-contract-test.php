@@ -1,5 +1,5 @@
 <?php
-/** Static release contract checks for Research Librarian AI v7.0.7. */
+/** Static release contract checks for Research Librarian AI v7.0.8. */
 $root=dirname(__DIR__);
 $main=file_get_contents($root.'/sustainable-catalyst-research-librarian-ai.php');
 $module=file_get_contents($root.'/includes/class-sc-rl-v700-connected-platform.php');
@@ -11,17 +11,17 @@ $models=file_get_contents($root.'/backend/app/models.py');
 $js=file_get_contents($root.'/assets/sc-research-platform-v7.js');
 $css=file_get_contents($root.'/assets/sc-research-librarian-ai.css');
 $docs=file_get_contents($root.'/docs/V700_CONNECTED_RESEARCH_INTELLIGENCE_PLATFORM.md');
-$manifest=json_decode(file_get_contents($root.'/data/research_librarian_connected_platform_manifest_v7.0.7.json'),true);
+$manifest=json_decode(file_get_contents($root.'/data/research_librarian_connected_platform_manifest_v7.0.8.json'),true);
 $checks=array(
- 'version_header'=>false!==strpos($main,'Version: 7.0.7'),
- 'version_constant'=>false!==strpos($main,"const VERSION        = '7.0.7';"),
- 'backend_version'=>false!==strpos(file_get_contents($root.'/backend/app/__init__.py'),'__version__ = "7.0.7"'),
+ 'version_header'=>false!==strpos($main,'Version: 7.0.8'),
+ 'version_constant'=>false!==strpos($main,"const VERSION        = '7.0.8';"),
+ 'backend_version'=>false!==strpos(file_get_contents($root.'/backend/app/__init__.py'),'__version__ = "7.0.8"'),
  'module_loaded'=>false!==strpos($main,'class-sc-rl-v700-connected-platform.php'),
  'module_initialized'=>false!==strpos($main,'SC_RL6_V700_Connected_Platform::init()'),
  'activation'=>false!==strpos($main,"SC_RL6_V700_Connected_Platform', 'activate"),
- 'module_version'=>false!==strpos($module,"const VERSION = '7.0.7';"),
- 'schema_ten'=>false!==strpos($store,'SCHEMA_VERSION = 11'),
- 'index_ten'=>false!==strpos($store,'sc-research-librarian-knowledge-index/11.0'),
+ 'module_version'=>false!==strpos($module,"const VERSION = '7.0.8';"),
+ 'schema_ten'=>false!==strpos($store,'SCHEMA_VERSION = 12'),
+ 'index_ten'=>false!==strpos($store,'sc-research-librarian-knowledge-index/12.0'),
  'project_table'=>false!==strpos($store,'CREATE TABLE IF NOT EXISTS research_projects'),
  'investigation_table'=>false!==strpos($store,'CREATE TABLE IF NOT EXISTS research_investigations'),
  'entity_table'=>false!==strpos($store,'CREATE TABLE IF NOT EXISTS research_project_entities'),
@@ -61,11 +61,11 @@ $checks=array(
  'responsive_css'=>false!==strpos($css,'.sc-rl-v7-layout')&&false!==strpos($css,'@media(max-width:900px)'),
  'reduced_motion'=>false!==strpos($css,'prefers-reduced-motion'),
  'forced_colors'=>false!==strpos($css,'forced-colors'),
- 'manifest_version'=>is_array($manifest)&&'7.0.7'===($manifest['version']??''),
- 'manifest_schema'=>is_array($manifest)&&11===($manifest['sqlite_schema']??0),
+ 'manifest_version'=>is_array($manifest)&&'7.0.8'===($manifest['version']??''),
+ 'manifest_schema'=>is_array($manifest)&&12===($manifest['sqlite_schema']??0),
  'free_first'=>is_array($manifest)&&false===($manifest['paid_infrastructure_required']??true),
  'docs'=>false!==strpos($docs,'Connected Research Intelligence Platform'),
 );
 $failed=array_keys(array_filter($checks,function($ok){return !$ok;}));
-echo json_encode(array('version'=>'7.0.7','checks'=>$checks,'passed'=>count($checks)-count($failed),'failed'=>count($failed),'failures'=>$failed),JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES).PHP_EOL;
+echo json_encode(array('version'=>'7.0.8','checks'=>$checks,'passed'=>count($checks)-count($failed),'failed'=>count($failed),'failures'=>$failed),JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES).PHP_EOL;
 exit($failed?1:0);

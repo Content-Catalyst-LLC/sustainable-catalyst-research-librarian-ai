@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 7.0.7
+Stable tag: 7.0.8
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
@@ -12,7 +12,7 @@ A connected, site-scoped research intelligence platform for Sustainable Catalyst
 
 Research Librarian AI retrieves Sustainable Catalyst publications and documents through exact-title priority, section-aware BM25 ranking, optional Gemini embeddings, calibrated reciprocal-rank fusion, and citation-verified synthesis. WordPress remains the canonical publishing and recovery source, while FastAPI provides a durable SQLite runtime index compatible with free Render infrastructure.
 
-v7.0.7 replaces the long-running backend activation worker with a durable incremental state machine. WordPress advances one bounded Python step at a time, while record, chunk, and checksum cursors persist in SQLite. The previous index remains active until the verified replacement switches atomically.
+v7.0.8 adds deterministic transaction-state reconciliation. WordPress compares its expected batch manifest with backend-retained batches, replays missing work from the durable staging file, and never treats an empty missing-batch list as proof of completeness.
 
 == Shortcodes ==
 
@@ -38,7 +38,7 @@ v7.0.7 replaces the long-running backend activation worker with a durable increm
 [sc_research_librarian_platform_handoffs]
 
 == Changelog ==
-= 7.0.7 =
+= 7.0.8 =
 * Removes FastAPI in-process background activation from the index rebuild path.
 * Adds a bounded authenticated commit-step endpoint with durable SQLite cursors.
 * Copies shadow records, builds chunks, and verifies the replacement in resumable batches.

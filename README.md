@@ -1,19 +1,20 @@
-# Sustainable Catalyst Research Librarian AI v7.0.7
+# Sustainable Catalyst Research Librarian AI v7.0.8
 
-A site-scoped connected research intelligence platform with restart-safe knowledge-index activation, verified retrieval, and a visible public research workspace. See `docs/V707_DURABLE_INCREMENTAL_INDEX_ACTIVATION.md`.
+A site-scoped connected research intelligence platform with deterministic transaction reconciliation, restart-safe index activation, verified retrieval, and a visible public research workspace. See `docs/V708_TRANSACTION_STATE_RECONCILIATION_DURABLE_RECOVERY.md`.
 
-## v7.0.7 highlights
+## v7.0.8 highlights
 
-- Removes long-running FastAPI in-process background activation
-- Advances activation through short authenticated `commit/step` requests
-- Copies records, builds retrieval chunks, and verifies checksums in bounded persisted batches
-- Resumes after backend process restarts without resetting durable cursors
-- Upgrades existing v7.0.6 queued or activating transactions in place
-- Keeps the previous active index untouched until the verified atomic switch
-- Replays the complete WordPress staging file when ephemeral backend state disappears
-- Shows shadow-record, chunked-record, verified-record, and durable-step progress
-- Supports `SC_RL_DATA_DIR` for a persistent backend disk
-- Preserves Gemini generation, semantic indexing, deterministic fallback, and human control
+- Distinguishes a complete 24/24 backend transaction from an empty transaction that merely reports no missing batches
+- Compares the backend batch manifest with the WordPress-owned expected batch count
+- Adds an authenticated transaction-reconciliation endpoint with explicit recovery actions
+- Replays only missing batches when the durable byte-offset ledger is available
+- Recreates missing, empty, mismatched, or indeterminate transactions from the preserved WordPress staging file
+- Resets replay counters after successful reconciliation
+- Starts a new recovery generation when resuming an exhausted v7.0.7 recovery job
+- Rejects activation of zero-batch backend transactions
+- Exposes transaction state, recovery action, transaction ID, storage path, and persistence diagnostics
+- Automatically uses a writable `/var/data` Render disk when available
+- Preserves the previous active index until the replacement is verified and switched atomically
 
 ## Architecture
 
@@ -38,7 +39,7 @@ WordPress remains the canonical publishing, administration, identity, and recove
 
 - Python 3.12.12
 - FastAPI
-- SQLite schema 11
+- SQLite schema 12
 - WordPress 6.0+
 - No paid vector database is required; persistent backend storage is recommended for strongest restart durability
 

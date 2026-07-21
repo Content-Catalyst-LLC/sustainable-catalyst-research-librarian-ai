@@ -1,5 +1,18 @@
 # Changelog
 
+## 7.0.8 — Transaction-State Reconciliation and Durable Recovery
+
+- Fixes the empty-missing-batch ambiguity that could exhaust replay attempts despite reporting no missing batch numbers.
+- Adds an authenticated reconciliation endpoint that compares backend state with the WordPress expected batch count.
+- Returns deterministic `committed`, `activate`, `replay-missing`, or `replay-all` recovery actions.
+- Records synchronization batch byte offsets and replays only specific missing batches when possible.
+- Recreates missing, empty-shell, mismatched, or indeterminate transactions from the preserved WordPress staging file.
+- Resets replay counters after successful reconciliation and supports new recovery generations for failed v7.0.7 jobs.
+- Rejects zero-batch activation requests before shadow-index work begins.
+- Adds transaction-state, action, ID, generation, and persistent-storage diagnostics to the administration interface.
+- Automatically selects a writable `/var/data` disk when available and continues to warn when storage is ephemeral.
+- Advances the backend store to SQLite schema 12.
+
 ## 7.0.7 — Durable Incremental Index Activation
 
 - Removes FastAPI `BackgroundTasks` from durable-index activation.

@@ -1,6 +1,6 @@
 <?php
 /**
- * Research Librarian AI v7.0.7 — Transaction Reconciliation and Public Interface Repair.
+ * Research Librarian AI v7.0.8 — Transaction-State Reconciliation and Durable Recovery.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class SC_RL6_V630_Durable_Index {
-    const VERSION = '7.0.7';
+    const VERSION = '7.0.8';
     const OPTION_NAME = 'sc_rl_v620_python_options';
     const STATUS_OPTION = 'sc_rl_v620_python_status';
     const SYNC_HOOK = 'sc_rl_v620_python_sync_event';
@@ -592,7 +592,7 @@ final class SC_RL6_V630_Durable_Index {
         $recovery_next = wp_next_scheduled( self::RECOVERY_HOOK );
         $retry_next = wp_next_scheduled( self::SYNC_RETRY_HOOK );
         return array(
-            'schema' => 'sc-research-librarian-sync-recovery-export/7.0.7',
+            'schema' => 'sc-research-librarian-sync-recovery-export/7.0.8',
             'version' => self::VERSION,
             'site' => home_url( '/' ),
             'generated_utc' => gmdate( 'c' ),
@@ -831,7 +831,7 @@ final class SC_RL6_V630_Durable_Index {
         $grounding['reason_codes'] = array_values( array_unique( array_merge( $grounding['reason_codes'], array( 'bm25-section-retrieval', 'citation-verification' ), ! empty( $grounding['retrieval_diagnostics']['semantic_used'] ) ? array( 'semantic-retrieval' ) : array() ) ) );
 
         $note = array(
-            'schema' => 'sc-research-librarian-route-note/7.0.7',
+            'schema' => 'sc-research-librarian-route-note/7.0.8',
             'created_at_utc' => gmdate( 'c' ),
             'question' => sanitize_textarea_field( $question ),
             'source' => sanitize_key( isset( $backend['source'] ) ? $backend['source'] : 'python-backend' ),
@@ -1256,7 +1256,7 @@ final class SC_RL6_V630_Durable_Index {
         $deleted_ids = array_values( array_diff( array_keys( $ledger['records'] ), array_keys( $current_ids ) ) );
         $report = array_merge( array(
             'version' => self::VERSION,
-            'schema' => 'sc-rl-sync-report/7.0.7',
+            'schema' => 'sc-rl-sync-report/7.0.8',
             'job_id' => $job_id,
             'state' => 'running',
             'mode' => 'transactional-replace',
@@ -1505,7 +1505,7 @@ final class SC_RL6_V630_Durable_Index {
     }
 
     public static function build_index_pipeline() {
-        return self::start_index_build( 'manual-v7.0.7-index-build' );
+        return self::start_index_build( 'manual-v7.0.8-index-build' );
     }
 
     private static function replace_build_state( $state ) {
@@ -1637,7 +1637,7 @@ final class SC_RL6_V630_Durable_Index {
             return new WP_Error( 'sc_rl_v703_build_file_create', 'The private asynchronous index staging file could not be created.' );
         }
         $state = array(
-            'schema' => 'sc-rl-async-index-build/7.0.7',
+            'schema' => 'sc-rl-async-index-build/7.0.8',
             'version' => self::VERSION,
             'job_id' => $job_id,
             'backend_job_id' => $job_id,
@@ -1675,11 +1675,16 @@ final class SC_RL6_V630_Durable_Index {
             'finalization_posts' => array(),
             'finalization_bytes' => 0,
             'transaction_replay_count' => 0,
-            'transaction_replay_limit' => 2,
+            'transaction_replay_limit' => 3,
             'backend_transaction_status' => array(),
             'backend_missing_batches' => array(),
             'backend_received_batches' => array(),
             'reconciliation_started_utc' => '',
+            'reconciliation_completed_utc' => '',
+            'recovery_generation' => 0,
+            'sync_batch_offsets' => array(),
+            'replay_batch_numbers' => array(),
+            'replay_batch_cursor' => 0,
         );
         self::clear_index_build_schedule();
         self::replace_build_state( $state );
@@ -1710,7 +1715,14 @@ final class SC_RL6_V630_Durable_Index {
         }
         $state['state'] = 'queued';
         $last_error = strtolower( (string) ( $state['last_error'] ?? '' ) );
-        if ( 'synchronizing-records' === sanitize_key( $state['stage'] ?? '' ) && false !== strpos( $last_error, 'did not commit the replacement transaction' ) ) {
+        $reconciliation_exhausted = false !== strpos( $last_error, 'could not be reconciled' ) || false !== strpos( $last_error, 'missing batch(es)' );
+        if ( $reconciliation_exhausted ) {
+            $state['transaction_replay_count'] = 0;
+            $state['transaction_replay_limit'] = max( 3, absint( $state['transaction_replay_limit'] ?? 0 ) );
+            $state['recovery_generation'] = absint( $state['recovery_generation'] ?? 0 ) + 1;
+            $state['stage'] = 'reconciling-transaction';
+            $state['message'] = 'Durable recovery restarted with a fresh reconciliation generation. The complete WordPress staging file remains intact.';
+        } elseif ( 'synchronizing-records' === sanitize_key( $state['stage'] ?? '' ) && false !== strpos( $last_error, 'did not commit the replacement transaction' ) ) {
             $state['stage'] = 'reconciling-transaction';
             $state['message'] = 'The saved source file is intact. Research Librarian will reconcile the backend transaction before replaying any missing work.';
         } else {
@@ -1907,7 +1919,7 @@ final class SC_RL6_V630_Durable_Index {
         $state['message'] = 'Bounded finalization complete. Record batches are staging in Python while the current index remains live.';
         $report = array(
             'version' => self::VERSION,
-            'schema' => 'sc-rl-sync-report/7.0.7',
+            'schema' => 'sc-rl-sync-report/7.0.8',
             'job_id' => $state['backend_job_id'],
             'state' => 'running',
             'mode' => 'transactional-replace-async',
@@ -2103,6 +2115,17 @@ final class SC_RL6_V630_Durable_Index {
         return self::request( '/v1/knowledge/sync/jobs/' . rawurlencode( $job_id ), 'GET' );
     }
 
+    private static function backend_reconcile_sync_job( $job_id, $expected_batch_count, $recovery_generation = 0 ) {
+        $job_id = sanitize_text_field( $job_id );
+        if ( ! $job_id ) {
+            return new WP_Error( 'sc_rl_v708_missing_backend_job', 'The backend transaction ID is missing.' );
+        }
+        return self::request( '/v1/knowledge/sync/jobs/' . rawurlencode( $job_id ) . '/reconcile', 'POST', array(
+            'expected_batch_count' => absint( $expected_batch_count ),
+            'recovery_generation' => absint( $recovery_generation ),
+        ) );
+    }
+
     private static function backend_queue_sync_commit( $job_id ) {
         $job_id = sanitize_text_field( $job_id );
         if ( ! $job_id ) {
@@ -2174,6 +2197,75 @@ final class SC_RL6_V630_Durable_Index {
         return $state;
     }
 
+    private static function local_reconciliation_status( $state, $status ) {
+        $state = is_array( $state ) ? $state : array();
+        $status = is_array( $status ) ? $status : array();
+        $expected = max( 0, absint( $state['sync_batch_count'] ?? 0 ) );
+        $actual = max( 0, absint( $status['batch_count'] ?? 0 ) );
+        $received = isset( $status['received_batches'] ) && is_array( $status['received_batches'] ) ? array_values( array_unique( array_filter( array_map( 'absint', $status['received_batches'] ) ) ) ) : array();
+        sort( $received, SORT_NUMERIC );
+        $missing = isset( $status['missing_batches'] ) && is_array( $status['missing_batches'] ) ? array_values( array_unique( array_filter( array_map( 'absint', $status['missing_batches'] ) ) ) ) : array();
+        if ( ! empty( $status['committed'] ) ) {
+            $action = 'committed';
+            $transaction_state = 'committed';
+        } elseif ( empty( $status['exists'] ) ) {
+            $action = 'replay-all';
+            $transaction_state = 'missing';
+        } elseif ( $expected > 0 && $actual === $expected && count( $received ) === $expected && empty( $missing ) ) {
+            $action = 'activate';
+            $transaction_state = 'complete';
+        } elseif ( 0 === $actual && empty( $received ) ) {
+            $action = 'replay-all';
+            $transaction_state = 'empty-shell';
+        } elseif ( $expected > 0 && $actual !== $expected ) {
+            $action = 'replay-all';
+            $transaction_state = 'batch-count-mismatch';
+        } elseif ( ! empty( $missing ) ) {
+            $action = 'replay-missing';
+            $transaction_state = 'incomplete';
+        } else {
+            $action = 'replay-all';
+            $transaction_state = 'indeterminate';
+        }
+        return array_merge( $status, array(
+            'reconciliation_action' => $action,
+            'transaction_state' => $transaction_state,
+            'expected_batch_count' => $expected,
+            'backend_batch_count' => $actual,
+            'received_batch_count' => count( $received ),
+            'received_batches' => $received,
+            'missing_batches' => $missing,
+        ) );
+    }
+
+    private static function reconciliation_status( $state, $status = array() ) {
+        $expected = absint( $state['sync_batch_count'] ?? 0 );
+        $remote = self::backend_reconcile_sync_job( $state['backend_job_id'] ?? '', $expected, absint( $state['recovery_generation'] ?? 0 ) );
+        if ( ! is_wp_error( $remote ) && is_array( $remote ) ) {
+            return $remote;
+        }
+        return self::local_reconciliation_status( $state, $status );
+    }
+
+    private static function continue_after_complete_reconciliation( $state, $status ) {
+        $state['backend_transaction_status'] = $status;
+        $state['backend_missing_batches'] = array();
+        $state['backend_received_batches'] = isset( $status['received_batches'] ) && is_array( $status['received_batches'] ) ? array_values( array_map( 'absint', $status['received_batches'] ) ) : array();
+        $state['backend_transaction_state'] = sanitize_key( $status['transaction_state'] ?? 'complete' );
+        $state['backend_reconciliation_action'] = sanitize_key( $status['reconciliation_action'] ?? 'activate' );
+        $state['transaction_replay_count'] = 0;
+        $state['reconciliation_completed_utc'] = gmdate( 'c' );
+        $state['last_error'] = '';
+        $backend_state = sanitize_key( $status['state'] ?? '' );
+        $state['stage'] = in_array( $backend_state, array( 'commit-queued', 'committing', 'commit-stalled' ), true ) ? 'waiting-backend-commit' : 'queuing-backend-commit';
+        $state['state'] = 'queued';
+        $state['progress'] = 87;
+        $state['message'] = 'Backend reconciliation confirms that every expected source batch is retained. Continuing with durable index activation.';
+        self::replace_build_state( $state );
+        self::schedule_index_build( $state['job_id'], 2 );
+        return $state;
+    }
+
     private static function process_build_backend_commit_step( $state ) {
         $job_id = sanitize_text_field( $state['backend_job_id'] ?? '' );
         $status = self::backend_sync_job_status( $job_id );
@@ -2182,6 +2274,19 @@ final class SC_RL6_V630_Durable_Index {
         }
         if ( empty( $status['exists'] ) ) {
             return self::begin_transaction_replay( $state, $status, 'backend-ephemeral-state-lost-before-activation' );
+        }
+        $reconciliation = self::local_reconciliation_status( $state, $status );
+        $state['backend_transaction_state'] = sanitize_key( $reconciliation['transaction_state'] ?? '' );
+        $state['backend_reconciliation_action'] = sanitize_key( $reconciliation['reconciliation_action'] ?? '' );
+        if ( in_array( sanitize_key( $reconciliation['reconciliation_action'] ?? '' ), array( 'replay-all', 'replay-missing' ), true ) ) {
+            $state['stage'] = 'reconciling-transaction';
+            $state['state'] = 'queued';
+            $state['progress'] = 86;
+            $state['backend_transaction_status'] = $reconciliation;
+            $state['message'] = 'Backend transaction state requires reconciliation before activation can continue.';
+            self::replace_build_state( $state );
+            self::schedule_index_build( $state['job_id'], 2 );
+            return $state;
         }
 
         $state['backend_transaction_status'] = $status;
@@ -2230,7 +2335,7 @@ final class SC_RL6_V630_Durable_Index {
             }
         }
 
-        // v7.0.7 advances exactly one bounded backend step per WordPress job
+        // v7.0.8 advances exactly one bounded backend step per WordPress job
         // iteration. There is no in-process FastAPI background worker to lose.
         $advanced = self::backend_advance_sync_commit( $job_id );
         if ( is_wp_error( $advanced ) ) {
@@ -2287,17 +2392,38 @@ final class SC_RL6_V630_Durable_Index {
 
     private static function begin_transaction_replay( $state, $backend_status = array(), $reason = '' ) {
         $state = is_array( $state ) ? $state : array();
-        $attempt = absint( $state['transaction_replay_count'] ?? 0 ) + 1;
-        $limit = max( 1, min( 5, absint( $state['transaction_replay_limit'] ?? 2 ) ) );
-        if ( $attempt > $limit ) {
-            $missing = isset( $backend_status['missing_batches'] ) && is_array( $backend_status['missing_batches'] ) ? implode( ', ', array_map( 'absint', $backend_status['missing_batches'] ) ) : 'unknown';
-            return self::handle_build_error( $state, new WP_Error( 'sc_rl_v705_reconciliation_exhausted', 'The backend transaction could not be reconciled after ' . $limit . ' replay attempt(s). Missing batch(es): ' . $missing . '.' ) );
+        $backend_status = self::local_reconciliation_status( $state, is_array( $backend_status ) ? $backend_status : array() );
+        $action = sanitize_key( $backend_status['reconciliation_action'] ?? '' );
+        if ( in_array( $action, array( 'activate', 'committed' ), true ) ) {
+            if ( 'committed' === $action || ! empty( $backend_status['committed'] ) ) {
+                return self::activate_committed_build( $state, $backend_status );
+            }
+            return self::continue_after_complete_reconciliation( $state, $backend_status );
         }
+
+        $attempt = absint( $state['transaction_replay_count'] ?? 0 ) + 1;
+        $limit = max( 1, min( 5, absint( $state['transaction_replay_limit'] ?? 3 ) ) );
+        if ( $attempt > $limit ) {
+            $missing_values = isset( $backend_status['missing_batches'] ) && is_array( $backend_status['missing_batches'] ) ? array_values( array_filter( array_map( 'absint', $backend_status['missing_batches'] ) ) ) : array();
+            $missing = $missing_values ? implode( ', ', $missing_values ) : 'none reported';
+            $transaction_state = sanitize_key( $backend_status['transaction_state'] ?? $backend_status['state'] ?? 'unknown' );
+            $expected = absint( $backend_status['expected_batch_count'] ?? $state['sync_batch_count'] ?? 0 );
+            $actual = absint( $backend_status['backend_batch_count'] ?? $backend_status['batch_count'] ?? 0 );
+            $retained = absint( $backend_status['received_batch_count'] ?? count( $backend_status['received_batches'] ?? array() ) );
+            return self::handle_build_error( $state, new WP_Error(
+                'sc_rl_v708_reconciliation_exhausted',
+                'The backend transaction could not be reconciled after ' . $limit . ' replay attempt(s). Transaction state: ' . $transaction_state . '; expected batches: ' . $expected . '; backend batch count: ' . $actual . '; retained batches: ' . $retained . '; missing batches: ' . $missing . '.'
+            ) );
+        }
+
         $previous_job_id = sanitize_text_field( $state['backend_job_id'] ?? $state['job_id'] ?? '' );
+        $generation = max( 1, absint( $state['recovery_generation'] ?? 0 ) );
         $state['previous_backend_job_id'] = $previous_job_id;
-        $state['backend_job_id'] = sanitize_text_field( ( $state['job_id'] ?? 'async-sync' ) . '-replay-' . $attempt . '-' . gmdate( 'His' ) );
+        $state['backend_job_id'] = sanitize_text_field( ( $state['job_id'] ?? 'async-sync' ) . '-recovery-' . $generation . '-replay-' . $attempt . '-' . gmdate( 'His' ) );
         $state['transaction_replay_count'] = $attempt;
-        $state['backend_transaction_status'] = is_array( $backend_status ) ? $backend_status : array();
+        $state['backend_transaction_status'] = $backend_status;
+        $state['backend_transaction_state'] = sanitize_key( $backend_status['transaction_state'] ?? 'unknown' );
+        $state['backend_reconciliation_action'] = 'replay-all';
         $state['backend_missing_batches'] = isset( $backend_status['missing_batches'] ) && is_array( $backend_status['missing_batches'] ) ? array_values( array_map( 'absint', $backend_status['missing_batches'] ) ) : array();
         $state['backend_received_batches'] = isset( $backend_status['received_batches'] ) && is_array( $backend_status['received_batches'] ) ? array_values( array_map( 'absint', $backend_status['received_batches'] ) ) : array();
         $state['reconciliation_started_utc'] = gmdate( 'c' );
@@ -2309,8 +2435,10 @@ final class SC_RL6_V630_Durable_Index {
         $state['failed_records'] = 0;
         $state['retry_count'] = 0;
         $state['progress'] = 56;
-        $missing_count = count( $state['backend_missing_batches'] );
-        $state['message'] = 'Backend transaction reconciliation started. Replaying the durable WordPress staging file as a fresh transaction' . ( $missing_count ? ' after detecting ' . $missing_count . ' missing batch(es)' : '' ) . '.';
+        $state['replay_batch_numbers'] = array();
+        $state['replay_batch_cursor'] = 0;
+        $transaction_state = sanitize_key( $backend_status['transaction_state'] ?? 'unknown' );
+        $state['message'] = 'Backend transaction recovery started from the durable WordPress staging file. Recovery state: ' . str_replace( '-', ' ', $transaction_state ) . '; replaying all source batches as a fresh transaction.';
         if ( $reason ) {
             $state['reconciliation_reason'] = sanitize_text_field( $reason );
         }
@@ -2319,34 +2447,102 @@ final class SC_RL6_V630_Durable_Index {
         return $state;
     }
 
-    private static function process_build_reconciliation_step( $state ) {
-        $status = self::backend_sync_job_status( $state['backend_job_id'] ?? '' );
-        if ( is_wp_error( $status ) ) {
-            return self::handle_build_error( $state, $status );
-        }
-        $state['backend_transaction_status'] = $status;
-        $state['backend_missing_batches'] = isset( $status['missing_batches'] ) && is_array( $status['missing_batches'] ) ? array_values( array_map( 'absint', $status['missing_batches'] ) ) : array();
-        $state['backend_received_batches'] = isset( $status['received_batches'] ) && is_array( $status['received_batches'] ) ? array_values( array_map( 'absint', $status['received_batches'] ) ) : array();
-        if ( ! empty( $status['committed'] ) ) {
-            return self::activate_committed_build( $state, $status );
-        }
-        if ( empty( $state['backend_missing_batches'] ) && in_array( sanitize_key( $status['state'] ?? '' ), array( 'ready-to-commit', 'ready-to-commit-with-rejections', 'commit-queued', 'committing' ), true ) ) {
-            $state['stage'] = in_array( sanitize_key( $status['state'] ?? '' ), array( 'commit-queued', 'committing' ), true ) ? 'waiting-backend-commit' : 'queuing-backend-commit';
+    private static function process_build_missing_batch_replay_step( $state ) {
+        $numbers = isset( $state['replay_batch_numbers'] ) && is_array( $state['replay_batch_numbers'] ) ? array_values( array_filter( array_map( 'absint', $state['replay_batch_numbers'] ) ) ) : array();
+        $cursor = absint( $state['replay_batch_cursor'] ?? 0 );
+        if ( $cursor >= count( $numbers ) ) {
+            $state['stage'] = 'reconciling-transaction';
             $state['state'] = 'queued';
-            $state['progress'] = 87;
-            $state['message'] = 'All backend batches are present. Continuing with asynchronous index activation instead of replaying the source collection.';
-            $state['last_error'] = '';
+            $state['progress'] = 86;
+            $state['message'] = 'Missing source batches were replayed. Verifying backend transaction completeness.';
             self::replace_build_state( $state );
             self::schedule_index_build( $state['job_id'], 2 );
             return $state;
         }
-        return self::begin_transaction_replay( $state, $status, ! empty( $status['exists'] ) ? 'backend-missing-batches' : 'backend-staging-state-lost' );
+        $batch_number = absint( $numbers[ $cursor ] );
+        $offsets = isset( $state['sync_batch_offsets'] ) && is_array( $state['sync_batch_offsets'] ) ? $state['sync_batch_offsets'] : array();
+        $offset = isset( $offsets[ $batch_number ]['start'] ) ? absint( $offsets[ $batch_number ]['start'] ) : null;
+        if ( null === $offset ) {
+            return self::begin_transaction_replay( $state, $state['backend_transaction_status'] ?? array(), 'missing-batch-offset-ledger-unavailable' );
+        }
+        $batch_size = max( 25, min( 250, absint( self::options()['sync_batch_size'] ?? 100 ) ) );
+        $batch_data = self::read_build_batch( $state, $offset, $batch_size );
+        if ( is_wp_error( $batch_data ) ) {
+            return self::handle_build_error( $state, $batch_data );
+        }
+        $batch_count = max( 1, absint( $state['sync_batch_count'] ?? 1 ) );
+        $response = self::request( '/v1/knowledge/sync', 'POST', array(
+            'records' => $batch_data['records'],
+            'deleted_ids' => $batch_number === $batch_count ? array_values( $state['deleted_ids'] ?? array() ) : array(),
+            'mode' => 'replace',
+            'source_site' => home_url( '/' ),
+            'generated_utc' => gmdate( 'c' ),
+            'job_id' => sanitize_text_field( $state['backend_job_id'] ),
+            'batch_index' => $batch_number,
+            'batch_count' => $batch_count,
+            'reason' => 'wordpress-missing-batch-replay-v7.0.8',
+            'defer_commit' => true,
+        ) );
+        if ( is_wp_error( $response ) ) {
+            return self::handle_build_error( $state, $response );
+        }
+        $state['replay_batch_cursor'] = $cursor + 1;
+        $state['retry_count'] = 0;
+        $state['message'] = 'Replayed missing backend batch ' . $batch_number . ' · ' . $state['replay_batch_cursor'] . ' of ' . count( $numbers ) . ' recovery batch(es).';
+        self::replace_build_state( $state );
+        self::schedule_index_build( $state['job_id'], 2 );
+        return $state;
+    }
+
+    private static function process_build_reconciliation_step( $state ) {
+        $status = self::backend_sync_job_status( $state['backend_job_id'] ?? '' );
+        if ( is_wp_error( $status ) ) {
+            $status = array( 'exists' => false, 'state' => 'unreachable', 'error' => $status->get_error_message() );
+        }
+        $status = self::reconciliation_status( $state, $status );
+        $state['backend_transaction_status'] = $status;
+        $state['backend_transaction_state'] = sanitize_key( $status['transaction_state'] ?? 'unknown' );
+        $state['backend_reconciliation_action'] = sanitize_key( $status['reconciliation_action'] ?? 'replay-all' );
+        $state['backend_missing_batches'] = isset( $status['missing_batches'] ) && is_array( $status['missing_batches'] ) ? array_values( array_map( 'absint', $status['missing_batches'] ) ) : array();
+        $state['backend_received_batches'] = isset( $status['received_batches'] ) && is_array( $status['received_batches'] ) ? array_values( array_map( 'absint', $status['received_batches'] ) ) : array();
+
+        $action = sanitize_key( $status['reconciliation_action'] ?? '' );
+        if ( 'committed' === $action || ! empty( $status['committed'] ) ) {
+            return self::activate_committed_build( $state, $status );
+        }
+        if ( 'activate' === $action ) {
+            return self::continue_after_complete_reconciliation( $state, $status );
+        }
+        if ( 'replay-missing' === $action ) {
+            $offsets = isset( $state['sync_batch_offsets'] ) && is_array( $state['sync_batch_offsets'] ) ? $state['sync_batch_offsets'] : array();
+            $missing = $state['backend_missing_batches'];
+            $can_replay_missing = ! empty( $missing );
+            foreach ( $missing as $batch_number ) {
+                if ( ! isset( $offsets[ $batch_number ]['start'] ) ) {
+                    $can_replay_missing = false;
+                    break;
+                }
+            }
+            if ( $can_replay_missing ) {
+                $state['stage'] = 'replaying-missing-batches';
+                $state['state'] = 'queued';
+                $state['replay_batch_numbers'] = $missing;
+                $state['replay_batch_cursor'] = 0;
+                $state['progress'] = 86;
+                $state['message'] = 'The backend retained part of the transaction. Replaying only ' . count( $missing ) . ' missing batch(es) from the WordPress offset ledger.';
+                self::replace_build_state( $state );
+                self::schedule_index_build( $state['job_id'], 2 );
+                return $state;
+            }
+        }
+        return self::begin_transaction_replay( $state, $status, 'backend-' . sanitize_key( $status['transaction_state'] ?? 'state-lost' ) );
     }
 
     private static function process_build_sync_step( $state ) {
         $options = self::options();
         $batch_size = max( 25, min( 250, absint( $options['sync_batch_size'] ?? 100 ) ) );
         $batch_index = absint( $state['sync_batch_index'] ?? 0 ) + 1;
+        $batch_start_offset = absint( $state['sync_offset'] ?? 0 );
         $batch_count = max( 1, absint( $state['sync_batch_count'] ?? 1 ) );
         $batch_data = self::read_build_batch( $state, absint( $state['sync_offset'] ?? 0 ), $batch_size );
         if ( is_wp_error( $batch_data ) ) {
@@ -2366,45 +2562,40 @@ final class SC_RL6_V630_Durable_Index {
             'job_id' => sanitize_text_field( $state['backend_job_id'] ),
             'batch_index' => $batch_index,
             'batch_count' => $batch_count,
-            'reason' => 'wordpress-async-full-sync-v7.0.7',
+            'reason' => 'wordpress-async-full-sync-v7.0.8',
             'defer_commit' => true,
         ) );
 
         if ( is_wp_error( $response ) ) {
             if ( $is_final ) {
                 $transaction_status = self::backend_sync_job_status( $state['backend_job_id'] );
-                if ( ! is_wp_error( $transaction_status ) && ! empty( $transaction_status['exists'] ) ) {
+                if ( ! is_wp_error( $transaction_status ) ) {
+                    $transaction_status = self::reconciliation_status( $state, $transaction_status );
                     $state['backend_transaction_status'] = $transaction_status;
+                    $state['backend_transaction_state'] = sanitize_key( $transaction_status['transaction_state'] ?? '' );
+                    $state['backend_reconciliation_action'] = sanitize_key( $transaction_status['reconciliation_action'] ?? '' );
                     $state['backend_missing_batches'] = isset( $transaction_status['missing_batches'] ) && is_array( $transaction_status['missing_batches'] ) ? array_values( array_map( 'absint', $transaction_status['missing_batches'] ) ) : array();
                     $state['backend_received_batches'] = isset( $transaction_status['received_batches'] ) && is_array( $transaction_status['received_batches'] ) ? array_values( array_map( 'absint', $transaction_status['received_batches'] ) ) : array();
-                    if ( ! empty( $transaction_status['committed'] ) ) {
+                    $action = sanitize_key( $transaction_status['reconciliation_action'] ?? '' );
+                    if ( 'committed' === $action || ! empty( $transaction_status['committed'] ) ) {
                         $state['sync_batch_index'] = $batch_index;
                         $state['sync_offset'] = absint( $batch_data['offset'] );
                         $state['records_synced'] = max( absint( $state['records_synced'] ?? 0 ), absint( $transaction_status['activation_records'] ?? $transaction_status['staged_records'] ?? 0 ) );
                         return self::activate_committed_build( $state, $transaction_status );
                     }
-                    if ( empty( $state['backend_missing_batches'] ) && in_array( sanitize_key( $transaction_status['state'] ?? '' ), array( 'ready-to-commit', 'ready-to-commit-with-rejections', 'commit-queued', 'committing' ), true ) ) {
+                    if ( 'activate' === $action ) {
                         $state['sync_batch_index'] = $batch_index;
                         $state['sync_offset'] = absint( $batch_data['offset'] );
                         $state['records_synced'] = max( absint( $state['records_synced'] ?? 0 ), absint( $transaction_status['staged_records'] ?? 0 ) );
-                        $state['stage'] = in_array( sanitize_key( $transaction_status['state'] ?? '' ), array( 'commit-queued', 'committing' ), true ) ? 'waiting-backend-commit' : 'queuing-backend-commit';
-                        $state['state'] = 'queued';
-                        $state['progress'] = 87;
-                        $state['last_error'] = '';
-                        $state['message'] = 'The final staging response was ambiguous, but backend reconciliation confirms that all batches are retained. Continuing with asynchronous activation.';
-                        self::replace_build_state( $state );
-                        self::schedule_index_build( $state['job_id'], 2 );
-                        return $state;
+                        return self::continue_after_complete_reconciliation( $state, $transaction_status );
                     }
-                    if ( ! empty( $state['backend_missing_batches'] ) ) {
-                        $state['stage'] = 'reconciling-transaction';
-                        $state['state'] = 'queued';
-                        $state['progress'] = 86;
-                        $state['message'] = 'The final staging request failed and the backend reports missing batches. Research Librarian is reconciling the transaction.';
-                        self::replace_build_state( $state );
-                        self::schedule_index_build( $state['job_id'], 2 );
-                        return $state;
-                    }
+                    $state['stage'] = 'reconciling-transaction';
+                    $state['state'] = 'queued';
+                    $state['progress'] = 86;
+                    $state['message'] = 'The final staging response was ambiguous. Transaction-state reconciliation will determine whether to replay missing work or recreate the backend transaction.';
+                    self::replace_build_state( $state );
+                    self::schedule_index_build( $state['job_id'], 2 );
+                    return $state;
                 }
             }
             return self::handle_build_error( $state, $response );
@@ -2436,6 +2627,12 @@ final class SC_RL6_V630_Durable_Index {
 
         $state['sync_batch_index'] = $batch_index;
         $state['sync_offset'] = absint( $batch_data['offset'] );
+        $state['sync_batch_offsets'] = isset( $state['sync_batch_offsets'] ) && is_array( $state['sync_batch_offsets'] ) ? $state['sync_batch_offsets'] : array();
+        $state['sync_batch_offsets'][ $batch_index ] = array(
+            'start' => $batch_start_offset,
+            'end' => absint( $batch_data['offset'] ),
+            'records' => count( $records ),
+        );
         $state['records_synced'] = absint( $state['records_synced'] ?? 0 ) + count( $records );
         $state['failed_records'] = absint( $state['failed_records'] ?? 0 ) + absint( $response['rejected'] ?? 0 );
         $state['retry_count'] = 0;
@@ -2444,32 +2641,30 @@ final class SC_RL6_V630_Durable_Index {
 
         if ( $is_final ) {
             if ( ! empty( $response['committed'] ) ) {
-                // Backward-compatible path for a pre-v7.0.7 backend.
+                // Backward-compatible path for a pre-v7.0.8 backend.
                 return self::activate_committed_build( $state, $response );
             }
             $transaction_status = self::backend_sync_job_status( $state['backend_job_id'] );
             if ( is_wp_error( $transaction_status ) ) {
                 return self::handle_build_error( $state, $transaction_status );
             }
+            $transaction_status = self::reconciliation_status( $state, $transaction_status );
             $state['backend_transaction_status'] = $transaction_status;
+            $state['backend_transaction_state'] = sanitize_key( $transaction_status['transaction_state'] ?? '' );
+            $state['backend_reconciliation_action'] = sanitize_key( $transaction_status['reconciliation_action'] ?? '' );
             $state['backend_received_batches'] = isset( $transaction_status['received_batches'] ) && is_array( $transaction_status['received_batches'] ) ? array_values( array_map( 'absint', $transaction_status['received_batches'] ) ) : array();
             $state['backend_missing_batches'] = isset( $transaction_status['missing_batches'] ) && is_array( $transaction_status['missing_batches'] ) ? array_values( array_map( 'absint', $transaction_status['missing_batches'] ) ) : array();
-            if ( ! empty( $state['backend_missing_batches'] ) ) {
-                $state['stage'] = 'reconciling-transaction';
-                $state['state'] = 'queued';
-                $state['progress'] = 86;
-                $state['message'] = 'The final source batch was retained, but the backend no longer has every earlier batch. Replaying the durable WordPress staging file through transaction reconciliation.';
-            } elseif ( in_array( sanitize_key( $transaction_status['state'] ?? '' ), array( 'commit-queued', 'committing' ), true ) ) {
-                $state['stage'] = 'waiting-backend-commit';
-                $state['state'] = 'queued';
-                $state['progress'] = 87;
-                $state['message'] = 'All synchronization batches are staged and backend activation is already running.';
-            } else {
-                $state['stage'] = 'queuing-backend-commit';
-                $state['state'] = 'queued';
-                $state['progress'] = 87;
-                $state['message'] = 'All ' . $batch_count . ' synchronization batches are staged. Queuing backend index activation outside the WordPress request.';
+            $action = sanitize_key( $transaction_status['reconciliation_action'] ?? '' );
+            if ( 'committed' === $action || ! empty( $transaction_status['committed'] ) ) {
+                return self::activate_committed_build( $state, $transaction_status );
             }
+            if ( 'activate' === $action ) {
+                return self::continue_after_complete_reconciliation( $state, $transaction_status );
+            }
+            $state['stage'] = 'reconciling-transaction';
+            $state['state'] = 'queued';
+            $state['progress'] = 86;
+            $state['message'] = 'Source staging completed, but the backend transaction manifest is not complete. Starting deterministic transaction reconciliation.';
         }
         $state['next_run_utc'] = gmdate( 'c', time() + 2 );
         self::replace_build_state( $state );
@@ -2620,7 +2815,7 @@ final class SC_RL6_V630_Durable_Index {
             $warnings[] = 'Knowledge records are ready, but semantic embeddings need attention: ' . $embedding_test->get_error_message();
             $state['embedding_state'] = array( 'state' => 'configuration-error', 'last_error' => $embedding_test->get_error_message() );
         } else {
-            $embedding_state = self::schedule_embedding_queue( 'v7.0.7-async-index-build', 10 );
+            $embedding_state = self::schedule_embedding_queue( 'v7.0.8-async-index-build', 10 );
             if ( is_wp_error( $embedding_state ) ) {
                 $warnings[] = 'Knowledge records are ready, but the semantic queue could not be scheduled: ' . $embedding_state->get_error_message();
                 $state['embedding_state'] = array( 'state' => 'manual-continuation-required', 'last_error' => $embedding_state->get_error_message() );
@@ -2680,6 +2875,8 @@ final class SC_RL6_V630_Durable_Index {
                     return self::process_build_sync_step( $state );
                 case 'reconciling-transaction':
                     return self::process_build_reconciliation_step( $state );
+                case 'replaying-missing-batches':
+                    return self::process_build_missing_batch_replay_step( $state );
                 case 'queuing-backend-commit':
                 case 'waiting-backend-commit':
                     return self::process_build_backend_commit_step( $state );
@@ -2707,7 +2904,7 @@ final class SC_RL6_V630_Durable_Index {
     }
 
     public static function sync_and_complete_embeddings() {
-        $sync = self::sync_all_records( 'manual-v7.0.7-repair' );
+        $sync = self::sync_all_records( 'manual-v7.0.8-repair' );
         if ( is_wp_error( $sync ) ) {
             return $sync;
         }
@@ -3843,11 +4040,11 @@ final class SC_RL6_V630_Durable_Index {
         $primary_state = $build_active ? 'indexing' : ( $indexed_records ? ( $pending_chunks ? 'indexing' : 'ready' ) : ( $backend_connected ? 'action-required' : 'offline' ) );
         $build_badge = $build_active ? 'Background rebuild · ' . str_replace( '-', ' ', $build_stage ?: 'queued' ) : ( 'failed' === $build_status_key ? 'Rebuild paused by an error · previous index retained' : ( $indexed_records ? ( $pending_chunks ? 'Index ready · semantic indexing in progress' : 'Research service ready' ) : ( $backend_connected ? 'Connection ready · index build required' : 'Python connection needs attention' ) ) );
         $last_error_text = strtolower( (string) ( $build_state['last_error'] ?? '' ) );
-        $transaction_recovery_ready = 'reconciling-transaction' === $build_stage || false !== strpos( $last_error_text, 'did not commit the replacement transaction' );
+        $transaction_recovery_ready = in_array( $build_stage, array( 'reconciling-transaction', 'replaying-missing-batches' ), true ) || false !== strpos( $last_error_text, 'did not commit the replacement transaction' ) || false !== strpos( $last_error_text, 'could not be reconciled' );
         $backend_commit_active = in_array( $build_stage, array( 'queuing-backend-commit', 'waiting-backend-commit' ), true );
         $resume_label = $transaction_recovery_ready ? 'Repair and Resume Commit' : ( $backend_commit_active ? 'Resume Activation Check' : 'Resume Rebuild' );
         $validated_display = absint( $build_state['finalization_records'] ?? 0 );
-        if ( ! $validated_display && in_array( $build_stage, array( 'synchronizing-records', 'reconciling-transaction', 'queuing-backend-commit', 'waiting-backend-commit', 'verifying-index', 'creating-snapshot', 'starting-embeddings', 'ready' ), true ) ) {
+        if ( ! $validated_display && in_array( $build_stage, array( 'synchronizing-records', 'reconciling-transaction', 'replaying-missing-batches', 'queuing-backend-commit', 'waiting-backend-commit', 'verifying-index', 'creating-snapshot', 'starting-embeddings', 'ready' ), true ) ) {
             $validated_display = absint( $build_state['records_discovered'] ?? 0 );
         }
         $finalization_bytes = absint( $build_state['finalization_bytes'] ?? 0 );
@@ -3869,6 +4066,10 @@ final class SC_RL6_V630_Durable_Index {
         $backend_checksum_records = absint( $build_state['backend_checksum_records'] ?? $build_state['backend_transaction_status']['checksum_records'] ?? 0 );
         $backend_activation_steps = absint( $build_state['backend_activation_steps'] ?? $build_state['backend_transaction_status']['activation_step_count'] ?? 0 );
         $backend_storage_persistent = ! empty( $build_state['backend_storage_persistent'] ?? $build_state['backend_transaction_status']['storage_persistent'] ?? false );
+        $backend_transaction_state = sanitize_key( $build_state['backend_transaction_state'] ?? $build_state['backend_transaction_status']['transaction_state'] ?? $build_state['backend_transaction_status']['state'] ?? '' );
+        $backend_reconciliation_action = sanitize_key( $build_state['backend_reconciliation_action'] ?? $build_state['backend_transaction_status']['reconciliation_action'] ?? '' );
+        $backend_job_id = sanitize_text_field( $build_state['backend_job_id'] ?? '' );
+        $recovery_generation = absint( $build_state['recovery_generation'] ?? 0 );
         ?>
         <div class="wrap sc-rl-v702-admin">
             <style>
@@ -3878,7 +4079,7 @@ final class SC_RL6_V630_Durable_Index {
 
             <section class="sc-rl-v702-hero" data-state="<?php echo esc_attr( $primary_state ); ?>">
                 <div>
-                    <div class="sc-rl-v702-eyebrow">Research Librarian v7.0.7</div>
+                    <div class="sc-rl-v702-eyebrow">Research Librarian v7.0.8</div>
                     <h1>Knowledge Index and AI Readiness</h1>
                     <p>One operational view for the Python connection, WordPress source discovery, durable knowledge synchronization, and Gemini semantic indexing.</p>
                     <div class="sc-rl-v702-badge"><?php echo esc_html( $build_badge ); ?></div>
@@ -3930,7 +4131,11 @@ final class SC_RL6_V630_Durable_Index {
                         <?php if ( $transaction_recovery_ready || $backend_received || $backend_missing ) : ?>
                             <div class="sc-rl-v703-job__metric"><span>Backend retained</span><strong><?php echo esc_html( count( $backend_received ) . '/' . $backend_batch_count ); ?></strong></div>
                             <div class="sc-rl-v703-job__metric"><span>Missing batches</span><strong><?php echo esc_html( $backend_missing ? implode( ', ', array_slice( $backend_missing, 0, 8 ) ) : 'Checking' ); ?></strong></div>
-                            <div class="sc-rl-v703-job__metric"><span>Replay attempt</span><strong><?php echo esc_html( absint( $build_state['transaction_replay_count'] ?? 0 ) . '/' . max( 1, absint( $build_state['transaction_replay_limit'] ?? 2 ) ) ); ?></strong></div>
+                            <div class="sc-rl-v703-job__metric"><span>Transaction state</span><strong><?php echo esc_html( $backend_transaction_state ? ucwords( str_replace( '-', ' ', $backend_transaction_state ) ) : 'Checking' ); ?></strong></div>
+                            <div class="sc-rl-v703-job__metric"><span>Recovery action</span><strong><?php echo esc_html( $backend_reconciliation_action ? ucwords( str_replace( '-', ' ', $backend_reconciliation_action ) ) : 'Checking' ); ?></strong></div>
+                            <div class="sc-rl-v703-job__metric"><span>Transaction ID</span><strong title="<?php echo esc_attr( $backend_job_id ); ?>"><?php echo esc_html( $backend_job_id ? substr( $backend_job_id, 0, 28 ) . ( strlen( $backend_job_id ) > 28 ? '…' : '' ) : 'Unavailable' ); ?></strong></div>
+                            <div class="sc-rl-v703-job__metric"><span>Recovery generation</span><strong><?php echo esc_html( number_format_i18n( $recovery_generation ) ); ?></strong></div>
+                            <div class="sc-rl-v703-job__metric"><span>Replay attempt</span><strong><?php echo esc_html( absint( $build_state['transaction_replay_count'] ?? 0 ) . '/' . max( 1, absint( $build_state['transaction_replay_limit'] ?? 3 ) ) ); ?></strong></div>
                         <?php endif; ?>
                     </div>
                     <?php if ( $backend_commit_active ) : ?><div class="sc-rl-v703-cron"><strong>All source batches are staged.</strong> WordPress is advancing one bounded Python activation step at a time. Every record, chunk, and verification cursor is saved before the next request.</div><?php endif; ?>

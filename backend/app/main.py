@@ -46,6 +46,7 @@ from .models import (
     StatusResponse,
     SyncRequest,
     SyncResponse,
+    SyncReconcileRequest,
     utc_now,
 )
 from .provider import configured as provider_configured
@@ -154,7 +155,7 @@ def _workspace_summary(mode: str, matches: list[RetrievedSource], related: list[
         "accessibility_profile": "wcag-focused-v6.5.1",
         "rendering_profile": "staged-v6.5.1",
         "handoff_profile": "cross-product-reliability-v6.6.1",
-        "governance_profile": store.governance_policy().get("profile", "public-trust-v7.0.7"),
+        "governance_profile": store.governance_policy().get("profile", "public-trust-v7.0.8"),
         "available_destinations": list(available_capabilities().keys()),
         "connected_platform": store.connected_platform_summary(),
         "generation_boundary": adapter_status(),
@@ -574,11 +575,22 @@ def reset_sync_job(job_id: str) -> dict[str, Any]:
     return store.reset_sync_job(job_id)
 
 
+@app.post("/v1/knowledge/sync/jobs/{job_id}/reconcile", dependencies=[Depends(require_key)])
+def reconcile_sync_job(job_id: str, payload: SyncReconcileRequest) -> dict[str, Any]:
+    """Compare backend transaction state with the WordPress-owned batch manifest."""
+    return {
+        "ok": True,
+        "version": __version__,
+        **store.reconcile_sync_job(job_id, payload.expected_batch_count),
+        "recovery_generation": payload.recovery_generation,
+    }
+
+
 @app.post("/v1/knowledge/sync/jobs/{job_id}/commit", dependencies=[Depends(require_key)])
 def queue_sync_job_commit(job_id: str) -> dict[str, Any]:
     """Initialize or resume the durable incremental activation state machine."""
     try:
-        queued = store.queue_sync_commit(job_id, "wordpress-durable-incremental-commit-v7.0.7")
+        queued = store.queue_sync_commit(job_id, "wordpress-transaction-reconciliation-v7.0.8")
     except ValueError as exc:
         message = str(exc)
         code = status.HTTP_404_NOT_FOUND if "does not exist" in message else status.HTTP_409_CONFLICT
@@ -590,7 +602,7 @@ def queue_sync_job_commit(job_id: str) -> dict[str, Any]:
 def advance_sync_job_commit(job_id: str) -> dict[str, Any]:
     """Advance one bounded activation step and persist its cursor before returning."""
     try:
-        advanced = store.advance_sync_commit(job_id, "wordpress-durable-incremental-commit-v7.0.7")
+        advanced = store.advance_sync_commit(job_id, "wordpress-transaction-reconciliation-v7.0.8")
     except ValueError as exc:
         message = str(exc)
         code = status.HTTP_404_NOT_FOUND if "does not exist" in message else status.HTTP_409_CONFLICT
@@ -652,7 +664,7 @@ async def test_embeddings_endpoint() -> dict[str, Any]:
     if not embeddings_configured():
         raise HTTPException(status_code=503, detail="Gemini embeddings are not configured or semantic retrieval is disabled.")
     try:
-        vector = await generate_embedding("Research Librarian v7.0.7 embedding connection test", "RETRIEVAL_DOCUMENT")
+        vector = await generate_embedding("Research Librarian v7.0.8 embedding connection test", "RETRIEVAL_DOCUMENT")
     except RuntimeError as exc:
         raise HTTPException(status_code=502, detail=f"Gemini embedding test failed: {str(exc)[:900]}") from exc
     return {

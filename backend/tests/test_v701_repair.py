@@ -25,7 +25,7 @@ def test_provider_diagnostics_endpoint() -> None:
     response = TestClient(app).get("/v1/provider/diagnostics", headers=_headers())
     assert response.status_code == 200
     payload = response.json()
-    assert payload["version"] == "7.0.7"
+    assert payload["version"] == "7.0.8"
     assert payload["credential_source"] == "SC_RL_GEMINI_API_KEY"
 
 

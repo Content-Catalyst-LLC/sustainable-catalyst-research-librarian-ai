@@ -1,0 +1,27 @@
+{
+  "schema": "sc-research-librarian-release-manifest/1.0",
+  "version": "7.0.8",
+  "title": "Transaction-State Reconciliation and Durable Recovery",
+  "sqlite_schema": 12,
+  "reconciliation": {
+    "empty_missing_list_is_not_complete": true,
+    "compares_wordpress_expected_batch_count": true,
+    "actions": [
+      "activate",
+      "committed",
+      "replay-missing",
+      "replay-all"
+    ],
+    "replays_only_missing_batches_when_offsets_exist": true,
+    "recreates_missing_or_empty_transactions": true,
+    "resets_replay_counter_after_success": true,
+    "preserves_wordpress_staging_file": true
+  },
+  "storage": {
+    "environment_variable": "SC_RL_DATA_DIR",
+    "recommended_render_path": "/var/data/sc-research-librarian",
+    "automatic_disk_detection": true,
+    "ephemeral_storage_warning": true
+  },
+  "paid_infrastructure_required": false
+}

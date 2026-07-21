@@ -1,0 +1,37 @@
+{
+  "schema": "sc-connected-research-platform-manifest/1.0",
+  "version": "7.0.8",
+  "sqlite_schema": 12,
+  "workspace_schema": "sc-research-librarian-public-workspace/2.0",
+  "api_schema": "sc-connected-research-api/1.0",
+  "contracts": [
+    "sc-research-project/1.0",
+    "sc-research-investigation/1.0",
+    "sc-evidence-collection/1.0",
+    "sc-annotated-reading-path/1.0",
+    "sc-research-workflow/1.0",
+    "sc-uncertainty-register/1.0",
+    "sc-connected-research-backup/1.0",
+    "sc-generation-adapter/1.0"
+  ],
+  "capabilities": [
+    "persistent-projects",
+    "multi-step-investigations",
+    "evidence-collections",
+    "annotated-reading-paths",
+    "contradiction-reports",
+    "uncertainty-registers",
+    "reusable-workflows",
+    "artifact-history",
+    "portable-backups",
+    "stable-api",
+    "provider-independent-generation-boundary",
+    "human-publication-control"
+  ],
+  "shortcodes": [
+    "sc_connected_research_workspace",
+    "sc_research_projects_summary",
+    "sc_connected_research_platform_status"
+  ],
+  "paid_infrastructure_required": false
+}
