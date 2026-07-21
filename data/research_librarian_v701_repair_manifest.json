@@ -1,0 +1,22 @@
+{
+  "schema": "sc-research-librarian-repair-manifest/1.0",
+  "version": "7.0.1",
+  "release": "Canonical Index, Credential, and Embedding Queue Repair",
+  "canonical_index": "python-durable-sqlite",
+  "credential_source": "SC_RL_GEMINI_API_KEY",
+  "features": [
+    "all-public-post-type-fallback-index",
+    "provider-diagnostics",
+    "embedding-connection-test",
+    "resumable-embedding-cron",
+    "one-click-sync-and-embed",
+    "current-model-semantic-coverage",
+    "credential-failure-retry-stop"
+  ],
+  "compatibility": {
+    "wordpress_fallback": true,
+    "python_3_12": true,
+    "render": true,
+    "deterministic_fallback": true
+  }
+}

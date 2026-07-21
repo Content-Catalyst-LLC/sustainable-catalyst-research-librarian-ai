@@ -3,7 +3,7 @@
  * Plugin Name: Sustainable Catalyst Research Librarian AI
  * Plugin URI: https://sustainablecatalyst.com/platform/research-librarian/
  * Description: Site-scoped research intelligence for Sustainable Catalyst with verified retrieval, typed handoffs, answer traceability, source governance, quality evaluation, release gates, and deterministic fallback.
- * Version: 7.0.0
+ * Version: 7.0.1
  * Author: Content Catalyst LLC / Tariq Ahmad
  * Author URI: https://sustainablecatalyst.com/
  * License: MIT
@@ -251,7 +251,7 @@ if ( ! function_exists( 'sc_rl6_render_legacy_class_notice' ) ) {
             return;
         }
         $status = sc_rl6_legacy_class_status();
-        echo '<div class="notice notice-warning"><p><strong>Research Librarian AI v7.0.0 compatibility mode:</strong> A legacy Research Librarian class was already loaded before the current plugin. The collision-safe v6 bootstrap is active, so settings and shortcodes remain available.</p>';
+        echo '<div class="notice notice-warning"><p><strong>Research Librarian AI v7.0.1 compatibility mode:</strong> A legacy Research Librarian class was already loaded before the current plugin. The collision-safe v6 bootstrap is active, so settings and shortcodes remain available.</p>';
         if ( ! empty( $status['file'] ) ) {
             echo '<p>Legacy class file: <code>' . esc_html( $status['file'] ) . '</code>';
             if ( ! empty( $status['version'] ) ) {
@@ -259,7 +259,7 @@ if ( ! function_exists( 'sc_rl6_render_legacy_class_notice' ) ) {
             }
             echo '</p>';
         }
-        echo '<p>Remove the legacy duplicate, network plugin, or must-use copy after confirming the active v7.0.0 plugin is working.</p></div>';
+        echo '<p>Remove the legacy duplicate, network plugin, or must-use copy after confirming the active v7.0.1 plugin is working.</p></div>';
     }
 }
 add_action( 'admin_notices', 'sc_rl6_render_legacy_class_notice' );
@@ -274,7 +274,7 @@ final class SC_RL6_Core {
     const MAINTENANCE_HOOK = 'sc_rl_ai_index_maintenance_event';
     const AI_STATUS_OPTION = 'sc_rl_ai_live_provider_status';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const VERSION        = '7.0.0';
+    const VERSION        = '7.0.1';
     const RATE_LIMIT_REGISTRY_OPTION = 'sc_rl_ai_rate_limit_registry';
 
     private static $instance = null;
@@ -340,7 +340,7 @@ final class SC_RL6_Core {
             'rate_limit_window_minutes' => 60,
             'rate_limit_admin_exempt'  => '1',
             'source_result_limit'     => 5,
-            'index_max_posts'         => 1000,
+            'index_max_posts'         => 5000,
             'stale_after_days'        => 180,
             'maintenance_auto_rebuild_enabled' => '0',
             'maintenance_frequency'    => 'daily',
@@ -3909,50 +3909,83 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
     }
 
     private function wordpress_content_index_records() {
-        if ( ! function_exists( 'get_posts' ) ) {
+        if ( ! class_exists( 'WP_Query' ) || ! function_exists( 'get_post_types' ) ) {
             return array();
         }
+
         $options = $this->get_options();
-        $max_posts = max( 25, min( 1000, absint( isset( $options['index_max_posts'] ) ? $options['index_max_posts'] : 1000 ) ) );
-        $posts = get_posts( array(
-            'post_type' => array( 'page', 'post' ),
-            'post_status' => 'publish',
-            'numberposts' => $max_posts,
-            'orderby' => 'modified',
-            'order' => 'DESC',
-            'suppress_filters' => true,
-        ) );
-        $records = array();
-        foreach ( $posts as $post ) {
-            $url = get_permalink( $post );
-            if ( ! $url ) { continue; }
-            $title = get_the_title( $post );
-            $content = wp_strip_all_tags( $post->post_excerpt ? $post->post_excerpt : $post->post_content );
-            $summary = trim( preg_replace( '/\s+/', ' ', wp_trim_words( $content, 34, '' ) ) );
-            $topics = $this->derive_topics_from_text( $title . ' ' . $summary . ' ' . $post->post_name );
-            $route_id = $this->detect_route_id_from_record( $title, $url, $summary, $topics );
-            $modified_utc = get_gmt_from_date( $post->post_modified, 'c' );
-            $record = array(
-                'id' => 'wp-' . $post->ID,
-                'route_id' => $route_id,
-                'type' => $post->post_type,
-                'title' => $title ? $title : '(untitled)',
-                'url' => $url,
-                'summary' => $summary,
-                'topics' => $topics,
-                'priority' => 1,
-                'source_kind' => 'wordpress-content',
-                'status' => 'indexed',
-                'last_seen_utc' => gmdate( 'c' ),
-                'last_indexed_utc' => gmdate( 'c' ),
-                'modified_utc' => $modified_utc,
-            );
-            $record['metadata_flags'] = $this->index_metadata_flags( $record );
-            $records[] = $record;
+        $max_posts = max( 25, min( 5000, absint( isset( $options['index_max_posts'] ) ? $options['index_max_posts'] : 1000 ) ) );
+        $post_types = get_post_types( array( 'public' => true ), 'names' );
+        $post_types = is_array( $post_types ) ? array_values( $post_types ) : array();
+
+        // Infrastructure objects are public in some WordPress installations but are
+        // not useful Research Librarian evidence records.
+        $excluded_post_types = array( 'attachment', 'wp_block', 'wp_template', 'wp_template_part', 'wp_navigation' );
+        $post_types = array_values( array_diff( $post_types, $excluded_post_types ) );
+        if ( empty( $post_types ) ) {
+            return array();
         }
+
+        $records = array();
+        $page = 1;
+        $page_size = min( 200, $max_posts );
+        while ( count( $records ) < $max_posts ) {
+            $query = new WP_Query( array(
+                'post_type' => $post_types,
+                'post_status' => 'publish',
+                'posts_per_page' => min( $page_size, $max_posts - count( $records ) ),
+                'paged' => $page,
+                'orderby' => 'modified',
+                'order' => 'DESC',
+                'suppress_filters' => true,
+                'no_found_rows' => false,
+                'fields' => 'all',
+            ) );
+            if ( empty( $query->posts ) ) {
+                break;
+            }
+
+            foreach ( $query->posts as $post ) {
+                $url = get_permalink( $post );
+                if ( ! $url ) {
+                    continue;
+                }
+                $title = get_the_title( $post );
+                $content = wp_strip_all_tags( $post->post_excerpt ? $post->post_excerpt : $post->post_content );
+                $summary = trim( preg_replace( '/\s+/', ' ', wp_trim_words( $content, 34, '' ) ) );
+                $topics = $this->derive_topics_from_text( $title . ' ' . $summary . ' ' . $post->post_name );
+                $route_id = $this->detect_route_id_from_record( $title, $url, $summary, $topics );
+                $modified_utc = get_gmt_from_date( $post->post_modified, 'c' );
+                $record = array(
+                    'id' => 'wp-' . sanitize_key( $post->post_type ) . '-' . $post->ID,
+                    'route_id' => $route_id,
+                    'type' => $post->post_type,
+                    'title' => $title ? $title : '(untitled)',
+                    'url' => $url,
+                    'summary' => $summary,
+                    'topics' => $topics,
+                    'priority' => 1,
+                    'source_kind' => 'wordpress-content',
+                    'status' => 'indexed',
+                    'last_seen_utc' => gmdate( 'c' ),
+                    'last_indexed_utc' => gmdate( 'c' ),
+                    'modified_utc' => $modified_utc,
+                );
+                $record['metadata_flags'] = $this->index_metadata_flags( $record );
+                $records[] = $record;
+                if ( count( $records ) >= $max_posts ) {
+                    break;
+                }
+            }
+
+            if ( $page >= absint( $query->max_num_pages ) ) {
+                break;
+            }
+            $page++;
+        }
+        wp_reset_postdata();
         return $records;
     }
-
 
     private function sitemap_index_records() {
         $options = $this->get_options();
@@ -4238,30 +4271,47 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         if ( ! current_user_can( 'manage_options' ) ) { return ''; }
         check_admin_referer( 'sc_rl_index_action', 'sc_rl_index_nonce' );
         $action = sanitize_key( wp_unslash( $_POST['sc_rl_index_action'] ) );
+        $python_canonical = class_exists( 'SC_RL6_V630_Durable_Index' ) && SC_RL6_V630_Durable_Index::enabled();
+
         if ( 'rebuild' === $action ) {
+            if ( $python_canonical ) {
+                $result = SC_RL6_V630_Durable_Index::sync_and_complete_embeddings();
+                if ( is_wp_error( $result ) ) {
+                    set_transient( 'sc_rl_ai_admin_notice', 'Canonical Python sync failed: ' . $result->get_error_message(), 60 );
+                    return 'embedding-error';
+                }
+                set_transient( 'sc_rl_ai_admin_success_notice', 'Canonical Python full sync completed and the remaining embedding queue was scheduled.', 60 );
+                return 'rebuilt';
+            }
             $this->rebuild_knowledge_index();
             return 'rebuilt';
         }
         if ( 'embed' === $action ) {
-            $result = $this->generate_index_embeddings();
+            $result = $python_canonical
+                ? SC_RL6_V630_Durable_Index::process_embedding_batch( true )
+                : $this->generate_index_embeddings();
             if ( is_wp_error( $result ) ) {
                 set_transient( 'sc_rl_ai_admin_notice', $result->get_error_message(), 60 );
                 return 'embedding-error';
             }
-            if ( isset( $result['embedded_records'] ) && 0 === absint( $result['embedded_records'] ) ) {
+            if ( ! $python_canonical && isset( $result['embedded_records'] ) && 0 === absint( $result['embedded_records'] ) ) {
                 $diagnostics = isset( $result['diagnostics']['last_error'] ) ? $result['diagnostics']['last_error'] : 'No records embedded. Review diagnostics below.';
                 set_transient( 'sc_rl_ai_admin_notice', $diagnostics, 60 );
                 return 'embedding-error';
             }
+            set_transient( 'sc_rl_ai_admin_success_notice', $python_canonical ? 'Python embedding batch processed; remaining chunks will continue through WP-Cron.' : 'WordPress fallback embeddings generated.', 60 );
             return 'embedded';
         }
         if ( 'test_embedding' === $action ) {
-            $result = $this->test_single_embedding();
+            $result = $python_canonical
+                ? SC_RL6_V630_Durable_Index::test_backend_embeddings()
+                : $this->test_single_embedding();
             if ( is_wp_error( $result ) ) {
                 set_transient( 'sc_rl_ai_admin_notice', 'Single embedding test failed: ' . $result->get_error_message(), 60 );
                 return 'embedding-error';
             }
-            set_transient( 'sc_rl_ai_admin_success_notice', 'Single embedding test passed. Dimensions: ' . absint( $result['embedding_dimensions'] ?? 0 ), 60 );
+            $dimensions = absint( $result['embedding_dimensions'] ?? $result['dimensions'] ?? 0 );
+            set_transient( 'sc_rl_ai_admin_success_notice', 'Single embedding test passed. Dimensions: ' . $dimensions, 60 );
             return 'test-embedding-ok';
         }
         if ( 'reset' === $action ) {
@@ -4295,7 +4345,6 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         }
         return '';
     }
-
 
     public function register_cron_schedules( $schedules ) {
         if ( ! isset( $schedules['sc_rl_weekly'] ) ) {
@@ -4835,7 +4884,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             'rate_limit_window_minutes' => max( 5, min( 1440, absint( isset( $input['rate_limit_window_minutes'] ) ? $input['rate_limit_window_minutes'] : self::defaults()['rate_limit_window_minutes'] ) ) ),
             'rate_limit_admin_exempt'  => ( isset( $input['rate_limit_admin_exempt'] ) && '1' === (string) wp_unslash( $input['rate_limit_admin_exempt'] ) ) ? '1' : '0',
             'source_result_limit'     => max( 3, min( 8, absint( isset( $input['source_result_limit'] ) ? $input['source_result_limit'] : self::defaults()['source_result_limit'] ) ) ),
-            'index_max_posts'         => max( 25, min( 1000, absint( isset( $input['index_max_posts'] ) ? $input['index_max_posts'] : self::defaults()['index_max_posts'] ) ) ),
+            'index_max_posts'         => max( 25, min( 5000, absint( isset( $input['index_max_posts'] ) ? $input['index_max_posts'] : self::defaults()['index_max_posts'] ) ) ),
             'stale_after_days'        => max( 30, min( 1095, absint( isset( $input['stale_after_days'] ) ? $input['stale_after_days'] : self::defaults()['stale_after_days'] ) ) ),
             'maintenance_auto_rebuild_enabled' => ( isset( $input['maintenance_auto_rebuild_enabled'] ) && '1' === (string) wp_unslash( $input['maintenance_auto_rebuild_enabled'] ) ) ? '1' : '0',
             'maintenance_frequency' => isset( $input['maintenance_frequency'] ) && in_array( sanitize_key( wp_unslash( $input['maintenance_frequency'] ) ), array( 'hourly', 'twicedaily', 'daily', 'sc_rl_weekly' ), true ) ? sanitize_key( wp_unslash( $input['maintenance_frequency'] ) ) : 'daily',
@@ -5048,7 +5097,7 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
             <?php endif; ?>
 
             <h2><?php esc_html_e( 'Knowledge Indexer and Crawl Dashboard', 'sustainable-catalyst-research-librarian-ai' ); ?></h2>
-            <p><?php esc_html_e( 'The indexer combines curated source records with recently published WordPress pages/posts. It tracks source coverage, metadata gaps, stale records, duplicate URLs, and route groups for grounded routing.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
+            <p><?php esc_html_e( 'The fallback indexer combines curated source records with every eligible published WordPress public content type. It tracks source coverage, metadata gaps, stale records, duplicate URLs, and route groups for grounded routing.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
             <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:16px 0;max-width:1100px;">
                 <div class="postbox" style="padding:14px;"><strong style="font-size:22px;display:block;"><?php echo esc_html( $summary['total_records'] ); ?></strong><span><?php esc_html_e( 'Indexed records', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
                 <div class="postbox" style="padding:14px;"><strong style="font-size:22px;display:block;"><?php echo esc_html( $summary['route_count'] ); ?></strong><span><?php esc_html_e( 'Route groups', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
@@ -5057,6 +5106,10 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                 <div class="postbox" style="padding:14px;"><strong style="font-size:22px;display:block;"><?php echo esc_html( $retrieval['embedded_records'] ); ?></strong><span><?php esc_html_e( 'Embedded records', 'sustainable-catalyst-research-librarian-ai' ); ?></span></div>
             </div>
             <p><strong><?php esc_html_e( 'Last indexed:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <?php echo esc_html( isset( $index['last_indexed_utc'] ) ? $index['last_indexed_utc'] : 'seed only' ); ?> · <strong><?php esc_html_e( 'Mode:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <?php echo esc_html( isset( $index['crawl_mode'] ) ? $index['crawl_mode'] : 'unknown' ); ?> · <strong><?php esc_html_e( 'Retrieval:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <?php echo esc_html( $retrieval['enabled'] ? 'Gemini hybrid semantic retrieval enabled' : 'Keyword/source retrieval only' ); ?> · <strong><?php esc_html_e( 'Last embedding run:', 'sustainable-catalyst-research-librarian-ai' ); ?></strong> <?php echo esc_html( $retrieval['last_embedding_utc'] ? $retrieval['last_embedding_utc'] : 'not generated' ); ?></p>
+            <?php $python_canonical = class_exists( 'SC_RL6_V630_Durable_Index' ) && SC_RL6_V630_Durable_Index::enabled(); ?>
+            <?php if ( $python_canonical ) : ?>
+                <div class="notice notice-info inline"><p><strong>Canonical Python index active.</strong> Rebuild, test, and embedding actions on this page are delegated to the Render backend and use <code>SC_RL_GEMINI_API_KEY</code>. The WordPress Gemini key is retained only for fallback operation.</p></div>
+            <?php endif; ?>
             <form method="post" style="display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 22px;">
                 <?php wp_nonce_field( 'sc_rl_index_action', 'sc_rl_index_nonce' ); ?>
                 <button class="button button-primary" type="submit" name="sc_rl_index_action" value="rebuild"><?php esc_html_e( 'Rebuild Knowledge Index', 'sustainable-catalyst-research-librarian-ai' ); ?></button>

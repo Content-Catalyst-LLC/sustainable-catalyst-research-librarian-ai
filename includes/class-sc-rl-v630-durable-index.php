@@ -1,6 +1,6 @@
 <?php
 /**
- * Research Librarian AI v7.0.0 — Platform Intelligence and Typed Research Handoffs.
+ * Research Librarian AI v7.0.1 — Platform Intelligence and Typed Research Handoffs.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class SC_RL6_V630_Durable_Index {
-    const VERSION = '7.0.0';
+    const VERSION = '7.0.1';
     const OPTION_NAME = 'sc_rl_v620_python_options';
     const STATUS_OPTION = 'sc_rl_v620_python_status';
     const SYNC_HOOK = 'sc_rl_v620_python_sync_event';
@@ -25,6 +25,8 @@ final class SC_RL6_V630_Durable_Index {
     const SYNC_RETRY_OPTION = 'sc_rl_v631_sync_retry_state';
     const RECOVERY_STATE_OPTION = 'sc_rl_v631_recovery_state';
     const ALERT_STATE_OPTION = 'sc_rl_v631_public_alert_state';
+    const EMBEDDING_HOOK = 'sc_rl_v701_embedding_queue_event';
+    const EMBEDDING_STATE_OPTION = 'sc_rl_v701_embedding_queue_state';
 
     public static function init() {
         add_action( 'admin_menu', array( __CLASS__, 'register_admin_menu' ), 1010 );
@@ -33,6 +35,7 @@ final class SC_RL6_V630_Durable_Index {
         add_action( self::RECOVERY_HOOK, array( __CLASS__, 'run_backend_recovery' ) );
         add_action( self::INCREMENTAL_HOOK, array( __CLASS__, 'run_incremental_sync' ) );
         add_action( self::SYNC_RETRY_HOOK, array( __CLASS__, 'run_sync_retry' ) );
+        add_action( self::EMBEDDING_HOOK, array( __CLASS__, 'run_embedding_queue' ) );
         add_action( 'admin_post_sc_rl_v631_export_sync_log', array( __CLASS__, 'export_sync_log' ) );
         add_action( 'save_post', array( __CLASS__, 'schedule_incremental_sync' ), 30, 3 );
         add_action( 'before_delete_post', array( __CLASS__, 'schedule_sync_after_delete' ), 30, 1 );
@@ -52,6 +55,7 @@ final class SC_RL6_V630_Durable_Index {
         wp_clear_scheduled_hook( self::RECOVERY_HOOK );
         wp_clear_scheduled_hook( self::INCREMENTAL_HOOK );
         wp_clear_scheduled_hook( self::SYNC_RETRY_HOOK );
+        wp_clear_scheduled_hook( self::EMBEDDING_HOOK );
     }
 
     public static function defaults() {
@@ -68,6 +72,10 @@ final class SC_RL6_V630_Durable_Index {
             'content_character_limit' => 30000,
             'public_title_suggestions' => '1',
             'auto_recover' => '1',
+            'auto_embed_after_sync' => '1',
+            'embedding_batch_size' => 50,
+            'embedding_delay_ms' => 200,
+            'embedding_retry_seconds' => 300,
             'max_wordpress_snapshots' => 5,
             'max_retry_attempts' => 5,
             'retry_base_seconds' => 30,
@@ -575,7 +583,7 @@ final class SC_RL6_V630_Durable_Index {
         $recovery_next = wp_next_scheduled( self::RECOVERY_HOOK );
         $retry_next = wp_next_scheduled( self::SYNC_RETRY_HOOK );
         return array(
-            'schema' => 'sc-research-librarian-sync-recovery-export/7.0.0',
+            'schema' => 'sc-research-librarian-sync-recovery-export/7.0.1',
             'version' => self::VERSION,
             'site' => home_url( '/' ),
             'generated_utc' => gmdate( 'c' ),
@@ -814,7 +822,7 @@ final class SC_RL6_V630_Durable_Index {
         $grounding['reason_codes'] = array_values( array_unique( array_merge( $grounding['reason_codes'], array( 'bm25-section-retrieval', 'citation-verification' ), ! empty( $grounding['retrieval_diagnostics']['semantic_used'] ) ? array( 'semantic-retrieval' ) : array() ) ) );
 
         $note = array(
-            'schema' => 'sc-research-librarian-route-note/7.0.0',
+            'schema' => 'sc-research-librarian-route-note/7.0.1',
             'created_at_utc' => gmdate( 'c' ),
             'question' => sanitize_textarea_field( $question ),
             'source' => sanitize_key( isset( $backend['source'] ) ? $backend['source'] : 'python-backend' ),
@@ -1228,7 +1236,7 @@ final class SC_RL6_V630_Durable_Index {
         $deleted_ids = array_values( array_diff( array_keys( $ledger['records'] ), array_keys( $current_ids ) ) );
         $report = array_merge( array(
             'version' => self::VERSION,
-            'schema' => 'sc-rl-sync-report/7.0.0',
+            'schema' => 'sc-rl-sync-report/7.0.1',
             'job_id' => $job_id,
             'state' => 'running',
             'mode' => 'transactional-replace',
@@ -1358,7 +1366,132 @@ final class SC_RL6_V630_Durable_Index {
         );
         update_option( self::STATUS_OPTION, array_merge( (array) get_option( self::STATUS_OPTION, array() ), $status ), false );
         self::clear_sync_retry();
+        if ( '1' === (string) self::options()['auto_embed_after_sync'] ) {
+            self::schedule_embedding_queue( 'sync-complete', 10 );
+        }
         return $status;
+    }
+
+    public static function provider_diagnostics() {
+        return self::request( '/v1/provider/diagnostics', 'GET' );
+    }
+
+    public static function test_backend_embeddings() {
+        return self::request( '/v1/knowledge/embeddings/test', 'POST', array() );
+    }
+
+    public static function embedding_queue_state() {
+        $state = get_option( self::EMBEDDING_STATE_OPTION, array() );
+        return is_array( $state ) ? $state : array();
+    }
+
+    public static function schedule_embedding_queue( $reason = 'manual', $delay_seconds = 10 ) {
+        if ( ! self::enabled() ) {
+            return new WP_Error( 'sc_rl_v701_backend_not_configured', 'Python Intelligence is not configured.' );
+        }
+        $status = self::request( '/v1/knowledge/embeddings/status', 'GET' );
+        if ( is_wp_error( $status ) ) {
+            return $status;
+        }
+        $pending = absint( $status['pending_chunks'] ?? 0 );
+        $state = array(
+            'state' => $pending ? 'scheduled' : 'complete',
+            'reason' => sanitize_key( $reason ),
+            'pending_chunks' => $pending,
+            'processed_chunks' => absint( $status['embedded_chunks'] ?? 0 ),
+            'embedding_model' => sanitize_text_field( $status['embedding_model'] ?? '' ),
+            'updated_utc' => gmdate( 'c' ),
+            'last_error' => '',
+        );
+        update_option( self::EMBEDDING_STATE_OPTION, $state, false );
+        if ( $pending && ! wp_next_scheduled( self::EMBEDDING_HOOK ) ) {
+            wp_schedule_single_event( time() + max( 1, absint( $delay_seconds ) ), self::EMBEDDING_HOOK );
+        }
+        return $state;
+    }
+
+    public static function process_embedding_batch( $schedule_remaining = true ) {
+        $options = self::options();
+        $limit = max( 1, min( 250, absint( $options['embedding_batch_size'] ?? 50 ) ) );
+        $delay_ms = max( 0, min( 5000, absint( $options['embedding_delay_ms'] ?? 200 ) ) );
+        $result = self::request( '/v1/knowledge/embeddings/process', 'POST', array( 'limit' => $limit, 'delay_ms' => $delay_ms ) );
+        if ( ! is_wp_error( $result ) && isset( $result['ok'] ) && ! $result['ok'] ) {
+            $result = new WP_Error(
+                'sc_rl_v701_embedding_provider_error',
+                sanitize_text_field( $result['error'] ?? 'The embedding provider rejected the batch.' ),
+                array(
+                    'http_status' => absint( $result['http_status'] ?? 502 ),
+                    'pending_chunks' => absint( $result['pending_chunks'] ?? 0 ),
+                )
+            );
+        }
+        if ( is_wp_error( $result ) ) {
+            $data = $result->get_error_data();
+            $http = is_array( $data ) ? absint( $data['http_status'] ?? $data['status'] ?? 0 ) : 0;
+            $message = $result->get_error_message();
+            $auth_failure = in_array( $http, array( 400, 401, 403 ), true )
+                || false !== stripos( $message, 'api key' )
+                || false !== stripos( $message, 'credential' )
+                || false !== stripos( $message, 'invalid argument' );
+            update_option( self::EMBEDDING_STATE_OPTION, array(
+                'state' => $auth_failure ? 'configuration-error' : 'retry-scheduled',
+                'pending_chunks' => is_array( $data ) && isset( $data['pending_chunks'] ) ? absint( $data['pending_chunks'] ) : absint( self::embedding_queue_state()['pending_chunks'] ?? 0 ),
+                'last_error' => sanitize_text_field( $message ),
+                'http_status' => $http,
+                'credential_source' => 'SC_RL_GEMINI_API_KEY',
+                'updated_utc' => gmdate( 'c' ),
+            ), false );
+            if ( $schedule_remaining && ! $auth_failure && ! wp_next_scheduled( self::EMBEDDING_HOOK ) ) {
+                wp_schedule_single_event( time() + max( 60, absint( $options['embedding_retry_seconds'] ?? 300 ) ), self::EMBEDDING_HOOK );
+            }
+            return $result;
+        }
+        $pending = absint( $result['pending_chunks'] ?? 0 );
+        $state = array(
+            'state' => $pending ? 'running' : 'complete',
+            'run_id' => sanitize_text_field( $result['run_id'] ?? '' ),
+            'processed_this_batch' => absint( $result['processed'] ?? 0 ),
+            'failed_this_batch' => absint( $result['failed'] ?? 0 ),
+            'embedded_chunks' => absint( $result['embedded_chunks'] ?? 0 ),
+            'indexed_chunks' => absint( $result['indexed_chunks'] ?? 0 ),
+            'pending_chunks' => $pending,
+            'semantic_coverage' => (float) ( $result['semantic_coverage'] ?? 0 ),
+            'embedding_model' => sanitize_text_field( $result['embedding_model'] ?? '' ),
+            'last_error' => sanitize_text_field( $result['error'] ?? '' ),
+            'credential_source' => 'SC_RL_GEMINI_API_KEY',
+            'updated_utc' => gmdate( 'c' ),
+        );
+        update_option( self::EMBEDDING_STATE_OPTION, $state, false );
+        if ( $schedule_remaining && $pending && ! wp_next_scheduled( self::EMBEDDING_HOOK ) ) {
+            wp_schedule_single_event( time() + 15, self::EMBEDDING_HOOK );
+        }
+        return $result;
+    }
+
+    public static function run_embedding_queue() {
+        return self::process_embedding_batch( true );
+    }
+
+    public static function sync_and_complete_embeddings() {
+        $sync = self::sync_all_records( 'manual-v7.0.1-repair' );
+        if ( is_wp_error( $sync ) ) {
+            return $sync;
+        }
+        $test = self::test_backend_embeddings();
+        if ( is_wp_error( $test ) ) {
+            update_option( self::EMBEDDING_STATE_OPTION, array(
+                'state' => 'configuration-error',
+                'last_error' => sanitize_text_field( $test->get_error_message() ),
+                'credential_source' => 'SC_RL_GEMINI_API_KEY',
+                'updated_utc' => gmdate( 'c' ),
+            ), false );
+            return $test;
+        }
+        $batch = self::process_embedding_batch( true );
+        if ( is_wp_error( $batch ) ) {
+            return $batch;
+        }
+        return array( 'sync' => $sync, 'embedding_test' => $test, 'embedding_batch' => $batch );
     }
 
     private static function save_sync_report( $report ) {
@@ -2209,6 +2342,16 @@ final class SC_RL6_V630_Durable_Index {
                         $notice .= ' The runtime index is empty, so automatic snapshot recovery was scheduled.';
                     }
                 }
+            } elseif ( isset( $_POST['sc_rl_v701_sync_embed'] ) ) {
+                self::save_options( $input );
+                $repair = self::sync_and_complete_embeddings();
+                if ( is_wp_error( $repair ) ) {
+                    $notice_type = 'error';
+                    $notice = 'Canonical sync/embedding repair stopped: ' . $repair->get_error_message();
+                } else {
+                    $batch = $repair['embedding_batch'];
+                    $notice = 'Canonical full sync committed ' . absint( $repair['sync']['synced_records'] ?? 0 ) . ' records. Embeddings are verified and the resumable queue is active: ' . absint( $batch['processed'] ?? 0 ) . ' completed now, ' . absint( $batch['pending_chunks'] ?? 0 ) . ' remaining.';
+                }
             } elseif ( isset( $_POST['sc_rl_v620_sync'] ) ) {
                 self::save_options( $input );
                 $sync = self::sync_all_records();
@@ -2281,7 +2424,7 @@ final class SC_RL6_V630_Durable_Index {
                 self::clear_recovery_state();
                 $notice = 'Pending synchronization and recovery retries were cleared.';
             } elseif ( isset( $_POST['sc_rl_v640_process_embeddings'] ) ) {
-                $embedding_result = self::request( '/v1/knowledge/embeddings/process', 'POST', array( 'limit' => 20, 'delay_ms' => 200 ) );
+                $embedding_result = self::process_embedding_batch( true );
                 if ( is_wp_error( $embedding_result ) ) {
                     $notice_type = 'error';
                     $notice = $embedding_result->get_error_message();
@@ -2338,6 +2481,8 @@ final class SC_RL6_V630_Durable_Index {
         $wordpress_snapshot_validation = self::validate_wordpress_snapshots();
         $backend_snapshot_validation = self::request( '/v1/knowledge/snapshots/validate', 'GET' );
         $embedding_status = self::request( '/v1/knowledge/embeddings/status', 'GET' );
+        $provider_diagnostics = self::provider_diagnostics();
+        $embedding_queue_state = self::embedding_queue_state();
         $retrieval_config_response = self::request( '/v1/retrieval/config', 'GET' );
         $benchmark_history_response = self::request( '/v1/retrieval/benchmark/history', 'GET' );
         $retrieval_config = ! is_wp_error( $retrieval_config_response ) && isset( $retrieval_config_response['config'] ) ? $retrieval_config_response['config'] : array();
@@ -2346,7 +2491,7 @@ final class SC_RL6_V630_Durable_Index {
         ?>
         <div class="wrap">
             <h1>Python Intelligence, Retrieval Calibration, and Durable Index</h1>
-            <p>Research Librarian AI v6.5.1 retains benchmark-driven retrieval calibration, minimum-evidence gates, near-duplicate-title protection, unsupported-answer detection, source weighting, exclusions, and latency diagnostics to the v6.4.0 hybrid retrieval engine.</p>
+            <p>Research Librarian AI v7.0.1 uses the Python durable index as the canonical knowledge index and retains benchmark-driven retrieval calibration, minimum-evidence gates, near-duplicate-title protection, unsupported-answer detection, source weighting, exclusions, and latency diagnostics to the v6.4.0 hybrid retrieval engine.</p>
             <?php if ( $notice ) : ?><div class="notice notice-<?php echo esc_attr( $notice_type ); ?> is-dismissible"><p><?php echo esc_html( $notice ); ?></p></div><?php endif; ?>
 
             <div class="sc-rl-admin-grid">
@@ -2374,6 +2519,8 @@ final class SC_RL6_V630_Durable_Index {
                     <tr><th>Automatic synchronization</th><td><input type="hidden" name="sc_rl_v620[auto_sync]" value="0"><label><input type="checkbox" name="sc_rl_v620[auto_sync]" value="1" <?php checked( $options['auto_sync'], '1' ); ?>> Process saved, unpublished, and deleted records incrementally and run recurring verification syncs</label></td></tr>
                     <tr><th><label for="sc-rl-v620-frequency">Recurring frequency</label></th><td><select id="sc-rl-v620-frequency" name="sc_rl_v620[sync_frequency]"><?php foreach ( array( 'hourly' => 'Hourly', 'sc_rl_six_hourly' => 'Every six hours', 'twicedaily' => 'Twice daily', 'daily' => 'Daily' ) as $value => $label ) : ?><option value="<?php echo esc_attr( $value ); ?>" <?php selected( $options['sync_frequency'], $value ); ?>><?php echo esc_html( $label ); ?></option><?php endforeach; ?></select></td></tr>
                     <tr><th>Automatic cold-start recovery</th><td><input type="hidden" name="sc_rl_v620[auto_recover]" value="0"><label><input type="checkbox" name="sc_rl_v620[auto_recover]" value="1" <?php checked( $options['auto_recover'], '1' ); ?>> Rehydrate an empty backend from the latest verified WordPress snapshot</label></td></tr>
+                    <tr><th>Automatic semantic indexing</th><td><input type="hidden" name="sc_rl_v620[auto_embed_after_sync]" value="0"><label><input type="checkbox" name="sc_rl_v620[auto_embed_after_sync]" value="1" <?php checked( $options['auto_embed_after_sync'], '1' ); ?>> Continue resumable Python embedding batches automatically after every successful sync</label></td></tr>
+                    <tr><th><label for="sc-rl-v701-embedding-batch">Embedding batch size</label></th><td><input id="sc-rl-v701-embedding-batch" type="number" min="1" max="250" name="sc_rl_v620[embedding_batch_size]" value="<?php echo esc_attr( $options['embedding_batch_size'] ); ?>"><p class="description">Each cron pass persists completed vectors, then schedules the next pass until pending chunks reach zero.</p></td></tr>
                     <tr><th><label for="sc-rl-v630-snapshots">WordPress snapshot retention</label></th><td><input id="sc-rl-v630-snapshots" type="number" min="1" max="20" name="sc_rl_v620[max_wordpress_snapshots]" value="<?php echo esc_attr( $options['max_wordpress_snapshots'] ); ?>"> snapshots</td></tr>
                     <tr><th><label for="sc-rl-v631-retries">Maximum automatic retries</label></th><td><input id="sc-rl-v631-retries" type="number" min="1" max="10" name="sc_rl_v620[max_retry_attempts]" value="<?php echo esc_attr( $options['max_retry_attempts'] ); ?>"> attempts</td></tr>
                     <tr><th><label for="sc-rl-v631-base-delay">Retry base delay</label></th><td><input id="sc-rl-v631-base-delay" type="number" min="10" max="300" name="sc_rl_v620[retry_base_seconds]" value="<?php echo esc_attr( $options['retry_base_seconds'] ); ?>"> seconds</td></tr>
@@ -2391,7 +2538,7 @@ final class SC_RL6_V630_Durable_Index {
                     <tr><th><label for="sc-rl-v650-excluded-sources">Excluded sources</label></th><td><input id="sc-rl-v650-excluded-sources" class="large-text" name="sc_rl_v620[retrieval_excluded_sources]" value="<?php echo esc_attr( $options['retrieval_excluded_sources'] ); ?>"></td></tr>
                     <tr><th><label for="sc-rl-v650-excluded-prefixes">Excluded URL prefixes</label></th><td><textarea id="sc-rl-v650-excluded-prefixes" class="large-text" rows="3" name="sc_rl_v620[retrieval_excluded_url_prefixes]"><?php echo esc_textarea( $options['retrieval_excluded_url_prefixes'] ); ?></textarea><p class="description">One prefix per line.</p></td></tr>
                 </table>
-                <p class="submit"><button class="button button-primary" type="submit" name="sc_rl_v620_save" value="1">Save Settings</button> <button class="button" type="submit" name="sc_rl_v620_test" value="1">Test Backend</button> <button class="button button-secondary" type="submit" name="sc_rl_v620_sync" value="1">Transactional Full Sync</button> <button class="button" type="submit" name="sc_rl_v630_sync_incremental" value="1">Process Incremental Queue</button> <button class="button" type="submit" name="sc_rl_v630_create_snapshot" value="1">Create WordPress Snapshot</button> <button class="button button-secondary" type="submit" name="sc_rl_v630_recover" value="1">Recover Empty Backend</button> <button class="button" type="submit" name="sc_rl_v631_repair_stalled" value="1">Repair Stalled Jobs</button> <button class="button" type="submit" name="sc_rl_v631_validate_snapshots" value="1">Validate Snapshots</button> <button class="button" type="submit" name="sc_rl_v631_clear_retries" value="1">Clear Pending Retries</button> <button class="button button-secondary" type="submit" name="sc_rl_v640_process_embeddings" value="1">Process Embedding Batch</button> <button class="button button-secondary" type="submit" name="sc_rl_v650_run_benchmark" value="1">Run Retrieval Benchmark</button> <button class="button" type="submit" name="sc_rl_v621_repair" value="1">Repair and Resynchronize</button> <button class="button" type="submit" name="sc_rl_v621_reset_rate_limits" value="1">Reset Public Rate Limits</button> <a class="button" href="<?php echo esc_url( $export_url ); ?>">Export Sync and Recovery Log</a></p>
+                <p class="submit"><button class="button button-primary" type="submit" name="sc_rl_v620_save" value="1">Save Settings</button> <button class="button" type="submit" name="sc_rl_v620_test" value="1">Test Backend</button> <button class="button button-primary" type="submit" name="sc_rl_v701_sync_embed" value="1">Full Sync and Complete Embedding Queue</button> <button class="button button-secondary" type="submit" name="sc_rl_v620_sync" value="1">Transactional Full Sync</button> <button class="button" type="submit" name="sc_rl_v630_sync_incremental" value="1">Process Incremental Queue</button> <button class="button" type="submit" name="sc_rl_v630_create_snapshot" value="1">Create WordPress Snapshot</button> <button class="button button-secondary" type="submit" name="sc_rl_v630_recover" value="1">Recover Empty Backend</button> <button class="button" type="submit" name="sc_rl_v631_repair_stalled" value="1">Repair Stalled Jobs</button> <button class="button" type="submit" name="sc_rl_v631_validate_snapshots" value="1">Validate Snapshots</button> <button class="button" type="submit" name="sc_rl_v631_clear_retries" value="1">Clear Pending Retries</button> <button class="button button-secondary" type="submit" name="sc_rl_v640_process_embeddings" value="1">Process and Continue Embedding Queue</button> <button class="button button-secondary" type="submit" name="sc_rl_v650_run_benchmark" value="1">Run Retrieval Benchmark</button> <button class="button" type="submit" name="sc_rl_v621_repair" value="1">Repair and Resynchronize</button> <button class="button" type="submit" name="sc_rl_v621_reset_rate_limits" value="1">Reset Public Rate Limits</button> <a class="button" href="<?php echo esc_url( $export_url ); ?>">Export Sync and Recovery Log</a></p>
 
                 <?php if ( $backend_snapshots ) : ?>
                     <h2>Runtime Rollback</h2>
@@ -2404,6 +2551,8 @@ final class SC_RL6_V630_Durable_Index {
                 <tr><th>Runtime storage</th><td><?php echo esc_html( is_wp_error( $status ) ? 'Unavailable' : ( $status['storage_engine'] ?? 'sqlite' ) ); ?><?php if ( ! is_wp_error( $status ) ) : ?> · schema <?php echo esc_html( absint( $status['schema_version'] ?? 0 ) ); ?> · index version <?php echo esc_html( absint( $status['index_version'] ?? 0 ) ); ?><?php endif; ?></td></tr>
                 <tr><th>Retrieval chunks</th><td><?php echo esc_html( is_wp_error( $status ) ? 'Unavailable' : absint( $status['indexed_chunks'] ?? 0 ) . ' section-aware chunk(s)' ); ?></td></tr>
                 <tr><th>Semantic coverage</th><td><?php echo esc_html( is_wp_error( $embedding_status ) ? $embedding_status->get_error_message() : ( number_format_i18n( (float) ( $embedding_status['semantic_coverage'] ?? 0 ), 2 ) . '% · ' . absint( $embedding_status['embedded_chunks'] ?? 0 ) . '/' . absint( $embedding_status['indexed_chunks'] ?? 0 ) . ' chunks · ' . sanitize_text_field( $embedding_status['embedding_model'] ?? '' ) ) ); ?></td></tr>
+                <tr><th>Embedding queue</th><td><?php echo esc_html( $embedding_queue_state ? ( sanitize_text_field( $embedding_queue_state['state'] ?? 'unknown' ) . ' · ' . absint( $embedding_queue_state['pending_chunks'] ?? 0 ) . ' pending · updated ' . sanitize_text_field( $embedding_queue_state['updated_utc'] ?? '' ) ) : 'Idle' ); ?></td></tr>
+                <tr><th>Gemini credential source</th><td><?php echo esc_html( is_wp_error( $provider_diagnostics ) ? $provider_diagnostics->get_error_message() : ( sanitize_text_field( $provider_diagnostics['credential_source'] ?? 'SC_RL_GEMINI_API_KEY' ) . ' · ' . ( ! empty( $provider_diagnostics['credential_present'] ) ? 'present' : 'missing' ) . ( ! empty( $provider_diagnostics['credential_fingerprint'] ) ? ' · fingerprint ' . sanitize_text_field( $provider_diagnostics['credential_fingerprint'] ) : '' ) ) ); ?></td></tr>
                 <tr><th>Retrieval profile</th><td><?php echo esc_html( $retrieval_config ? sanitize_text_field( $retrieval_config['profile'] ?? 'balanced-v6.5.0' ) . ' · RRF k ' . absint( $retrieval_config['rrf_k'] ?? 60 ) : 'Backend calibration unavailable' ); ?></td></tr>
                 <tr><th>Evidence gate</th><td><?php echo esc_html( $retrieval_config ? 'Minimum score ' . (float) ( $retrieval_config['thresholds']['minimum_score'] ?? 0 ) . ' · minimum sources ' . absint( $retrieval_config['thresholds']['minimum_sources'] ?? 1 ) . ' · citation coverage ' . (float) ( $retrieval_config['thresholds']['minimum_citation_coverage'] ?? 0 ) : 'Unavailable' ); ?></td></tr>
                 <tr><th>Benchmark history</th><td><?php echo esc_html( count( $benchmark_runs ) . ' persisted run(s)' ); ?><?php if ( $benchmark_runs ) : $latest_benchmark = $benchmark_runs[0]; ?> · latest lexical MRR <?php echo esc_html( round( (float) ( $latest_benchmark['metrics']['lexical']['mrr'] ?? 0 ), 3 ) ); ?> · hybrid MRR <?php echo esc_html( round( (float) ( $latest_benchmark['metrics']['hybrid']['mrr'] ?? 0 ), 3 ) ); ?><?php endif; ?></td></tr>
@@ -2452,6 +2601,10 @@ final class SC_RL6_V630_Durable_Index {
             'content_character_limit' => max( 2000, min( 60000, absint( isset( $input['content_character_limit'] ) ? $input['content_character_limit'] : $old['content_character_limit'] ) ) ),
             'public_title_suggestions' => '1',
             'auto_recover' => ! empty( $input['auto_recover'] ) ? '1' : '0',
+            'auto_embed_after_sync' => ! empty( $input['auto_embed_after_sync'] ) ? '1' : '0',
+            'embedding_batch_size' => max( 1, min( 250, absint( $input['embedding_batch_size'] ?? $old['embedding_batch_size'] ) ) ),
+            'embedding_delay_ms' => max( 0, min( 5000, absint( $input['embedding_delay_ms'] ?? $old['embedding_delay_ms'] ) ) ),
+            'embedding_retry_seconds' => max( 60, min( 3600, absint( $input['embedding_retry_seconds'] ?? $old['embedding_retry_seconds'] ) ) ),
             'max_wordpress_snapshots' => max( 1, min( 20, absint( isset( $input['max_wordpress_snapshots'] ) ? $input['max_wordpress_snapshots'] : $old['max_wordpress_snapshots'] ) ) ),
             'max_retry_attempts' => max( 1, min( 10, absint( isset( $input['max_retry_attempts'] ) ? $input['max_retry_attempts'] : $old['max_retry_attempts'] ) ) ),
             'retry_base_seconds' => max( 10, min( 300, absint( isset( $input['retry_base_seconds'] ) ? $input['retry_base_seconds'] : $old['retry_base_seconds'] ) ) ),

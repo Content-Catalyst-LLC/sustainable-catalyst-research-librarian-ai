@@ -49,7 +49,7 @@ from .models import (
     utc_now,
 )
 from .provider import configured as provider_configured
-from .provider import embeddings_configured, generate_embedding, provider_state, verify_citations
+from .provider import credential_diagnostics, embeddings_configured, generate_embedding, provider_state, verify_citations
 from .generation_adapter import adapter_status, generate as generate_answer
 from .platform_handoffs import (
     ARTIFACT_SCHEMA,
@@ -154,7 +154,7 @@ def _workspace_summary(mode: str, matches: list[RetrievedSource], related: list[
         "accessibility_profile": "wcag-focused-v6.5.1",
         "rendering_profile": "staged-v6.5.1",
         "handoff_profile": "cross-product-reliability-v6.6.1",
-        "governance_profile": store.governance_policy().get("profile", "public-trust-v7.0.0"),
+        "governance_profile": store.governance_policy().get("profile", "public-trust-v7.0.1"),
         "available_destinations": list(available_capabilities().keys()),
         "connected_platform": store.connected_platform_summary(),
         "generation_boundary": adapter_status(),
@@ -560,6 +560,29 @@ def knowledge_rollback(payload: RollbackRequest) -> dict[str, Any]:
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return {"version": __version__, **result}
+
+
+
+
+@app.get("/v1/provider/diagnostics", dependencies=[Depends(require_key)])
+def provider_diagnostics_endpoint() -> dict[str, Any]:
+    return {"ok": True, "version": __version__, **credential_diagnostics()}
+
+
+@app.post("/v1/knowledge/embeddings/test", dependencies=[Depends(require_key)])
+async def test_embeddings_endpoint() -> dict[str, Any]:
+    if not embeddings_configured():
+        raise HTTPException(status_code=503, detail="Gemini embeddings are not configured or semantic retrieval is disabled.")
+    try:
+        vector = await generate_embedding("Research Librarian v7.0.1 embedding connection test", "RETRIEVAL_DOCUMENT")
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=f"Gemini embedding test failed: {str(exc)[:900]}") from exc
+    return {
+        "ok": True,
+        "version": __version__,
+        "dimensions": len(vector),
+        **credential_diagnostics(),
+    }
 
 
 @app.get("/v1/knowledge/embeddings/status", dependencies=[Depends(require_key)])

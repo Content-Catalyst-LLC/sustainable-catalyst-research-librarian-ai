@@ -128,7 +128,7 @@ class RetrievalRequest(BaseModel):
 
 
 class EmbeddingProcessRequest(BaseModel):
-    limit: int = Field(default=20, ge=1, le=100)
+    limit: int = Field(default=50, ge=1, le=250)
     delay_ms: int = Field(default=150, ge=0, le=5000)
 
 

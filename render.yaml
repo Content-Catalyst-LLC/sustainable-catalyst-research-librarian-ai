@@ -27,7 +27,7 @@ services:
       - key: SC_RL_CHUNK_OVERLAP_WORDS
         value: "35"
       - key: SC_RL_EMBEDDING_BATCH_LIMIT
-        value: "20"
+        value: "50"
       - key: SC_RL_CITATION_REQUIRED
         value: "true"
       - key: SC_RL_MAX_RUNTIME_SNAPSHOTS
@@ -39,7 +39,7 @@ services:
       - key: SC_RL_MAX_REJECTION_DETAILS
         value: "100"
       - key: SC_RL_RELEASE_VERSION
-        value: "7.0.0"
+        value: "7.0.1"
       - key: SC_RL_HANDOFF_SOURCE_LIMIT
         value: "8"
       - key: SC_RL_HANDOFF_TTL_SECONDS

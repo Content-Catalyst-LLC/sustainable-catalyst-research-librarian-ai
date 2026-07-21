@@ -1,3 +1,7 @@
+# Research Librarian AI v7.0.1
+
+Canonical index, credential, and resumable embedding queue repair. See `docs/V701_CANONICAL_INDEX_CREDENTIAL_EMBEDDING_REPAIR.md`.
+
 # Sustainable Catalyst Research Librarian AI v7.0.0
 
 A site-scoped connected research intelligence platform for Sustainable Catalyst.

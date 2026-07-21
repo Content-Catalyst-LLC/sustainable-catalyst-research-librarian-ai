@@ -1,0 +1,11 @@
+Research Librarian AI v7.0.1 validation
+69/69 backend tests passed from repository root
+69/69 backend tests passed from backend deployment layout
+21/21 PHP release suites passed
+695 reported PHP contract checks passed
+35 PHP files linted
+3 JavaScript files syntax checked
+62 JSON files parsed
+Python compile validation passed
+Bash syntax validation passed
+Secret-pattern scan passed

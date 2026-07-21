@@ -1,0 +1,30 @@
+{
+  "schema": "sc-research-librarian-release-manifest/1.0",
+  "version": "7.0.1",
+  "release": "Research Quality and Governance Center",
+  "sqlite_schema": 9,
+  "contracts": [
+    "sc-research-governance-policy/1.0",
+    "sc-research-source-review/1.0",
+    "sc-research-answer-trace/1.0",
+    "sc-research-quality-evaluation/1.0",
+    "sc-research-release-gate/1.0",
+    "sc-research-methodology/1.0",
+    "sc-research-governance-export/1.0"
+  ],
+  "capabilities": [
+    "answer traceability",
+    "source approval and freshness review",
+    "quality evaluation",
+    "release gates",
+    "privacy-minimized analytics",
+    "retention enforcement",
+    "public methodology and limitations",
+    "human-controlled overrides"
+  ],
+  "human_control": {
+    "automatic_publication": false,
+    "automatic_source_exclusion": false,
+    "automatic_release_override": false
+  }
+}

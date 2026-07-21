@@ -1,6 +1,6 @@
 <?php
 /**
- * Research Librarian AI v7.0.0 — consolidated administration and Python intelligence operations.
+ * Research Librarian AI v7.0.1 — consolidated administration and Python intelligence operations.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -129,7 +129,7 @@ final class SC_RL6_V610_Live_AI_Admin {
             <?php if ( 'standard' === $gemini_key_type ) : ?>
                 <div class="notice notice-warning"><p><strong>Gemini key migration:</strong> This saved key uses the older standard-key format. Google rejects unrestricted standard keys after June 19, 2026 and plans to end standard-key support in September 2026. Restrict it to the Gemini API in Google AI Studio or replace it with a new authorization key.</p></div>
             <?php elseif ( 'authorization' === $gemini_key_type ) : ?>
-                <div class="notice notice-info"><p><strong>Gemini authorization key detected.</strong> Research Librarian AI v7.0.0 retains support for modern Google AI Studio authorization keys, including keys that contain periods.</p></div>
+                <div class="notice notice-info"><p><strong>Gemini authorization key detected.</strong> Research Librarian AI v7.0.1 retains support for modern Google AI Studio authorization keys, including keys that contain periods.</p></div>
             <?php endif; ?>
 
             <?php if ( ! empty( $status['last_error_message'] ) ) : ?>
@@ -186,7 +186,7 @@ final class SC_RL6_V610_Live_AI_Admin {
         ?>
         <div class="wrap">
             <h1><?php esc_html_e( 'WordPress AI Provider Fallback', 'sustainable-catalyst-research-librarian-ai' ); ?></h1>
-            <p><?php esc_html_e( 'Optional fallback provider configuration for direct WordPress operation when the Python/Render service is disabled. The primary v7.0.0 architecture is configured under Python Intelligence.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
+            <p><?php esc_html_e( 'Optional fallback provider configuration for direct WordPress operation when the Python/Render service is disabled. When Python Intelligence is enabled, generation and semantic indexing use Render SC_RL_GEMINI_API_KEY; this saved WordPress key is not used by the canonical backend index.', 'sustainable-catalyst-research-librarian-ai' ); ?></p>
 
             <?php if ( $notice ) : ?><div class="notice notice-<?php echo esc_attr( $notice_type ); ?> is-dismissible"><p><?php echo esc_html( $notice ); ?></p></div><?php endif; ?>
 
@@ -206,7 +206,7 @@ final class SC_RL6_V610_Live_AI_Admin {
                 <table class="form-table sc-rl-provider-table" role="presentation">
                     <tr><th><label for="sc-rl-provider">AI provider</label></th><td><select id="sc-rl-provider" name="sc_rl_ai[provider]"><?php foreach ( array( 'disabled' => 'Disabled / verified fallback only', 'gemini' => 'Gemini', 'openai' => 'OpenAI' ) as $value => $label ) : ?><option value="<?php echo esc_attr( $value ); ?>" <?php selected( $options['provider'], $value ); ?>><?php echo esc_html( $label ); ?></option><?php endforeach; ?></select></td></tr>
                     <tr><th><label for="sc-rl-gemini-model">Gemini model</label></th><td><input id="sc-rl-gemini-model" class="regular-text" name="sc_rl_ai[gemini_model]" value="<?php echo esc_attr( $options['gemini_model'] ); ?>"><p class="description">Use a model returned by the provider model list for this key.</p></td></tr>
-                    <tr><th><label for="sc-rl-gemini-key">Gemini API key</label></th><td><input id="sc-rl-gemini-key" type="password" class="regular-text" name="sc_rl_ai[gemini_api_key_new]" value="" autocomplete="new-password" placeholder="<?php echo esc_attr( $gemini_saved ? 'Key saved. Paste only to replace.' : 'Paste Gemini API key' ); ?>"><p class="description">Create the key in Google AI Studio. Modern authorization keys are supported; leave this field blank to preserve the saved key.</p><?php if ( $gemini_saved ) : ?><p><label><input type="checkbox" name="sc_rl_ai[gemini_api_key_clear]" value="1"> Clear saved Gemini key</label></p><?php endif; ?></td></tr>
+                    <tr><th><label for="sc-rl-gemini-key">Gemini API key</label></th><td><input id="sc-rl-gemini-key" type="password" class="regular-text" name="sc_rl_ai[gemini_api_key_new]" value="" autocomplete="new-password" placeholder="<?php echo esc_attr( $gemini_saved ? 'Key saved. Paste only to replace.' : 'Paste Gemini API key' ); ?>"><p class="description">Fallback-only credential. Create it in Google AI Studio; leave blank to preserve it. The canonical Python backend uses Render SC_RL_GEMINI_API_KEY instead.</p><?php if ( $gemini_saved ) : ?><p><label><input type="checkbox" name="sc_rl_ai[gemini_api_key_clear]" value="1"> Clear saved Gemini key</label></p><?php endif; ?></td></tr>
                     <tr><th><label for="sc-rl-openai-model">OpenAI model</label></th><td><input id="sc-rl-openai-model" class="regular-text" name="sc_rl_ai[openai_model]" value="<?php echo esc_attr( $options['openai_model'] ); ?>"></td></tr>
                     <tr><th><label for="sc-rl-openai-key">OpenAI API key</label></th><td><input id="sc-rl-openai-key" type="password" class="regular-text" name="sc_rl_ai[openai_api_key_new]" value="" autocomplete="new-password" placeholder="<?php echo esc_attr( $openai_saved ? 'Key saved. Paste only to replace.' : 'Paste OpenAI API key' ); ?>"><?php if ( $openai_saved ) : ?><p><label><input type="checkbox" name="sc_rl_ai[openai_api_key_clear]" value="1"> Clear saved OpenAI key</label></p><?php endif; ?></td></tr>
                     <tr><th><label for="sc-rl-embedding-provider">Semantic retrieval</label></th><td><select id="sc-rl-embedding-provider" name="sc_rl_ai[embeddings_provider]"><option value="disabled" <?php selected( $options['embeddings_provider'], 'disabled' ); ?>>Keyword retrieval only</option><option value="gemini" <?php selected( $options['embeddings_provider'], 'gemini' ); ?>>Gemini embeddings</option></select></td></tr>

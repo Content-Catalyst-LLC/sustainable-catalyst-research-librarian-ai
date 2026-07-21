@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import hashlib
 import json
 import re
 from typing import Any
@@ -48,6 +49,27 @@ def embeddings_configured() -> bool:
         settings.gemini_api_key and settings.gemini_embedding_model
     )
 
+
+
+
+def credential_diagnostics() -> dict[str, Any]:
+    """Return safe provider configuration metadata without exposing credentials."""
+    key = settings.gemini_api_key.strip()
+    fingerprint = hashlib.sha256(key.encode("utf-8")).hexdigest()[:12] if key else ""
+    return {
+        "provider": settings.provider,
+        "generation_configured": configured(),
+        "embeddings_configured": embeddings_configured(),
+        "credential_source": "SC_RL_GEMINI_API_KEY",
+        "credential_present": bool(key),
+        "credential_fingerprint": fingerprint,
+        "generation_model": settings.gemini_model,
+        "embedding_model": settings.gemini_embedding_model,
+        "semantic_enabled": settings.semantic_enabled,
+        "last_success_utc": provider_state.last_success_utc,
+        "last_failure_utc": provider_state.last_failure_utc,
+        "last_error": provider_state.last_error,
+    }
 
 def _source_context(matches: list[RetrievedSource], calibration: dict[str, Any] | None = None) -> str:
     config = sanitize_retrieval_config(calibration)

@@ -512,7 +512,10 @@ class KnowledgeStore:
     def embedding_status(self) -> dict[str, Any]:
         with self._lock, self._connection() as connection:
             total = int(connection.execute("SELECT COUNT(*) FROM retrieval_chunks").fetchone()[0])
-            embedded = int(connection.execute("SELECT COUNT(*) FROM retrieval_chunks WHERE embedding_json<>''").fetchone()[0])
+            embedded = int(connection.execute(
+                "SELECT COUNT(*) FROM retrieval_chunks WHERE embedding_json<>'' AND embedding_model=?",
+                (settings.gemini_embedding_model,),
+            ).fetchone()[0])
             latest = connection.execute(
                 "SELECT run_id,model,state,requested,processed,failed,started_utc,completed_utc,error "
                 "FROM embedding_runs ORDER BY started_utc DESC LIMIT 1"
@@ -595,7 +598,10 @@ class KnowledgeStore:
         ).fetchone()[0])
         snapshots = int(connection.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0])
         indexed_chunks = int(connection.execute("SELECT COUNT(*) FROM retrieval_chunks").fetchone()[0])
-        embedded_chunks = int(connection.execute("SELECT COUNT(*) FROM retrieval_chunks WHERE embedding_json<>''").fetchone()[0])
+        embedded_chunks = int(connection.execute(
+            "SELECT COUNT(*) FROM retrieval_chunks WHERE embedding_json<>'' AND embedding_model=?",
+            (settings.gemini_embedding_model,),
+        ).fetchone()[0])
         benchmark_runs = int(connection.execute("SELECT COUNT(*) FROM retrieval_benchmark_runs").fetchone()[0])
         handoff_count = int(connection.execute("SELECT COUNT(*) FROM platform_handoffs").fetchone()[0])
         artifact_return_count = int(connection.execute("SELECT COUNT(*) FROM platform_artifact_returns").fetchone()[0])
@@ -1572,7 +1578,7 @@ class KnowledgeStore:
     def connected_platform_summary(self) -> dict[str, Any]:
         with self._lock, self._connection() as connection:
             counts={name:int(connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]) for name,table in {"projects":"research_projects","investigations":"research_investigations","entities":"research_project_entities","backups":"connected_platform_backups"}.items()}
-        return {"schema":"sc-connected-research-platform-summary/1.0","version":"7.0.0","counts":counts,"workspace_schema":"sc-research-librarian-public-workspace/2.0","api_schema":"sc-connected-research-api/1.0"}
+        return {"schema":"sc-connected-research-platform-summary/1.0","version":"7.0.1","counts":counts,"workspace_schema":"sc-research-librarian-public-workspace/2.0","api_schema":"sc-connected-research-api/1.0"}
 
 
 store = KnowledgeStore()
