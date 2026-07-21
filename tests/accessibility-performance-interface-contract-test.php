@@ -11,10 +11,10 @@ $roadmap = file_get_contents( $root . '/docs/ROADMAP.md' );
 $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_accessibility_performance_manifest_v6.5.1.json' ), true );
 
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 7.0.3' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '7.0.3';" ),
-    'module_version' => false !== strpos( $module, "const VERSION = '7.0.3';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.0.3"' ),
+    'version_header' => false !== strpos( $main, 'Version: 7.0.4' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '7.0.4';" ),
+    'module_version' => false !== strpos( $module, "const VERSION = '7.0.4';" ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.0.4"' ),
     'workspace_schema_markup' => false !== strpos( $main, 'data-workspace-version="2.0"' ),
     'workspace_schema_backend' => false !== strpos( $backend, 'sc-research-librarian-public-workspace/2.0' ),
     'workspace_accessibility_profile' => false !== strpos( $backend, 'wcag-focused-v6.5.1' ),
@@ -71,7 +71,7 @@ $checks = array(
 );
 $failed = array_keys( array_filter( $checks, static function ( $value ) { return ! $value; } ) );
 echo json_encode( array(
-    'version' => '7.0.3',
+    'version' => '7.0.4',
     'checks' => $checks,
     'passed' => count( $checks ) - count( $failed ),
     'failed' => count( $failed ),

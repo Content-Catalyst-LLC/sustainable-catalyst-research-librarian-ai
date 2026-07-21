@@ -7,8 +7,8 @@ $js = file_get_contents( $root . '/assets/sc-research-librarian-ai.js' );
 $backend = file_get_contents( $root . '/backend/app/main.py' );
 $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_v702_index_experience_manifest.json' ), true );
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 7.0.3' ),
-    'version_constant' => false !== strpos( $module, "const VERSION = '7.0.3';" ),
+    'version_header' => false !== strpos( $main, 'Version: 7.0.4' ),
+    'version_constant' => false !== strpos( $module, "const VERSION = '7.0.4';" ),
     'one_click_pipeline' => false !== strpos( $module, 'build_index_pipeline' ) && false !== strpos( $module, 'Build Knowledge Index' ),
     'post_commit_verification' => false !== strpos( $module, "'/v1/knowledge/summary'" ) && false !== strpos( $module, 'index_verification_failed' ),
     'snapshot_recovery' => false !== strpos( $module, 'create_wordpress_snapshot_from_build_file' ) && false !== strpos( $module, 'verifying-index' ),
@@ -23,5 +23,5 @@ $checks = array(
     'manifest' => is_array( $manifest ) && '7.0.2' === ( $manifest['version'] ?? '' ) && false === ( $manifest['paid_infrastructure_required'] ?? true ),
 );
 $failed = array_keys( array_filter( $checks, function( $value ) { return ! $value; } ) );
-echo json_encode( array( 'version' => '7.0.3', 'checks' => $checks, 'passed' => count( $checks ) - count( $failed ), 'failed' => count( $failed ), 'failures' => $failed ), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . PHP_EOL;
+echo json_encode( array( 'version' => '7.0.4', 'checks' => $checks, 'passed' => count( $checks ) - count( $failed ), 'failed' => count( $failed ), 'failures' => $failed ), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . PHP_EOL;
 exit( $failed ? 1 : 0 );

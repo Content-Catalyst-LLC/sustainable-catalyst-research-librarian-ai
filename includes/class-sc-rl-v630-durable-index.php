@@ -1,6 +1,6 @@
 <?php
 /**
- * Research Librarian AI v7.0.3 — Asynchronous Index Rebuild and Recovery.
+ * Research Librarian AI v7.0.4 — Asynchronous Index Rebuild and Recovery.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class SC_RL6_V630_Durable_Index {
-    const VERSION = '7.0.3';
+    const VERSION = '7.0.4';
     const OPTION_NAME = 'sc_rl_v620_python_options';
     const STATUS_OPTION = 'sc_rl_v620_python_status';
     const SYNC_HOOK = 'sc_rl_v620_python_sync_event';
@@ -592,7 +592,7 @@ final class SC_RL6_V630_Durable_Index {
         $recovery_next = wp_next_scheduled( self::RECOVERY_HOOK );
         $retry_next = wp_next_scheduled( self::SYNC_RETRY_HOOK );
         return array(
-            'schema' => 'sc-research-librarian-sync-recovery-export/7.0.3',
+            'schema' => 'sc-research-librarian-sync-recovery-export/7.0.4',
             'version' => self::VERSION,
             'site' => home_url( '/' ),
             'generated_utc' => gmdate( 'c' ),
@@ -831,7 +831,7 @@ final class SC_RL6_V630_Durable_Index {
         $grounding['reason_codes'] = array_values( array_unique( array_merge( $grounding['reason_codes'], array( 'bm25-section-retrieval', 'citation-verification' ), ! empty( $grounding['retrieval_diagnostics']['semantic_used'] ) ? array( 'semantic-retrieval' ) : array() ) ) );
 
         $note = array(
-            'schema' => 'sc-research-librarian-route-note/7.0.3',
+            'schema' => 'sc-research-librarian-route-note/7.0.4',
             'created_at_utc' => gmdate( 'c' ),
             'question' => sanitize_textarea_field( $question ),
             'source' => sanitize_key( isset( $backend['source'] ) ? $backend['source'] : 'python-backend' ),
@@ -1253,7 +1253,7 @@ final class SC_RL6_V630_Durable_Index {
         $deleted_ids = array_values( array_diff( array_keys( $ledger['records'] ), array_keys( $current_ids ) ) );
         $report = array_merge( array(
             'version' => self::VERSION,
-            'schema' => 'sc-rl-sync-report/7.0.3',
+            'schema' => 'sc-rl-sync-report/7.0.4',
             'job_id' => $job_id,
             'state' => 'running',
             'mode' => 'transactional-replace',
@@ -1502,7 +1502,7 @@ final class SC_RL6_V630_Durable_Index {
     }
 
     public static function build_index_pipeline() {
-        return self::start_index_build( 'manual-v7.0.3-index-build' );
+        return self::start_index_build( 'manual-v7.0.4-index-build' );
     }
 
     private static function replace_build_state( $state ) {
@@ -1634,7 +1634,7 @@ final class SC_RL6_V630_Durable_Index {
             return new WP_Error( 'sc_rl_v703_build_file_create', 'The private asynchronous index staging file could not be created.' );
         }
         $state = array(
-            'schema' => 'sc-rl-async-index-build/7.0.3',
+            'schema' => 'sc-rl-async-index-build/7.0.4',
             'version' => self::VERSION,
             'job_id' => $job_id,
             'backend_job_id' => $job_id,
@@ -1664,6 +1664,13 @@ final class SC_RL6_V630_Durable_Index {
             'sync_offset' => 0,
             'retry_count' => 0,
             'failed_records' => 0,
+            'migrate_legacy' => false,
+            'legacy_skipped' => 0,
+            'finalization_offset' => 0,
+            'finalization_records' => 0,
+            'finalization_hashes' => array(),
+            'finalization_posts' => array(),
+            'finalization_bytes' => 0,
         );
         self::clear_index_build_schedule();
         self::replace_build_state( $state );
@@ -1819,29 +1826,73 @@ final class SC_RL6_V630_Durable_Index {
     private static function finalize_build_discovery( $state ) {
         $record_count = absint( $state['records_discovered'] ?? 0 );
         if ( ! $record_count ) {
-            return self::handle_build_error( $state, new WP_Error( 'sc_rl_v703_no_sources', 'No published, indexable WordPress records were discovered.' ) );
+            return self::handle_build_error( $state, new WP_Error( 'sc_rl_v704_no_sources', 'No published, indexable WordPress records were discovered.' ) );
         }
-        $scan = self::scan_build_file( $state );
-        if ( is_wp_error( $scan ) ) {
-            return self::handle_build_error( $state, $scan );
+        // Persist the transition before scanning. Finalization is deliberately bounded so
+        // a large staging file can never recreate the synchronous rebuild fatal.
+        $state['state'] = 'running';
+        $state['stage'] = 'finalizing-discovery';
+        $state['progress'] = 48;
+        $state['message'] = 'Source discovery complete. Validating the staging file in bounded passes before synchronization.';
+        $state['finalization_offset'] = 0;
+        $state['finalization_records'] = 0;
+        $state['finalization_hashes'] = array();
+        $state['finalization_posts'] = array();
+        $state['finalization_bytes'] = 0;
+        $state['retry_count'] = 0;
+        unset( $state['seen_url_hashes'] );
+        self::replace_build_state( $state );
+        self::schedule_index_build( $state['job_id'], 2 );
+        return $state;
+    }
+
+    private static function process_build_finalization_step( $state ) {
+        $limit = max( 25, min( 250, absint( self::options()['sync_batch_size'] ?? 100 ) ) );
+        $batch = self::read_build_batch( $state, absint( $state['finalization_offset'] ?? 0 ), $limit );
+        if ( is_wp_error( $batch ) ) {
+            return self::handle_build_error( $state, $batch );
         }
+        $hashes = isset( $state['finalization_hashes'] ) && is_array( $state['finalization_hashes'] ) ? $state['finalization_hashes'] : array();
+        $posts = isset( $state['finalization_posts'] ) && is_array( $state['finalization_posts'] ) ? $state['finalization_posts'] : array();
+        foreach ( $batch['records'] as $record ) {
+            if ( empty( $record['id'] ) || empty( $record['title'] ) || empty( $record['url'] ) ) {
+                return self::handle_build_error( $state, new WP_Error( 'sc_rl_v704_build_record_invalid', 'The private staging file contains an invalid record.' ) );
+            }
+            $record_id = sanitize_text_field( $record['id'] );
+            $hashes[ $record_id ] = sanitize_text_field( $record['content_hash'] ?? self::record_content_hash( $record ) );
+            if ( ! empty( $record['metadata']['post_id'] ) ) {
+                $posts[ absint( $record['metadata']['post_id'] ) ] = $record_id;
+            }
+        }
+        $state['finalization_hashes'] = $hashes;
+        $state['finalization_posts'] = $posts;
+        $state['finalization_records'] = absint( $state['finalization_records'] ?? 0 ) + count( $batch['records'] );
+        $state['finalization_offset'] = absint( $batch['offset'] );
+        $state['finalization_bytes'] = absint( $batch['offset'] );
+        $total = max( 1, absint( $state['records_discovered'] ?? 0 ) );
+        $state['progress'] = min( 55, 48 + (int) floor( 7 * min( 1, $state['finalization_records'] / $total ) ) );
+        $state['message'] = 'Validated ' . $state['finalization_records'] . ' of ' . $total . ' staged record(s) in bounded passes.';
+        if ( ! $batch['eof'] ) {
+            self::replace_build_state( $state );
+            self::schedule_index_build( $state['job_id'], 2 );
+            return $state;
+        }
+        ksort( $hashes );
         $ledger = self::sync_ledger();
-        $deleted_ids = array_values( array_diff( array_keys( $ledger['records'] ?? array() ), array_keys( $scan['hashes'] ) ) );
+        $deleted_ids = array_values( array_diff( array_keys( $ledger['records'] ?? array() ), array_keys( $hashes ) ) );
         $batch_size = max( 25, min( 250, absint( self::options()['sync_batch_size'] ?? 100 ) ) );
-        $state['records_discovered'] = absint( $scan['record_count'] );
+        $state['records_discovered'] = absint( $state['finalization_records'] );
+        $state['finalization_hashes'] = $hashes;
         $state['deleted_ids'] = $deleted_ids;
         $state['sync_batch_count'] = max( 1, (int) ceil( $state['records_discovered'] / $batch_size ) );
         $state['sync_batch_index'] = 0;
         $state['sync_offset'] = 0;
-        $state['state'] = 'running';
         $state['stage'] = 'synchronizing-records';
-        $state['progress'] = 50;
-        $state['message'] = 'Source discovery complete. Record batches are staging in Python while the current index remains live.';
-        $state['retry_count'] = 0;
-        unset( $state['seen_url_hashes'] );
+        $state['progress'] = 56;
+        $state['message'] = 'Bounded finalization complete. Record batches are staging in Python while the current index remains live.';
         $report = array(
             'version' => self::VERSION,
-            'schema' => 'sc-rl-sync-report/7.0.3',
+            'schema' => 'sc-rl-sync-report/7.0.4',
             'job_id' => $state['backend_job_id'],
             'state' => 'running',
             'mode' => 'transactional-replace-async',
@@ -1859,6 +1910,7 @@ final class SC_RL6_V630_Durable_Index {
             'records_by_post_type' => $state['records_by_post_type'] ?? array(),
             'skipped_records' => absint( $state['skipped_records'] ?? 0 ),
             'duplicate_urls' => absint( $state['duplicate_urls'] ?? 0 ),
+            'legacy_skipped' => absint( $state['legacy_skipped'] ?? 0 ),
         );
         self::save_sync_report( $report );
         self::replace_build_state( $state );
@@ -1921,18 +1973,21 @@ final class SC_RL6_V630_Durable_Index {
                 $state['source_page'] = $page + 1;
             }
         } else {
-            $state['stage'] = 'discovering-legacy';
             $saved_index = get_option( SC_RL6_Core::INDEX_OPTION, array() );
             $legacy = is_array( $saved_index ) && isset( $saved_index['records'] ) && is_array( $saved_index['records'] ) ? array_values( $saved_index['records'] ) : array();
+            if ( empty( $state['migrate_legacy'] ) ) {
+                $state['legacy_skipped'] = count( $legacy );
+                $state['legacy_offset'] = count( $legacy );
+                $state['message'] = 'Current WordPress sources are complete. Legacy fallback records were skipped to prevent duplicate discovery and synchronous transition failures.';
+                self::replace_build_state( $state );
+                return self::finalize_build_discovery( $state );
+            }
+            $state['stage'] = 'discovering-legacy';
             $offset = absint( $state['legacy_offset'] ?? 0 );
             foreach ( array_slice( $legacy, $offset, $batch_size ) as $item ) {
-                if ( absint( $state['records_discovered'] ?? 0 ) >= $max_records ) {
-                    break;
-                }
+                if ( absint( $state['records_discovered'] ?? 0 ) >= $max_records ) { break; }
                 $appended = self::append_build_record( $state, self::legacy_record_from_item( $item ) );
-                if ( is_wp_error( $appended ) ) {
-                    return self::handle_build_error( $state, $appended );
-                }
+                if ( is_wp_error( $appended ) ) { return self::handle_build_error( $state, $appended ); }
             }
             $state['legacy_offset'] = min( count( $legacy ), $offset + $batch_size );
             if ( $state['legacy_offset'] >= count( $legacy ) || absint( $state['records_discovered'] ?? 0 ) >= $max_records ) {
@@ -2007,19 +2062,22 @@ final class SC_RL6_V630_Durable_Index {
     }
 
     private static function save_ledger_from_build_file( $state, $backend_result ) {
-        $scan = self::scan_build_file( $state );
-        if ( is_wp_error( $scan ) ) {
-            return $scan;
+        $hashes = isset( $state['finalization_hashes'] ) && is_array( $state['finalization_hashes'] ) ? $state['finalization_hashes'] : array();
+        $posts = isset( $state['finalization_posts'] ) && is_array( $state['finalization_posts'] ) ? $state['finalization_posts'] : array();
+        if ( ! $hashes ) {
+            return new WP_Error( 'sc_rl_v704_finalization_ledger_missing', 'The bounded finalization ledger is missing; the committed index was left intact.' );
         }
+        ksort( $hashes );
+        $checksum = self::ledger_checksum( $hashes );
         update_option( self::LEDGER_OPTION, array(
             'schema' => 'sc-rl-sync-ledger/1.0',
-            'records' => $scan['hashes'],
-            'posts' => $scan['posts'],
-            'checksum' => sanitize_text_field( $backend_result['checksum'] ?? $scan['checksum'] ),
+            'records' => $hashes,
+            'posts' => $posts,
+            'checksum' => sanitize_text_field( $backend_result['checksum'] ?? $checksum ),
             'index_version' => absint( $backend_result['index_version'] ?? 0 ),
             'updated_utc' => gmdate( 'c' ),
         ), false );
-        return $scan;
+        return array( 'record_count' => count( $hashes ), 'hashes' => $hashes, 'posts' => $posts, 'checksum' => $checksum );
     }
 
     private static function process_build_sync_step( $state ) {
@@ -2045,7 +2103,7 @@ final class SC_RL6_V630_Durable_Index {
             'job_id' => sanitize_text_field( $state['backend_job_id'] ),
             'batch_index' => $batch_index,
             'batch_count' => $batch_count,
-            'reason' => 'wordpress-async-full-sync-v7.0.3',
+            'reason' => 'wordpress-async-full-sync-v7.0.4',
         ) );
         if ( is_wp_error( $response ) ) {
             return self::handle_build_error( $state, $response );
@@ -2081,7 +2139,7 @@ final class SC_RL6_V630_Durable_Index {
         $state['records_synced'] = absint( $state['records_synced'] ?? 0 ) + count( $records );
         $state['failed_records'] = absint( $state['failed_records'] ?? 0 ) + absint( $response['rejected'] ?? 0 );
         $state['retry_count'] = 0;
-        $state['progress'] = min( 86, 50 + (int) floor( 36 * min( 1, $batch_index / $batch_count ) ) );
+        $state['progress'] = min( 86, 56 + (int) floor( 30 * min( 1, $batch_index / $batch_count ) ) );
         $state['message'] = 'Staged batch ' . $batch_index . ' of ' . $batch_count . ' · ' . $state['records_synced'] . ' record(s) processed.';
         if ( $is_final ) {
             $ledger = self::save_ledger_from_build_file( $state, $response );
@@ -2119,10 +2177,11 @@ final class SC_RL6_V630_Durable_Index {
     }
 
     private static function create_wordpress_snapshot_from_build_file( $state, $reason ) {
-        $scan = self::scan_build_file( $state );
-        if ( is_wp_error( $scan ) ) {
-            return $scan;
+        $hashes = isset( $state['finalization_hashes'] ) && is_array( $state['finalization_hashes'] ) ? $state['finalization_hashes'] : array();
+        if ( ! $hashes ) {
+            return new WP_Error( 'sc_rl_v704_snapshot_ledger_missing', 'The bounded finalization ledger is unavailable for snapshot creation.' );
         }
+        $scan = array( 'record_count' => count( $hashes ), 'checksum' => self::ledger_checksum( $hashes ) );
         $directory = self::ensure_snapshot_directory();
         if ( is_wp_error( $directory ) ) {
             return $directory;
@@ -2260,7 +2319,7 @@ final class SC_RL6_V630_Durable_Index {
             $warnings[] = 'Knowledge records are ready, but semantic embeddings need attention: ' . $embedding_test->get_error_message();
             $state['embedding_state'] = array( 'state' => 'configuration-error', 'last_error' => $embedding_test->get_error_message() );
         } else {
-            $embedding_state = self::schedule_embedding_queue( 'v7.0.3-async-index-build', 10 );
+            $embedding_state = self::schedule_embedding_queue( 'v7.0.4-async-index-build', 10 );
             if ( is_wp_error( $embedding_state ) ) {
                 $warnings[] = 'Knowledge records are ready, but the semantic queue could not be scheduled: ' . $embedding_state->get_error_message();
                 $state['embedding_state'] = array( 'state' => 'manual-continuation-required', 'last_error' => $embedding_state->get_error_message() );
@@ -2275,7 +2334,7 @@ final class SC_RL6_V630_Durable_Index {
         $state['message'] = $warnings ? 'Knowledge index ready; review the warning before semantic search reaches full coverage.' : 'Knowledge index ready. Semantic indexing will continue in resumable background batches.';
         $state['last_error'] = '';
         $state['completed_utc'] = gmdate( 'c' );
-        unset( $state['deleted_ids'], $state['seen_url_hashes'] );
+        unset( $state['deleted_ids'], $state['seen_url_hashes'], $state['finalization_hashes'], $state['finalization_posts'] );
         self::cleanup_build_files( $state );
         self::clear_index_build_schedule( $state['job_id'] );
         return self::replace_build_state( $state );
@@ -2314,6 +2373,8 @@ final class SC_RL6_V630_Durable_Index {
                 case 'discovering-sources':
                 case 'discovering-legacy':
                     return self::process_build_discovery_step( $state );
+                case 'finalizing-discovery':
+                    return self::process_build_finalization_step( $state );
                 case 'synchronizing-records':
                     return self::process_build_sync_step( $state );
                 case 'verifying-index':
@@ -2340,7 +2401,7 @@ final class SC_RL6_V630_Durable_Index {
     }
 
     public static function sync_and_complete_embeddings() {
-        $sync = self::sync_all_records( 'manual-v7.0.3-repair' );
+        $sync = self::sync_all_records( 'manual-v7.0.4-repair' );
         if ( is_wp_error( $sync ) ) {
             return $sync;
         }
@@ -3484,7 +3545,7 @@ final class SC_RL6_V630_Durable_Index {
 
             <section class="sc-rl-v702-hero" data-state="<?php echo esc_attr( $primary_state ); ?>">
                 <div>
-                    <div class="sc-rl-v702-eyebrow">Research Librarian v7.0.3</div>
+                    <div class="sc-rl-v702-eyebrow">Research Librarian v7.0.4</div>
                     <h1>Knowledge Index and AI Readiness</h1>
                     <p>One operational view for the Python connection, WordPress source discovery, durable knowledge synchronization, and Gemini semantic indexing.</p>
                     <div class="sc-rl-v702-badge"><?php echo esc_html( $build_badge ); ?></div>
@@ -3522,6 +3583,8 @@ final class SC_RL6_V630_Durable_Index {
                         <div class="sc-rl-v703-job__metric"><span>Discovered</span><strong><?php echo esc_html( number_format_i18n( absint( $build_state['records_discovered'] ?? 0 ) ) ); ?></strong></div>
                         <div class="sc-rl-v703-job__metric"><span>Synchronized</span><strong><?php echo esc_html( number_format_i18n( absint( $build_state['records_synced'] ?? 0 ) ) ); ?></strong></div>
                         <div class="sc-rl-v703-job__metric"><span>Batch</span><strong><?php echo esc_html( absint( $build_state['sync_batch_index'] ?? 0 ) . '/' . absint( $build_state['sync_batch_count'] ?? 0 ) ); ?></strong></div>
+                        <div class="sc-rl-v703-job__metric"><span>Validated</span><strong><?php echo esc_html( number_format_i18n( absint( $build_state['finalization_records'] ?? 0 ) ) ); ?></strong></div>
+                        <div class="sc-rl-v703-job__metric"><span>Bytes processed</span><strong><?php echo esc_html( size_format( absint( $build_state['finalization_bytes'] ?? 0 ) ) ); ?></strong></div>
                     </div>
                     <?php if ( ! empty( $build_state['last_error'] ) ) : ?><div class="sc-rl-v703-error"><strong>Last error:</strong> <?php echo esc_html( $build_state['last_error'] ); ?></div><?php endif; ?>
                     <?php if ( defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ) : ?><div class="sc-rl-v703-cron"><strong>WP-Cron is disabled.</strong> Use “Run Next Batch Now,” or configure a real server cron request to <code>wp-cron.php</code>.</div><?php endif; ?>

@@ -1,4 +1,14 @@
-## 7.0.3 — Asynchronous Index Rebuild and Recovery
+# Changelog
+
+## 7.0.4 — Bounded Discovery Finalization and Index Activation
+
+- Skips duplicate legacy fallback migration during normal full rebuilds.
+- Adds a persisted `finalizing-discovery` stage with byte and record cursors.
+- Removes synchronous full-file scans from the discovery transition and ledger activation.
+- Reuses the bounded finalization ledger after the backend commits.
+- Adds visible validated-record and byte-progress diagnostics.
+
+## 7.0.4 — Asynchronous Index Rebuild and Recovery
 
 - Moves full knowledge-index rebuild work out of the WordPress browser request.
 - Adds a persistent, resumable build job with bounded source-discovery and backend-sync batches.
@@ -167,7 +177,6 @@
 - Added a larger answer-first public interface with advanced diagnostics hidden behind disclosure controls.
 - Moved direct WordPress AI provider configuration to an optional fallback screen under Advanced.
 
-# Changelog
 
 ## 6.1.1 — Gemini Authorization Key Compatibility Patch
 

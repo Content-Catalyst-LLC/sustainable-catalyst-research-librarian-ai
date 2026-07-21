@@ -1,6 +1,6 @@
-# Research Librarian AI v7.0.3 Validation Report
+# Research Librarian AI v7.0.4 Validation Report
 
-Release: **v7.0.3 — Asynchronous Index Rebuild and Recovery**  
+Release: **v7.0.4 — Asynchronous Index Rebuild and Recovery**  
 Validation date: **2026-07-21**
 
 ## Release objective
@@ -57,7 +57,7 @@ The automated tests validate contracts, state transitions, packaging, and backen
 - WordPress plugin ZIP integrity: passed.
 - Full package PHP syntax after extraction: 39 files passed.
 - WordPress package PHP syntax after extraction: 14 files passed.
-- Package root folders and required v7.0.3 files: passed.
+- Package root folders and required v7.0.4 files: passed.
 - Cache, bytecode, and test-generated SQLite artifacts excluded.
 - Self-contained installer embedded payload checksum: passed.
 - Self-contained installer `--self-test`: passed.

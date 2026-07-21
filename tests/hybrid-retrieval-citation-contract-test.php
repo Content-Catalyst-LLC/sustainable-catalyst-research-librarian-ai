@@ -17,10 +17,10 @@ $docs = file_get_contents( $root . '/docs/V640_HYBRID_RETRIEVAL_CITATION_ENGINE.
 $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_hybrid_retrieval_manifest_v6.4.0.json' ), true );
 
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 7.0.3' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '7.0.3';" ),
-    'module_version' => false !== strpos( $module, "const VERSION = '7.0.3';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.0.3"' ),
+    'version_header' => false !== strpos( $main, 'Version: 7.0.4' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '7.0.4';" ),
+    'module_version' => false !== strpos( $module, "const VERSION = '7.0.4';" ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.0.4"' ),
     'schema_version_six_or_newer' => false !== strpos( $store, 'SCHEMA_VERSION = 10' ),
     'index_schema_six_or_newer' => false !== strpos( $store, 'sc-research-librarian-knowledge-index/10.0' ),
     'knowledge_chunk_model' => false !== strpos( $models, 'class KnowledgeChunk(BaseModel)' ),
@@ -82,7 +82,7 @@ $checks = array(
 );
 $failed = array_keys( array_filter( $checks, static function ( $value ) { return ! $value; } ) );
 echo json_encode( array(
-    'version' => '7.0.3',
+    'version' => '7.0.4',
     'checks' => $checks,
     'passed' => count( $checks ) - count( $failed ),
     'failed' => count( $failed ),

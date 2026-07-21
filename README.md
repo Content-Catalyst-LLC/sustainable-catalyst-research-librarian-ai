@@ -1,12 +1,12 @@
-# Research Librarian AI v7.0.3
+# Research Librarian AI v7.0.4
 
 Asynchronous, resumable knowledge-index rebuilding that avoids WordPress request timeouts and preserves the last working index. See `docs/V703_ASYNCHRONOUS_INDEX_REBUILD_RECOVERY.md`.
 
-# Sustainable Catalyst Research Librarian AI v7.0.3
+# Sustainable Catalyst Research Librarian AI v7.0.4
 
 A site-scoped connected research intelligence platform for Sustainable Catalyst.
 
-## v7.0.3 highlights
+## v7.0.4 highlights
 
 - Browser requests only create or control a persistent index-build job
 - Bounded WP-Cron source-discovery and transactional backend-sync batches

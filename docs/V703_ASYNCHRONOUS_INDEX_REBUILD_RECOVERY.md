@@ -1,8 +1,8 @@
-# Research Librarian AI v7.0.3
+# Research Librarian AI v7.0.4
 
 ## Asynchronous Index Rebuild and Recovery
 
-v7.0.3 removes the full knowledge-index rebuild from the WordPress admin request. The primary button now creates a persistent job and returns immediately. Source discovery, transactional synchronization, verification, snapshot creation, and semantic-index scheduling continue in bounded, resumable passes.
+v7.0.4 removes the full knowledge-index rebuild from the WordPress admin request. The primary button now creates a persistent job and returns immediately. Source discovery, transactional synchronization, verification, snapshot creation, and semantic-index scheduling continue in bounded, resumable passes.
 
 ## Why this repair exists
 

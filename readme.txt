@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 7.0.3
+Stable tag: 7.0.4
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
@@ -12,7 +12,7 @@ A connected, site-scoped research intelligence platform for Sustainable Catalyst
 
 Research Librarian AI retrieves Sustainable Catalyst publications and documents through exact-title priority, section-aware BM25 ranking, optional Gemini embeddings, calibrated reciprocal-rank fusion, and citation-verified synthesis. WordPress remains the canonical publishing and recovery source, while FastAPI provides a durable SQLite runtime index compatible with free Render infrastructure.
 
-v7.0.3 replaces the synchronous full rebuild with a persistent asynchronous job. Source discovery, transactional synchronization, verification, recovery snapshot creation, and semantic-index scheduling run in bounded resumable batches while the previous working index remains active.
+v7.0.4 replaces the synchronous full rebuild with a persistent asynchronous job. Source discovery, transactional synchronization, verification, recovery snapshot creation, and semantic-index scheduling run in bounded resumable batches while the previous working index remains active.
 
 == Shortcodes ==
 
@@ -38,7 +38,7 @@ v7.0.3 replaces the synchronous full rebuild with a persistent asynchronous job.
 [sc_research_librarian_platform_handoffs]
 
 == Changelog ==
-= 7.0.3 =
+= 7.0.4 =
 * Moves the full index rebuild out of the browser request into bounded WP-Cron jobs.
 * Adds persistent progress, pause, resume, cancel, manual next-batch processing, stale-lock recovery, and bounded retry backoff.
 * Preserves the previous committed Python index until a final replacement batch verifies successfully.

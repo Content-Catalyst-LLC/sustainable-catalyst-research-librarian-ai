@@ -60,7 +60,7 @@ class Settings:
     startup_warmup_seconds: int = _int("SC_RL_STARTUP_WARMUP_SECONDS", 12, 0, 120)
     stalled_job_seconds: int = _int("SC_RL_STALLED_JOB_SECONDS", 1800, 300, 86400)
     max_rejection_details: int = _int("SC_RL_MAX_REJECTION_DETAILS", 100, 10, 500)
-    release_version: str = os.getenv("SC_RL_RELEASE_VERSION", "7.0.3")
+    release_version: str = os.getenv("SC_RL_RELEASE_VERSION", "7.0.4")
     handoff_source_limit: int = _int("SC_RL_HANDOFF_SOURCE_LIMIT", 8, 1, 25)
     handoff_ttl_seconds: int = _int("SC_RL_HANDOFF_TTL_SECONDS", 1800, 300, 86400)
     handoff_retry_limit: int = _int("SC_RL_HANDOFF_RETRY_LIMIT", 5, 1, 20)
