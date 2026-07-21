@@ -89,7 +89,7 @@ def test_capabilities_endpoint() -> None:
     response = client.get("/v1/platform/capabilities", headers=HEADERS)
     assert response.status_code == 200
     body = response.json()
-    assert body["version"] == "7.0.4"
+    assert body["version"] == "7.0.5"
     assert "workbench" in body["available"]
     assert body["schema"] == "sc-platform-capabilities/1.1"
 

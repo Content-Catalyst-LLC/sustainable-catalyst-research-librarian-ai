@@ -1,5 +1,5 @@
 <?php
-/** Static release contract checks for Research Librarian AI v7.0.4 compatibility regression. */
+/** Static release contract checks for Research Librarian AI v7.0.5 compatibility regression. */
 $root = dirname( __DIR__ );
 $main = file_get_contents( $root . '/sustainable-catalyst-research-librarian-ai.php' );
 $module = file_get_contents( $root . '/includes/class-sc-rl-v630-durable-index.php' );
@@ -17,11 +17,11 @@ $roadmap = file_get_contents( $root . '/docs/ROADMAP.md' );
 $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_platform_handoffs_manifest_v6.6.0.json' ), true );
 
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 7.0.4' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '7.0.4';" ),
-    'bridge_version' => false !== strpos( $bridge, "const VERSION = '7.0.4';" ),
-    'durable_module_version' => false !== strpos( $module, "const VERSION = '7.0.4';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.0.4"' ),
+    'version_header' => false !== strpos( $main, 'Version: 7.0.5' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '7.0.5';" ),
+    'bridge_version' => false !== strpos( $bridge, "const VERSION = '7.0.5';" ),
+    'durable_module_version' => false !== strpos( $module, "const VERSION = '7.0.5';" ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.0.5"' ),
     'sqlite_schema_seven' => false !== strpos( $store, 'SCHEMA_VERSION = 10' ),
     'index_schema_seven' => false !== strpos( $store, 'sc-research-librarian-knowledge-index/10.0' ),
     'handoff_table' => false !== strpos( $store, 'CREATE TABLE IF NOT EXISTS platform_handoffs' ),
@@ -81,7 +81,7 @@ $checks = array(
     'main_data_endpoints' => false !== strpos( $main, 'data-platform-capabilities-endpoint' ) && false !== strpos( $main, 'data-platform-handoff-endpoint' ),
     'main_artifact_endpoint' => false !== strpos( $main, 'data-artifact-return-endpoint' ),
     'wordpress_normalizes_handoffs' => false !== strpos( $module, "'typed_handoffs'" ) && false !== strpos( $module, "'capabilities'" ) && false !== strpos( $module, "'provenance'" ),
-    'route_note_handoff' => false !== strpos( $module, "'handoff_payload'" ) && false !== strpos( $module, 'sc-research-librarian-route-note/7.0.4' ),
+    'route_note_handoff' => false !== strpos( $module, "'handoff_payload'" ) && false !== strpos( $module, 'sc-research-librarian-route-note/7.0.5' ),
     'js_typed_cards' => false !== strpos( $js, 'Typed research handoffs' ) && false !== strpos( $js, 'typedHandoffs' ),
     'js_available_capabilities' => false !== strpos( $js, 'item && item.available' ),
     'js_prepare_action' => false !== strpos( $js, 'platformHandoffEndpoint' ) && false !== strpos( $js, 'Prepare payload' ),
@@ -89,7 +89,7 @@ $checks = array(
     'css_handoff_cards' => false !== strpos( $css, '.sc-rl-production-answer__handoff-grid' ),
     'css_handoff_mobile' => false !== strpos( $css, '@media (max-width: 720px)' ),
     'css_handoff_focus' => false !== strpos( $css, '.sc-rl-production-answer__handoff-grid button:focus-visible' ),
-    'render_release_version' => false !== strpos( $render, 'SC_RL_RELEASE_VERSION' ) && false !== strpos( $render, '7.0.4' ),
+    'render_release_version' => false !== strpos( $render, 'SC_RL_RELEASE_VERSION' ) && false !== strpos( $render, '7.0.5' ),
     'render_destinations' => false !== strpos( $render, 'SC_RL_WORKBENCH_ENABLED' ) && false !== strpos( $render, 'SC_RL_LAB_ENABLED' ),
     'release_docs' => false !== strpos( $docs, 'Platform Intelligence and Typed Research Handoffs' ),
     'roadmap_complete' => false !== strpos( $roadmap, 'v6.6.0 — Platform Intelligence and Typed Research Handoffs — Complete' ),
@@ -102,7 +102,7 @@ $checks = array(
 );
 $failed = array_keys( array_filter( $checks, static function ( $value ) { return ! $value; } ) );
 echo json_encode( array(
-    'version' => '7.0.4',
+    'version' => '7.0.5',
     'checks' => $checks,
     'passed' => count( $checks ) - count( $failed ),
     'failed' => count( $failed ),

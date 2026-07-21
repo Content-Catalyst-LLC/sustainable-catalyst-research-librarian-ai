@@ -1,5 +1,17 @@
 # Changelog
 
+## 7.0.5 — Transaction Reconciliation and Public Interface Repair
+
+- Adds authenticated backend transaction-status and incomplete-transaction reset endpoints.
+- Detects uncommitted final replacement batches and reconciles backend staging state.
+- Replays the durable WordPress JSONL staging file as a fresh bounded transaction without rediscovering source records.
+- Adds a production recovery action labeled **Repair and Resume Commit** for existing v7.0.4 failures.
+- Displays backend-retained batches, missing batches, replay attempts, validated records, and staging-file size.
+- Replaces the unreadable public two-pane/terminal treatment with a visible single-column research workspace.
+- Adds eight clearly labeled research-mode cards, readable descriptions, a light question field, a prominent Start Research action, and progressive disclosure for secondary tools.
+- Replaces alarming provider-oriented public failure copy with visitor-facing verified-fallback language.
+- Preserves the previous committed durable index until the replacement transaction is verified.
+
 ## 7.0.4 — Bounded Discovery Finalization and Index Activation
 
 - Skips duplicate legacy fallback migration during normal full rebuilds.
@@ -8,7 +20,7 @@
 - Reuses the bounded finalization ledger after the backend commits.
 - Adds visible validated-record and byte-progress diagnostics.
 
-## 7.0.4 — Asynchronous Index Rebuild and Recovery
+## 7.0.3 — Asynchronous Index Rebuild and Recovery
 
 - Moves full knowledge-index rebuild work out of the WordPress browser request.
 - Adds a persistent, resumable build job with bounded source-discovery and backend-sync batches.

@@ -1,20 +1,16 @@
-# Research Librarian AI v7.0.4
+# Sustainable Catalyst Research Librarian AI v7.0.5
 
-Asynchronous, resumable knowledge-index rebuilding that avoids WordPress request timeouts and preserves the last working index. See `docs/V703_ASYNCHRONOUS_INDEX_REBUILD_RECOVERY.md`.
+A site-scoped connected research intelligence platform with transaction reconciliation, resumable knowledge-index recovery, and a visible public research workspace. See `docs/V705_TRANSACTION_RECONCILIATION_PUBLIC_INTERFACE.md`.
 
-# Sustainable Catalyst Research Librarian AI v7.0.4
+## v7.0.5 highlights
 
-A site-scoped connected research intelligence platform for Sustainable Catalyst.
-
-## v7.0.4 highlights
-
-- Browser requests only create or control a persistent index-build job
-- Bounded WP-Cron source-discovery and transactional backend-sync batches
-- Pause, resume, cancel, manual next-batch, stale-lock recovery, and visible progress
-- Private JSONL staging with streamed, compressed WordPress recovery snapshots
-- Previous durable index remains active until the final replacement batch commits
-- Permanent credential failures stop cleanly; transient failures use bounded retry backoff
-- Semantic embedding begins only after the durable index is verified
+- Repairs v7.0.4 final-batch failures without rediscovering the source library
+- Authenticated backend transaction status with received and missing batch diagnostics
+- Durable local staging replay with bounded batches and two-attempt recovery limit
+- **Repair and Resume Commit** action for stopped production jobs
+- Visible single-column public research workspace with eight readable mode cards
+- Light question surface, prominent Start Research action, and secondary tools behind progressive disclosure
+- Visitor-safe verified-fallback status language instead of provider-oriented failure copy
 - Broader discovery of published document-style custom post types from v7.0.2
 - Persistent, private-by-default research projects
 - Multi-step investigations and project event history

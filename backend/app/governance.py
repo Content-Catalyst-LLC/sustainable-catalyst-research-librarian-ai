@@ -17,7 +17,7 @@ SOURCE_REVIEW_SCHEMA = "sc-research-source-review/1.0"
 
 DEFAULT_GOVERNANCE_POLICY: dict[str, Any] = {
     "schema": POLICY_SCHEMA,
-    "profile": "public-trust-v7.0.4",
+    "profile": "public-trust-v7.0.5",
     "source_controls": {
         "require_approved_sources": False,
         "exclude_rejected_sources": True,
@@ -264,7 +264,7 @@ def build_answer_trace(
         "source": source,
         "provider": provider,
         "model": model,
-        "prompt_version": "research-librarian-answer-v7.0.4",
+        "prompt_version": "research-librarian-answer-v7.0.5",
         "index_version": int(index_version),
         "index_checksum": index_checksum,
         "retrieval_profile": retrieval_profile,
@@ -345,7 +345,7 @@ def public_methodology(policy: dict[str, Any]) -> dict[str, Any]:
     return {
         "schema": METHODOLOGY_SCHEMA,
         "title": "Research Librarian Methodology and Limitations",
-        "version": "7.0.4",
+        "version": "7.0.5",
         "principles": [
             "Retrieval occurs before generation.",
             "Exact titles and verified Sustainable Catalyst records have priority.",

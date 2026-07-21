@@ -677,6 +677,95 @@ class KnowledgeStore:
             connection.executemany("DELETE FROM snapshots WHERE snapshot_id=?", [(snapshot_id,) for snapshot_id in old_ids])
         return snapshot_id
 
+    def sync_job_status(self, job_id: str) -> dict[str, Any]:
+        """Return reconciliation-safe state for one staged synchronization job."""
+        job_id = str(job_id or "").strip()
+        if not job_id:
+            return {
+                "ok": False,
+                "exists": False,
+                "job_id": "",
+                "state": "missing",
+                "committed": False,
+                "batch_count": 0,
+                "received_batches": [],
+                "missing_batches": [],
+                "staged_records": 0,
+                "staged_deletions": 0,
+                "rejected_records": 0,
+                "started_utc": "",
+                "updated_utc": "",
+                "completed_utc": "",
+                "error": "A synchronization job ID is required.",
+            }
+        with self._lock, self._connection() as connection:
+            row = connection.execute("SELECT * FROM sync_jobs WHERE job_id=?", (job_id,)).fetchone()
+            if row is None:
+                return {
+                    "ok": True,
+                    "exists": False,
+                    "job_id": job_id,
+                    "state": "missing",
+                    "committed": False,
+                    "batch_count": 0,
+                    "received_batches": [],
+                    "missing_batches": [],
+                    "staged_records": 0,
+                    "staged_deletions": 0,
+                    "rejected_records": 0,
+                    "started_utc": "",
+                    "updated_utc": "",
+                    "completed_utc": "",
+                    "error": "",
+                }
+            try:
+                received = sorted({int(value) for value in json.loads(str(row["received_batches"] or "[]"))})
+            except (TypeError, ValueError, json.JSONDecodeError):
+                received = []
+            batch_count = max(0, int(row["batch_count"] or 0))
+            missing = [value for value in range(1, batch_count + 1) if value not in received]
+            state = str(row["state"] or "staging")
+            return {
+                "ok": True,
+                "exists": True,
+                "job_id": job_id,
+                "state": state,
+                "committed": state in {"completed", "completed-with-rejections"},
+                "batch_count": batch_count,
+                "received_batches": received,
+                "missing_batches": missing,
+                "staged_records": int(row["staged_records"] or 0),
+                "staged_deletions": int(row["staged_deletions"] or 0),
+                "rejected_records": int(row["rejected_records"] or 0),
+                "source_site": str(row["source_site"] or ""),
+                "started_utc": str(row["started_utc"] or ""),
+                "updated_utc": str(row["updated_utc"] or ""),
+                "completed_utc": str(row["completed_utc"] or ""),
+                "error": str(row["error"] or ""),
+            }
+
+    def reset_sync_job(self, job_id: str) -> dict[str, Any]:
+        """Remove an incomplete transaction so WordPress can replay its durable staging file."""
+        job_id = str(job_id or "").strip()
+        if not job_id:
+            raise ValueError("A synchronization job ID is required.")
+        with self._lock, self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                row = connection.execute("SELECT state FROM sync_jobs WHERE job_id=?", (job_id,)).fetchone()
+                if row is not None and str(row["state"] or "") in {"completed", "completed-with-rejections"}:
+                    connection.commit()
+                    return {"ok": True, "job_id": job_id, "reset": False, "state": str(row["state"]), "reason": "already-committed"}
+                connection.execute("DELETE FROM staging_records WHERE job_id=?", (job_id,))
+                connection.execute("DELETE FROM staging_deletions WHERE job_id=?", (job_id,))
+                connection.execute("DELETE FROM sync_rejections WHERE job_id=?", (job_id,))
+                connection.execute("DELETE FROM sync_jobs WHERE job_id=?", (job_id,))
+                connection.commit()
+                return {"ok": True, "job_id": job_id, "reset": True, "state": "missing", "reason": "incomplete-transaction-cleared"}
+            except Exception:
+                connection.rollback()
+                raise
+
     def sync(
         self,
         records: Iterable[Any],
@@ -1578,7 +1667,7 @@ class KnowledgeStore:
     def connected_platform_summary(self) -> dict[str, Any]:
         with self._lock, self._connection() as connection:
             counts={name:int(connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]) for name,table in {"projects":"research_projects","investigations":"research_investigations","entities":"research_project_entities","backups":"connected_platform_backups"}.items()}
-        return {"schema":"sc-connected-research-platform-summary/1.0","version":"7.0.4","counts":counts,"workspace_schema":"sc-research-librarian-public-workspace/2.0","api_schema":"sc-connected-research-api/1.0"}
+        return {"schema":"sc-connected-research-platform-summary/1.0","version":"7.0.5","counts":counts,"workspace_schema":"sc-research-librarian-public-workspace/2.0","api_schema":"sc-connected-research-api/1.0"}
 
 
 store = KnowledgeStore()

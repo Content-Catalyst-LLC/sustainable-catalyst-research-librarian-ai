@@ -1,6 +1,6 @@
 <?php
 /**
- * Research Librarian AI v7.0.4 — Cross-Product Reliability Patch.
+ * Research Librarian AI v7.0.5 — Cross-Product Reliability Patch.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class SC_RL6_V660_Platform_Handoffs {
-    const VERSION = '7.0.4';
+    const VERSION = '7.0.5';
     const OPTION_NAME = 'sc_rl_v660_platform_options';
     const STATUS_OPTION = 'sc_rl_v660_platform_status';
     const LOG_OPTION = 'sc_rl_v660_handoff_log';
@@ -689,7 +689,7 @@ final class SC_RL6_V660_Platform_Handoffs {
         ?>
         <div class="wrap">
             <h1>Research Librarian Platform Intelligence</h1>
-            <p>v7.0.4 preserves versioned research handoffs with compatibility checks, bounded retries, token recovery, idempotency, receipts, and immutable artifact returns for Workbench, Decision Studio, Site Intelligence, Lab, and Feature Suggestions. Disabling a destination removes it from public actions and handoff preparation.</p>
+            <p>v7.0.5 preserves versioned research handoffs with compatibility checks, bounded retries, token recovery, idempotency, receipts, and immutable artifact returns for Workbench, Decision Studio, Site Intelligence, Lab, and Feature Suggestions. Disabling a destination removes it from public actions and handoff preparation.</p>
             <form method="post">
                 <?php wp_nonce_field( 'sc_rl_v660_save_action' ); ?>
                 <table class="widefat striped"><thead><tr><th>Destination</th><th>Available</th><th>URL</th><th>Version</th><th>Minimum</th><th>Compatibility</th><th>Contract</th></tr></thead><tbody>

@@ -546,7 +546,12 @@
         'retrieval-only': 'Verified retrieval available',
         ready: 'Research service ready',
         'backend-warming': 'Research service starting',
-        offline: 'Research service temporarily limited',
+        offline: 'Verified fallback available',
+        'integration-key-mismatch': 'Verified fallback available',
+        'backend-rate-limited': 'Research service busy',
+        'backend-unreachable': 'Verified fallback available',
+        'backend-unavailable': 'Verified fallback available',
+        'backend-invalid-response': 'Verified fallback available',
         'not-configured': 'Verified routing available',
         'backend-not-configured': 'Verified routing available'
       };
@@ -567,7 +572,7 @@
         detail = 'The knowledge index is ready and the AI connection is configured';
         if (payload.indexed_titles !== undefined) detail += ' · ' + payload.indexed_titles + ' indexed titles';
       } else if (state === 'offline') {
-        detail = 'AI or Python backend request failed · verified title-aware fallback remains active when available';
+        detail = 'The live research index or AI response is temporarily unavailable · verified title-aware Sustainable Catalyst routing remains available';
         if (payload.last_failure_utc) detail += ' · checked ' + formatHealthTime(payload.last_failure_utc);
       } else if (state === 'not-configured' || state === 'backend-not-configured') {
         detail = 'No live provider or authenticated Python connection is configured · verified local routing remains active';
@@ -583,11 +588,11 @@
         }
         detail += ' · verified WordPress fallback remains available';
       } else if (state === 'integration-key-mismatch') {
-        detail = 'WordPress reached Python, but the shared integration key was rejected';
+        detail = 'The live research connection could not be verified · title-aware Sustainable Catalyst routing remains available';
       } else if (state === 'backend-rate-limited') {
-        detail = 'The Python service temporarily rejected requests because of a rate limit';
+        detail = 'The live research service is temporarily busy · try again shortly';
       } else if (state === 'backend-unreachable' || state === 'backend-unavailable' || state === 'backend-invalid-response') {
-        detail = 'The Python endpoint is temporarily unavailable · verified WordPress fallback remains active';
+        detail = 'The live research service is temporarily unavailable · verified title-aware Sustainable Catalyst routing remains active';
       } else if (state === 'hidden') {
         detail = 'Verified fallback routing remains available.';
       } else {
@@ -668,7 +673,7 @@
         return { label: 'Invalid endpoint response', intro: 'WordPress returned a response that the Research Librarian could not read.', detail: 'Check caching, security, or REST-response modification plugins.' };
       }
       if (statusCode === 404) {
-        return { label: 'WordPress route unavailable', intro: 'The Research Librarian REST route was not found.', detail: 'Resave WordPress permalinks and confirm that the active v7.0.4 plugin registered its routes.' };
+        return { label: 'WordPress route unavailable', intro: 'The Research Librarian REST route was not found.', detail: 'Resave WordPress permalinks and confirm that the active v7.0.5 plugin registered its routes.' };
       }
       if (statusCode >= 500) {
         return { label: 'WordPress endpoint error', intro: 'WordPress reached the Research Librarian route but returned a server error.', detail: 'The Python provider status is separate from this WordPress failure.' };

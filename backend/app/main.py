@@ -154,7 +154,7 @@ def _workspace_summary(mode: str, matches: list[RetrievedSource], related: list[
         "accessibility_profile": "wcag-focused-v6.5.1",
         "rendering_profile": "staged-v6.5.1",
         "handoff_profile": "cross-product-reliability-v6.6.1",
-        "governance_profile": store.governance_policy().get("profile", "public-trust-v7.0.4"),
+        "governance_profile": store.governance_policy().get("profile", "public-trust-v7.0.5"),
         "available_destinations": list(available_capabilities().keys()),
         "connected_platform": store.connected_platform_summary(),
         "generation_boundary": adapter_status(),
@@ -563,6 +563,16 @@ def sync_knowledge(payload: SyncRequest) -> SyncResponse:
     )
 
 
+@app.get("/v1/knowledge/sync/jobs/{job_id}", dependencies=[Depends(require_key)])
+def sync_job_status(job_id: str) -> dict[str, Any]:
+    return store.sync_job_status(job_id)
+
+
+@app.delete("/v1/knowledge/sync/jobs/{job_id}", dependencies=[Depends(require_key)])
+def reset_sync_job(job_id: str) -> dict[str, Any]:
+    return store.reset_sync_job(job_id)
+
+
 @app.get("/v1/knowledge/summary", response_model=StatusResponse, dependencies=[Depends(require_key)])
 def knowledge_summary() -> StatusResponse:
     return _status()
@@ -615,7 +625,7 @@ async def test_embeddings_endpoint() -> dict[str, Any]:
     if not embeddings_configured():
         raise HTTPException(status_code=503, detail="Gemini embeddings are not configured or semantic retrieval is disabled.")
     try:
-        vector = await generate_embedding("Research Librarian v7.0.4 embedding connection test", "RETRIEVAL_DOCUMENT")
+        vector = await generate_embedding("Research Librarian v7.0.5 embedding connection test", "RETRIEVAL_DOCUMENT")
     except RuntimeError as exc:
         raise HTTPException(status_code=502, detail=f"Gemini embedding test failed: {str(exc)[:900]}") from exc
     return {

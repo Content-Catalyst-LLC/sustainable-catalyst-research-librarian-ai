@@ -1,0 +1,29 @@
+{
+  "schema": "sc-research-librarian-v705-release/1.0",
+  "version": "7.0.5",
+  "title": "Transaction Reconciliation and Public Interface Repair",
+  "transaction_recovery": {
+    "status_endpoint": "/v1/knowledge/sync/jobs/{job_id}",
+    "reset_endpoint": "/v1/knowledge/sync/jobs/{job_id}",
+    "durable_wordpress_replay": true,
+    "source_rediscovery_required": false,
+    "previous_index_retained_until_commit": true,
+    "replay_attempt_limit": 2
+  },
+  "public_interface": {
+    "single_column_workspace": true,
+    "research_modes": 8,
+    "mode_descriptions_visible": true,
+    "light_question_surface": true,
+    "primary_action": "Start Research",
+    "secondary_actions_collapsed": true,
+    "visitor_safe_status_copy": true,
+    "responsive": true
+  },
+  "compatibility": {
+    "wordpress_minimum": "6.0",
+    "python": ["3.12", "3.13", "3.14"],
+    "free_tier_compatible": true,
+    "paid_vector_database_required": false
+  }
+}
