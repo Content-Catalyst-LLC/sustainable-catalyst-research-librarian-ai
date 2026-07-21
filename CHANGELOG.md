@@ -1,5 +1,16 @@
 # Changelog
 
+## 7.0.7 — Durable Incremental Index Activation
+
+- Removes FastAPI `BackgroundTasks` from durable-index activation.
+- Adds an authenticated, one-step-at-a-time commit endpoint.
+- Persists record-copy, chunk-build, checksum, heartbeat, and restart cursors in SQLite schema 11.
+- Builds and verifies a shadow replacement while the previous active index remains online.
+- Performs only the final database-local table-content switch inside one atomic transaction.
+- Upgrades existing v7.0.6 queued/activating jobs in place.
+- Replays the durable WordPress staging file when backend ephemeral state is lost.
+- Adds granular administration metrics and persistent-storage guidance.
+
 ## 7.0.6 — Asynchronous Backend Commit and Ambiguous-Failure Recovery
 
 - Stages all source batches without activating the replacement index inside the final WordPress request.

@@ -1,19 +1,19 @@
-# Sustainable Catalyst Research Librarian AI v7.0.6
+# Sustainable Catalyst Research Librarian AI v7.0.7
 
-A site-scoped connected research intelligence platform with transaction reconciliation, resumable knowledge-index recovery, and a visible public research workspace. See `docs/V705_TRANSACTION_RECONCILIATION_PUBLIC_INTERFACE.md`.
+A site-scoped connected research intelligence platform with restart-safe knowledge-index activation, verified retrieval, and a visible public research workspace. See `docs/V707_DURABLE_INCREMENTAL_INDEX_ACTIVATION.md`.
 
-## v7.0.6 highlights
+## v7.0.7 highlights
 
-- Stages all 24 synchronization batches before index activation begins
-- Queues backend activation through a short authenticated endpoint
-- Runs the heavy SQLite replacement commit outside the WordPress request
-- Polls durable commit status instead of waiting on a proxy-sensitive final response
-- Reconciles empty 5xx and transport failures before declaring the rebuild failed
-- Detects and safely retries stale activation after a Render restart
-- Shows activation phase, progress, activated records, and retrieval chunks in the administration screen
-- Retains the v7.0.5 visible public workspace and transaction-replay recovery
-- Preserves the previous committed index until the replacement verifies
-- Requires no paid vector database or persistent Render disk
+- Removes long-running FastAPI in-process background activation
+- Advances activation through short authenticated `commit/step` requests
+- Copies records, builds retrieval chunks, and verifies checksums in bounded persisted batches
+- Resumes after backend process restarts without resetting durable cursors
+- Upgrades existing v7.0.6 queued or activating transactions in place
+- Keeps the previous active index untouched until the verified atomic switch
+- Replays the complete WordPress staging file when ephemeral backend state disappears
+- Shows shadow-record, chunked-record, verified-record, and durable-step progress
+- Supports `SC_RL_DATA_DIR` for a persistent backend disk
+- Preserves Gemini generation, semantic indexing, deterministic fallback, and human control
 
 ## Architecture
 
@@ -38,8 +38,8 @@ WordPress remains the canonical publishing, administration, identity, and recove
 
 - Python 3.12.12
 - FastAPI
-- SQLite schema 10
+- SQLite schema 11
 - WordPress 6.0+
-- Free-tier compatible; no paid vector database or persistent Render disk required
+- No paid vector database is required; persistent backend storage is recommended for strongest restart durability
 
 See `docs/V700_CONNECTED_RESEARCH_INTELLIGENCE_PLATFORM.md` and `docs/INSTALL.md`.

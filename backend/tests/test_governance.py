@@ -41,25 +41,25 @@ def test_ask_creates_privacy_minimized_trace():
     trace_id=body['provenance']['answer_trace_id']
     trace=client.get('/v1/governance/traces/'+trace_id,headers=HEADERS).json()['trace']
     assert trace['schema']=='sc-research-answer-trace/1.0'
-    assert trace['prompt_version']=='research-librarian-answer-v7.0.6'
+    assert trace['prompt_version']=='research-librarian-answer-v7.0.7'
     assert 'query' not in trace
     assert 'answer' not in trace
     assert trace['trace_fingerprint']
 
 def test_release_gate_blocks_critical_citation_failure_and_records_history():
     metrics={'exact_title_accuracy':.98,'hit_at_3':.95,'citation_precision':.5,'citation_completeness':.6,'unsupported_claim_rate':.2,'route_accuracy':.9,'pdf_page_accuracy':.9,'fallback_success':1,'mean_answer_quality':.9}
-    result=client.post('/v1/governance/release-gate',headers=HEADERS,json={'release_version':'7.0.6-test','metrics':metrics,'persist':True})
+    result=client.post('/v1/governance/release-gate',headers=HEADERS,json={'release_version':'7.0.7-test','metrics':metrics,'persist':True})
     assert result.status_code==200
     assert result.json()['report']['decision']=='block'
     assert result.json()['ok'] is False
     history=client.get('/v1/governance/release-gate/history',headers=HEADERS).json()['runs']
-    assert any(item['release_version']=='7.0.6-test' for item in history)
+    assert any(item['release_version']=='7.0.7-test' for item in history)
 
 def test_release_override_requires_named_human():
     metrics={'exact_title_accuracy':1,'hit_at_3':1,'citation_precision':1,'citation_completeness':1,'unsupported_claim_rate':0,'route_accuracy':1,'pdf_page_accuracy':1,'fallback_success':1,'mean_answer_quality':1}
-    missing=client.post('/v1/governance/release-gate',headers=HEADERS,json={'release_version':'7.0.6','metrics':metrics,'override':True})
+    missing=client.post('/v1/governance/release-gate',headers=HEADERS,json={'release_version':'7.0.7','metrics':metrics,'override':True})
     assert missing.status_code==409
-    approved=client.post('/v1/governance/release-gate',headers=HEADERS,json={'release_version':'7.0.6','metrics':metrics,'override':True,'reviewer':'Release Reviewer'})
+    approved=client.post('/v1/governance/release-gate',headers=HEADERS,json={'release_version':'7.0.7','metrics':metrics,'override':True,'reviewer':'Release Reviewer'})
     assert approved.status_code==200
     assert approved.json()['report']['decision']=='human-override'
 

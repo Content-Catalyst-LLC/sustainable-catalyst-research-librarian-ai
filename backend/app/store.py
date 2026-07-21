@@ -19,8 +19,8 @@ from .models import KnowledgeChunk, KnowledgeRecord, utc_now
 from .governance import DEFAULT_GOVERNANCE_POLICY, sanitize_governance_policy
 
 
-SCHEMA_VERSION = 10
-INDEX_SCHEMA = "sc-research-librarian-knowledge-index/10.0"
+SCHEMA_VERSION = 11
+INDEX_SCHEMA = "sc-research-librarian-knowledge-index/11.0"
 SNAPSHOT_SCHEMA = "sc-research-librarian-runtime-snapshot/4.0"
 
 
@@ -172,6 +172,34 @@ class KnowledgeStore:
                     PRIMARY KEY(job_id, id),
                     FOREIGN KEY(job_id) REFERENCES sync_jobs(job_id) ON DELETE CASCADE
                 );
+                CREATE TABLE IF NOT EXISTS activation_records (
+                    job_id TEXT NOT NULL,
+                    id TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    url TEXT NOT NULL,
+                    payload TEXT NOT NULL,
+                    content_hash TEXT NOT NULL,
+                    updated_utc TEXT NOT NULL,
+                    PRIMARY KEY(job_id, id),
+                    FOREIGN KEY(job_id) REFERENCES sync_jobs(job_id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS idx_activation_records_job ON activation_records(job_id, id);
+                CREATE TABLE IF NOT EXISTS activation_chunks (
+                    job_id TEXT NOT NULL,
+                    chunk_id TEXT NOT NULL,
+                    record_id TEXT NOT NULL,
+                    heading TEXT NOT NULL DEFAULT '',
+                    page INTEGER,
+                    passage TEXT NOT NULL,
+                    position INTEGER NOT NULL DEFAULT 0,
+                    content_hash TEXT NOT NULL,
+                    embedding_model TEXT NOT NULL DEFAULT '',
+                    embedding_json TEXT NOT NULL DEFAULT '',
+                    updated_utc TEXT NOT NULL,
+                    PRIMARY KEY(job_id, chunk_id),
+                    FOREIGN KEY(job_id) REFERENCES sync_jobs(job_id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS idx_activation_chunks_job ON activation_chunks(job_id, record_id, position);
                 CREATE TABLE IF NOT EXISTS sync_rejections (
                     rejection_id INTEGER PRIMARY KEY AUTOINCREMENT,
                     job_id TEXT NOT NULL,
@@ -370,6 +398,14 @@ class KnowledgeStore:
             self._ensure_column(connection, "sync_jobs", "activation_records", "INTEGER NOT NULL DEFAULT 0")
             self._ensure_column(connection, "sync_jobs", "activation_total", "INTEGER NOT NULL DEFAULT 0")
             self._ensure_column(connection, "sync_jobs", "indexed_chunks", "INTEGER NOT NULL DEFAULT 0")
+            self._ensure_column(connection, "sync_jobs", "activation_cursor", "TEXT NOT NULL DEFAULT ''")
+            self._ensure_column(connection, "sync_jobs", "chunk_cursor", "TEXT NOT NULL DEFAULT ''")
+            self._ensure_column(connection, "sync_jobs", "chunk_records_processed", "INTEGER NOT NULL DEFAULT 0")
+            self._ensure_column(connection, "sync_jobs", "checksum_cursor", "TEXT NOT NULL DEFAULT ''")
+            self._ensure_column(connection, "sync_jobs", "checksum_records", "INTEGER NOT NULL DEFAULT 0")
+            self._ensure_column(connection, "sync_jobs", "activation_checksum", "TEXT NOT NULL DEFAULT ''")
+            self._ensure_column(connection, "sync_jobs", "activation_step_count", "INTEGER NOT NULL DEFAULT 0")
+            self._ensure_column(connection, "sync_jobs", "activation_restart_count", "INTEGER NOT NULL DEFAULT 0")
             self._ensure_column(connection, "platform_handoffs", "compatibility_state", "TEXT NOT NULL DEFAULT ''")
             self._ensure_column(connection, "platform_handoffs", "retry_attempt", "INTEGER NOT NULL DEFAULT 0")
             self._ensure_column(connection, "platform_handoffs", "token_expires_utc", "TEXT NOT NULL DEFAULT ''")
@@ -744,6 +780,16 @@ class KnowledgeStore:
                     "activation_records": 0,
                     "activation_total": 0,
                     "indexed_chunks": 0,
+                    "activation_cursor": "",
+                    "chunk_cursor": "",
+                    "chunk_records_processed": 0,
+                    "checksum_cursor": "",
+                    "checksum_records": 0,
+                    "activation_checksum": "",
+                    "activation_step_count": 0,
+                    "activation_restart_count": 0,
+                    "storage_path": str(self.path),
+                    "storage_persistent": not str(self.path).startswith("/tmp/"),
                     "error": "",
                 }
             try:
@@ -784,14 +830,52 @@ class KnowledgeStore:
                 "activation_records": int(row["activation_records"] or 0),
                 "activation_total": int(row["activation_total"] or 0),
                 "indexed_chunks": int(row["indexed_chunks"] or 0),
+                "activation_cursor": str(row["activation_cursor"] or ""),
+                "chunk_cursor": str(row["chunk_cursor"] or ""),
+                "chunk_records_processed": int(row["chunk_records_processed"] or 0),
+                "checksum_cursor": str(row["checksum_cursor"] or ""),
+                "checksum_records": int(row["checksum_records"] or 0),
+                "activation_checksum": str(row["activation_checksum"] or ""),
+                "activation_step_count": int(row["activation_step_count"] or 0),
+                "activation_restart_count": int(row["activation_restart_count"] or 0),
+                "storage_path": str(self.path),
+                "storage_persistent": not str(self.path).startswith("/tmp/"),
                 "error": str(row["error"] or ""),
             }
 
-    def queue_sync_commit(self, job_id: str, reason: str = "wordpress-async-commit") -> dict[str, Any]:
-        """Mark a fully staged transaction for asynchronous activation.
+    @staticmethod
+    def _activation_checksum_seed() -> str:
+        return hashlib.sha256(b"").hexdigest()
 
-        This operation is idempotent. A fresh request returns immediately, while
-        the API schedules ``commit_sync_job`` outside the HTTP response path.
+    @staticmethod
+    def _roll_activation_checksum(seed: str, rows: Iterable[sqlite3.Row]) -> str:
+        value = str(seed or KnowledgeStore._activation_checksum_seed())
+        for row in rows:
+            digest = hashlib.sha256()
+            digest.update(value.encode("ascii", errors="ignore"))
+            digest.update(b"\n")
+            digest.update(str(row["id"]).encode("utf-8"))
+            digest.update(b":")
+            digest.update(str(row["content_hash"]).encode("ascii", errors="ignore"))
+            value = digest.hexdigest()
+        return value
+
+    @staticmethod
+    def _durable_activation_phases() -> set[str]:
+        return {
+            "preparing",
+            "copying-records",
+            "building-chunks",
+            "checksumming",
+            "ready-to-switch",
+            "switching",
+        }
+
+    def queue_sync_commit(self, job_id: str, reason: str = "wordpress-durable-incremental-commit-v7.0.7") -> dict[str, Any]:
+        """Prepare a fully staged replacement for restart-safe incremental activation.
+
+        No long-lived process is created here. WordPress advances the durable
+        state machine through short authenticated ``commit/step`` requests.
         """
         job_id = str(job_id or "").strip()
         if not job_id:
@@ -815,75 +899,451 @@ class KnowledgeStore:
                 missing = [value for value in range(1, batch_count + 1) if value not in received]
                 if missing:
                     raise ValueError("The transaction is missing staged batch(es): " + ", ".join(str(value) for value in missing))
-                # Do not enqueue a duplicate worker while a recent commit is active.
-                heartbeat = str(row["commit_heartbeat_utc"] or row["updated_utc"] or "")
-                heartbeat_dt = None
-                try:
-                    heartbeat_dt = datetime.fromisoformat(heartbeat.replace("Z", "+00:00")) if heartbeat else None
-                except ValueError:
-                    heartbeat_dt = None
-                recent = heartbeat_dt is not None and (datetime.now(timezone.utc) - heartbeat_dt).total_seconds() < 300
-                if state in {"commit-queued", "committing"} and recent:
-                    connection.commit()
-                    return {**self.sync_job_status(job_id), "queued": False, "reason": "already-running"}
-                connection.execute(
-                    "UPDATE sync_jobs SET state='commit-queued',commit_phase='queued',commit_progress=0,commit_started_utc=CASE WHEN commit_started_utc='' THEN ? ELSE commit_started_utc END,commit_heartbeat_utc=?,activation_records=0,activation_total=staged_records,indexed_chunks=0,updated_utc=?,error='' WHERE job_id=?",
-                    (now, now, now, job_id),
+                if str(row["mode"] or "replace") != "replace":
+                    raise ValueError("Durable incremental activation currently requires replace mode.")
+
+                phase = str(row["commit_phase"] or "")
+                durable = phase in self._durable_activation_phases()
+                shadow_count = int(
+                    connection.execute("SELECT COUNT(*) FROM activation_records WHERE job_id=?", (job_id,)).fetchone()[0]
                 )
+                if not durable:
+                    # Upgrade v7.0.6 queued/activating jobs in place. The staged
+                    # source batches remain authoritative; only disposable shadow
+                    # activation state is reset.
+                    connection.execute("DELETE FROM activation_chunks WHERE job_id=?", (job_id,))
+                    connection.execute("DELETE FROM activation_records WHERE job_id=?", (job_id,))
+                    connection.execute(
+                        "UPDATE sync_jobs SET state='commit-queued',commit_phase='preparing',commit_progress=1,"
+                        "commit_started_utc=CASE WHEN commit_started_utc='' THEN ? ELSE commit_started_utc END,"
+                        "commit_heartbeat_utc=?,activation_records=0,activation_total=staged_records,indexed_chunks=0,"
+                        "activation_cursor='',chunk_cursor='',chunk_records_processed=0,checksum_cursor='',checksum_records=0,"
+                        "activation_checksum=?,activation_step_count=0,activation_restart_count=activation_restart_count+1,"
+                        "updated_utc=?,error='' WHERE job_id=?",
+                        (now, now, self._activation_checksum_seed(), now, job_id),
+                    )
+                else:
+                    # Preserve durable cursors and shadow tables after a process
+                    # restart or an interrupted HTTP poll.
+                    connection.execute(
+                        "UPDATE sync_jobs SET state='commit-queued',commit_heartbeat_utc=?,updated_utc=?,error='',"
+                        "activation_restart_count=activation_restart_count+1 WHERE job_id=?",
+                        (now, now, job_id),
+                    )
                 connection.commit()
             except Exception:
                 connection.rollback()
                 raise
-        return {**self.sync_job_status(job_id), "queued": True, "reason": reason}
+        return {
+            **self.sync_job_status(job_id),
+            "queued": True,
+            "reason": reason,
+            "resumed": durable and shadow_count > 0,
+        }
 
-    def commit_sync_job(self, job_id: str, reason: str = "wordpress-async-commit") -> dict[str, Any]:
-        """Activate one fully staged transaction outside the caller's HTTP request."""
+    def advance_sync_commit(self, job_id: str, reason: str = "wordpress-durable-incremental-commit-v7.0.7") -> dict[str, Any]:
+        """Advance one bounded, restart-safe activation step.
+
+        Each call persists its cursor before returning. The active ``records`` and
+        ``retrieval_chunks`` tables remain untouched until the final verified
+        SQLite switch transaction.
+        """
         job_id = str(job_id or "").strip()
         if not job_id:
             raise ValueError("A synchronization job ID is required.")
         now = utc_now()
         with self._lock, self._connection() as connection:
-            row = connection.execute("SELECT * FROM sync_jobs WHERE job_id=?", (job_id,)).fetchone()
-            if row is None:
-                raise ValueError("The synchronization transaction does not exist.")
-            state = str(row["state"] or "")
-            if state in {"completed", "completed-with-rejections"}:
-                return self.sync_job_status(job_id)
+            connection.execute("BEGIN IMMEDIATE")
             try:
-                received = {int(value) for value in json.loads(str(row["received_batches"] or "[]"))}
-            except (TypeError, ValueError, json.JSONDecodeError):
-                received = set()
-            batch_count = max(1, int(row["batch_count"] or 1))
-            missing = [value for value in range(1, batch_count + 1) if value not in received]
-            if missing:
-                raise ValueError("The transaction is missing staged batch(es): " + ", ".join(str(value) for value in missing))
-            mode = str(row["mode"] or "replace")
-            source_site = str(row["source_site"] or "")
-            connection.execute(
-                "UPDATE sync_jobs SET state='committing',commit_phase='activating',commit_progress=10,commit_started_utc=CASE WHEN commit_started_utc='' THEN ? ELSE commit_started_utc END,commit_heartbeat_utc=?,activation_total=staged_records,updated_utc=?,error='' WHERE job_id=?",
-                (now, now, now, job_id),
-            )
-        try:
-            result = self.sync(
-                records=[],
-                mode=mode,
-                source_site=source_site,
-                job_id=job_id,
-                batch_index=batch_count,
-                batch_count=batch_count,
-                deleted_ids=[],
-                reason=reason,
-                defer_commit=False,
-            )
-            return {**self.sync_job_status(job_id), "result_committed": result.committed}
-        except Exception as exc:
-            with self._lock, self._connection() as connection:
-                failed_at = utc_now()
+                row = connection.execute("SELECT * FROM sync_jobs WHERE job_id=?", (job_id,)).fetchone()
+                if row is None:
+                    raise ValueError("The synchronization transaction does not exist.")
+                state = str(row["state"] or "")
+                if state in {"completed", "completed-with-rejections"}:
+                    connection.commit()
+                    return {**self.sync_job_status(job_id), "advanced": False, "reason": "already-committed"}
+                try:
+                    received = {int(value) for value in json.loads(str(row["received_batches"] or "[]"))}
+                except (TypeError, ValueError, json.JSONDecodeError):
+                    received = set()
+                batch_count = max(1, int(row["batch_count"] or 1))
+                missing = [value for value in range(1, batch_count + 1) if value not in received]
+                if missing:
+                    raise ValueError("The transaction is missing staged batch(es): " + ", ".join(str(value) for value in missing))
+
+                phase = str(row["commit_phase"] or "")
+                if phase not in self._durable_activation_phases():
+                    # Convert legacy v7.0.6 state without requiring a new source sync.
+                    connection.execute("DELETE FROM activation_chunks WHERE job_id=?", (job_id,))
+                    connection.execute("DELETE FROM activation_records WHERE job_id=?", (job_id,))
+                    connection.execute(
+                        "UPDATE sync_jobs SET state='committing',commit_phase='preparing',commit_progress=1,"
+                        "commit_started_utc=CASE WHEN commit_started_utc='' THEN ? ELSE commit_started_utc END,"
+                        "commit_heartbeat_utc=?,activation_records=0,activation_total=staged_records,indexed_chunks=0,"
+                        "activation_cursor='',chunk_cursor='',chunk_records_processed=0,checksum_cursor='',checksum_records=0,"
+                        "activation_checksum=?,activation_step_count=activation_step_count+1,updated_utc=?,error='' WHERE job_id=?",
+                        (now, now, self._activation_checksum_seed(), now, job_id),
+                    )
+                    connection.commit()
+                    return {**self.sync_job_status(job_id), "advanced": True, "reason": "legacy-state-upgraded"}
+
                 connection.execute(
-                    "UPDATE sync_jobs SET state='failed',commit_phase='failed',commit_heartbeat_utc=?,updated_utc=?,error=? WHERE job_id=?",
-                    (failed_at, failed_at, str(exc)[:1000], job_id),
+                    "UPDATE sync_jobs SET state='committing',commit_heartbeat_utc=?,updated_utc=?,error='',"
+                    "activation_step_count=activation_step_count+1 WHERE job_id=?",
+                    (now, now, job_id),
                 )
-            return self.sync_job_status(job_id)
+
+                if phase == "preparing":
+                    connection.execute("DELETE FROM activation_chunks WHERE job_id=?", (job_id,))
+                    connection.execute("DELETE FROM activation_records WHERE job_id=?", (job_id,))
+                    connection.execute(
+                        "UPDATE sync_jobs SET commit_phase='copying-records',commit_progress=5,activation_records=0,"
+                        "activation_total=staged_records,indexed_chunks=0,activation_cursor='',chunk_cursor='',"
+                        "chunk_records_processed=0,checksum_cursor='',checksum_records=0,activation_checksum=?,"
+                        "commit_heartbeat_utc=?,updated_utc=? WHERE job_id=?",
+                        (self._activation_checksum_seed(), now, now, job_id),
+                    )
+                    connection.commit()
+                    return {**self.sync_job_status(job_id), "advanced": True, "reason": "shadow-index-prepared"}
+
+                if phase == "copying-records":
+                    cursor = str(row["activation_cursor"] or "")
+                    rows = list(
+                        connection.execute(
+                            "SELECT id,payload,content_hash FROM staging_records WHERE job_id=? AND id>? "
+                            "ORDER BY id LIMIT ?",
+                            (job_id, cursor, settings.activation_record_batch_limit),
+                        )
+                    )
+                    if rows:
+                        for staged in rows:
+                            payload_text = str(staged["payload"])
+                            try:
+                                payload = json.loads(payload_text)
+                            except (TypeError, ValueError, json.JSONDecodeError):
+                                payload = {}
+                            connection.execute(
+                                "INSERT INTO activation_records(job_id,id,title,url,payload,content_hash,updated_utc) "
+                                "VALUES(?,?,?,?,?,?,?) ON CONFLICT(job_id,id) DO UPDATE SET title=excluded.title,"
+                                "url=excluded.url,payload=excluded.payload,content_hash=excluded.content_hash,updated_utc=excluded.updated_utc",
+                                (
+                                    job_id,
+                                    str(staged["id"]),
+                                    str(payload.get("title", "")),
+                                    str(payload.get("url", "")),
+                                    payload_text,
+                                    str(staged["content_hash"]),
+                                    now,
+                                ),
+                            )
+                        copied = int(
+                            connection.execute("SELECT COUNT(*) FROM activation_records WHERE job_id=?", (job_id,)).fetchone()[0]
+                        )
+                        total = max(1, int(row["staged_records"] or copied or 1))
+                        progress = min(34, 5 + int(29 * min(1.0, copied / total)))
+                        connection.execute(
+                            "UPDATE sync_jobs SET activation_cursor=?,activation_records=?,commit_progress=?,"
+                            "commit_heartbeat_utc=?,updated_utc=? WHERE job_id=?",
+                            (str(rows[-1]["id"]), copied, progress, now, now, job_id),
+                        )
+                        connection.commit()
+                        return {**self.sync_job_status(job_id), "advanced": True, "reason": "records-copied"}
+
+                    # Preserve the last active version of any record rejected by
+                    # validation instead of deleting it during replace mode.
+                    connection.execute(
+                        "INSERT OR IGNORE INTO activation_records(job_id,id,title,url,payload,content_hash,updated_utc) "
+                        "SELECT ?,r.id,r.title,r.url,r.payload,r.content_hash,r.updated_utc FROM records r "
+                        "JOIN sync_rejections x ON x.job_id=? AND x.record_id=r.id WHERE trim(x.record_id)<>''",
+                        (job_id, job_id),
+                    )
+                    target_total = int(
+                        connection.execute("SELECT COUNT(*) FROM activation_records WHERE job_id=?", (job_id,)).fetchone()[0]
+                    )
+                    connection.execute(
+                        "UPDATE sync_jobs SET commit_phase='building-chunks',commit_progress=35,activation_records=?,"
+                        "activation_total=?,chunk_cursor='',chunk_records_processed=0,indexed_chunks=0,"
+                        "commit_heartbeat_utc=?,updated_utc=? WHERE job_id=?",
+                        (target_total, target_total, now, now, job_id),
+                    )
+                    connection.commit()
+                    return {**self.sync_job_status(job_id), "advanced": True, "reason": "record-copy-complete"}
+
+                if phase == "building-chunks":
+                    cursor = str(row["chunk_cursor"] or "")
+                    rows = list(
+                        connection.execute(
+                            "SELECT id,payload FROM activation_records WHERE job_id=? AND id>? ORDER BY id LIMIT ?",
+                            (job_id, cursor, settings.activation_chunk_record_batch_limit),
+                        )
+                    )
+                    if rows:
+                        for activation_row in rows:
+                            record_id = str(activation_row["id"])
+                            connection.execute(
+                                "DELETE FROM activation_chunks WHERE job_id=? AND record_id=?",
+                                (job_id, record_id),
+                            )
+                            try:
+                                record = KnowledgeRecord.model_validate(json.loads(str(activation_row["payload"])))
+                            except (ValueError, TypeError, json.JSONDecodeError):
+                                continue
+                            prior = {
+                                str(item["chunk_id"]): (
+                                    str(item["content_hash"]),
+                                    str(item["embedding_model"] or ""),
+                                    str(item["embedding_json"] or ""),
+                                )
+                                for item in connection.execute(
+                                    "SELECT chunk_id,content_hash,embedding_model,embedding_json FROM retrieval_chunks WHERE record_id=?",
+                                    (record_id,),
+                                )
+                            }
+                            for chunk in chunk_record(record, settings.chunk_max_words, settings.chunk_overlap_words):
+                                old = prior.get(chunk.chunk_id)
+                                model = old[1] if old and old[0] == chunk.content_hash else ""
+                                vector = old[2] if old and old[0] == chunk.content_hash else ""
+                                connection.execute(
+                                    "INSERT INTO activation_chunks(job_id,chunk_id,record_id,heading,page,passage,position,"
+                                    "content_hash,embedding_model,embedding_json,updated_utc) VALUES(?,?,?,?,?,?,?,?,?,?,?) "
+                                    "ON CONFLICT(job_id,chunk_id) DO UPDATE SET record_id=excluded.record_id,heading=excluded.heading,"
+                                    "page=excluded.page,passage=excluded.passage,position=excluded.position,content_hash=excluded.content_hash,"
+                                    "embedding_model=excluded.embedding_model,embedding_json=excluded.embedding_json,updated_utc=excluded.updated_utc",
+                                    (
+                                        job_id,
+                                        chunk.chunk_id,
+                                        chunk.record_id,
+                                        chunk.heading,
+                                        chunk.page,
+                                        chunk.passage,
+                                        chunk.position,
+                                        chunk.content_hash,
+                                        model,
+                                        vector,
+                                        now,
+                                    ),
+                                )
+                        processed = int(row["chunk_records_processed"] or 0) + len(rows)
+                        chunks = int(
+                            connection.execute("SELECT COUNT(*) FROM activation_chunks WHERE job_id=?", (job_id,)).fetchone()[0]
+                        )
+                        total = max(1, int(row["activation_total"] or 1))
+                        progress = min(74, 35 + int(39 * min(1.0, processed / total)))
+                        connection.execute(
+                            "UPDATE sync_jobs SET chunk_cursor=?,chunk_records_processed=?,indexed_chunks=?,commit_progress=?,"
+                            "commit_heartbeat_utc=?,updated_utc=? WHERE job_id=?",
+                            (str(rows[-1]["id"]), processed, chunks, progress, now, now, job_id),
+                        )
+                        connection.commit()
+                        return {**self.sync_job_status(job_id), "advanced": True, "reason": "chunks-built"}
+
+                    connection.execute(
+                        "UPDATE sync_jobs SET commit_phase='checksumming',commit_progress=75,checksum_cursor='',"
+                        "checksum_records=0,activation_checksum=?,commit_heartbeat_utc=?,updated_utc=? WHERE job_id=?",
+                        (self._activation_checksum_seed(), now, now, job_id),
+                    )
+                    connection.commit()
+                    return {**self.sync_job_status(job_id), "advanced": True, "reason": "chunk-build-complete"}
+
+                if phase == "checksumming":
+                    cursor = str(row["checksum_cursor"] or "")
+                    rows = list(
+                        connection.execute(
+                            "SELECT id,content_hash FROM activation_records WHERE job_id=? AND id>? ORDER BY id LIMIT ?",
+                            (job_id, cursor, settings.activation_checksum_batch_limit),
+                        )
+                    )
+                    if rows:
+                        checksum = self._roll_activation_checksum(str(row["activation_checksum"] or ""), rows)
+                        verified = int(row["checksum_records"] or 0) + len(rows)
+                        total = max(1, int(row["activation_total"] or 1))
+                        progress = min(89, 75 + int(14 * min(1.0, verified / total)))
+                        connection.execute(
+                            "UPDATE sync_jobs SET checksum_cursor=?,checksum_records=?,activation_checksum=?,commit_progress=?,"
+                            "commit_heartbeat_utc=?,updated_utc=? WHERE job_id=?",
+                            (str(rows[-1]["id"]), verified, checksum, progress, now, now, job_id),
+                        )
+                        connection.commit()
+                        return {**self.sync_job_status(job_id), "advanced": True, "reason": "checksum-advanced"}
+
+                    activation_count = int(
+                        connection.execute("SELECT COUNT(*) FROM activation_records WHERE job_id=?", (job_id,)).fetchone()[0]
+                    )
+                    chunk_count = int(
+                        connection.execute("SELECT COUNT(*) FROM activation_chunks WHERE job_id=?", (job_id,)).fetchone()[0]
+                    )
+                    if activation_count != int(row["activation_total"] or activation_count):
+                        raise RuntimeError(
+                            f"Replacement verification failed: expected {int(row['activation_total'] or 0)} records, found {activation_count}."
+                        )
+                    if activation_count and not chunk_count:
+                        raise RuntimeError("Replacement verification failed: no retrieval chunks were generated.")
+                    connection.execute(
+                        "UPDATE sync_jobs SET commit_phase='ready-to-switch',commit_progress=92,activation_records=?,"
+                        "indexed_chunks=?,commit_heartbeat_utc=?,updated_utc=? WHERE job_id=?",
+                        (activation_count, chunk_count, now, now, job_id),
+                    )
+                    connection.commit()
+                    return {**self.sync_job_status(job_id), "advanced": True, "reason": "replacement-verified"}
+
+                if phase == "ready-to-switch":
+                    connection.execute(
+                        "UPDATE sync_jobs SET commit_phase='switching',commit_progress=96,commit_heartbeat_utc=?,updated_utc=? WHERE job_id=?",
+                        (now, now, job_id),
+                    )
+                    connection.commit()
+                    return {**self.sync_job_status(job_id), "advanced": True, "reason": "atomic-switch-ready"}
+
+                if phase == "switching":
+                    activation_count = int(
+                        connection.execute("SELECT COUNT(*) FROM activation_records WHERE job_id=?", (job_id,)).fetchone()[0]
+                    )
+                    chunk_count = int(
+                        connection.execute("SELECT COUNT(*) FROM activation_chunks WHERE job_id=?", (job_id,)).fetchone()[0]
+                    )
+                    if activation_count <= 0:
+                        raise RuntimeError("The verified replacement index is empty; the active index was not changed.")
+                    inserted = int(
+                        connection.execute(
+                            "SELECT COUNT(*) FROM activation_records a LEFT JOIN records r ON r.id=a.id "
+                            "WHERE a.job_id=? AND r.id IS NULL",
+                            (job_id,),
+                        ).fetchone()[0]
+                    )
+                    updated = int(
+                        connection.execute(
+                            "SELECT COUNT(*) FROM activation_records a JOIN records r ON r.id=a.id "
+                            "WHERE a.job_id=? AND r.content_hash<>a.content_hash",
+                            (job_id,),
+                        ).fetchone()[0]
+                    )
+                    unchanged = int(
+                        connection.execute(
+                            "SELECT COUNT(*) FROM activation_records a JOIN records r ON r.id=a.id "
+                            "WHERE a.job_id=? AND r.content_hash=a.content_hash",
+                            (job_id,),
+                        ).fetchone()[0]
+                    )
+                    deleted = int(
+                        connection.execute(
+                            "SELECT COUNT(*) FROM records r LEFT JOIN activation_records a ON a.job_id=? AND a.id=r.id "
+                            "WHERE a.id IS NULL",
+                            (job_id,),
+                        ).fetchone()[0]
+                    )
+                    current_count = self._record_count(connection)
+                    snapshot_id = ""
+                    if 0 < current_count <= settings.activation_snapshot_record_limit:
+                        snapshot_id = self._snapshot_current(connection, f"before:{job_id}:{reason}")
+
+                    # The only non-incremental operation is a database-local table
+                    # switch. Chunk generation, validation, and checksum work have
+                    # already completed in durable shadow tables. SQLite rollback
+                    # leaves the previous active index intact if this transaction
+                    # is interrupted.
+                    connection.execute("DELETE FROM retrieval_chunks")
+                    connection.execute("DELETE FROM records")
+                    connection.execute(
+                        "INSERT INTO records(id,title,url,payload,content_hash,updated_utc) "
+                        "SELECT id,title,url,payload,content_hash,updated_utc FROM activation_records WHERE job_id=? ORDER BY id",
+                        (job_id,),
+                    )
+                    connection.execute(
+                        "INSERT INTO retrieval_chunks(chunk_id,record_id,heading,page,passage,position,content_hash,"
+                        "embedding_model,embedding_json,updated_utc) SELECT chunk_id,record_id,heading,page,passage,position,"
+                        "content_hash,embedding_model,embedding_json,updated_utc FROM activation_chunks WHERE job_id=? "
+                        "ORDER BY record_id,position",
+                        (job_id,),
+                    )
+                    meta = self._meta(connection)
+                    version = int(meta.get("index_version", 0)) + 1
+                    checksum = str(row["activation_checksum"] or self._activation_checksum_seed())
+                    source_site = str(row["source_site"] or "")
+                    self._set_meta(
+                        connection,
+                        {
+                            "schema_version": SCHEMA_VERSION,
+                            "index_schema": INDEX_SCHEMA,
+                            "index_version": version,
+                            "last_sync_utc": now,
+                            "source_site": source_site,
+                            "total_records": activation_count,
+                            "indexed_chunks": chunk_count,
+                            "checksum": checksum,
+                            "last_job_id": job_id,
+                        },
+                    )
+                    rejected_total = int(row["rejected_records"] or 0)
+                    rejection_rows = [
+                        dict(item)
+                        for item in connection.execute(
+                            "SELECT batch_index,record_id,error,created_utc FROM sync_rejections WHERE job_id=? "
+                            "ORDER BY rejection_id LIMIT ?",
+                            (job_id, settings.max_rejection_details),
+                        )
+                    ]
+                    final_state = "completed-with-rejections" if rejected_total else "completed"
+                    result = {
+                        "accepted": activation_count,
+                        "rejected": rejected_total,
+                        "rejected_records": rejection_rows,
+                        "inserted": inserted,
+                        "updated": updated,
+                        "unchanged": unchanged,
+                        "deleted": deleted,
+                        "snapshot_id": snapshot_id,
+                        "index_version": version,
+                        "checksum": checksum,
+                        "indexed_chunks": chunk_count,
+                        "activation_strategy": "durable-incremental-shadow-v7.0.7",
+                    }
+                    connection.execute(
+                        "UPDATE sync_jobs SET state=?,completed_utc=?,updated_utc=?,result=?,error='',"
+                        "commit_phase='completed',commit_progress=100,commit_heartbeat_utc=?,activation_records=?,"
+                        "activation_total=?,indexed_chunks=? WHERE job_id=?",
+                        (
+                            final_state,
+                            now,
+                            now,
+                            _canonical_json(result),
+                            now,
+                            activation_count,
+                            activation_count,
+                            chunk_count,
+                            job_id,
+                        ),
+                    )
+                    connection.execute("DELETE FROM staging_records WHERE job_id=?", (job_id,))
+                    connection.execute("DELETE FROM staging_deletions WHERE job_id=?", (job_id,))
+                    connection.execute("DELETE FROM activation_chunks WHERE job_id=?", (job_id,))
+                    connection.execute("DELETE FROM activation_records WHERE job_id=?", (job_id,))
+                    connection.commit()
+                    return {**self.sync_job_status(job_id), "advanced": True, "reason": "atomic-switch-complete"}
+
+                raise RuntimeError(f"Unknown durable activation phase: {phase or '(empty)'}")
+            except Exception as exc:
+                connection.rollback()
+                with self._connection() as failure_connection:
+                    failed_at = utc_now()
+                    failure_connection.execute(
+                        "UPDATE sync_jobs SET state='failed',commit_phase=CASE WHEN commit_phase='' THEN 'failed' ELSE commit_phase END,"
+                        "commit_heartbeat_utc=?,updated_utc=?,error=? WHERE job_id=?",
+                        (failed_at, failed_at, str(exc)[:1000], job_id),
+                    )
+                raise
+
+    def commit_sync_job(self, job_id: str, reason: str = "compatibility-loop-v7.0.7") -> dict[str, Any]:
+        """Compatibility helper for tests and command-line maintenance.
+
+        Production HTTP traffic advances only one bounded step per request.
+        """
+        self.queue_sync_commit(job_id, reason)
+        for _ in range(10000):
+            status = self.advance_sync_commit(job_id, reason)
+            if status.get("committed") or status.get("state") in {"failed", "completed", "completed-with-rejections"}:
+                return status
+        raise RuntimeError("Durable activation did not finish within the compatibility step limit.")
+
 
     def reset_sync_job(self, job_id: str) -> dict[str, Any]:
         """Remove an incomplete transaction so WordPress can replay its durable staging file."""
@@ -897,6 +1357,8 @@ class KnowledgeStore:
                 if row is not None and str(row["state"] or "") in {"completed", "completed-with-rejections"}:
                     connection.commit()
                     return {"ok": True, "job_id": job_id, "reset": False, "state": str(row["state"]), "reason": "already-committed"}
+                connection.execute("DELETE FROM activation_chunks WHERE job_id=?", (job_id,))
+                connection.execute("DELETE FROM activation_records WHERE job_id=?", (job_id,))
                 connection.execute("DELETE FROM staging_records WHERE job_id=?", (job_id,))
                 connection.execute("DELETE FROM staging_deletions WHERE job_id=?", (job_id,))
                 connection.execute("DELETE FROM sync_rejections WHERE job_id=?", (job_id,))
@@ -1833,7 +2295,7 @@ class KnowledgeStore:
     def connected_platform_summary(self) -> dict[str, Any]:
         with self._lock, self._connection() as connection:
             counts={name:int(connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]) for name,table in {"projects":"research_projects","investigations":"research_investigations","entities":"research_project_entities","backups":"connected_platform_backups"}.items()}
-        return {"schema":"sc-connected-research-platform-summary/1.0","version":"7.0.6","counts":counts,"workspace_schema":"sc-research-librarian-public-workspace/2.0","api_schema":"sc-connected-research-api/1.0"}
+        return {"schema":"sc-connected-research-platform-summary/1.0","version":"7.0.7","counts":counts,"workspace_schema":"sc-research-librarian-public-workspace/2.0","api_schema":"sc-connected-research-api/1.0"}
 
 
 store = KnowledgeStore()

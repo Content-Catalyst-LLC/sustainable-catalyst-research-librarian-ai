@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 7.0.6
+Stable tag: 7.0.7
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
@@ -12,7 +12,7 @@ A connected, site-scoped research intelligence platform for Sustainable Catalyst
 
 Research Librarian AI retrieves Sustainable Catalyst publications and documents through exact-title priority, section-aware BM25 ranking, optional Gemini embeddings, calibrated reciprocal-rank fusion, and citation-verified synthesis. WordPress remains the canonical publishing and recovery source, while FastAPI provides a durable SQLite runtime index compatible with free Render infrastructure.
 
-v7.0.6 stages every source batch first, queues durable-index activation through a short authenticated endpoint, and polls backend commit status instead of waiting for a long final WordPress request. Ambiguous transport failures are reconciled before the rebuild stops, while the previous working index remains active.
+v7.0.7 replaces the long-running backend activation worker with a durable incremental state machine. WordPress advances one bounded Python step at a time, while record, chunk, and checksum cursors persist in SQLite. The previous index remains active until the verified replacement switches atomically.
 
 == Shortcodes ==
 
@@ -38,14 +38,15 @@ v7.0.6 stages every source batch first, queues durable-index activation through 
 [sc_research_librarian_platform_handoffs]
 
 == Changelog ==
-= 7.0.6 =
-* Defers final durable-index activation until all synchronization batches are staged.
-* Adds an authenticated background commit endpoint and durable commit-status polling.
-* Removes snapshot, rechunking, checksum, and SQLite activation work from the final WordPress request.
-* Reconciles empty 5xx and transport failures before stopping the rebuild.
-* Detects stale commit workers and safely requeues idempotent activation.
-* Shows activation phase, progress, activated records, and retrieval chunks in the rebuild panel.
-* Preserves the previous committed index and the complete WordPress staging file until verification succeeds.
+= 7.0.7 =
+* Removes FastAPI in-process background activation from the index rebuild path.
+* Adds a bounded authenticated commit-step endpoint with durable SQLite cursors.
+* Copies shadow records, builds chunks, and verifies the replacement in resumable batches.
+* Upgrades existing v7.0.6 queued and activating transactions without source rediscovery.
+* Preserves the previous active index until one verified atomic SQLite switch.
+* Replays the WordPress staging file when ephemeral backend transaction state is lost.
+* Adds shadow-record, chunked-record, verified-record, durable-step, and storage diagnostics.
+* Adds configurable activation batch limits and persistent SC_RL_DATA_DIR support.
 
 = 7.0.2 =
 * Added broader published-document discovery, four-stage readiness, and simplified index controls.

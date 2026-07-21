@@ -1,6 +1,6 @@
 <?php
 /**
- * Research Librarian AI v7.0.6 — Transaction Reconciliation and Public Interface Repair.
+ * Research Librarian AI v7.0.7 — Transaction Reconciliation and Public Interface Repair.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class SC_RL6_V630_Durable_Index {
-    const VERSION = '7.0.6';
+    const VERSION = '7.0.7';
     const OPTION_NAME = 'sc_rl_v620_python_options';
     const STATUS_OPTION = 'sc_rl_v620_python_status';
     const SYNC_HOOK = 'sc_rl_v620_python_sync_event';
@@ -592,7 +592,7 @@ final class SC_RL6_V630_Durable_Index {
         $recovery_next = wp_next_scheduled( self::RECOVERY_HOOK );
         $retry_next = wp_next_scheduled( self::SYNC_RETRY_HOOK );
         return array(
-            'schema' => 'sc-research-librarian-sync-recovery-export/7.0.6',
+            'schema' => 'sc-research-librarian-sync-recovery-export/7.0.7',
             'version' => self::VERSION,
             'site' => home_url( '/' ),
             'generated_utc' => gmdate( 'c' ),
@@ -831,7 +831,7 @@ final class SC_RL6_V630_Durable_Index {
         $grounding['reason_codes'] = array_values( array_unique( array_merge( $grounding['reason_codes'], array( 'bm25-section-retrieval', 'citation-verification' ), ! empty( $grounding['retrieval_diagnostics']['semantic_used'] ) ? array( 'semantic-retrieval' ) : array() ) ) );
 
         $note = array(
-            'schema' => 'sc-research-librarian-route-note/7.0.6',
+            'schema' => 'sc-research-librarian-route-note/7.0.7',
             'created_at_utc' => gmdate( 'c' ),
             'question' => sanitize_textarea_field( $question ),
             'source' => sanitize_key( isset( $backend['source'] ) ? $backend['source'] : 'python-backend' ),
@@ -1256,7 +1256,7 @@ final class SC_RL6_V630_Durable_Index {
         $deleted_ids = array_values( array_diff( array_keys( $ledger['records'] ), array_keys( $current_ids ) ) );
         $report = array_merge( array(
             'version' => self::VERSION,
-            'schema' => 'sc-rl-sync-report/7.0.6',
+            'schema' => 'sc-rl-sync-report/7.0.7',
             'job_id' => $job_id,
             'state' => 'running',
             'mode' => 'transactional-replace',
@@ -1505,7 +1505,7 @@ final class SC_RL6_V630_Durable_Index {
     }
 
     public static function build_index_pipeline() {
-        return self::start_index_build( 'manual-v7.0.6-index-build' );
+        return self::start_index_build( 'manual-v7.0.7-index-build' );
     }
 
     private static function replace_build_state( $state ) {
@@ -1637,7 +1637,7 @@ final class SC_RL6_V630_Durable_Index {
             return new WP_Error( 'sc_rl_v703_build_file_create', 'The private asynchronous index staging file could not be created.' );
         }
         $state = array(
-            'schema' => 'sc-rl-async-index-build/7.0.6',
+            'schema' => 'sc-rl-async-index-build/7.0.7',
             'version' => self::VERSION,
             'job_id' => $job_id,
             'backend_job_id' => $job_id,
@@ -1907,7 +1907,7 @@ final class SC_RL6_V630_Durable_Index {
         $state['message'] = 'Bounded finalization complete. Record batches are staging in Python while the current index remains live.';
         $report = array(
             'version' => self::VERSION,
-            'schema' => 'sc-rl-sync-report/7.0.6',
+            'schema' => 'sc-rl-sync-report/7.0.7',
             'job_id' => $state['backend_job_id'],
             'state' => 'running',
             'mode' => 'transactional-replace-async',
@@ -2106,9 +2106,17 @@ final class SC_RL6_V630_Durable_Index {
     private static function backend_queue_sync_commit( $job_id ) {
         $job_id = sanitize_text_field( $job_id );
         if ( ! $job_id ) {
-            return new WP_Error( 'sc_rl_v706_missing_backend_job', 'The backend transaction ID is missing.' );
+            return new WP_Error( 'sc_rl_v707_missing_backend_job', 'The backend transaction ID is missing.' );
         }
         return self::request( '/v1/knowledge/sync/jobs/' . rawurlencode( $job_id ) . '/commit', 'POST', array() );
+    }
+
+    private static function backend_advance_sync_commit( $job_id ) {
+        $job_id = sanitize_text_field( $job_id );
+        if ( ! $job_id ) {
+            return new WP_Error( 'sc_rl_v707_missing_backend_job', 'The backend transaction ID is missing.' );
+        }
+        return self::request( '/v1/knowledge/sync/jobs/' . rawurlencode( $job_id ) . '/commit/step', 'POST', array() );
     }
 
     private static function activate_committed_build( $state, $backend_status = array() ) {
@@ -2172,6 +2180,10 @@ final class SC_RL6_V630_Durable_Index {
         if ( is_wp_error( $status ) ) {
             return self::handle_build_error( $state, $status );
         }
+        if ( empty( $status['exists'] ) ) {
+            return self::begin_transaction_replay( $state, $status, 'backend-ephemeral-state-lost-before-activation' );
+        }
+
         $state['backend_transaction_status'] = $status;
         $state['backend_missing_batches'] = isset( $status['missing_batches'] ) && is_array( $status['missing_batches'] ) ? array_values( array_map( 'absint', $status['missing_batches'] ) ) : array();
         $state['backend_received_batches'] = isset( $status['received_batches'] ) && is_array( $status['received_batches'] ) ? array_values( array_map( 'absint', $status['received_batches'] ) ) : array();
@@ -2179,7 +2191,12 @@ final class SC_RL6_V630_Durable_Index {
         $state['backend_commit_progress'] = absint( $status['commit_progress'] ?? 0 );
         $state['backend_activation_records'] = absint( $status['activation_records'] ?? 0 );
         $state['backend_activation_total'] = absint( $status['activation_total'] ?? $status['staged_records'] ?? 0 );
+        $state['backend_chunk_records_processed'] = absint( $status['chunk_records_processed'] ?? 0 );
+        $state['backend_checksum_records'] = absint( $status['checksum_records'] ?? 0 );
         $state['backend_indexed_chunks'] = absint( $status['indexed_chunks'] ?? 0 );
+        $state['backend_activation_steps'] = absint( $status['activation_step_count'] ?? 0 );
+        $state['backend_activation_restarts'] = absint( $status['activation_restart_count'] ?? 0 );
+        $state['backend_storage_persistent'] = ! empty( $status['storage_persistent'] );
 
         if ( ! empty( $status['committed'] ) ) {
             return self::activate_committed_build( $state, $status );
@@ -2188,53 +2205,83 @@ final class SC_RL6_V630_Durable_Index {
             $state['stage'] = 'reconciling-transaction';
             $state['state'] = 'queued';
             $state['progress'] = 86;
-            $state['message'] = 'The backend is missing staged batches. Research Librarian will reconcile the transaction before activation.';
+            $state['message'] = 'The backend is missing staged batches. Research Librarian will replay the durable WordPress staging file before activation.';
             self::replace_build_state( $state );
             self::schedule_index_build( $state['job_id'], 2 );
             return $state;
         }
-        if ( 'failed' === sanitize_key( $status['state'] ?? '' ) ) {
-            $message = sanitize_text_field( $status['error'] ?? 'The asynchronous backend activation failed.' );
-            return self::handle_build_error( $state, new WP_Error( 'sc_rl_v706_backend_commit_failed', $message ) );
-        }
 
         $stage = sanitize_key( $state['stage'] ?? '' );
         $backend_state = sanitize_key( $status['state'] ?? '' );
-        if ( 'queuing-backend-commit' === $stage || in_array( $backend_state, array( 'ready-to-commit', 'ready-to-commit-with-rejections', 'commit-stalled' ), true ) ) {
+        $phase = sanitize_key( $status['commit_phase'] ?? '' );
+        if ( 'queuing-backend-commit' === $stage || in_array( $backend_state, array( 'ready-to-commit', 'ready-to-commit-with-rejections' ), true ) || ! $phase || in_array( $phase, array( 'staged', 'activating' ), true ) ) {
             $queued = self::backend_queue_sync_commit( $job_id );
             if ( is_wp_error( $queued ) ) {
-                // An ambiguous queue response must be reconciled before failing.
                 $after = self::backend_sync_job_status( $job_id );
-                if ( ! is_wp_error( $after ) && in_array( sanitize_key( $after['state'] ?? '' ), array( 'commit-queued', 'committing', 'completed', 'completed-with-rejections' ), true ) ) {
-                    $status = $after;
-                } else {
-                    return self::handle_build_error( $state, $queued );
+                if ( is_wp_error( $after ) || empty( $after['exists'] ) ) {
+                    return self::begin_transaction_replay( $state, is_wp_error( $after ) ? array() : $after, 'backend-queue-state-lost' );
                 }
+                $status = $after;
             } elseif ( is_array( $queued ) ) {
                 $status = array_merge( $status, $queued );
             }
             if ( ! empty( $status['committed'] ) ) {
                 return self::activate_committed_build( $state, $status );
             }
-            $state['backend_transaction_status'] = $status;
-            $state['stage'] = 'waiting-backend-commit';
-            $state['state'] = 'queued';
-            $state['progress'] = 87;
-            $state['message'] = 'All synchronization batches are staged. Backend index activation is running outside the WordPress request.';
-            $state['next_run_utc'] = gmdate( 'c', time() + 5 );
-            self::replace_build_state( $state );
-            self::schedule_index_build( $state['job_id'], 5 );
-            return $state;
         }
 
-        $progress = max( 0, min( 100, absint( $status['commit_progress'] ?? 0 ) ) );
+        // v7.0.7 advances exactly one bounded backend step per WordPress job
+        // iteration. There is no in-process FastAPI background worker to lose.
+        $advanced = self::backend_advance_sync_commit( $job_id );
+        if ( is_wp_error( $advanced ) ) {
+            $after = self::backend_sync_job_status( $job_id );
+            if ( ! is_wp_error( $after ) && ! empty( $after['committed'] ) ) {
+                return self::activate_committed_build( $state, $after );
+            }
+            if ( ! is_wp_error( $after ) && empty( $after['exists'] ) ) {
+                return self::begin_transaction_replay( $state, $after, 'backend-state-lost-during-activation-step' );
+            }
+            $message = ! is_wp_error( $after ) && ! empty( $after['error'] ) ? sanitize_text_field( $after['error'] ) : $advanced->get_error_message();
+            return self::handle_build_error( $state, new WP_Error( 'sc_rl_v707_activation_step_failed', $message ) );
+        }
+        $status = is_array( $advanced ) ? $advanced : self::backend_sync_job_status( $job_id );
+        if ( is_wp_error( $status ) ) {
+            return self::handle_build_error( $state, $status );
+        }
+        if ( ! empty( $status['committed'] ) ) {
+            return self::activate_committed_build( $state, $status );
+        }
+
+        $state['backend_transaction_status'] = $status;
+        $state['backend_commit_phase'] = sanitize_key( $status['commit_phase'] ?? $status['state'] ?? '' );
+        $state['backend_commit_progress'] = absint( $status['commit_progress'] ?? 0 );
+        $state['backend_activation_records'] = absint( $status['activation_records'] ?? 0 );
+        $state['backend_activation_total'] = absint( $status['activation_total'] ?? $status['staged_records'] ?? 0 );
+        $state['backend_chunk_records_processed'] = absint( $status['chunk_records_processed'] ?? 0 );
+        $state['backend_checksum_records'] = absint( $status['checksum_records'] ?? 0 );
+        $state['backend_indexed_chunks'] = absint( $status['indexed_chunks'] ?? 0 );
+        $state['backend_activation_steps'] = absint( $status['activation_step_count'] ?? 0 );
+        $state['backend_activation_restarts'] = absint( $status['activation_restart_count'] ?? 0 );
+        $state['backend_storage_persistent'] = ! empty( $status['storage_persistent'] );
+
+        $phase_labels = array(
+            'preparing' => 'Preparing a restart-safe shadow index',
+            'copying-records' => 'Copying records into the shadow index',
+            'building-chunks' => 'Building retrieval chunks in bounded groups',
+            'checksumming' => 'Verifying the replacement index',
+            'ready-to-switch' => 'Replacement verified; preparing the atomic switch',
+            'switching' => 'Switching the verified replacement into service',
+        );
+        $phase = sanitize_key( $state['backend_commit_phase'] );
+        $label = $phase_labels[ $phase ] ?? 'Advancing durable index activation';
+        $progress = max( 0, min( 100, absint( $state['backend_commit_progress'] ) ) );
         $state['stage'] = 'waiting-backend-commit';
         $state['state'] = 'queued';
         $state['progress'] = min( 89, 87 + (int) floor( $progress / 50 ) );
-        $state['message'] = 'Backend activation in progress · ' . ( $progress ? $progress . '%' : 'working' ) . '. WordPress is polling durable transaction status.';
-        $state['next_run_utc'] = gmdate( 'c', time() + 5 );
+        $state['message'] = $label . ' · ' . $progress . '%. Each step saves a durable cursor before the next request.';
+        $state['next_run_utc'] = gmdate( 'c', time() + 2 );
         self::replace_build_state( $state );
-        self::schedule_index_build( $state['job_id'], 5 );
+        self::schedule_index_build( $state['job_id'], 2 );
         return $state;
     }
 
@@ -2319,7 +2366,7 @@ final class SC_RL6_V630_Durable_Index {
             'job_id' => sanitize_text_field( $state['backend_job_id'] ),
             'batch_index' => $batch_index,
             'batch_count' => $batch_count,
-            'reason' => 'wordpress-async-full-sync-v7.0.6',
+            'reason' => 'wordpress-async-full-sync-v7.0.7',
             'defer_commit' => true,
         ) );
 
@@ -2397,7 +2444,7 @@ final class SC_RL6_V630_Durable_Index {
 
         if ( $is_final ) {
             if ( ! empty( $response['committed'] ) ) {
-                // Backward-compatible path for a pre-v7.0.6 backend.
+                // Backward-compatible path for a pre-v7.0.7 backend.
                 return self::activate_committed_build( $state, $response );
             }
             $transaction_status = self::backend_sync_job_status( $state['backend_job_id'] );
@@ -2573,7 +2620,7 @@ final class SC_RL6_V630_Durable_Index {
             $warnings[] = 'Knowledge records are ready, but semantic embeddings need attention: ' . $embedding_test->get_error_message();
             $state['embedding_state'] = array( 'state' => 'configuration-error', 'last_error' => $embedding_test->get_error_message() );
         } else {
-            $embedding_state = self::schedule_embedding_queue( 'v7.0.6-async-index-build', 10 );
+            $embedding_state = self::schedule_embedding_queue( 'v7.0.7-async-index-build', 10 );
             if ( is_wp_error( $embedding_state ) ) {
                 $warnings[] = 'Knowledge records are ready, but the semantic queue could not be scheduled: ' . $embedding_state->get_error_message();
                 $state['embedding_state'] = array( 'state' => 'manual-continuation-required', 'last_error' => $embedding_state->get_error_message() );
@@ -2660,7 +2707,7 @@ final class SC_RL6_V630_Durable_Index {
     }
 
     public static function sync_and_complete_embeddings() {
-        $sync = self::sync_all_records( 'manual-v7.0.6-repair' );
+        $sync = self::sync_all_records( 'manual-v7.0.7-repair' );
         if ( is_wp_error( $sync ) ) {
             return $sync;
         }
@@ -3818,6 +3865,10 @@ final class SC_RL6_V630_Durable_Index {
         $backend_activation_records = absint( $build_state['backend_activation_records'] ?? $build_state['backend_transaction_status']['activation_records'] ?? 0 );
         $backend_activation_total = absint( $build_state['backend_activation_total'] ?? $build_state['backend_transaction_status']['activation_total'] ?? 0 );
         $backend_indexed_chunks = absint( $build_state['backend_indexed_chunks'] ?? $build_state['backend_transaction_status']['indexed_chunks'] ?? 0 );
+        $backend_chunk_records_processed = absint( $build_state['backend_chunk_records_processed'] ?? $build_state['backend_transaction_status']['chunk_records_processed'] ?? 0 );
+        $backend_checksum_records = absint( $build_state['backend_checksum_records'] ?? $build_state['backend_transaction_status']['checksum_records'] ?? 0 );
+        $backend_activation_steps = absint( $build_state['backend_activation_steps'] ?? $build_state['backend_transaction_status']['activation_step_count'] ?? 0 );
+        $backend_storage_persistent = ! empty( $build_state['backend_storage_persistent'] ?? $build_state['backend_transaction_status']['storage_persistent'] ?? false );
         ?>
         <div class="wrap sc-rl-v702-admin">
             <style>
@@ -3827,7 +3878,7 @@ final class SC_RL6_V630_Durable_Index {
 
             <section class="sc-rl-v702-hero" data-state="<?php echo esc_attr( $primary_state ); ?>">
                 <div>
-                    <div class="sc-rl-v702-eyebrow">Research Librarian v7.0.6</div>
+                    <div class="sc-rl-v702-eyebrow">Research Librarian v7.0.7</div>
                     <h1>Knowledge Index and AI Readiness</h1>
                     <p>One operational view for the Python connection, WordPress source discovery, durable knowledge synchronization, and Gemini semantic indexing.</p>
                     <div class="sc-rl-v702-badge"><?php echo esc_html( $build_badge ); ?></div>
@@ -3846,7 +3897,7 @@ final class SC_RL6_V630_Durable_Index {
                             <button class="button button-primary" type="submit" name="sc_rl_v703_start_build" value="1"><?php echo esc_html( $indexed_records ? 'Rebuild Index in Background' : 'Build Knowledge Index' ); ?></button>
                         <?php endif; ?>
                     </form>
-                    <small>Every browser request is bounded. Discovery, synchronization, verification, snapshots, and embeddings continue as resumable background jobs.</small>
+                    <small>Every request is bounded. WordPress and Python persist a cursor after each discovery, synchronization, activation, verification, snapshot, and embedding step.</small>
                 </div>
             </section>
 
@@ -3870,8 +3921,11 @@ final class SC_RL6_V630_Durable_Index {
                         <?php if ( $backend_commit_active || $backend_commit_phase ) : ?>
                             <div class="sc-rl-v703-job__metric"><span>Backend activation</span><strong><?php echo esc_html( $backend_commit_phase ? ucwords( str_replace( '-', ' ', $backend_commit_phase ) ) : 'Queued' ); ?></strong></div>
                             <div class="sc-rl-v703-job__metric"><span>Activation progress</span><strong><?php echo esc_html( $backend_commit_progress . '%' ); ?></strong></div>
-                            <div class="sc-rl-v703-job__metric"><span>Activated records</span><strong><?php echo esc_html( number_format_i18n( $backend_activation_records ) . ( $backend_activation_total ? '/' . number_format_i18n( $backend_activation_total ) : '' ) ); ?></strong></div>
+                            <div class="sc-rl-v703-job__metric"><span>Shadow records</span><strong><?php echo esc_html( number_format_i18n( $backend_activation_records ) . ( $backend_activation_total ? '/' . number_format_i18n( $backend_activation_total ) : '' ) ); ?></strong></div>
+                            <div class="sc-rl-v703-job__metric"><span>Chunked records</span><strong><?php echo esc_html( number_format_i18n( $backend_chunk_records_processed ) . ( $backend_activation_total ? '/' . number_format_i18n( $backend_activation_total ) : '' ) ); ?></strong></div>
+                            <div class="sc-rl-v703-job__metric"><span>Verified records</span><strong><?php echo esc_html( number_format_i18n( $backend_checksum_records ) . ( $backend_activation_total ? '/' . number_format_i18n( $backend_activation_total ) : '' ) ); ?></strong></div>
                             <div class="sc-rl-v703-job__metric"><span>Retrieval chunks</span><strong><?php echo esc_html( number_format_i18n( $backend_indexed_chunks ) ); ?></strong></div>
+                            <div class="sc-rl-v703-job__metric"><span>Durable steps</span><strong><?php echo esc_html( number_format_i18n( $backend_activation_steps ) ); ?></strong></div>
                         <?php endif; ?>
                         <?php if ( $transaction_recovery_ready || $backend_received || $backend_missing ) : ?>
                             <div class="sc-rl-v703-job__metric"><span>Backend retained</span><strong><?php echo esc_html( count( $backend_received ) . '/' . $backend_batch_count ); ?></strong></div>
@@ -3879,8 +3933,9 @@ final class SC_RL6_V630_Durable_Index {
                             <div class="sc-rl-v703-job__metric"><span>Replay attempt</span><strong><?php echo esc_html( absint( $build_state['transaction_replay_count'] ?? 0 ) . '/' . max( 1, absint( $build_state['transaction_replay_limit'] ?? 2 ) ) ); ?></strong></div>
                         <?php endif; ?>
                     </div>
-                    <?php if ( $backend_commit_active ) : ?><div class="sc-rl-v703-cron"><strong>All source batches are staged.</strong> The Python backend is activating the replacement index independently, so this page no longer waits for a long final HTTP response.</div><?php endif; ?>
+                    <?php if ( $backend_commit_active ) : ?><div class="sc-rl-v703-cron"><strong>All source batches are staged.</strong> WordPress is advancing one bounded Python activation step at a time. Every record, chunk, and verification cursor is saved before the next request.</div><?php endif; ?>
                     <?php if ( $transaction_recovery_ready ) : ?><div class="sc-rl-v703-cron"><strong>Commit recovery is ready.</strong> The complete WordPress staging file is still available. Choose “Repair and Resume Commit” to replay the transaction without rediscovering the 2,000-plus source records.</div><?php endif; ?>
+                    <?php if ( $backend_commit_active && ! $backend_storage_persistent ) : ?><div class="sc-rl-v703-cron"><strong>Persistent Render storage is recommended.</strong> Set <code>SC_RL_DATA_DIR=/var/data/sc-research-librarian</code> and attach a Render persistent disk. The WordPress staging file can still replay the transaction after an ephemeral restart.</div><?php endif; ?>
                     <?php if ( ! empty( $build_state['last_error'] ) ) : ?><div class="sc-rl-v703-error"><strong>Last error:</strong> <?php echo esc_html( $build_state['last_error'] ); ?></div><?php endif; ?>
                     <?php if ( defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ) : ?><div class="sc-rl-v703-cron"><strong>WP-Cron is disabled.</strong> Use “Run Next Batch Now,” or configure a real server cron request to <code>wp-cron.php</code>.</div><?php endif; ?>
                     <form method="post" class="sc-rl-v703-controls">

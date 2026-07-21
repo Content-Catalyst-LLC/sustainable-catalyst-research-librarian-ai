@@ -1,0 +1,30 @@
+{
+  "schema": "sc-research-librarian-release-manifest/1.0",
+  "version": "7.0.7",
+  "title": "Durable Incremental Index Activation",
+  "sqlite_schema": 11,
+  "activation": {
+    "in_process_background_task": false,
+    "bounded_step_endpoint": "/v1/knowledge/sync/jobs/{job_id}/commit/step",
+    "restart_safe_cursors": true,
+    "shadow_records": true,
+    "shadow_retrieval_chunks": true,
+    "incremental_checksum": true,
+    "atomic_active_index_switch": true,
+    "previous_index_retained_until_verified": true
+  },
+  "recovery": {
+    "v706_state_upgrade": true,
+    "wordpress_staging_replay": true,
+    "missing_backend_state_detection": true,
+    "persistent_data_directory_supported": true
+  },
+  "admin_interface": {
+    "shadow_record_progress": true,
+    "chunked_record_progress": true,
+    "verified_record_progress": true,
+    "durable_step_count": true,
+    "persistent_storage_guidance": true
+  },
+  "paid_infrastructure_required": false
+}

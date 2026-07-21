@@ -69,7 +69,7 @@ def test_store_defers_activation_until_explicit_commit(tmp_path: Path) -> None:
 
 
 def test_api_commit_endpoint_queues_fully_staged_transaction() -> None:
-    job_id = "v706-api-async-commit"
+    job_id = "v707-api-async-commit"
     staged = client.post(
         "/v1/knowledge/sync",
         headers=HEADERS,
@@ -81,9 +81,9 @@ def test_api_commit_endpoint_queues_fully_staged_transaction() -> None:
             "defer_commit": True,
             "records": [
                 {
-                    "id": "v706-api-record",
-                    "title": "v7.0.6 API Record",
-                    "url": "https://sustainablecatalyst.com/v706-api-record/",
+                    "id": "v707-api-record",
+                    "title": "v7.0.7 API Record",
+                    "url": "https://sustainablecatalyst.com/v707-api-record/",
                 }
             ],
         },
@@ -94,17 +94,23 @@ def test_api_commit_endpoint_queues_fully_staged_transaction() -> None:
 
     queued = client.post(f"/v1/knowledge/sync/jobs/{job_id}/commit", headers=HEADERS, json={})
     assert queued.status_code == 200
-    status = client.get(f"/v1/knowledge/sync/jobs/{job_id}", headers=HEADERS)
-    assert status.status_code == 200
-    body = status.json()
-    # TestClient completes Starlette background tasks before returning control.
+    assert queued.json()["commit_phase"] == "preparing"
+    assert queued.json()["committed"] is False
+
+    body = queued.json()
+    for _ in range(50):
+        advanced = client.post(f"/v1/knowledge/sync/jobs/{job_id}/commit/step", headers=HEADERS, json={})
+        assert advanced.status_code == 200
+        body = advanced.json()
+        if body["committed"]:
+            break
     assert body["committed"] is True
     assert body["commit_phase"] == "completed"
     assert body["commit_progress"] == 100
 
 
 def test_commit_endpoint_rejects_missing_batches() -> None:
-    job_id = "v706-api-missing-batch"
+    job_id = "v707-api-missing-batch"
     staged = client.post(
         "/v1/knowledge/sync",
         headers=HEADERS,
@@ -116,9 +122,9 @@ def test_commit_endpoint_rejects_missing_batches() -> None:
             "defer_commit": True,
             "records": [
                 {
-                    "id": "v706-incomplete",
+                    "id": "v707-incomplete",
                     "title": "Incomplete",
-                    "url": "https://sustainablecatalyst.com/v706-incomplete/",
+                    "url": "https://sustainablecatalyst.com/v707-incomplete/",
                 }
             ],
         },

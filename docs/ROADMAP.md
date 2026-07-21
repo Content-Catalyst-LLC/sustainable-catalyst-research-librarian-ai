@@ -98,3 +98,11 @@ Answer traceability, source approval and freshness controls, retention, quality 
 ## Beyond v7.0.0
 
 Future work should be maintenance-led: destination intake adoption, project collaboration permissions, structured conflict resolution, long-running workflow orchestration, and production usage evaluation. These should extend the stable v7 contracts rather than replace them.
+
+## v7.0.7 — Durable Incremental Index Activation — Complete
+
+- Restart-safe shadow-index activation
+- Bounded record, chunk, and checksum cursors
+- Atomic verified index switch
+- v7.0.6 transaction migration and WordPress replay recovery
+- Persistent data-directory support and activation diagnostics
