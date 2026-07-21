@@ -39,7 +39,7 @@ services:
       - key: SC_RL_MAX_REJECTION_DETAILS
         value: "100"
       - key: SC_RL_RELEASE_VERSION
-        value: "7.0.2"
+        value: "7.0.3"
       - key: SC_RL_HANDOFF_SOURCE_LIMIT
         value: "8"
       - key: SC_RL_HANDOFF_TTL_SECONDS

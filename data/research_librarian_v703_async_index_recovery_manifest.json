@@ -1,0 +1,44 @@
+{
+  "schema": "sc-research-librarian-release-manifest/1.0",
+  "version": "7.0.3",
+  "release": "Asynchronous Index Rebuild and Recovery",
+  "status": "stable",
+  "paid_infrastructure_required": false,
+  "capabilities": {
+    "bounded_admin_request": true,
+    "wp_cron_background_batches": true,
+    "manual_next_batch_fallback": true,
+    "resumable_source_discovery": true,
+    "resumable_backend_sync": true,
+    "transactional_index_swap": true,
+    "previous_index_preserved_until_commit": true,
+    "streamed_private_snapshot": true,
+    "pause_resume_cancel": true,
+    "stale_lock_recovery": true,
+    "bounded_retry_backoff": true,
+    "semantic_queue_after_verification": true
+  },
+  "default_limits": {
+    "source_records_per_pass": 40,
+    "sync_records_per_pass": 100,
+    "embedding_records_per_pass": 50,
+    "stale_build_minutes": 20
+  },
+  "workflow": [
+    "testing-backend",
+    "discovering-sources",
+    "discovering-legacy",
+    "synchronizing-records",
+    "verifying-index",
+    "creating-snapshot",
+    "starting-embeddings",
+    "ready"
+  ],
+  "safety_boundaries": [
+    "The browser request only creates or controls the job.",
+    "The Python store stages replacement batches under one job identifier.",
+    "The active durable index is replaced only when the final batch commits.",
+    "A failed or cancelled rebuild does not delete the previous committed index.",
+    "Invalid credentials stop the job without an unbounded retry loop."
+  ]
+}

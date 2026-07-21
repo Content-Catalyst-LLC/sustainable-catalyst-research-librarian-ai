@@ -1,26 +1,26 @@
-# Research Librarian AI v7.0.2
+# Research Librarian AI v7.0.3
 
-Knowledge-index recovery and interface redesign with a verified one-click build pipeline. See `docs/V702_INDEX_RECOVERY_INTERFACE_REDESIGN.md`.
+Asynchronous, resumable knowledge-index rebuilding that avoids WordPress request timeouts and preserves the last working index. See `docs/V703_ASYNCHRONOUS_INDEX_REBUILD_RECOVERY.md`.
 
-# Sustainable Catalyst Research Librarian AI v7.0.2
+# Sustainable Catalyst Research Librarian AI v7.0.3
 
 A site-scoped connected research intelligence platform for Sustainable Catalyst.
 
-## v7.0.2 highlights
+## v7.0.3 highlights
 
-- One-click authenticated knowledge-index build and post-commit verification
-- Broader discovery of published document custom post types
-- Four-stage readiness interface with source, index, and embedding progress
-- Automatic snapshot recovery and resumable semantic-index completion
+- Browser requests only create or control a persistent index-build job
+- Bounded WP-Cron source-discovery and transactional backend-sync batches
+- Pause, resume, cancel, manual next-batch, stale-lock recovery, and visible progress
+- Private JSONL staging with streamed, compressed WordPress recovery snapshots
+- Previous durable index remains active until the final replacement batch commits
+- Permanent credential failures stop cleanly; transient failures use bounded retry backoff
+- Semantic embedding begins only after the durable index is verified
+- Broader discovery of published document-style custom post types from v7.0.2
 - Persistent, private-by-default research projects
 - Multi-step investigations and project event history
-- Evidence, annotation, reading-path, contradiction, uncertainty, workflow, and artifact entities
-- Reusable Workbench, Decision Studio, Site Intelligence, Lab, and evidence-review workflow templates
 - Stable `sc-connected-research-api/1.0` resource contract
 - Provider-independent generation adapter with deterministic fallback
-- Portable checksum-verified project backup and dry-run import
-- Public, editorial, and institutional workspace modes
-- Existing hybrid retrieval, verified citations, durable recovery, typed handoffs, and governance retained
+- Existing hybrid retrieval, verified citations, typed handoffs, governance, and portable recovery retained
 - Additive SQLite schema version 10
 
 ## Architecture

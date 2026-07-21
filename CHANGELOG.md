@@ -1,3 +1,14 @@
+## 7.0.3 — Asynchronous Index Rebuild and Recovery
+
+- Moves full knowledge-index rebuild work out of the WordPress browser request.
+- Adds a persistent, resumable build job with bounded source-discovery and backend-sync batches.
+- Preserves the previously committed Python index until the final replacement batch verifies successfully.
+- Streams private JSONL staging data and compressed recovery snapshots without loading the entire corpus into PHP memory.
+- Adds Pause, Resume, Run Next Batch Now, Cancel, stale-lock recovery, progress metrics, and WP-Cron/manual processing paths.
+- Stops on permanent credential/configuration errors and uses bounded exponential backoff for transient provider or network failures.
+- Starts semantic embedding only after durable-index verification.
+- Retains all v7.0.2 source-discovery and interface-recovery improvements.
+
 ## 7.0.2 — Knowledge Index Recovery and Interface Redesign
 
 - Adds a verified one-click knowledge-index build pipeline.

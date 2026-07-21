@@ -3,7 +3,7 @@
  * Plugin Name: Sustainable Catalyst Research Librarian AI
  * Plugin URI: https://sustainablecatalyst.com/platform/research-librarian/
  * Description: Site-scoped research intelligence for Sustainable Catalyst with verified retrieval, typed handoffs, answer traceability, source governance, quality evaluation, release gates, and deterministic fallback.
- * Version: 7.0.2
+ * Version: 7.0.3
  * Author: Content Catalyst LLC / Tariq Ahmad
  * Author URI: https://sustainablecatalyst.com/
  * License: MIT
@@ -251,7 +251,7 @@ if ( ! function_exists( 'sc_rl6_render_legacy_class_notice' ) ) {
             return;
         }
         $status = sc_rl6_legacy_class_status();
-        echo '<div class="notice notice-warning"><p><strong>Research Librarian AI v7.0.2 compatibility mode:</strong> A legacy Research Librarian class was already loaded before the current plugin. The collision-safe v6 bootstrap is active, so settings and shortcodes remain available.</p>';
+        echo '<div class="notice notice-warning"><p><strong>Research Librarian AI v7.0.3 compatibility mode:</strong> A legacy Research Librarian class was already loaded before the current plugin. The collision-safe v6 bootstrap is active, so settings and shortcodes remain available.</p>';
         if ( ! empty( $status['file'] ) ) {
             echo '<p>Legacy class file: <code>' . esc_html( $status['file'] ) . '</code>';
             if ( ! empty( $status['version'] ) ) {
@@ -259,7 +259,7 @@ if ( ! function_exists( 'sc_rl6_render_legacy_class_notice' ) ) {
             }
             echo '</p>';
         }
-        echo '<p>Remove the legacy duplicate, network plugin, or must-use copy after confirming the active v7.0.2 plugin is working.</p></div>';
+        echo '<p>Remove the legacy duplicate, network plugin, or must-use copy after confirming the active v7.0.3 plugin is working.</p></div>';
     }
 }
 add_action( 'admin_notices', 'sc_rl6_render_legacy_class_notice' );
@@ -274,7 +274,7 @@ final class SC_RL6_Core {
     const MAINTENANCE_HOOK = 'sc_rl_ai_index_maintenance_event';
     const AI_STATUS_OPTION = 'sc_rl_ai_live_provider_status';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const VERSION        = '7.0.2';
+    const VERSION        = '7.0.3';
     const RATE_LIMIT_REGISTRY_OPTION = 'sc_rl_ai_rate_limit_registry';
 
     private static $instance = null;

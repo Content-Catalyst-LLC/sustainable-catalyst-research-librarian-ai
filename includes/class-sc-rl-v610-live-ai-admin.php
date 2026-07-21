@@ -1,6 +1,6 @@
 <?php
 /**
- * Research Librarian AI v7.0.2 — consolidated administration and Python intelligence operations.
+ * Research Librarian AI v7.0.3 — consolidated administration and Python intelligence operations.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -129,7 +129,7 @@ final class SC_RL6_V610_Live_AI_Admin {
             <?php if ( 'standard' === $gemini_key_type ) : ?>
                 <div class="notice notice-warning"><p><strong>Gemini key migration:</strong> This saved key uses the older standard-key format. Google rejects unrestricted standard keys after June 19, 2026 and plans to end standard-key support in September 2026. Restrict it to the Gemini API in Google AI Studio or replace it with a new authorization key.</p></div>
             <?php elseif ( 'authorization' === $gemini_key_type ) : ?>
-                <div class="notice notice-info"><p><strong>Gemini authorization key detected.</strong> Research Librarian AI v7.0.2 retains support for modern Google AI Studio authorization keys, including keys that contain periods.</p></div>
+                <div class="notice notice-info"><p><strong>Gemini authorization key detected.</strong> Research Librarian AI v7.0.3 retains support for modern Google AI Studio authorization keys, including keys that contain periods.</p></div>
             <?php endif; ?>
 
             <?php if ( ! empty( $status['last_error_message'] ) ) : ?>

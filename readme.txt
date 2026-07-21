@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 7.0.2
+Stable tag: 7.0.3
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
@@ -12,7 +12,7 @@ A connected, site-scoped research intelligence platform for Sustainable Catalyst
 
 Research Librarian AI retrieves Sustainable Catalyst publications and documents through exact-title priority, section-aware BM25 ranking, optional Gemini embeddings, calibrated reciprocal-rank fusion, and citation-verified synthesis. WordPress remains the canonical publishing and recovery source, while FastAPI provides a durable SQLite runtime index compatible with free Render infrastructure.
 
-v7.0.2 adds a verified one-click index build, broader public-document discovery, four-stage readiness, automatic snapshot recovery, and resumable semantic-index completion while preserving the connected research platform introduced in v7.0.0.
+v7.0.3 replaces the synchronous full rebuild with a persistent asynchronous job. Source discovery, transactional synchronization, verification, recovery snapshot creation, and semantic-index scheduling run in bounded resumable batches while the previous working index remains active.
 
 == Shortcodes ==
 
@@ -38,6 +38,17 @@ v7.0.2 adds a verified one-click index build, broader public-document discovery,
 [sc_research_librarian_platform_handoffs]
 
 == Changelog ==
+= 7.0.3 =
+* Moves the full index rebuild out of the browser request into bounded WP-Cron jobs.
+* Adds persistent progress, pause, resume, cancel, manual next-batch processing, stale-lock recovery, and bounded retry backoff.
+* Preserves the previous committed Python index until a final replacement batch verifies successfully.
+* Streams private JSONL staging and compressed recovery snapshots to avoid PHP memory exhaustion.
+* Starts semantic embedding only after the durable index is verified.
+
+= 7.0.2 =
+* Added broader published-document discovery, four-stage readiness, and simplified index controls.
+* Added runtime verification, snapshot recovery, and resumable semantic-index completion.
+
 = 7.0.0 =
 * Adds the Connected Research Intelligence Platform.
 * Adds persistent projects, investigations, project entities, reusable workflows, contradiction and uncertainty tracking, and artifact history.
