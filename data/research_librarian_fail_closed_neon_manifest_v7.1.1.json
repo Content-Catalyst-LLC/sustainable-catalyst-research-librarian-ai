@@ -1,0 +1,27 @@
+{
+  "schema": "sc-research-librarian-fail-closed-neon-manifest/1.0",
+  "version": "7.1.1",
+  "title": "Fail-Closed Neon Activation and Database Identity",
+  "database": {
+    "backend": "postgres",
+    "runtime_connection": "DATABASE_URL",
+    "migration_connection": "DIRECT_DATABASE_URL",
+    "schema": "SC_RL_DATABASE_SCHEMA",
+    "fail_closed": true,
+    "automatic_migrations": true,
+    "identity_verification": true,
+    "sqlite_production_fallback": false
+  },
+  "activation": {
+    "verified_active_generation": true,
+    "record_count_required": true,
+    "chunk_count_required": true,
+    "database_fingerprint_required": true,
+    "committed_empty_replay": true,
+    "wordpress_staging_preserved": true
+  },
+  "diagnostics": [
+    "/v1/knowledge/database/diagnostics",
+    "/v1/knowledge/database/identity"
+  ]
+}

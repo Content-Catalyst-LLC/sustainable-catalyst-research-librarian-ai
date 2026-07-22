@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Neon/Postgres durable knowledge index for Research Librarian v7.1.0.
+"""Neon/Postgres durable knowledge index for Research Librarian v7.1.1.
 
 The Postgres store owns only the knowledge-index lifecycle: source batches,
 generations, records, retrieval chunks, embeddings, activation, recovery, and
@@ -35,12 +35,18 @@ except ImportError:  # pragma: no cover - exercised only on misconfigured deploy
 
 from .chunking import chunk_record
 from .config import settings
+from .database_identity import (
+    compare_live_identities,
+    configured_identity,
+    live_database_identity,
+    validate_schema_name,
+)
 from .models import KnowledgeChunk, KnowledgeRecord, utc_now
 from .store import KnowledgeStore, SyncResult, _canonical_json, record_hash
 
 
-POSTGRES_SCHEMA_VERSION = 1
-POSTGRES_INDEX_SCHEMA = "sc-research-librarian-postgres-index/1.0"
+POSTGRES_SCHEMA_VERSION = 2
+POSTGRES_INDEX_SCHEMA = "sc-research-librarian-postgres-index/1.1"
 
 
 def _sha256_records(rows: Iterable[dict[str, Any]], seed: str = "") -> str:
@@ -92,6 +98,7 @@ class PostgresKnowledgeStore:
         "validate_snapshots",
         "rollback",
         "database_diagnostics",
+        "database_identity",
     }
 
     def __init__(self, legacy_store: KnowledgeStore | None = None) -> None:
@@ -101,17 +108,31 @@ class PostgresKnowledgeStore:
                 "Install backend/requirements.txt before starting the service."
             )
         self.database_url = settings.database_url
-        self.direct_database_url = settings.direct_database_url or settings.database_url
+        self.direct_database_url = settings.direct_database_url
+        self.database_schema = validate_schema_name(settings.database_schema)
         if not self.database_url:
             raise RuntimeError("DATABASE_URL is required when SC_RL_DATABASE_BACKEND=postgres.")
+        if settings.database_fail_closed and not self.direct_database_url:
+            raise RuntimeError(
+                "DIRECT_DATABASE_URL is required in fail-closed Postgres mode so migrations cannot "
+                "silently target a different or pooled-only connection."
+            )
+        self.direct_database_url = self.direct_database_url or self.database_url
+        self._configured_identity = configured_identity(
+            self.database_url, self.direct_database_url, self.database_schema
+        )
         self._legacy = legacy_store or KnowledgeStore()
         self._lock = threading.RLock()
+        self._identity: dict[str, Any] = {}
         self._migrate()
+        self._identity = self._verify_database_identity()
 
     def __getattr__(self, name: str) -> Any:
         # Governance, handoffs, calibration, and project workspaces remain on the
-        # existing ancillary store in v7.1.0. Knowledge-index methods above never
-        # fall through to SQLite.
+        # ancillary SQLite store in v7.1.1. Knowledge-index methods are fail-closed:
+        # a missing Postgres implementation can never silently fall through.
+        if name in self.CORE_METHODS:
+            raise AttributeError(f"Postgres knowledge-index method {name!r} is not implemented.")
         return getattr(self._legacy, name)
 
     @contextmanager
@@ -119,6 +140,8 @@ class PostgresKnowledgeStore:
         url = self.direct_database_url if migration else self.database_url
         connection = psycopg.connect(url, autocommit=False, row_factory=dict_row)
         try:
+            # database_schema is validated as a simple identifier before use.
+            connection.execute(f'SET search_path TO "{self.database_schema}"')
             if register_vector is not None:
                 try:
                     register_vector(connection)
@@ -130,12 +153,79 @@ class PostgresKnowledgeStore:
         finally:
             connection.close()
 
+    def _verify_database_identity(self) -> dict[str, Any]:
+        runtime_target = self._configured_identity["runtime"]
+        direct_target = self._configured_identity["direct"]
+        with self._connection() as runtime_connection:
+            runtime = live_database_identity(runtime_connection, runtime_target)
+            table_rows = runtime_connection.execute(
+                """
+                SELECT to_regclass('sc_rl_generations') IS NOT NULL AS generations,
+                       to_regclass('sc_rl_records') IS NOT NULL AS records,
+                       to_regclass('sc_rl_chunks') IS NOT NULL AS chunks,
+                       to_regclass('sc_rl_meta') IS NOT NULL AS meta
+                """
+            ).fetchone()
+        with self._connection(migration=True) as direct_connection:
+            direct = live_database_identity(direct_connection, direct_target)
+        comparison = compare_live_identities(runtime, direct)
+        if not comparison["identity_match"]:
+            raise RuntimeError(
+                "Runtime and migration Postgres connections resolve to different database identities: "
+                + ", ".join(comparison["identity_mismatches"])
+            )
+        for label, live in (("runtime", runtime), ("migration", direct)):
+            if live["database"] != runtime_target.database or live["user"] != runtime_target.user:
+                raise RuntimeError(
+                    f"The {label} connection resolved to an unexpected database or role. "
+                    "Check the Neon branch, database, and role selected in both connection strings."
+                )
+            if live["schema"] != self.database_schema:
+                raise RuntimeError(
+                    f"The {label} connection did not enter schema {self.database_schema!r}."
+                )
+            if not live["vector_enabled"]:
+                raise RuntimeError("The pgvector extension is not enabled in the configured Neon database.")
+        migration_ready = all(bool(table_rows.get(name)) for name in ("generations", "records", "chunks", "meta"))
+        if not migration_ready:
+            raise RuntimeError("The Neon schema migration did not create all required Research Librarian tables.")
+        identity = {
+            "configured_fingerprint": self._configured_identity["configured_fingerprint"],
+            "runtime": runtime,
+            "direct": direct,
+            **comparison,
+            "migration_ready": migration_ready,
+            "database_ready": True,
+            "fail_closed": bool(settings.database_fail_closed),
+        }
+        with self._connection() as connection:
+            now = utc_now()
+            connection.execute(
+                """
+                INSERT INTO sc_rl_meta(key,value,updated_utc) VALUES
+                  ('storage_backend',to_jsonb('postgres'::text),%s),
+                  ('database_fingerprint',to_jsonb(%s::text),%s),
+                  ('release_version',to_jsonb(%s::text),%s),
+                  ('migration_version',to_jsonb(%s::int),%s)
+                ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_utc=excluded.updated_utc
+                """,
+                (now, runtime["live_fingerprint"], now, settings.release_version, now, POSTGRES_SCHEMA_VERSION, now),
+            )
+            connection.commit()
+        return identity
+
+    def _database_fingerprint(self) -> str:
+        runtime = self._identity.get("runtime", {}) if isinstance(self._identity, dict) else {}
+        return str(runtime.get("live_fingerprint") or self._configured_identity["configured_fingerprint"])
+
     def _migrate(self) -> None:
         with self._lock, self._connection(migration=True) as connection:
             with connection.cursor() as cursor:
                 cursor.execute("SELECT pg_advisory_lock(hashtext('sc_rl_postgres_migration'))")
                 connection.commit()
                 try:
+                    cursor.execute(f'CREATE SCHEMA IF NOT EXISTS "{self.database_schema}"')
+                    cursor.execute(f'SET search_path TO "{self.database_schema}"')
                     cursor.execute("CREATE EXTENSION IF NOT EXISTS vector")
                     cursor.execute(
                         """
@@ -184,6 +274,8 @@ class PostgresKnowledgeStore:
                         )
                         """
                     )
+                    cursor.execute("ALTER TABLE sc_rl_generations ADD COLUMN IF NOT EXISTS storage_backend TEXT NOT NULL DEFAULT 'postgres'")
+                    cursor.execute("ALTER TABLE sc_rl_generations ADD COLUMN IF NOT EXISTS database_fingerprint TEXT NOT NULL DEFAULT ''")
                     cursor.execute("CREATE INDEX IF NOT EXISTS idx_sc_rl_generations_state ON sc_rl_generations(state, updated_utc DESC)")
                     cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_sc_rl_one_active_generation ON sc_rl_generations(active) WHERE active")
                     cursor.execute(
@@ -293,7 +385,9 @@ class PostgresKnowledgeStore:
                             ('schema_version', to_jsonb(%s::int)),
                             ('index_schema', to_jsonb(%s::text)),
                             ('index_version', '0'::jsonb)
-                        ON CONFLICT(key) DO NOTHING
+                        ON CONFLICT(key) DO UPDATE SET
+                            value=CASE WHEN excluded.key IN ('schema_version','index_schema') THEN excluded.value ELSE sc_rl_meta.value END,
+                            updated_utc=now()
                         """,
                         (POSTGRES_SCHEMA_VERSION, POSTGRES_INDEX_SCHEMA),
                     )
@@ -329,12 +423,73 @@ class PostgresKnowledgeStore:
             return missing, "incomplete"
         return missing, "complete"
 
+    @staticmethod
+    def _json_scalar(value: Any) -> str:
+        if value is None:
+            return ""
+        if isinstance(value, (str, int, float, bool)):
+            return str(value)
+        return str(value)
+
+    def _active_generation_status(self, connection: Any) -> dict[str, Any]:
+        rows = connection.execute(
+            "SELECT generation_id,state,active,database_fingerprint,activation_checksum FROM sc_rl_generations WHERE active=TRUE ORDER BY updated_utc DESC"
+        ).fetchall()
+        meta_row = connection.execute("SELECT value FROM sc_rl_meta WHERE key='active_generation_id'").fetchone()
+        meta_generation = self._json_scalar(meta_row["value"]) if meta_row else ""
+        if not rows:
+            return {
+                "generation_id": "", "meta_generation_id": meta_generation, "verified": False,
+                "records": 0, "chunks": 0, "state": "missing", "error": "No active Neon generation is selected.",
+            }
+        if len(rows) != 1:
+            return {
+                "generation_id": "", "meta_generation_id": meta_generation, "verified": False,
+                "records": 0, "chunks": 0, "state": "invalid", "error": "Multiple active Neon generations were detected.",
+            }
+        row = rows[0]
+        generation_id = str(row["generation_id"] or "")
+        counts = connection.execute(
+            "SELECT (SELECT count(*) FROM sc_rl_records WHERE generation_id=%s) AS records,"
+            " (SELECT count(*) FROM sc_rl_chunks WHERE generation_id=%s) AS chunks",
+            (generation_id, generation_id),
+        ).fetchone()
+        records = int(counts["records"] or 0)
+        chunks = int(counts["chunks"] or 0)
+        state = str(row["state"] or "")
+        fingerprint = str(row.get("database_fingerprint") or "")
+        expected_fingerprint = self._database_fingerprint()
+        errors: list[str] = []
+        if state != "committed":
+            errors.append(f"generation state is {state or 'unknown'}")
+        if not meta_generation or meta_generation != generation_id:
+            errors.append("active-generation pointer does not match the active row")
+        if records <= 0:
+            errors.append("active generation contains no records")
+        if chunks <= 0:
+            errors.append("active generation contains no retrieval chunks")
+        if fingerprint != expected_fingerprint:
+            errors.append("generation belongs to a different database identity")
+        return {
+            "generation_id": generation_id,
+            "meta_generation_id": meta_generation,
+            "verified": not errors,
+            "records": records,
+            "chunks": chunks,
+            "state": state,
+            "database_fingerprint": fingerprint,
+            "expected_database_fingerprint": expected_fingerprint,
+            "checksum": str(row.get("activation_checksum") or ""),
+            "error": "; ".join(errors),
+        }
+
     def _active_generation(self, connection: Any) -> str:
-        row = connection.execute("SELECT generation_id FROM sc_rl_generations WHERE active=TRUE LIMIT 1").fetchone()
-        return str(row["generation_id"]) if row else ""
+        status = self._active_generation_status(connection)
+        return str(status["generation_id"]) if status.get("verified") else ""
 
     def _summary_connection(self, connection: Any) -> dict[str, Any]:
-        active = self._active_generation(connection)
+        active_status = self._active_generation_status(connection)
+        active = str(active_status.get("generation_id") or "") if active_status.get("verified") else ""
         if active:
             counts = connection.execute(
                 """
@@ -378,6 +533,12 @@ class PostgresKnowledgeStore:
             "last_sync_utc": self._iso(generation["completed_utc"]) if generation else "",
             "source_site": str(generation["source_site"] or "") if generation else "",
             "active_generation_id": active,
+            "active_generation_candidate_id": str(active_status.get("generation_id") or ""),
+            "active_generation_verified": bool(active_status.get("verified")),
+            "active_generation_error": str(active_status.get("error") or ""),
+            "database_fingerprint": self._database_fingerprint(),
+            "database_identity_match": bool(self._identity.get("identity_match", False)),
+            "database_ready": bool(self._identity.get("database_ready", False)),
             "recovery_needed": total_records == 0,
             "storage_persistent": True,
             "storage_warning": "",
@@ -397,20 +558,39 @@ class PostgresKnowledgeStore:
                 """
                 SELECT current_database() AS database_name,
                        current_user AS database_user,
+                       current_schema() AS database_schema,
+                       current_setting('neon.branch_id', true) AS branch_id,
+                       current_setting('neon.project_id', true) AS project_id,
                        version() AS postgres_version,
                        pg_database_size(current_database()) AS database_bytes,
-                       EXISTS(SELECT 1 FROM pg_extension WHERE extname='vector') AS vector_enabled
+                       EXISTS(SELECT 1 FROM pg_extension WHERE extname='vector') AS vector_enabled,
+                       (SELECT count(*) FROM sc_rl_generations) AS generation_rows,
+                       (SELECT count(*) FROM sc_rl_records) AS record_rows,
+                       (SELECT count(*) FROM sc_rl_chunks) AS chunk_rows
                 """
             ).fetchone()
             summary = self._summary_connection(connection)
+            active_status = self._active_generation_status(connection)
         database_mb = round(int(row["database_bytes"] or 0) / 1048576, 2)
         warning_mb = settings.neon_free_storage_warning_mb
+        runtime_identity = dict(self._identity.get("runtime", {}))
+        direct_identity = dict(self._identity.get("direct", {}))
         return {
             "ok": True,
             "backend": "postgres",
+            "effective_backend": "postgres",
+            "configured_backend": settings.database_backend,
             "provider": "neon-compatible",
             "database_name": str(row["database_name"]),
             "database_user": str(row["database_user"]),
+            "database_schema": str(row["database_schema"]),
+            "branch_id": str(row.get("branch_id") or runtime_identity.get("branch_id") or ""),
+            "project_id": str(row.get("project_id") or runtime_identity.get("project_id") or ""),
+            "endpoint_id": str(runtime_identity.get("endpoint_id") or ""),
+            "runtime_host": str(runtime_identity.get("host") or ""),
+            "direct_host": str(direct_identity.get("host") or ""),
+            "runtime_connection_label": self._configured_identity["runtime"].public_dict()["label"],
+            "direct_connection_label": self._configured_identity["direct"].public_dict()["label"],
             "postgres_version": str(row["postgres_version"]).split(",")[0],
             "database_bytes": int(row["database_bytes"] or 0),
             "database_megabytes": database_mb,
@@ -418,11 +598,37 @@ class PostgresKnowledgeStore:
             "free_tier_headroom_megabytes": max(0.0, round(500.0 - database_mb, 2)),
             "storage_warning": (f"Neon database usage is {database_mb} MB; clean superseded generations or increase capacity." if database_mb >= warning_mb else ""),
             "vector_enabled": bool(row["vector_enabled"]),
-            "pooled_runtime": "pooler" in self.database_url,
+            "pooled_runtime": bool(runtime_identity.get("pooled")),
             "direct_migrations": bool(settings.direct_database_url),
+            "direct_is_pooled": bool(direct_identity.get("pooled")),
+            "identity_match": bool(self._identity.get("identity_match", False)),
+            "identity_mismatches": list(self._identity.get("identity_mismatches", [])),
+            "database_fingerprint": self._database_fingerprint(),
+            "configured_fingerprint": str(self._identity.get("configured_fingerprint") or ""),
+            "migration_ready": bool(self._identity.get("migration_ready", False)),
+            "database_ready": bool(self._identity.get("database_ready", False)),
+            "fail_closed": bool(settings.database_fail_closed),
             "connection_label": _redacted_database_label(self.database_url),
+            "generation_rows": int(row.get("generation_rows") or 0),
+            "record_rows": int(row.get("record_rows") or 0),
+            "chunk_rows": int(row.get("chunk_rows") or 0),
+            "active_generation_verified": bool(active_status.get("verified")),
+            "active_generation_error": str(active_status.get("error") or ""),
+            "active_generation_candidate_id": str(active_status.get("generation_id") or ""),
             **summary,
         }
+
+    def database_identity(self) -> dict[str, Any]:
+        diagnostics = self.database_diagnostics()
+        keys = (
+            "backend", "effective_backend", "configured_backend", "database_name", "database_user",
+            "database_schema", "branch_id", "project_id", "endpoint_id", "runtime_host", "direct_host",
+            "pooled_runtime", "direct_is_pooled", "identity_match", "identity_mismatches",
+            "database_fingerprint", "configured_fingerprint", "migration_ready", "database_ready",
+            "fail_closed", "vector_enabled", "active_generation_id", "active_generation_verified",
+            "active_generation_error", "generation_rows", "record_rows", "chunk_rows",
+        )
+        return {"ok": True, **{key: diagnostics.get(key) for key in keys}}
 
     def sync(
         self,
@@ -460,15 +666,17 @@ class PostgresKnowledgeStore:
                     """
                     INSERT INTO sc_rl_generations(
                         generation_id,job_id,source_site,mode,state,commit_phase,expected_batches,
-                        activation_checksum,created_utc,updated_utc
-                    ) VALUES(%s,%s,%s,%s,'staging','staged',%s,%s,%s,%s)
+                        activation_checksum,storage_backend,database_fingerprint,created_utc,updated_utc
+                    ) VALUES(%s,%s,%s,%s,'staging','staged',%s,%s,'postgres',%s,%s,%s)
                     ON CONFLICT(job_id) DO UPDATE SET
                         source_site=excluded.source_site,
                         expected_batches=GREATEST(sc_rl_generations.expected_batches, excluded.expected_batches),
+                        storage_backend='postgres',
+                        database_fingerprint=excluded.database_fingerprint,
                         updated_utc=excluded.updated_utc,
                         error=''
                     """,
-                    (generation_id, job_id, source_site, mode, batch_count, hashlib.sha256(b"").hexdigest(), now, now),
+                    (generation_id, job_id, source_site, mode, batch_count, hashlib.sha256(b"").hexdigest(), self._database_fingerprint(), now, now),
                 )
                 existing = connection.execute(
                     "SELECT batch_hash FROM sc_rl_sync_batches WHERE generation_id=%s AND batch_index=%s",
@@ -575,24 +783,49 @@ class PostgresKnowledgeStore:
             row = connection.execute("SELECT * FROM sc_rl_generations WHERE job_id=%s", (job_id,)).fetchone()
             if not row:
                 return {
-                    "ok": True, "exists": False, "job_id": job_id, "state": "missing", "committed": False,
+                    "ok": True, "exists": False, "job_id": job_id, "state": "missing", "raw_state": "missing", "committed": False,
                     "batch_count": 0, "received_batches": [], "missing_batches": [], "staged_records": 0,
                     "staged_deletions": 0, "rejected_records": 0, "storage_engine": "postgres-neon",
+                    "storage_backend": "postgres", "database_fingerprint": self._database_fingerprint(),
+                    "database_identity_match": bool(self._identity.get("identity_match", False)),
                     "storage_persistent": True, "storage_path": _redacted_database_label(self.database_url),
                     "needs_full_replay": True, "can_activate": False, "error": "",
                 }
             received = sorted(int(value) for value in (row["received_batches"] or []))
             expected = int(row["expected_batches"] or 0)
             missing, manifest_state = self._batch_manifest(expected, received)
-            state = str(row["state"] or "staging")
-            committed = state == "committed" and bool(row["active"])
+            raw_state = str(row["state"] or "staging")
+            generation_id = str(row["generation_id"] or "")
+            counts = connection.execute(
+                "SELECT (SELECT count(*) FROM sc_rl_records WHERE generation_id=%s) AS records,"
+                " (SELECT count(*) FROM sc_rl_chunks WHERE generation_id=%s) AS chunks",
+                (generation_id, generation_id),
+            ).fetchone()
+            generation_records = int(counts["records"] or 0)
+            generation_chunks = int(counts["chunks"] or 0)
+            active_status = self._active_generation_status(connection)
+            row_fingerprint = str(row.get("database_fingerprint") or "")
+            identity_valid = row_fingerprint == self._database_fingerprint() and str(row.get("storage_backend") or "") == "postgres"
+            committed = (
+                raw_state == "committed"
+                and bool(row["active"])
+                and identity_valid
+                and bool(active_status.get("verified"))
+                and str(active_status.get("generation_id") or "") == generation_id
+            )
+            state = raw_state
+            committed_error = ""
+            if raw_state == "committed" and not committed:
+                state = "committed-empty" if generation_records <= 0 or generation_chunks <= 0 else "committed-unverified"
+                committed_error = str(active_status.get("error") or "The committed generation failed Neon identity verification.")
             return {
                 "ok": True,
                 "exists": True,
                 "job_id": job_id,
-                "generation_id": str(row["generation_id"]),
-                "transaction_id": str(row["generation_id"]),
+                "generation_id": generation_id,
+                "transaction_id": generation_id,
                 "state": state,
+                "raw_state": raw_state,
                 "committed": committed,
                 "active": bool(row["active"]),
                 "batch_count": expected,
@@ -603,6 +836,8 @@ class PostgresKnowledgeStore:
                 "staged_records": int(row["staged_records"] or 0),
                 "staged_deletions": int(row["staged_deletions"] or 0),
                 "rejected_records": int(row["rejected_records"] or 0),
+                "generation_record_count": generation_records,
+                "generation_chunk_count": generation_chunks,
                 "commit_phase": str(row["commit_phase"] or ""),
                 "commit_progress": int(row["commit_progress"] or 0),
                 "activation_records": int(row["activation_records"] or 0),
@@ -627,9 +862,14 @@ class PostgresKnowledgeStore:
                 "storage_path": _redacted_database_label(self.database_url),
                 "storage_persistent": True,
                 "storage_warning": "",
-                "can_activate": expected > 0 and len(received) == expected and not missing,
-                "needs_full_replay": False,
-                "error": str(row["error"] or ""),
+                "database_fingerprint": self._database_fingerprint(),
+                "generation_database_fingerprint": row_fingerprint,
+                "database_identity_match": identity_valid,
+                "active_generation_id": str(active_status.get("generation_id") or "") if active_status.get("verified") else "",
+                "active_generation_verified": bool(active_status.get("verified")),
+                "can_activate": expected > 0 and len(received) == expected and not missing and identity_valid,
+                "needs_full_replay": raw_state == "committed" and not committed,
+                "error": committed_error or str(row["error"] or ""),
             }
 
     def reconcile_sync_job(self, job_id: str, expected_batch_count: int = 0) -> dict[str, Any]:
@@ -639,6 +879,10 @@ class PostgresKnowledgeStore:
             action, transaction_state = "replay-all", "missing"
         elif status.get("committed"):
             action, transaction_state = "committed", "committed"
+        elif status.get("needs_full_replay"):
+            action, transaction_state = "replay-all", str(status.get("state") or "committed-unverified")
+        elif not status.get("database_identity_match", True):
+            action, transaction_state = "replay-all", "database-identity-mismatch"
         elif expected and int(status.get("batch_count", 0)) != expected:
             action, transaction_state = "replay-all", "batch-count-mismatch"
         elif status.get("missing_batches"):
@@ -658,12 +902,16 @@ class PostgresKnowledgeStore:
             "complete_for_expected_count": action in {"activate", "committed"},
         }
 
-    def queue_sync_commit(self, job_id: str, reason: str = "wordpress-postgres-activation-v7.1.0") -> dict[str, Any]:
+    def queue_sync_commit(self, job_id: str, reason: str = "wordpress-postgres-activation-v7.1.1") -> dict[str, Any]:
         status = self.sync_job_status(job_id)
         if not status.get("exists"):
             raise ValueError("The synchronization transaction does not exist.")
         if status.get("committed"):
             return {**status, "queued": False, "reason": "already-committed"}
+        if status.get("needs_full_replay"):
+            raise ValueError("The previous commit marker is not a verified Neon generation; replay the preserved WordPress staging file into a fresh transaction.")
+        if not status.get("database_identity_match", True):
+            raise ValueError("The synchronization transaction belongs to a different database identity and must be replayed.")
         if status.get("missing_batches") or not status.get("received_batches"):
             raise ValueError("The transaction is missing staged source batches.")
         now = utc_now()
@@ -683,12 +931,16 @@ class PostgresKnowledgeStore:
             connection.commit()
         return {**self.sync_job_status(job_id), "queued": True, "reason": reason}
 
-    def advance_sync_commit(self, job_id: str, reason: str = "wordpress-postgres-activation-v7.1.0") -> dict[str, Any]:
+    def advance_sync_commit(self, job_id: str, reason: str = "wordpress-postgres-activation-v7.1.1") -> dict[str, Any]:
         status = self.sync_job_status(job_id)
         if not status.get("exists"):
             raise ValueError("The synchronization transaction does not exist.")
         if status.get("committed"):
             return {**status, "advanced": False, "reason": "already-committed"}
+        if status.get("needs_full_replay"):
+            raise ValueError("The transaction has an unverified or empty commit marker and must be replayed into a fresh Neon generation.")
+        if not status.get("database_identity_match", True):
+            raise ValueError("The transaction belongs to a different database identity and must be replayed.")
         if status.get("missing_batches"):
             raise ValueError("The transaction is missing staged batch(es): " + ", ".join(map(str, status["missing_batches"])))
         generation_id = str(status["generation_id"])
@@ -822,21 +1074,16 @@ class PostgresKnowledgeStore:
                         raise RuntimeError("Verified generation contains no retrieval chunks.")
                     version_row = connection.execute("SELECT value FROM sc_rl_meta WHERE key='index_version' FOR UPDATE").fetchone()
                     version = int(version_row["value"] or 0) + 1 if version_row else 1
+                    fingerprint = self._database_fingerprint()
                     connection.execute("UPDATE sc_rl_generations SET active=FALSE WHERE active=TRUE")
-                    result = {
-                        "generation_id": generation_id,
-                        "record_count": int(counts["records"]),
-                        "indexed_chunks": int(counts["chunks"]),
-                        "checksum": str(status.get("activation_checksum") or ""),
-                        "reason": reason,
-                    }
                     connection.execute(
                         """
-                        UPDATE sc_rl_generations SET active=TRUE,state='committed',commit_phase='completed',commit_progress=100,
-                          completed_utc=%s,commit_heartbeat_utc=%s,updated_utc=%s,result=%s,error=''
+                        UPDATE sc_rl_generations SET active=TRUE,state='switching',commit_phase='verifying-active-generation',
+                          commit_progress=98,database_fingerprint=%s,storage_backend='postgres',
+                          commit_heartbeat_utc=%s,updated_utc=%s,error=''
                         WHERE generation_id=%s
                         """,
-                        (now, now, now, Jsonb(result), generation_id),
+                        (fingerprint, now, now, generation_id),
                     )
                     connection.execute(
                         """
@@ -844,10 +1091,49 @@ class PostgresKnowledgeStore:
                           ('active_generation_id',to_jsonb(%s::text),%s),
                           ('index_version',to_jsonb(%s::int),%s),
                           ('last_sync_utc',to_jsonb(%s::text),%s),
-                          ('checksum',to_jsonb(%s::text),%s)
+                          ('checksum',to_jsonb(%s::text),%s),
+                          ('database_fingerprint',to_jsonb(%s::text),%s),
+                          ('storage_backend',to_jsonb('postgres'::text),%s)
                         ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_utc=excluded.updated_utc
                         """,
-                        (generation_id, now, version, now, now, now, str(status.get("activation_checksum") or ""), now),
+                        (generation_id, now, version, now, now, now, str(status.get("activation_checksum") or ""), now, fingerprint, now, now),
+                    )
+                    verification = connection.execute(
+                        """
+                        SELECT g.generation_id,g.active,g.state,g.database_fingerprint,
+                          (SELECT count(*) FROM sc_rl_records WHERE generation_id=g.generation_id) AS records,
+                          (SELECT count(*) FROM sc_rl_chunks WHERE generation_id=g.generation_id) AS chunks,
+                          (SELECT value FROM sc_rl_meta WHERE key='active_generation_id') AS active_pointer
+                        FROM sc_rl_generations g WHERE g.generation_id=%s
+                        """,
+                        (generation_id,),
+                    ).fetchone()
+                    pointer = self._json_scalar(verification["active_pointer"]) if verification else ""
+                    if (
+                        not verification
+                        or not bool(verification["active"])
+                        or pointer != generation_id
+                        or str(verification["database_fingerprint"] or "") != fingerprint
+                        or int(verification["records"] or 0) != expected
+                        or int(verification["chunks"] or 0) <= 0
+                    ):
+                        raise RuntimeError("The Neon active-generation switch failed verification; the transaction was not marked committed.")
+                    result = {
+                        "generation_id": generation_id,
+                        "record_count": int(verification["records"]),
+                        "indexed_chunks": int(verification["chunks"]),
+                        "checksum": str(status.get("activation_checksum") or ""),
+                        "reason": reason,
+                        "storage_backend": "postgres",
+                        "database_fingerprint": fingerprint,
+                    }
+                    connection.execute(
+                        """
+                        UPDATE sc_rl_generations SET state='committed',commit_phase='completed',commit_progress=100,
+                          completed_utc=%s,commit_heartbeat_utc=%s,updated_utc=%s,result=%s,error=''
+                        WHERE generation_id=%s AND active=TRUE AND database_fingerprint=%s
+                        """,
+                        (now, now, now, Jsonb(result), generation_id, fingerprint),
                     )
                     # Staging is no longer required after the verified pointer
                     # switch. Removing it immediately avoids retaining a second
@@ -883,7 +1169,7 @@ class PostgresKnowledgeStore:
                 raise
         return {**self.sync_job_status(job_id), "advanced": True, "reason": reason}
 
-    def commit_sync_job(self, job_id: str, reason: str = "compatibility-loop-v7.1.0") -> dict[str, Any]:
+    def commit_sync_job(self, job_id: str, reason: str = "compatibility-loop-v7.1.1") -> dict[str, Any]:
         self.queue_sync_commit(job_id, reason)
         for _ in range(10000):
             status = self.advance_sync_commit(job_id, reason)

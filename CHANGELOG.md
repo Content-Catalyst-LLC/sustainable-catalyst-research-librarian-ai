@@ -1,5 +1,16 @@
 # Changelog
 
+## 7.1.1 — Fail-Closed Neon Activation and Database Identity
+
+- Added startup validation for pooled and direct Neon connection identity.
+- Added automatic idempotent schema migration and pgvector verification.
+- Removed silent production fallback to the local SQLite knowledge index.
+- Added password-free database identity and fingerprint diagnostics.
+- Added committed-empty and foreign-database marker classification.
+- Added automatic WordPress staging replay into a fresh Neon generation.
+- Added transactional active-generation verification before commit success.
+- Corrected WordPress status storage-engine reporting for Postgres.
+
 ## 7.1.0 — Neon Postgres Durable Index
 
 - Moves production source batches, generations, records, chunks, embeddings, and activation cursors to Neon-compatible Postgres.

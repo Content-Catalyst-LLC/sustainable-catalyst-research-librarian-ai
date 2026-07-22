@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 import gzip
 import hashlib
 import json
+import os
 from pathlib import Path
 import sqlite3
 import threading
@@ -945,7 +946,7 @@ class KnowledgeStore:
             "switching",
         }
 
-    def queue_sync_commit(self, job_id: str, reason: str = "wordpress-transaction-reconciliation-v7.1.0") -> dict[str, Any]:
+    def queue_sync_commit(self, job_id: str, reason: str = "wordpress-transaction-reconciliation-v7.1.1") -> dict[str, Any]:
         """Prepare a fully staged replacement for restart-safe incremental activation.
 
         No long-lived process is created here. WordPress advances the durable
@@ -1017,7 +1018,7 @@ class KnowledgeStore:
             "resumed": durable and shadow_count > 0,
         }
 
-    def advance_sync_commit(self, job_id: str, reason: str = "wordpress-transaction-reconciliation-v7.1.0") -> dict[str, Any]:
+    def advance_sync_commit(self, job_id: str, reason: str = "wordpress-transaction-reconciliation-v7.1.1") -> dict[str, Any]:
         """Advance one bounded, restart-safe activation step.
 
         Each call persists its cursor before returning. The active ``records`` and
@@ -1371,7 +1372,7 @@ class KnowledgeStore:
                         "index_version": version,
                         "checksum": checksum,
                         "indexed_chunks": chunk_count,
-                        "activation_strategy": "durable-incremental-shadow-v7.1.0",
+                        "activation_strategy": "durable-incremental-shadow-v7.1.1",
                     }
                     connection.execute(
                         "UPDATE sync_jobs SET state=?,completed_utc=?,updated_utc=?,result=?,error='',"
@@ -1408,7 +1409,7 @@ class KnowledgeStore:
                     )
                 raise
 
-    def commit_sync_job(self, job_id: str, reason: str = "compatibility-loop-v7.1.0") -> dict[str, Any]:
+    def commit_sync_job(self, job_id: str, reason: str = "compatibility-loop-v7.1.1") -> dict[str, Any]:
         """Compatibility helper for tests and command-line maintenance.
 
         Production HTTP traffic advances only one bounded step per request.
@@ -2371,14 +2372,34 @@ class KnowledgeStore:
     def connected_platform_summary(self) -> dict[str, Any]:
         with self._lock, self._connection() as connection:
             counts={name:int(connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]) for name,table in {"projects":"research_projects","investigations":"research_investigations","entities":"research_project_entities","backups":"connected_platform_backups"}.items()}
-        return {"schema":"sc-connected-research-platform-summary/1.0","version":"7.1.0","counts":counts,"workspace_schema":"sc-research-librarian-public-workspace/2.0","api_schema":"sc-connected-research-api/1.0"}
+        return {"schema":"sc-connected-research-platform-summary/1.0","version":"7.1.1","counts":counts,"workspace_schema":"sc-research-librarian-public-workspace/2.0","api_schema":"sc-connected-research-api/1.0"}
 
 
 def create_store() -> Any:
     backend = str(settings.database_backend or "sqlite").strip().lower()
     if backend in {"postgres", "postgresql", "neon"}:
         from .postgres_store import PostgresKnowledgeStore
+        # Construction performs the direct migration, runtime identity check,
+        # pgvector check, and table verification. Any failure aborts startup;
+        # production never falls back to an empty local SQLite index.
         return PostgresKnowledgeStore()
+    if backend != "sqlite":
+        raise RuntimeError("SC_RL_DATABASE_BACKEND must resolve to postgres or sqlite.")
+    if settings.database_fail_closed and (settings.database_url or settings.direct_database_url):
+        raise RuntimeError(
+            "Neon connection variables are configured but the selected database backend is SQLite. "
+            "Set SC_RL_DATABASE_BACKEND=postgres or remove the Neon variables."
+        )
+    if (
+        settings.database_fail_closed
+        and str(settings.environment).lower() == "production"
+        and os.getenv("RENDER")
+        and not settings.allow_sqlite_production
+    ):
+        raise RuntimeError(
+            "Production Render deployments are fail-closed and require Neon Postgres. "
+            "Set SC_RL_DATABASE_BACKEND=postgres, DATABASE_URL, and DIRECT_DATABASE_URL."
+        )
     return KnowledgeStore()
 
 

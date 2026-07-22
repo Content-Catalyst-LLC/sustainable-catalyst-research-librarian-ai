@@ -309,6 +309,11 @@ class StatusResponse(BaseModel):
     last_sync_utc: str
     source_site: str
     storage_engine: str = "sqlite"
+    database_backend: str = "sqlite"
+    database_ready: bool = True
+    database_identity_match: bool = True
+    database_fingerprint: str = ""
+    active_generation_id: str = ""
     schema_version: int = 12
     index_version: int = 0
     checksum: str = ""

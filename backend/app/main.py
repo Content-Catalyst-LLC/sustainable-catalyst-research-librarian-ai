@@ -155,7 +155,7 @@ def _workspace_summary(mode: str, matches: list[RetrievedSource], related: list[
         "accessibility_profile": "wcag-focused-v6.5.1",
         "rendering_profile": "staged-v6.5.1",
         "handoff_profile": "cross-product-reliability-v6.6.1",
-        "governance_profile": store.governance_policy().get("profile", "public-trust-v7.1.0"),
+        "governance_profile": store.governance_policy().get("profile", "public-trust-v7.1.1"),
         "available_destinations": list(available_capabilities().keys()),
         "connected_platform": store.connected_platform_summary(),
         "generation_boundary": adapter_status(),
@@ -376,6 +376,11 @@ def _status() -> StatusResponse:
         last_sync_utc=str(summary.get("last_sync_utc", "")),
         source_site=str(summary.get("source_site", "")),
         storage_engine=str(summary.get("storage_engine", "sqlite")),
+        database_backend=str(summary.get("database_backend", settings.database_backend)),
+        database_ready=bool(summary.get("database_ready", True)),
+        database_identity_match=bool(summary.get("database_identity_match", True)),
+        database_fingerprint=str(summary.get("database_fingerprint", "")),
+        active_generation_id=str(summary.get("active_generation_id", "")),
         schema_version=int(summary.get("schema_version", 5)),
         index_version=int(summary.get("index_version", 0)),
         checksum=str(summary.get("checksum", "")),
@@ -510,12 +515,32 @@ def root() -> dict[str, Any]:
 
 @app.get("/health")
 def health() -> dict[str, Any]:
-    return {"ok": True, "version": __version__, "environment": settings.environment, **_startup_snapshot()}
+    summary = store.summary()
+    database_ready = bool(summary.get("database_ready", True))
+    identity_match = bool(summary.get("database_identity_match", True))
+    return {
+        "ok": database_ready and identity_match,
+        "version": __version__,
+        "environment": settings.environment,
+        "database_backend": str(summary.get("database_backend", settings.database_backend)),
+        "database_ready": database_ready,
+        "database_identity_match": identity_match,
+        "database_fingerprint": str(summary.get("database_fingerprint", "")),
+        **_startup_snapshot(summary),
+    }
 
 
 @app.get("/startup")
 def startup() -> dict[str, Any]:
-    return {"ok": True, "version": __version__, **_startup_snapshot()}
+    summary = store.summary()
+    return {
+        "ok": bool(summary.get("database_ready", True)) and bool(summary.get("database_identity_match", True)),
+        "version": __version__,
+        "database_backend": str(summary.get("database_backend", settings.database_backend)),
+        "database_ready": bool(summary.get("database_ready", True)),
+        "database_identity_match": bool(summary.get("database_identity_match", True)),
+        **_startup_snapshot(summary),
+    }
 
 
 @app.get("/status", response_model=StatusResponse)
@@ -590,7 +615,7 @@ def reconcile_sync_job(job_id: str, payload: SyncReconcileRequest) -> dict[str, 
 def queue_sync_job_commit(job_id: str) -> dict[str, Any]:
     """Initialize or resume the durable incremental activation state machine."""
     try:
-        queued = store.queue_sync_commit(job_id, "wordpress-postgres-generation-v7.1.0")
+        queued = store.queue_sync_commit(job_id, "wordpress-postgres-generation-v7.1.1")
     except ValueError as exc:
         message = str(exc)
         code = status.HTTP_404_NOT_FOUND if "does not exist" in message else status.HTTP_409_CONFLICT
@@ -602,7 +627,7 @@ def queue_sync_job_commit(job_id: str) -> dict[str, Any]:
 def advance_sync_job_commit(job_id: str) -> dict[str, Any]:
     """Advance one bounded activation step and persist its cursor before returning."""
     try:
-        advanced = store.advance_sync_commit(job_id, "wordpress-postgres-generation-v7.1.0")
+        advanced = store.advance_sync_commit(job_id, "wordpress-postgres-generation-v7.1.1")
     except ValueError as exc:
         message = str(exc)
         code = status.HTTP_404_NOT_FOUND if "does not exist" in message else status.HTTP_409_CONFLICT
@@ -631,6 +656,24 @@ def knowledge_database_diagnostics() -> dict[str, Any]:
             "persistent": bool(store.summary().get("storage_persistent", False)),
         }
     return {"version": __version__, **diagnostics()}
+
+
+@app.get("/v1/knowledge/database/identity", dependencies=[Depends(require_key)])
+def knowledge_database_identity() -> dict[str, Any]:
+    identity = getattr(store, "database_identity", None)
+    if not callable(identity):
+        summary = store.summary()
+        return {
+            "ok": True,
+            "version": __version__,
+            "backend": "sqlite",
+            "effective_backend": "sqlite",
+            "database_ready": True,
+            "identity_match": True,
+            "storage_engine": summary.get("storage_engine", "sqlite"),
+        }
+    return {"version": __version__, **identity()}
+
 
 @app.get("/v1/knowledge/manifest", dependencies=[Depends(require_key)])
 def knowledge_manifest() -> dict[str, Any]:
@@ -679,7 +722,7 @@ async def test_embeddings_endpoint() -> dict[str, Any]:
     if not embeddings_configured():
         raise HTTPException(status_code=503, detail="Gemini embeddings are not configured or semantic retrieval is disabled.")
     try:
-        vector = await generate_embedding("Research Librarian v7.1.0 embedding connection test", "RETRIEVAL_DOCUMENT")
+        vector = await generate_embedding("Research Librarian v7.1.1 embedding connection test", "RETRIEVAL_DOCUMENT")
     except RuntimeError as exc:
         raise HTTPException(status_code=502, detail=f"Gemini embedding test failed: {str(exc)[:900]}") from exc
     return {

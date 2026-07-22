@@ -1,5 +1,5 @@
 <?php
-/** Functional WordPress fallback reliability checks for v7.1.0. */
+/** Functional WordPress fallback reliability checks for v7.1.1. */
 define( 'ABSPATH', '/tmp/sc-rl-wordpress/' );
 class WP_Error { public $code; public $message; public $data; public function __construct( $code='', $message='', $data=null ) { $this->code=$code; $this->message=$message; $this->data=$data; } public function get_error_message(){return $this->message;} }
 function add_action() {}
@@ -47,7 +47,7 @@ $result = array(
     'unknown_version_unverified' => 'unverified' === ( $unknown_version['state'] ?? '' ) && ! empty( $unknown_version['compatible'] ),
 );
 echo json_encode( $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . PHP_EOL;
-$passed = '7.1.0' === $result['version']
+$passed = '7.1.1' === $result['version']
     && 'sc-research-handoff-delivery/1.0' === $result['delivery_schema']
     && $result['token_present']
     && $result['token_future']

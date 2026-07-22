@@ -18,6 +18,10 @@ services:
         sync: false
       - key: DIRECT_DATABASE_URL
         sync: false
+      - key: SC_RL_DATABASE_FAIL_CLOSED
+        value: "true"
+      - key: SC_RL_DATABASE_SCHEMA
+        value: public
       - key: SC_RL_POSTGRES_GENERATION_RETENTION
         value: "1"
       - key: SC_RL_NEON_FREE_STORAGE_WARNING_MB
@@ -59,7 +63,7 @@ services:
       - key: SC_RL_ACTIVATION_SNAPSHOT_RECORD_LIMIT
         value: "500"
       - key: SC_RL_RELEASE_VERSION
-        value: "7.1.0"
+        value: "7.1.1"
       - key: SC_RL_HANDOFF_SOURCE_LIMIT
         value: "8"
       - key: SC_RL_HANDOFF_TTL_SECONDS

@@ -1,6 +1,6 @@
 <?php
 /**
- * Research Librarian AI v7.1.0 — Transaction-State Reconciliation and Durable Recovery.
+ * Research Librarian AI v7.1.1 — Transaction-State Reconciliation and Durable Recovery.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class SC_RL6_V630_Durable_Index {
-    const VERSION = '7.1.0';
+    const VERSION = '7.1.1';
     const OPTION_NAME = 'sc_rl_v620_python_options';
     const STATUS_OPTION = 'sc_rl_v620_python_status';
     const SYNC_HOOK = 'sc_rl_v620_python_sync_event';
@@ -592,7 +592,7 @@ final class SC_RL6_V630_Durable_Index {
         $recovery_next = wp_next_scheduled( self::RECOVERY_HOOK );
         $retry_next = wp_next_scheduled( self::SYNC_RETRY_HOOK );
         return array(
-            'schema' => 'sc-research-librarian-sync-recovery-export/7.1.0',
+            'schema' => 'sc-research-librarian-sync-recovery-export/7.1.1',
             'version' => self::VERSION,
             'site' => home_url( '/' ),
             'generated_utc' => gmdate( 'c' ),
@@ -831,7 +831,7 @@ final class SC_RL6_V630_Durable_Index {
         $grounding['reason_codes'] = array_values( array_unique( array_merge( $grounding['reason_codes'], array( 'bm25-section-retrieval', 'citation-verification' ), ! empty( $grounding['retrieval_diagnostics']['semantic_used'] ) ? array( 'semantic-retrieval' ) : array() ) ) );
 
         $note = array(
-            'schema' => 'sc-research-librarian-route-note/7.1.0',
+            'schema' => 'sc-research-librarian-route-note/7.1.1',
             'created_at_utc' => gmdate( 'c' ),
             'question' => sanitize_textarea_field( $question ),
             'source' => sanitize_key( isset( $backend['source'] ) ? $backend['source'] : 'python-backend' ),
@@ -1256,7 +1256,7 @@ final class SC_RL6_V630_Durable_Index {
         $deleted_ids = array_values( array_diff( array_keys( $ledger['records'] ), array_keys( $current_ids ) ) );
         $report = array_merge( array(
             'version' => self::VERSION,
-            'schema' => 'sc-rl-sync-report/7.1.0',
+            'schema' => 'sc-rl-sync-report/7.1.1',
             'job_id' => $job_id,
             'state' => 'running',
             'mode' => 'transactional-replace',
@@ -1505,7 +1505,7 @@ final class SC_RL6_V630_Durable_Index {
     }
 
     public static function build_index_pipeline() {
-        return self::start_index_build( 'manual-v7.1.0-index-build' );
+        return self::start_index_build( 'manual-v7.1.1-index-build' );
     }
 
     private static function replace_build_state( $state ) {
@@ -1637,7 +1637,7 @@ final class SC_RL6_V630_Durable_Index {
             return new WP_Error( 'sc_rl_v703_build_file_create', 'The private asynchronous index staging file could not be created.' );
         }
         $state = array(
-            'schema' => 'sc-rl-async-index-build/7.1.0',
+            'schema' => 'sc-rl-async-index-build/7.1.1',
             'version' => self::VERSION,
             'job_id' => $job_id,
             'backend_job_id' => $job_id,
@@ -1715,7 +1715,7 @@ final class SC_RL6_V630_Durable_Index {
         }
         $state['state'] = 'queued';
         $last_error = strtolower( (string) ( $state['last_error'] ?? '' ) );
-        $reconciliation_exhausted = false !== strpos( $last_error, 'could not be reconciled' ) || false !== strpos( $last_error, 'missing batch(es)' );
+        $reconciliation_exhausted = false !== strpos( $last_error, 'could not be reconciled' ) || false !== strpos( $last_error, 'missing batch(es)' ) || false !== strpos( $last_error, 'active index is empty' ) || false !== strpos( $last_error, 'committed transaction' );
         if ( $reconciliation_exhausted ) {
             $state['transaction_replay_count'] = 0;
             $state['transaction_replay_limit'] = max( 3, absint( $state['transaction_replay_limit'] ?? 0 ) );
@@ -1919,7 +1919,7 @@ final class SC_RL6_V630_Durable_Index {
         $state['message'] = 'Bounded finalization complete. Record batches are staging in Python while the current index remains live.';
         $report = array(
             'version' => self::VERSION,
-            'schema' => 'sc-rl-sync-report/7.1.0',
+            'schema' => 'sc-rl-sync-report/7.1.1',
             'job_id' => $state['backend_job_id'],
             'state' => 'running',
             'mode' => 'transactional-replace-async',
@@ -2143,12 +2143,36 @@ final class SC_RL6_V630_Durable_Index {
     }
 
     private static function activate_committed_build( $state, $backend_status = array() ) {
+        $database = self::request( '/v1/knowledge/database/diagnostics', 'GET' );
+        if ( is_wp_error( $database ) ) {
+            return self::handle_build_error( $state, $database );
+        }
+        $database_backend = sanitize_key( $database['effective_backend'] ?? $database['backend'] ?? '' );
+        $identity_ready = ! empty( $database['database_ready'] ) && ! empty( $database['identity_match'] ) && ! empty( $database['migration_ready'] );
+        if ( 'postgres' !== $database_backend || ! $identity_ready ) {
+            return self::handle_build_error( $state, new WP_Error(
+                'sc_rl_v711_neon_identity_not_ready',
+                'Neon fail-closed verification did not pass. Confirm the pooled and direct URLs identify the same branch, database, role, and schema.'
+            ) );
+        }
         $summary = self::request( '/v1/knowledge/summary', 'GET' );
         if ( is_wp_error( $summary ) ) {
             return self::handle_build_error( $state, $summary );
         }
-        if ( empty( $summary['total_records'] ) ) {
-            return self::handle_build_error( $state, new WP_Error( 'sc_rl_v706_committed_index_empty', 'The backend reported a committed transaction but the active index is empty.' ) );
+        $active_generation = sanitize_text_field( $summary['active_generation_id'] ?? '' );
+        $transaction_generation = sanitize_text_field( $backend_status['generation_id'] ?? $backend_status['transaction_id'] ?? '' );
+        $committed_empty = empty( $summary['total_records'] ) || empty( $summary['indexed_chunks'] ) || empty( $active_generation );
+        $generation_mismatch = $transaction_generation && $active_generation && $transaction_generation !== $active_generation;
+        if ( $committed_empty || $generation_mismatch || empty( $summary['database_identity_match'] ) ) {
+            $recovery = array_merge( (array) $backend_status, array(
+                'committed' => false,
+                'state' => $committed_empty ? 'committed-empty' : 'committed-unverified',
+                'transaction_state' => $committed_empty ? 'committed-empty' : 'database-identity-mismatch',
+                'reconciliation_action' => 'replay-all',
+                'needs_full_replay' => true,
+                'database_fingerprint' => sanitize_text_field( $database['database_fingerprint'] ?? '' ),
+            ) );
+            return self::begin_transaction_replay( $state, $recovery, 'neon-committed-empty-or-identity-mismatch' );
         }
         $ledger = self::save_ledger_from_build_file( $state, $summary );
         if ( is_wp_error( $ledger ) ) {
@@ -2181,7 +2205,10 @@ final class SC_RL6_V630_Durable_Index {
             'job_id' => sanitize_text_field( $state['backend_job_id'] ?? '' ),
             'index_version' => absint( $summary['index_version'] ?? 0 ),
             'checksum' => sanitize_text_field( $summary['checksum'] ?? '' ),
-            'storage_engine' => 'sqlite',
+            'storage_engine' => sanitize_key( $summary['storage_engine'] ?? 'postgres-neon' ),
+            'database_backend' => sanitize_key( $summary['database_backend'] ?? 'postgres' ),
+            'database_fingerprint' => sanitize_text_field( $summary['database_fingerprint'] ?? $database['database_fingerprint'] ?? '' ),
+            'active_generation_id' => sanitize_text_field( $summary['active_generation_id'] ?? '' ),
             'backend_result' => $summary,
             'sync_report' => $report,
         ) ), false );
@@ -2205,9 +2232,13 @@ final class SC_RL6_V630_Durable_Index {
         $received = isset( $status['received_batches'] ) && is_array( $status['received_batches'] ) ? array_values( array_unique( array_filter( array_map( 'absint', $status['received_batches'] ) ) ) ) : array();
         sort( $received, SORT_NUMERIC );
         $missing = isset( $status['missing_batches'] ) && is_array( $status['missing_batches'] ) ? array_values( array_unique( array_filter( array_map( 'absint', $status['missing_batches'] ) ) ) ) : array();
+        $reported_state = sanitize_key( $status['state'] ?? $status['transaction_state'] ?? '' );
         if ( ! empty( $status['committed'] ) ) {
             $action = 'committed';
             $transaction_state = 'committed';
+        } elseif ( ! empty( $status['needs_full_replay'] ) || in_array( $reported_state, array( 'committed-empty', 'committed-unverified', 'database-identity-mismatch' ), true ) || ( array_key_exists( 'database_identity_match', $status ) && empty( $status['database_identity_match'] ) ) ) {
+            $action = 'replay-all';
+            $transaction_state = $reported_state ?: 'committed-unverified';
         } elseif ( empty( $status['exists'] ) ) {
             $action = 'replay-all';
             $transaction_state = 'missing';
@@ -2335,7 +2366,7 @@ final class SC_RL6_V630_Durable_Index {
             }
         }
 
-        // v7.1.0 advances exactly one bounded backend step per WordPress job
+        // v7.1.1 advances exactly one bounded backend step per WordPress job
         // iteration. There is no in-process FastAPI background worker to lose.
         $advanced = self::backend_advance_sync_commit( $job_id );
         if ( is_wp_error( $advanced ) ) {
@@ -2480,7 +2511,7 @@ final class SC_RL6_V630_Durable_Index {
             'job_id' => sanitize_text_field( $state['backend_job_id'] ),
             'batch_index' => $batch_number,
             'batch_count' => $batch_count,
-            'reason' => 'wordpress-missing-batch-replay-v7.1.0',
+            'reason' => 'wordpress-missing-batch-replay-v7.1.1',
             'defer_commit' => true,
         ) );
         if ( is_wp_error( $response ) ) {
@@ -2562,7 +2593,7 @@ final class SC_RL6_V630_Durable_Index {
             'job_id' => sanitize_text_field( $state['backend_job_id'] ),
             'batch_index' => $batch_index,
             'batch_count' => $batch_count,
-            'reason' => 'wordpress-async-full-sync-v7.1.0',
+            'reason' => 'wordpress-async-full-sync-v7.1.1',
             'defer_commit' => true,
         ) );
 
@@ -2641,7 +2672,7 @@ final class SC_RL6_V630_Durable_Index {
 
         if ( $is_final ) {
             if ( ! empty( $response['committed'] ) ) {
-                // Backward-compatible path for a pre-v7.1.0 backend.
+                // Backward-compatible path for a pre-v7.1.1 backend.
                 return self::activate_committed_build( $state, $response );
             }
             $transaction_status = self::backend_sync_job_status( $state['backend_job_id'] );
@@ -2815,7 +2846,7 @@ final class SC_RL6_V630_Durable_Index {
             $warnings[] = 'Knowledge records are ready, but semantic embeddings need attention: ' . $embedding_test->get_error_message();
             $state['embedding_state'] = array( 'state' => 'configuration-error', 'last_error' => $embedding_test->get_error_message() );
         } else {
-            $embedding_state = self::schedule_embedding_queue( 'v7.1.0-async-index-build', 10 );
+            $embedding_state = self::schedule_embedding_queue( 'v7.1.1-async-index-build', 10 );
             if ( is_wp_error( $embedding_state ) ) {
                 $warnings[] = 'Knowledge records are ready, but the semantic queue could not be scheduled: ' . $embedding_state->get_error_message();
                 $state['embedding_state'] = array( 'state' => 'manual-continuation-required', 'last_error' => $embedding_state->get_error_message() );
@@ -2859,9 +2890,28 @@ final class SC_RL6_V630_Durable_Index {
                     if ( is_wp_error( $test ) ) {
                         return self::handle_build_error( $state, $test );
                     }
+                    $database = self::request( '/v1/knowledge/database/diagnostics', 'GET' );
+                    if ( is_wp_error( $database ) ) {
+                        return self::handle_build_error( $state, $database );
+                    }
+                    $database_backend = sanitize_key( $database['effective_backend'] ?? $database['backend'] ?? '' );
+                    if ( 'postgres' !== $database_backend || empty( $database['database_ready'] ) || empty( $database['identity_match'] ) || empty( $database['migration_ready'] ) ) {
+                        return self::handle_build_error( $state, new WP_Error(
+                            'sc_rl_v711_database_fail_closed',
+                            'The rebuild is blocked because Neon database identity or migrations are not ready. Check DATABASE_URL, DIRECT_DATABASE_URL, and SC_RL_DATABASE_BACKEND.'
+                        ) );
+                    }
+                    $state['database_identity'] = array(
+                        'database_name' => sanitize_text_field( $database['database_name'] ?? '' ),
+                        'database_user' => sanitize_text_field( $database['database_user'] ?? '' ),
+                        'database_schema' => sanitize_text_field( $database['database_schema'] ?? '' ),
+                        'endpoint_id' => sanitize_text_field( $database['endpoint_id'] ?? '' ),
+                        'branch_id' => sanitize_text_field( $database['branch_id'] ?? '' ),
+                        'fingerprint' => sanitize_text_field( $database['database_fingerprint'] ?? '' ),
+                    );
                     $state['stage'] = 'discovering-sources';
                     $state['progress'] = 5;
-                    $state['message'] = 'Authenticated Python connection verified. Beginning bounded source discovery.';
+                    $state['message'] = 'Authenticated Python and Neon identity checks passed. Beginning bounded source discovery.';
                     $state['retry_count'] = 0;
                     self::replace_build_state( $state );
                     self::schedule_index_build( $job_id, 2 );
@@ -2904,7 +2954,7 @@ final class SC_RL6_V630_Durable_Index {
     }
 
     public static function sync_and_complete_embeddings() {
-        $sync = self::sync_all_records( 'manual-v7.1.0-repair' );
+        $sync = self::sync_all_records( 'manual-v7.1.1-repair' );
         if ( is_wp_error( $sync ) ) {
             return $sync;
         }
@@ -4071,9 +4121,19 @@ final class SC_RL6_V630_Durable_Index {
         $backend_reconciliation_action = sanitize_key( $build_state['backend_reconciliation_action'] ?? $build_state['backend_transaction_status']['reconciliation_action'] ?? '' );
         $backend_job_id = sanitize_text_field( $build_state['backend_job_id'] ?? '' );
         $recovery_generation = absint( $build_state['recovery_generation'] ?? 0 );
-        $database_backend = ! is_wp_error( $database_diagnostics ) ? sanitize_key( $database_diagnostics['backend'] ?? $status['storage_engine'] ?? 'sqlite' ) : sanitize_key( $status['storage_engine'] ?? 'sqlite' );
+        $database_backend = ! is_wp_error( $database_diagnostics ) ? sanitize_key( $database_diagnostics['effective_backend'] ?? $database_diagnostics['backend'] ?? $status['database_backend'] ?? $status['storage_engine'] ?? 'sqlite' ) : sanitize_key( $status['database_backend'] ?? $status['storage_engine'] ?? 'sqlite' );
         $database_megabytes = ! is_wp_error( $database_diagnostics ) ? floatval( $database_diagnostics['database_megabytes'] ?? 0 ) : 0;
         $vector_enabled = ! is_wp_error( $database_diagnostics ) && ! empty( $database_diagnostics['vector_enabled'] );
+        $database_ready = ! is_wp_error( $database_diagnostics ) && ! empty( $database_diagnostics['database_ready'] ) && ! empty( $database_diagnostics['migration_ready'] );
+        $database_identity_match = ! is_wp_error( $database_diagnostics ) && ! empty( $database_diagnostics['identity_match'] );
+        $database_name = ! is_wp_error( $database_diagnostics ) ? sanitize_text_field( $database_diagnostics['database_name'] ?? '' ) : '';
+        $database_user = ! is_wp_error( $database_diagnostics ) ? sanitize_text_field( $database_diagnostics['database_user'] ?? '' ) : '';
+        $database_schema = ! is_wp_error( $database_diagnostics ) ? sanitize_text_field( $database_diagnostics['database_schema'] ?? '' ) : '';
+        $database_endpoint = ! is_wp_error( $database_diagnostics ) ? sanitize_text_field( $database_diagnostics['endpoint_id'] ?? '' ) : '';
+        $database_branch = ! is_wp_error( $database_diagnostics ) ? sanitize_text_field( $database_diagnostics['branch_id'] ?? '' ) : '';
+        $database_fingerprint = ! is_wp_error( $database_diagnostics ) ? sanitize_text_field( $database_diagnostics['database_fingerprint'] ?? '' ) : '';
+        $database_record_rows = ! is_wp_error( $database_diagnostics ) ? absint( $database_diagnostics['record_rows'] ?? 0 ) : 0;
+        $database_chunk_rows = ! is_wp_error( $database_diagnostics ) ? absint( $database_diagnostics['chunk_rows'] ?? 0 ) : 0;
         ?>
         <div class="wrap sc-rl-v702-admin">
             <style>
@@ -4083,7 +4143,7 @@ final class SC_RL6_V630_Durable_Index {
 
             <section class="sc-rl-v702-hero" data-state="<?php echo esc_attr( $primary_state ); ?>">
                 <div>
-                    <div class="sc-rl-v702-eyebrow">Research Librarian v7.1.0</div>
+                    <div class="sc-rl-v702-eyebrow">Research Librarian v7.1.1</div>
                     <h1>Knowledge Index and AI Readiness</h1>
                     <p>One operational view for the Python connection, WordPress source discovery, durable knowledge synchronization, and Gemini semantic indexing.</p>
                     <div class="sc-rl-v702-badge"><?php echo esc_html( $build_badge ); ?></div>
@@ -4145,7 +4205,7 @@ final class SC_RL6_V630_Durable_Index {
                     <?php if ( $backend_commit_active ) : ?><div class="sc-rl-v703-cron"><strong>All source batches are staged.</strong> WordPress is advancing one bounded Python activation step at a time. Every record, chunk, and verification cursor is saved before the next request.</div><?php endif; ?>
                     <?php if ( $transaction_recovery_ready ) : ?><div class="sc-rl-v703-cron"><strong>Commit recovery is ready.</strong> The complete WordPress staging file is still available. Choose “Repair and Resume Commit” to replay the transaction without rediscovering the 2,000-plus source records.</div><?php endif; ?>
                     <?php if ( $backend_commit_active && ! $backend_storage_persistent ) : ?><div class="sc-rl-v703-cron"><strong>Durable storage is not active.</strong> Configure Neon with <code>SC_RL_DATABASE_BACKEND=postgres</code>, <code>DATABASE_URL</code>, and <code>DIRECT_DATABASE_URL</code>. The WordPress staging file remains available for replay.</div><?php endif; ?>
-                    <?php if ( 'postgres' !== $database_backend ) : ?><div class="sc-rl-v703-cron"><strong>SQLite fallback mode.</strong> Local development may still use <code>SC_RL_DATA_DIR=/var/data/sc-research-librarian</code>, but production v7.1.0 should use Neon Postgres.</div><?php endif; ?>
+                    <?php if ( 'postgres' !== $database_backend ) : ?><div class="sc-rl-v703-cron"><strong>SQLite fallback mode.</strong> Local development may still use <code>SC_RL_DATA_DIR=/var/data/sc-research-librarian</code>, but production v7.1.1 requires verified Neon Postgres.</div><?php endif; ?>
                     <?php if ( ! empty( $build_state['last_error'] ) ) : ?><div class="sc-rl-v703-error"><strong>Last error:</strong> <?php echo esc_html( $build_state['last_error'] ); ?></div><?php endif; ?>
                     <?php if ( defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ) : ?><div class="sc-rl-v703-cron"><strong>WP-Cron is disabled.</strong> Use “Run Next Batch Now,” or configure a real server cron request to <code>wp-cron.php</code>.</div><?php endif; ?>
                     <form method="post" class="sc-rl-v703-controls">
@@ -4163,8 +4223,24 @@ final class SC_RL6_V630_Durable_Index {
                 <article class="sc-rl-v702-stage" data-state="<?php echo esc_attr( $source_count ? 'ready' : 'attention' ); ?>"><span>2 · WordPress sources</span><strong><?php echo esc_html( number_format_i18n( $source_count ) ); ?></strong><p><?php echo esc_html( count( $source_discovery['post_types'] ?? array() ) . ' indexable content type(s) discovered' ); ?></p></article>
                 <article class="sc-rl-v702-stage" data-state="<?php echo esc_attr( $indexed_records ? 'ready' : 'attention' ); ?>"><span>3 · Knowledge index</span><strong><?php echo esc_html( number_format_i18n( $indexed_records ) ); ?></strong><p><?php echo esc_html( $indexed_records ? absint( $status['indexed_titles'] ?? 0 ) . ' distinct titles in Python' : 'Build the index to activate retrieval' ); ?></p></article>
                 <article class="sc-rl-v702-stage" data-state="<?php echo esc_attr( $pending_chunks ? 'running' : ( $indexed_records ? 'ready' : 'attention' ) ); ?>"><span>4 · Semantic search</span><strong><?php echo esc_html( $indexed_chunks ? number_format_i18n( $embedded_chunks ) . '/' . number_format_i18n( $indexed_chunks ) : 'Waiting' ); ?></strong><p><?php echo esc_html( $pending_chunks ? number_format_i18n( $pending_chunks ) . ' chunk(s) remaining' : ( $indexed_records ? 'Embedding queue complete or not required' : 'Starts after the knowledge sync' ) ); ?></p></article>
-                <article class="sc-rl-v702-stage" data-state="<?php echo esc_attr( 'postgres' === $database_backend && $vector_enabled ? 'ready' : 'attention' ); ?>"><span>5 · Durable database</span><strong><?php echo esc_html( 'postgres' === $database_backend ? 'Neon Postgres' : strtoupper( $database_backend ) ); ?></strong><p><?php echo esc_html( 'postgres' === $database_backend ? ( $vector_enabled ? 'pgvector ready' . ( $database_megabytes ? ' · ' . number_format_i18n( $database_megabytes, 1 ) . ' MB used' : '' ) : 'Enable the vector extension in Neon' ) : 'Set SC_RL_DATABASE_BACKEND=postgres and DATABASE_URL' ); ?></p></article>
+                <article class="sc-rl-v702-stage" data-state="<?php echo esc_attr( 'postgres' === $database_backend && $vector_enabled && $database_ready && $database_identity_match ? 'ready' : 'attention' ); ?>"><span>5 · Durable database</span><strong><?php echo esc_html( 'postgres' === $database_backend ? 'Neon Postgres' : strtoupper( $database_backend ) ); ?></strong><p><?php echo esc_html( 'postgres' === $database_backend ? ( $database_ready && $database_identity_match && $vector_enabled ? 'Identity verified · pgvector ready' . ( $database_megabytes ? ' · ' . number_format_i18n( $database_megabytes, 1 ) . ' MB used' : '' ) : 'Fail-closed database verification needs attention' ) : 'Set SC_RL_DATABASE_BACKEND=postgres and both Neon URLs' ); ?></p></article>
             </div>
+
+            <section class="sc-rl-v702-source-panel sc-rl-v711-database-identity">
+                <h2>Neon database identity</h2>
+                <p>The backend will not build or activate an index until the pooled runtime URL and direct migration URL resolve to the same Neon endpoint, database, role, and schema.</p>
+                <div class="sc-rl-v703-job__grid">
+                    <div class="sc-rl-v703-job__metric"><span>Verification</span><strong><?php echo esc_html( $database_ready && $database_identity_match ? 'Passed' : 'Blocked' ); ?></strong></div>
+                    <div class="sc-rl-v703-job__metric"><span>Database</span><strong><?php echo esc_html( $database_name ?: 'Unavailable' ); ?></strong></div>
+                    <div class="sc-rl-v703-job__metric"><span>Role / schema</span><strong><?php echo esc_html( trim( $database_user . ' / ' . $database_schema, ' /' ) ?: 'Unavailable' ); ?></strong></div>
+                    <div class="sc-rl-v703-job__metric"><span>Endpoint</span><strong title="<?php echo esc_attr( $database_branch ?: $database_endpoint ); ?>"><?php echo esc_html( $database_endpoint ?: ( $database_branch ? substr( $database_branch, 0, 18 ) . '…' : 'Unavailable' ) ); ?></strong></div>
+                    <div class="sc-rl-v703-job__metric"><span>Neon records</span><strong><?php echo esc_html( number_format_i18n( $database_record_rows ) ); ?></strong></div>
+                    <div class="sc-rl-v703-job__metric"><span>Neon chunks</span><strong><?php echo esc_html( number_format_i18n( $database_chunk_rows ) ); ?></strong></div>
+                    <div class="sc-rl-v703-job__metric"><span>Fingerprint</span><strong title="<?php echo esc_attr( $database_fingerprint ); ?>"><?php echo esc_html( $database_fingerprint ? substr( $database_fingerprint, 0, 12 ) . '…' : 'Unavailable' ); ?></strong></div>
+                    <div class="sc-rl-v703-job__metric"><span>Fail closed</span><strong><?php echo esc_html( ! is_wp_error( $database_diagnostics ) && ! empty( $database_diagnostics['fail_closed'] ) ? 'Enabled' : 'Unknown' ); ?></strong></div>
+                </div>
+                <?php if ( ! $database_ready || ! $database_identity_match ) : ?><div class="sc-rl-v703-error"><strong>Index activation is blocked.</strong> Confirm <code>DATABASE_URL</code> is the pooled Neon URL, <code>DIRECT_DATABASE_URL</code> is the direct URL, and both use the same branch, database, and role.</div><?php endif; ?>
+            </section>
 
             <section class="sc-rl-v702-source-panel">
                 <h2>Source coverage</h2>

@@ -28,6 +28,24 @@ def _float(name: str, default: float, minimum: float, maximum: float) -> float:
     return max(minimum, min(maximum, value))
 
 
+
+def _database_backend() -> str:
+    raw = os.getenv("SC_RL_DATABASE_BACKEND", "").strip().lower()
+    has_postgres_url = bool(os.getenv("DATABASE_URL", "").strip() or os.getenv("DIRECT_DATABASE_URL", "").strip())
+    if raw in {"postgres", "postgresql", "neon"}:
+        return "postgres"
+    if raw in {"sqlite", "local"}:
+        return "sqlite"
+    if raw:
+        raise RuntimeError("SC_RL_DATABASE_BACKEND must be postgres or sqlite.")
+    # A configured Neon URL must never be ignored because an environment
+    # variable was omitted. Selecting Postgres automatically is fail-closed:
+    # create_store() will raise if the connection or migration is invalid.
+    if has_postgres_url:
+        return "postgres"
+    return "sqlite"
+
+
 def _data_dir() -> Path:
     configured = os.getenv("SC_RL_DATA_DIR", "").strip()
     if configured:
@@ -75,15 +93,18 @@ class Settings:
     activation_chunk_record_batch_limit: int = _int("SC_RL_ACTIVATION_CHUNK_RECORD_BATCH_LIMIT", 20, 1, 100)
     activation_checksum_batch_limit: int = _int("SC_RL_ACTIVATION_CHECKSUM_BATCH_LIMIT", 250, 25, 1000)
     activation_snapshot_record_limit: int = _int("SC_RL_ACTIVATION_SNAPSHOT_RECORD_LIMIT", 500, 0, 5000)
-    database_backend: str = os.getenv("SC_RL_DATABASE_BACKEND", "sqlite").strip().lower()
+    database_backend: str = _database_backend()
     database_url: str = os.getenv("DATABASE_URL", "").strip()
     direct_database_url: str = os.getenv("DIRECT_DATABASE_URL", "").strip()
+    database_schema: str = os.getenv("SC_RL_DATABASE_SCHEMA", "public").strip() or "public"
+    database_fail_closed: bool = _bool("SC_RL_DATABASE_FAIL_CLOSED", True)
+    allow_sqlite_production: bool = _bool("SC_RL_ALLOW_SQLITE_PRODUCTION", False)
     postgres_activation_record_batch_limit: int = _int("SC_RL_POSTGRES_ACTIVATION_RECORD_BATCH_LIMIT", 100, 10, 1000)
     postgres_activation_chunk_record_batch_limit: int = _int("SC_RL_POSTGRES_ACTIVATION_CHUNK_RECORD_BATCH_LIMIT", 20, 1, 200)
     postgres_activation_checksum_batch_limit: int = _int("SC_RL_POSTGRES_ACTIVATION_CHECKSUM_BATCH_LIMIT", 250, 25, 2000)
     postgres_generation_retention: int = _int("SC_RL_POSTGRES_GENERATION_RETENTION", 1, 1, 20)
     neon_free_storage_warning_mb: int = _int("SC_RL_NEON_FREE_STORAGE_WARNING_MB", 400, 100, 500)
-    release_version: str = os.getenv("SC_RL_RELEASE_VERSION", "7.1.0")
+    release_version: str = os.getenv("SC_RL_RELEASE_VERSION", "7.1.1")
     handoff_source_limit: int = _int("SC_RL_HANDOFF_SOURCE_LIMIT", 8, 1, 25)
     handoff_ttl_seconds: int = _int("SC_RL_HANDOFF_TTL_SECONDS", 1800, 300, 86400)
     handoff_retry_limit: int = _int("SC_RL_HANDOFF_RETRY_LIMIT", 5, 1, 20)
