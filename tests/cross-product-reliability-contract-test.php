@@ -1,5 +1,5 @@
 <?php
-/** Static release contract checks for Research Librarian AI v7.1.1. */
+/** Static release contract checks for Research Librarian AI v7.1.2. */
 $root = dirname( __DIR__ );
 $main = file_get_contents( $root . '/sustainable-catalyst-research-librarian-ai.php' );
 $bridge = file_get_contents( $root . '/includes/class-sc-rl-v660-platform-handoffs.php' );
@@ -16,11 +16,11 @@ $roadmap = file_get_contents( $root . '/docs/ROADMAP.md' );
 $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_cross_product_reliability_manifest_v6.6.1.json' ), true );
 
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 7.1.1' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '7.1.1';" ),
-    'bridge_version' => false !== strpos( $bridge, "const VERSION = '7.1.1';" ),
-    'durable_version' => false !== strpos( $module, "const VERSION = '7.1.1';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.1.1"' ),
+    'version_header' => false !== strpos( $main, 'Version: 7.1.2' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '7.1.2';" ),
+    'bridge_version' => false !== strpos( $bridge, "const VERSION = '7.1.2';" ),
+    'durable_version' => false !== strpos( $module, "const VERSION = '7.1.2';" ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.1.2"' ),
     'schema_eight' => false !== strpos( $store, 'SCHEMA_VERSION = 12' ),
     'index_schema_eight' => false !== strpos( $store, 'sc-research-librarian-knowledge-index/12.0' ),
     'capabilities_11' => false !== strpos( $handoffs, 'sc-platform-capabilities/1.1' ),
@@ -96,7 +96,7 @@ $checks = array(
     'js_refresh_control' => false !== strpos( $js, 'data-sc-rl-refresh-handoff-token' ) && false !== strpos( $js, 'refreshTypedHandoffToken' ),
     'js_prepare_idempotency' => false !== strpos( $js, "idempotency_key: 'prepare-'" ),
     'js_compatibility_state' => false !== strpos( $js, 'compatibility.state' ),
-    'render_version' => false !== strpos( $render, '7.1.1' ),
+    'render_version' => false !== strpos( $render, '7.1.2' ),
     'release_docs' => false !== strpos( $docs, 'Cross-Product Reliability Patch' ),
     'roadmap_complete' => false !== strpos( $roadmap, 'v6.6.1 — Cross-Product Reliability Patch — Complete' ),
     'manifest_version' => is_array( $manifest ) && '6.6.1' === ( $manifest['version'] ?? '' ),
@@ -109,7 +109,7 @@ $checks = array(
 );
 $failed = array_keys( array_filter( $checks, static function ( $value ) { return ! $value; } ) );
 echo json_encode( array(
-    'version' => '7.1.1',
+    'version' => '7.1.2',
     'checks' => $checks,
     'passed' => count( $checks ) - count( $failed ),
     'failed' => count( $failed ),

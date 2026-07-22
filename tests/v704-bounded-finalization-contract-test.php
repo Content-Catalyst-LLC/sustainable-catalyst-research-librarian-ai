@@ -2,7 +2,7 @@
 $root = dirname(__DIR__);
 $module = file_get_contents($root . '/includes/class-sc-rl-v630-durable-index.php');
 $checks = array(
- 'version' => false !== strpos($module, "const VERSION = '7.1.1'"),
+ 'version' => false !== strpos($module, "const VERSION = '7.1.2'"),
  'bounded_stage' => false !== strpos($module, "'finalizing-discovery'"),
  'bounded_processor' => false !== strpos($module, 'process_build_finalization_step'),
  'cursor_saved' => false !== strpos($module, "'finalization_offset'"),
@@ -12,4 +12,4 @@ $checks = array(
  'admin_validation_metrics' => false !== strpos($module, 'Staging file'),
 );
 foreach ($checks as $name => $pass) { if (!$pass) { fwrite(STDERR, "FAIL: $name\n"); exit(1); } }
-echo "v7.1.1 bounded finalization contract passed (" . count($checks) . " checks).\n";
+echo "v7.1.2 bounded finalization contract passed (" . count($checks) . " checks).\n";

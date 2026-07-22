@@ -139,7 +139,7 @@ $result = array(
 
 echo json_encode( $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . PHP_EOL;
 
-$passed = '7.1.1' === $result['version']
+$passed = '7.1.2' === $result['version']
     && $result['core_loaded']
     && $result['legacy_class_detected']
     && empty( $result['missing_shortcodes'] )

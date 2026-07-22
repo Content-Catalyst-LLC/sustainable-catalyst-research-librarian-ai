@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Neon/Postgres durable knowledge index for Research Librarian v7.1.1.
+"""Neon/Postgres durable knowledge index for Research Librarian v7.1.2.
 
 The Postgres store owns only the knowledge-index lifecycle: source batches,
 generations, records, retrieval chunks, embeddings, activation, recovery, and
@@ -17,6 +17,7 @@ from datetime import datetime, timedelta, timezone
 import hashlib
 import json
 import threading
+import time
 from typing import Any, Iterable, Iterator
 import uuid
 
@@ -45,8 +46,8 @@ from .models import KnowledgeChunk, KnowledgeRecord, utc_now
 from .store import KnowledgeStore, SyncResult, _canonical_json, record_hash
 
 
-POSTGRES_SCHEMA_VERSION = 2
-POSTGRES_INDEX_SCHEMA = "sc-research-librarian-postgres-index/1.1"
+POSTGRES_SCHEMA_VERSION = 3
+POSTGRES_INDEX_SCHEMA = "sc-research-librarian-postgres-index/1.2"
 
 
 def _sha256_records(rows: Iterable[dict[str, Any]], seed: str = "") -> str:
@@ -61,6 +62,32 @@ def _sha256_records(rows: Iterable[dict[str, Any]], seed: str = "") -> str:
         value = digest.hexdigest()
     return value
 
+
+
+def adaptive_chunk_batch_limit(
+    current: int,
+    duration_seconds: float,
+    *,
+    minimum: int = 1,
+    maximum: int = 10,
+    target_seconds: float = 20.0,
+    timed_out: bool = False,
+    allow_growth: bool = True,
+) -> int:
+    """Choose the next restart-safe chunk batch size.
+
+    A timeout or step beyond the target halves the batch. Fast successful steps
+    grow by one record at a time so a free-tier Neon connection is never hit
+    with a sudden large jump.
+    """
+    minimum = max(1, int(minimum))
+    maximum = max(minimum, int(maximum))
+    current = max(minimum, min(maximum, int(current or minimum)))
+    if timed_out or float(duration_seconds) > float(target_seconds):
+        return max(minimum, current // 2)
+    if allow_growth and float(duration_seconds) < max(2.0, float(target_seconds) * 0.4):
+        return min(maximum, current + 1)
+    return current
 
 def _redacted_database_label(url: str) -> str:
     if not url:
@@ -129,7 +156,7 @@ class PostgresKnowledgeStore:
 
     def __getattr__(self, name: str) -> Any:
         # Governance, handoffs, calibration, and project workspaces remain on the
-        # ancillary SQLite store in v7.1.1. Knowledge-index methods are fail-closed:
+        # ancillary SQLite store in v7.1.2. Knowledge-index methods are fail-closed:
         # a missing Postgres implementation can never silently fall through.
         if name in self.CORE_METHODS:
             raise AttributeError(f"Postgres knowledge-index method {name!r} is not implemented.")
@@ -270,12 +297,26 @@ class PostgresKnowledgeStore:
                             updated_utc TIMESTAMPTZ NOT NULL DEFAULT now(),
                             commit_started_utc TIMESTAMPTZ,
                             commit_heartbeat_utc TIMESTAMPTZ,
-                            completed_utc TIMESTAMPTZ
+                            completed_utc TIMESTAMPTZ,
+                            chunk_batch_limit INTEGER NOT NULL DEFAULT 5,
+                            chunk_timeout_count INTEGER NOT NULL DEFAULT 0,
+                            last_step_duration_ms INTEGER NOT NULL DEFAULT 0,
+                            last_step_records INTEGER NOT NULL DEFAULT 0,
+                            last_step_outcome TEXT NOT NULL DEFAULT '',
+                            last_step_started_utc TIMESTAMPTZ,
+                            last_step_completed_utc TIMESTAMPTZ
                         )
                         """
                     )
                     cursor.execute("ALTER TABLE sc_rl_generations ADD COLUMN IF NOT EXISTS storage_backend TEXT NOT NULL DEFAULT 'postgres'")
                     cursor.execute("ALTER TABLE sc_rl_generations ADD COLUMN IF NOT EXISTS database_fingerprint TEXT NOT NULL DEFAULT ''")
+                    cursor.execute("ALTER TABLE sc_rl_generations ADD COLUMN IF NOT EXISTS chunk_batch_limit INTEGER NOT NULL DEFAULT 5")
+                    cursor.execute("ALTER TABLE sc_rl_generations ADD COLUMN IF NOT EXISTS chunk_timeout_count INTEGER NOT NULL DEFAULT 0")
+                    cursor.execute("ALTER TABLE sc_rl_generations ADD COLUMN IF NOT EXISTS last_step_duration_ms INTEGER NOT NULL DEFAULT 0")
+                    cursor.execute("ALTER TABLE sc_rl_generations ADD COLUMN IF NOT EXISTS last_step_records INTEGER NOT NULL DEFAULT 0")
+                    cursor.execute("ALTER TABLE sc_rl_generations ADD COLUMN IF NOT EXISTS last_step_outcome TEXT NOT NULL DEFAULT ''")
+                    cursor.execute("ALTER TABLE sc_rl_generations ADD COLUMN IF NOT EXISTS last_step_started_utc TIMESTAMPTZ")
+                    cursor.execute("ALTER TABLE sc_rl_generations ADD COLUMN IF NOT EXISTS last_step_completed_utc TIMESTAMPTZ")
                     cursor.execute("CREATE INDEX IF NOT EXISTS idx_sc_rl_generations_state ON sc_rl_generations(state, updated_utc DESC)")
                     cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_sc_rl_one_active_generation ON sc_rl_generations(active) WHERE active")
                     cursor.execute(
@@ -851,6 +892,13 @@ class PostgresKnowledgeStore:
                 "checksum_cursor": str(row["checksum_cursor"] or ""),
                 "activation_step_count": int(row["activation_step_count"] or 0),
                 "activation_restart_count": int(row["activation_restart_count"] or 0),
+                "chunk_batch_limit": int(row.get("chunk_batch_limit") or settings.postgres_activation_chunk_record_batch_limit),
+                "chunk_timeout_count": int(row.get("chunk_timeout_count") or 0),
+                "last_step_duration_ms": int(row.get("last_step_duration_ms") or 0),
+                "last_step_records": int(row.get("last_step_records") or 0),
+                "last_step_outcome": str(row.get("last_step_outcome") or ""),
+                "last_step_started_utc": self._iso(row.get("last_step_started_utc")),
+                "last_step_completed_utc": self._iso(row.get("last_step_completed_utc")),
                 "recovery_generation": int(row["recovery_generation"] or 0),
                 "started_utc": self._iso(row["created_utc"]),
                 "updated_utc": self._iso(row["updated_utc"]),
@@ -902,7 +950,7 @@ class PostgresKnowledgeStore:
             "complete_for_expected_count": action in {"activate", "committed"},
         }
 
-    def queue_sync_commit(self, job_id: str, reason: str = "wordpress-postgres-activation-v7.1.1") -> dict[str, Any]:
+    def queue_sync_commit(self, job_id: str, reason: str = "wordpress-postgres-activation-v7.1.2") -> dict[str, Any]:
         status = self.sync_job_status(job_id)
         if not status.get("exists"):
             raise ValueError("The synchronization transaction does not exist.")
@@ -931,7 +979,7 @@ class PostgresKnowledgeStore:
             connection.commit()
         return {**self.sync_job_status(job_id), "queued": True, "reason": reason}
 
-    def advance_sync_commit(self, job_id: str, reason: str = "wordpress-postgres-activation-v7.1.1") -> dict[str, Any]:
+    def advance_sync_commit(self, job_id: str, reason: str = "wordpress-postgres-generation-v7.1.2") -> dict[str, Any]:
         status = self.sync_job_status(job_id)
         if not status.get("exists"):
             raise ValueError("The synchronization transaction does not exist.")
@@ -943,10 +991,26 @@ class PostgresKnowledgeStore:
             raise ValueError("The transaction belongs to a different database identity and must be replayed.")
         if status.get("missing_batches"):
             raise ValueError("The transaction is missing staged batch(es): " + ", ".join(map(str, status["missing_batches"])))
+
         generation_id = str(status["generation_id"])
         phase = str(status.get("commit_phase") or "preparing")
         now = utc_now()
+        step_started_monotonic = time.monotonic()
+        step_started_utc = now
+
         with self._lock, self._connection() as connection:
+            # A session advisory lock prevents an old request that outlived the
+            # WordPress HTTP timeout from overlapping a retry for the same job.
+            acquired_row = connection.execute(
+                "SELECT pg_try_advisory_lock(hashtext(%s)) AS acquired", (job_id,)
+            ).fetchone()
+            if not acquired_row or not bool(acquired_row["acquired"]):
+                return {
+                    **status,
+                    "advanced": False,
+                    "step_in_progress": True,
+                    "reason": "another-activation-step-is-still-running",
+                }
             try:
                 if phase not in {"preparing", "copying-records", "building-chunks", "checksumming", "ready-to-switch"}:
                     phase = "preparing"
@@ -958,11 +1022,22 @@ class PostgresKnowledgeStore:
                         UPDATE sc_rl_generations SET state='committing',commit_phase='copying-records',commit_progress=5,
                           activation_records=0,indexed_chunks=0,chunk_records_processed=0,checksum_records=0,
                           activation_cursor='',chunk_cursor='',checksum_cursor='',activation_checksum=%s,
+                          chunk_batch_limit=%s,last_step_started_utc=%s,last_step_completed_utc=%s,
+                          last_step_duration_ms=0,last_step_records=0,last_step_outcome='prepared',
                           activation_step_count=activation_step_count+1,commit_heartbeat_utc=%s,updated_utc=%s,error=''
                         WHERE generation_id=%s
                         """,
-                        (hashlib.sha256(b"").hexdigest(), now, now, generation_id),
+                        (
+                            hashlib.sha256(b"").hexdigest(),
+                            settings.postgres_activation_chunk_record_batch_limit,
+                            step_started_utc,
+                            utc_now(),
+                            now,
+                            now,
+                            generation_id,
+                        ),
                     )
+                    connection.commit()
                 elif phase == "copying-records":
                     cursor_value = str(status.get("activation_cursor") or "")
                     rows = connection.execute(
@@ -986,58 +1061,180 @@ class PostgresKnowledgeStore:
                             )
                         activation_records = int(status.get("activation_records", 0)) + len(rows)
                         progress = min(42, 5 + int(37 * activation_records / max(1, int(status.get("activation_total", 1)))))
+                        duration_ms = int((time.monotonic() - step_started_monotonic) * 1000)
                         connection.execute(
                             """
                             UPDATE sc_rl_generations SET state='committing',commit_phase='copying-records',commit_progress=%s,
                               activation_records=%s,activation_cursor=%s,activation_step_count=activation_step_count+1,
-                              commit_heartbeat_utc=%s,updated_utc=%s WHERE generation_id=%s
+                              last_step_started_utc=%s,last_step_completed_utc=%s,last_step_duration_ms=%s,
+                              last_step_records=%s,last_step_outcome='completed',commit_heartbeat_utc=%s,updated_utc=%s
+                            WHERE generation_id=%s
                             """,
-                            (progress, activation_records, str(rows[-1]["record_id"]), now, now, generation_id),
+                            (progress, activation_records, str(rows[-1]["record_id"]), step_started_utc, utc_now(), duration_ms, len(rows), now, now, generation_id),
                         )
                     else:
                         connection.execute(
-                            "UPDATE sc_rl_generations SET commit_phase='building-chunks',commit_progress=45,chunk_cursor='',activation_step_count=activation_step_count+1,commit_heartbeat_utc=%s,updated_utc=%s WHERE generation_id=%s",
-                            (now, now, generation_id),
+                            """
+                            UPDATE sc_rl_generations SET commit_phase='building-chunks',commit_progress=45,chunk_cursor='',
+                              chunk_batch_limit=GREATEST(%s,LEAST(%s,COALESCE(NULLIF(chunk_batch_limit,0),%s))),
+                              activation_step_count=activation_step_count+1,commit_heartbeat_utc=%s,updated_utc=%s,
+                              last_step_started_utc=%s,last_step_completed_utc=%s,last_step_duration_ms=%s,
+                              last_step_records=0,last_step_outcome='phase-transition'
+                            WHERE generation_id=%s
+                            """,
+                            (
+                                settings.postgres_activation_chunk_min_batch_limit,
+                                settings.postgres_activation_chunk_max_batch_limit,
+                                settings.postgres_activation_chunk_record_batch_limit,
+                                now,
+                                now,
+                                step_started_utc,
+                                utc_now(),
+                                int((time.monotonic() - step_started_monotonic) * 1000),
+                                generation_id,
+                            ),
                         )
+                    connection.commit()
                 elif phase == "building-chunks":
                     cursor_value = str(status.get("chunk_cursor") or "")
+                    current_limit = max(
+                        settings.postgres_activation_chunk_min_batch_limit,
+                        min(
+                            settings.postgres_activation_chunk_max_batch_limit,
+                            int(status.get("chunk_batch_limit") or settings.postgres_activation_chunk_record_batch_limit),
+                        ),
+                    )
                     rows = connection.execute(
                         "SELECT record_id,payload FROM sc_rl_records WHERE generation_id=%s AND record_id>%s ORDER BY record_id LIMIT %s",
-                        (generation_id, cursor_value, settings.postgres_activation_chunk_record_batch_limit),
+                        (generation_id, cursor_value, current_limit),
                     ).fetchall()
                     if rows:
-                        chunk_count = 0
+                        processed_base = int(status.get("chunk_records_processed", 0))
+                        indexed_base = int(status.get("indexed_chunks", 0))
+                        processed_this_step = 0
+                        chunks_this_step = 0
+                        last_record_id = cursor_value
                         for row in rows:
+                            elapsed = time.monotonic() - step_started_monotonic
+                            if processed_this_step and elapsed >= settings.postgres_activation_step_hard_budget_seconds:
+                                break
                             record = KnowledgeRecord.model_validate(row["payload"])
-                            for chunk in chunk_record(record, settings.chunk_max_words, settings.chunk_overlap_words):
+                            chunks = list(chunk_record(record, settings.chunk_max_words, settings.chunk_overlap_words))
+                            chunk_payload = [
+                                {
+                                    "chunk_id": chunk.chunk_id,
+                                    "record_id": chunk.record_id,
+                                    "heading": chunk.heading,
+                                    "page": chunk.page,
+                                    "passage": chunk.passage,
+                                    "position": chunk.position,
+                                    "content_hash": chunk.content_hash,
+                                }
+                                for chunk in chunks
+                            ]
+                            # One delete and one JSONB bulk insert per record avoids
+                            # hundreds of transatlantic INSERT round trips to Neon.
+                            connection.execute(
+                                "DELETE FROM sc_rl_chunks WHERE generation_id=%s AND record_id=%s",
+                                (generation_id, str(row["record_id"])),
+                            )
+                            if chunk_payload:
                                 connection.execute(
                                     """
-                                    INSERT INTO sc_rl_chunks(generation_id,chunk_id,record_id,heading,page,passage,position,content_hash,updated_utc)
-                                    VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                                    INSERT INTO sc_rl_chunks(
+                                      generation_id,chunk_id,record_id,heading,page,passage,position,content_hash,updated_utc
+                                    )
+                                    SELECT %s,x.chunk_id,x.record_id,x.heading,x.page,x.passage,x.position,x.content_hash,%s
+                                    FROM jsonb_to_recordset(%s::jsonb) AS x(
+                                      chunk_id text,record_id text,heading text,page integer,passage text,position integer,content_hash text
+                                    )
                                     ON CONFLICT(generation_id,chunk_id) DO UPDATE SET
                                       heading=excluded.heading,page=excluded.page,passage=excluded.passage,
                                       position=excluded.position,content_hash=excluded.content_hash,updated_utc=excluded.updated_utc
                                     """,
-                                    (generation_id, chunk.chunk_id, chunk.record_id, chunk.heading, chunk.page, chunk.passage, chunk.position, chunk.content_hash, now),
+                                    (generation_id, utc_now(), Jsonb(chunk_payload)),
                                 )
-                                chunk_count += 1
-                        processed = int(status.get("chunk_records_processed", 0)) + len(rows)
-                        indexed = int(status.get("indexed_chunks", 0)) + chunk_count
-                        progress = min(78, 45 + int(33 * processed / max(1, int(status.get("activation_total", 1)))))
+                            processed_this_step += 1
+                            chunks_this_step += len(chunks)
+                            last_record_id = str(row["record_id"])
+                            duration_ms = int((time.monotonic() - step_started_monotonic) * 1000)
+                            # Persist after every record. A Render restart or client
+                            # timeout can lose at most the record currently running.
+                            connection.execute(
+                                """
+                                UPDATE sc_rl_generations SET commit_phase='building-chunks',
+                                  chunk_records_processed=%s,indexed_chunks=%s,chunk_cursor=%s,
+                                  activation_step_count=activation_step_count+1,commit_heartbeat_utc=%s,updated_utc=%s,
+                                  last_step_started_utc=%s,last_step_completed_utc=%s,last_step_duration_ms=%s,
+                                  last_step_records=%s,last_step_outcome='checkpointed'
+                                WHERE generation_id=%s
+                                """,
+                                (
+                                    processed_base + processed_this_step,
+                                    indexed_base + chunks_this_step,
+                                    last_record_id,
+                                    utc_now(),
+                                    utc_now(),
+                                    step_started_utc,
+                                    utc_now(),
+                                    duration_ms,
+                                    processed_this_step,
+                                    generation_id,
+                                ),
+                            )
+                            connection.commit()
+                        duration_seconds = time.monotonic() - step_started_monotonic
+                        next_limit = adaptive_chunk_batch_limit(
+                            current_limit,
+                            duration_seconds,
+                            minimum=settings.postgres_activation_chunk_min_batch_limit,
+                            maximum=settings.postgres_activation_chunk_max_batch_limit,
+                            target_seconds=settings.postgres_activation_step_target_seconds,
+                            allow_growth=settings.postgres_activation_chunk_growth_enabled,
+                        )
+                        processed_total = processed_base + processed_this_step
+                        indexed_total = indexed_base + chunks_this_step
+                        progress = min(78, 45 + int(33 * processed_total / max(1, int(status.get("activation_total", 1)))))
+                        slow_step = duration_seconds > settings.postgres_activation_step_target_seconds
+                        outcome = "budget-yield" if processed_this_step < len(rows) else ("slow-completed" if slow_step else "completed")
                         connection.execute(
                             """
                             UPDATE sc_rl_generations SET commit_phase='building-chunks',commit_progress=%s,
-                              chunk_records_processed=%s,indexed_chunks=%s,chunk_cursor=%s,
-                              activation_step_count=activation_step_count+1,commit_heartbeat_utc=%s,updated_utc=%s
+                              chunk_records_processed=%s,indexed_chunks=%s,chunk_cursor=%s,chunk_batch_limit=%s,
+                              chunk_timeout_count=chunk_timeout_count+%s,
+                              last_step_started_utc=%s,last_step_completed_utc=%s,last_step_duration_ms=%s,
+                              last_step_records=%s,last_step_outcome=%s,commit_heartbeat_utc=%s,updated_utc=%s
                             WHERE generation_id=%s
                             """,
-                            (progress, processed, indexed, str(rows[-1]["record_id"]), now, now, generation_id),
+                            (
+                                progress,
+                                processed_total,
+                                indexed_total,
+                                last_record_id,
+                                next_limit,
+                                1 if slow_step else 0,
+                                step_started_utc,
+                                utc_now(),
+                                int(duration_seconds * 1000),
+                                processed_this_step,
+                                outcome,
+                                utc_now(),
+                                utc_now(),
+                                generation_id,
+                            ),
                         )
                     else:
                         connection.execute(
-                            "UPDATE sc_rl_generations SET commit_phase='checksumming',commit_progress=80,checksum_cursor='',checksum_records=0,activation_checksum=%s,activation_step_count=activation_step_count+1,commit_heartbeat_utc=%s,updated_utc=%s WHERE generation_id=%s",
-                            (hashlib.sha256(b"").hexdigest(), now, now, generation_id),
+                            """
+                            UPDATE sc_rl_generations SET commit_phase='checksumming',commit_progress=80,checksum_cursor='',
+                              checksum_records=0,activation_checksum=%s,activation_step_count=activation_step_count+1,
+                              commit_heartbeat_utc=%s,updated_utc=%s,last_step_started_utc=%s,last_step_completed_utc=%s,
+                              last_step_duration_ms=%s,last_step_records=0,last_step_outcome='phase-transition'
+                            WHERE generation_id=%s
+                            """,
+                            (hashlib.sha256(b"").hexdigest(), now, now, step_started_utc, utc_now(), int((time.monotonic() - step_started_monotonic) * 1000), generation_id),
                         )
+                    connection.commit()
                 elif phase == "checksumming":
                     cursor_value = str(status.get("checksum_cursor") or "")
                     rows = connection.execute(
@@ -1048,20 +1245,24 @@ class PostgresKnowledgeStore:
                         checksum = _sha256_records(rows, str(status.get("activation_checksum") or ""))
                         checked = int(status.get("checksum_records", 0)) + len(rows)
                         progress = min(94, 80 + int(14 * checked / max(1, int(status.get("activation_total", 1)))))
+                        duration_ms = int((time.monotonic() - step_started_monotonic) * 1000)
                         connection.execute(
                             """
                             UPDATE sc_rl_generations SET commit_phase='checksumming',commit_progress=%s,
                               checksum_records=%s,checksum_cursor=%s,activation_checksum=%s,
-                              activation_step_count=activation_step_count+1,commit_heartbeat_utc=%s,updated_utc=%s
+                              activation_step_count=activation_step_count+1,commit_heartbeat_utc=%s,updated_utc=%s,
+                              last_step_started_utc=%s,last_step_completed_utc=%s,last_step_duration_ms=%s,
+                              last_step_records=%s,last_step_outcome='completed'
                             WHERE generation_id=%s
                             """,
-                            (progress, checked, str(rows[-1]["record_id"]), checksum, now, now, generation_id),
+                            (progress, checked, str(rows[-1]["record_id"]), checksum, now, now, step_started_utc, utc_now(), duration_ms, len(rows), generation_id),
                         )
                     else:
                         connection.execute(
-                            "UPDATE sc_rl_generations SET commit_phase='ready-to-switch',commit_progress=96,activation_step_count=activation_step_count+1,commit_heartbeat_utc=%s,updated_utc=%s WHERE generation_id=%s",
-                            (now, now, generation_id),
+                            "UPDATE sc_rl_generations SET commit_phase='ready-to-switch',commit_progress=96,activation_step_count=activation_step_count+1,commit_heartbeat_utc=%s,updated_utc=%s,last_step_started_utc=%s,last_step_completed_utc=%s,last_step_duration_ms=%s,last_step_records=0,last_step_outcome='phase-transition' WHERE generation_id=%s",
+                            (now, now, step_started_utc, utc_now(), int((time.monotonic() - step_started_monotonic) * 1000), generation_id),
                         )
+                    connection.commit()
                 elif phase == "ready-to-switch":
                     counts = connection.execute(
                         "SELECT (SELECT count(*) FROM sc_rl_records WHERE generation_id=%s) AS records,(SELECT count(*) FROM sc_rl_chunks WHERE generation_id=%s) AS chunks",
@@ -1130,19 +1331,16 @@ class PostgresKnowledgeStore:
                     connection.execute(
                         """
                         UPDATE sc_rl_generations SET state='committed',commit_phase='completed',commit_progress=100,
-                          completed_utc=%s,commit_heartbeat_utc=%s,updated_utc=%s,result=%s,error=''
+                          completed_utc=%s,commit_heartbeat_utc=%s,updated_utc=%s,result=%s,error='',
+                          last_step_started_utc=%s,last_step_completed_utc=%s,last_step_duration_ms=%s,
+                          last_step_records=0,last_step_outcome='completed'
                         WHERE generation_id=%s AND active=TRUE AND database_fingerprint=%s
                         """,
-                        (now, now, now, Jsonb(result), generation_id, fingerprint),
+                        (now, now, now, Jsonb(result), step_started_utc, utc_now(), int((time.monotonic() - step_started_monotonic) * 1000), generation_id, fingerprint),
                     )
-                    # Staging is no longer required after the verified pointer
-                    # switch. Removing it immediately avoids retaining a second
-                    # full copy of a 100+ MB WordPress export on Neon Free.
                     connection.execute("DELETE FROM sc_rl_staging_records WHERE generation_id=%s", (generation_id,))
                     connection.execute("DELETE FROM sc_rl_staging_deletions WHERE generation_id=%s", (generation_id,))
                     connection.execute("DELETE FROM sc_rl_sync_batches WHERE generation_id=%s", (generation_id,))
-                    # Free-tier default retains only the active generation. Sites
-                    # with larger Neon plans may raise SC_RL_POSTGRES_GENERATION_RETENTION.
                     obsolete = connection.execute(
                         """
                         SELECT generation_id FROM sc_rl_generations
@@ -1157,19 +1355,30 @@ class PostgresKnowledgeStore:
                             "DELETE FROM sc_rl_generations WHERE generation_id=ANY(%s)",
                             ([str(item["generation_id"]) for item in obsolete],),
                         )
-                connection.commit()
+                    connection.commit()
             except Exception as exc:
                 connection.rollback()
                 with self._connection() as failure:
                     failure.execute(
-                        "UPDATE sc_rl_generations SET state='failed',commit_phase='failed',error=%s,updated_utc=%s,commit_heartbeat_utc=%s WHERE generation_id=%s",
-                        (str(exc)[:2000], utc_now(), utc_now(), generation_id),
+                        """
+                        UPDATE sc_rl_generations SET state='failed',commit_phase='failed',error=%s,updated_utc=%s,
+                          commit_heartbeat_utc=%s,last_step_started_utc=%s,last_step_completed_utc=%s,
+                          last_step_duration_ms=%s,last_step_outcome='failed'
+                        WHERE generation_id=%s
+                        """,
+                        (str(exc)[:2000], utc_now(), utc_now(), step_started_utc, utc_now(), int((time.monotonic() - step_started_monotonic) * 1000), generation_id),
                     )
                     failure.commit()
                 raise
+            finally:
+                try:
+                    connection.execute("SELECT pg_advisory_unlock(hashtext(%s))", (job_id,))
+                    connection.commit()
+                except Exception:
+                    pass
         return {**self.sync_job_status(job_id), "advanced": True, "reason": reason}
 
-    def commit_sync_job(self, job_id: str, reason: str = "compatibility-loop-v7.1.1") -> dict[str, Any]:
+    def commit_sync_job(self, job_id: str, reason: str = "compatibility-loop-v7.1.2") -> dict[str, Any]:
         self.queue_sync_commit(job_id, reason)
         for _ in range(10000):
             status = self.advance_sync_commit(job_id, reason)

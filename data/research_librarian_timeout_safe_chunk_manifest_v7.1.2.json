@@ -1,0 +1,21 @@
+{
+  "schema": "sc-research-librarian-timeout-safe-chunk-processing/1.0",
+  "version": "7.1.2",
+  "release": "Timeout-Safe Chunk Processing",
+  "chunking": {
+    "default_batch_records": 5,
+    "minimum_batch_records": 1,
+    "maximum_batch_records": 10,
+    "per_record_checkpoint": true,
+    "jsonb_bulk_insert": true,
+    "adaptive_batch_size": true,
+    "target_step_seconds": 20,
+    "hard_budget_seconds": 30
+  },
+  "recovery": {
+    "curl_timeout_is_ambiguous": true,
+    "poll_before_retry": true,
+    "advisory_lock": true,
+    "resume_existing_generation": true
+  }
+}

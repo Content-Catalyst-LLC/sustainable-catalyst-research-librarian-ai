@@ -63,7 +63,17 @@ services:
       - key: SC_RL_ACTIVATION_SNAPSHOT_RECORD_LIMIT
         value: "500"
       - key: SC_RL_RELEASE_VERSION
-        value: "7.1.1"
+        value: "7.1.2"
+      - key: SC_RL_POSTGRES_ACTIVATION_CHUNK_RECORD_BATCH_LIMIT
+        value: "5"
+      - key: SC_RL_POSTGRES_ACTIVATION_CHUNK_MIN_BATCH_LIMIT
+        value: "1"
+      - key: SC_RL_POSTGRES_ACTIVATION_CHUNK_MAX_BATCH_LIMIT
+        value: "10"
+      - key: SC_RL_POSTGRES_ACTIVATION_STEP_TARGET_SECONDS
+        value: "20"
+      - key: SC_RL_POSTGRES_ACTIVATION_STEP_HARD_BUDGET_SECONDS
+        value: "30"
       - key: SC_RL_HANDOFF_SOURCE_LIMIT
         value: "8"
       - key: SC_RL_HANDOFF_TTL_SECONDS

@@ -1,5 +1,15 @@
 # Changelog
 
+## 7.1.2 — Timeout-Safe Chunk Processing
+
+- Reduces Neon chunk activation to five records per request by default.
+- Persists the durable chunk cursor after every record.
+- Bulk-inserts each record's chunks with one JSONB operation instead of hundreds of network round trips.
+- Adapts the next batch size to measured step duration.
+- Reconciles WordPress cURL timeouts against Neon before declaring failure or retrying.
+- Prevents overlapping retries with a Postgres advisory lock.
+- Displays current chunk batch size, last-step duration, heartbeat, and timeout recoveries.
+
 ## 7.1.1 — Fail-Closed Neon Activation and Database Identity
 
 - Added startup validation for pooled and direct Neon connection identity.

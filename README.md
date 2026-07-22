@@ -1,25 +1,18 @@
-# Sustainable Catalyst Research Librarian AI v7.1.1
+# Sustainable Catalyst Research Librarian AI v7.1.2
 
 A site-scoped connected research intelligence platform with Neon/Postgres durable indexing, verified retrieval, Gemini semantic search, transaction recovery, and a visible public research workspace. See `docs/V710_NEON_POSTGRES_DURABLE_INDEX.md`.
 
-## v7.1.1 highlights
+## v7.1.2 highlights
 
-- Fails closed when Neon is selected but unavailable, mismatched, or unmigrated.
-- Verifies pooled and direct connection identity without exposing credentials.
-- Automatically migrates the configured Neon schema before accepting traffic.
-- Rejects SQLite-era or foreign-database committed markers.
-- Replays the preserved WordPress staging file into a fresh Neon generation.
-- Verifies the active generation, record count, chunks, pointer, and database fingerprint before success.
-- Neon/Postgres is the production knowledge-index store.
-- `pgvector` persists semantic embeddings outside Render's ephemeral filesystem.
-- Each rebuild creates an invisible generation and switches the active pointer only after record, chunk, and checksum verification.
-- Existing WordPress staging files can replay failed v7.0.x rebuilds directly into Neon.
-- SQLite remains the default for local development and ancillary governance/workspace data.
-
+- Timeout-safe Neon chunk processing with a five-record default batch.
+- Per-record cursor checkpoints and idempotent JSONB bulk chunk insertion.
+- Adaptive batch sizing based on measured step duration.
+- WordPress cURL timeout reconciliation before retry or failure.
+- Live activation diagnostics for batch size, duration, heartbeat, and recovered timeouts.
 
 ## Architecture
 
-WordPress remains the canonical publishing, administration, identity, and recovery boundary. FastAPI uses Neon/Postgres for production knowledge generations, source records, retrieval chunks, and pgvector embeddings. SQLite remains the local-development and ancillary governance/workspace store in v7.1.1. Generation is isolated behind `sc-generation-adapter/1.0`; deterministic retrieval and project continuity remain usable when generation is unavailable.
+WordPress remains the canonical publishing, administration, identity, and recovery boundary. FastAPI uses Neon/Postgres for production knowledge generations, source records, retrieval chunks, and pgvector embeddings. SQLite remains the local-development and ancillary governance/workspace store in v7.1.2. Generation is isolated behind `sc-generation-adapter/1.0`; deterministic retrieval and project continuity remain usable when generation is unavailable.
 
 ## Public shortcodes
 

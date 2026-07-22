@@ -64,10 +64,10 @@ def test_v711_wordpress_replays_committed_empty_state():
 
 def test_v711_migration_and_manifest_contract():
     migration = (ROOT / "backend/migrations/002_fail_closed_neon_identity.sql").read_text()
-    manifest = (ROOT / "data/research_librarian_fail_closed_neon_manifest_v7.1.1.json").read_text()
+    manifest = (ROOT / "data/research_librarian_fail_closed_neon_manifest_v7.1.2.json").read_text()
     docs = (ROOT / "docs/V711_FAIL_CLOSED_NEON_ACTIVATION_DATABASE_IDENTITY.md").read_text()
     assert "database_fingerprint" in migration
-    assert '"version": "7.1.1"' in manifest
+    assert '"version": "7.1.2"' in manifest
     assert "committed-empty" in docs
 
 

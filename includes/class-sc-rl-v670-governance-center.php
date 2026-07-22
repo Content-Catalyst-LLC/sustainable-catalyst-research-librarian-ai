@@ -1,11 +1,11 @@
 <?php
 /**
- * Research Librarian AI v7.1.1 — Research Quality and Governance Center.
+ * Research Librarian AI v7.1.2 — Research Quality and Governance Center.
  */
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 final class SC_RL6_V670_Governance_Center {
-    const VERSION = '7.1.1';
+    const VERSION = '7.1.2';
     const OPTION_NAME = 'sc_rl_v670_governance_options';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
     const POLICY_SCHEMA = 'sc-research-governance-policy/1.0';
@@ -25,7 +25,7 @@ final class SC_RL6_V670_Governance_Center {
 
     public static function defaults() {
         return array(
-            'profile' => 'public-trust-v7.1.1',
+            'profile' => 'public-trust-v7.1.2',
             'require_approved_sources' => '0',
             'exclude_rejected_sources' => '1',
             'stale_after_days' => 730,

@@ -40,7 +40,14 @@ CREATE TABLE IF NOT EXISTS sc_rl_generations (
     updated_utc timestamptz NOT NULL DEFAULT now(),
     commit_started_utc timestamptz,
     commit_heartbeat_utc timestamptz,
-    completed_utc timestamptz
+    completed_utc timestamptz,
+    chunk_batch_limit integer NOT NULL DEFAULT 5,
+    chunk_timeout_count integer NOT NULL DEFAULT 0,
+    last_step_duration_ms integer NOT NULL DEFAULT 0,
+    last_step_records integer NOT NULL DEFAULT 0,
+    last_step_outcome text NOT NULL DEFAULT '',
+    last_step_started_utc timestamptz,
+    last_step_completed_utc timestamptz
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_sc_rl_one_active_generation

@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 7.1.1
+Stable tag: 7.1.2
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
@@ -12,7 +12,7 @@ A connected, site-scoped research intelligence platform for Sustainable Catalyst
 
 Research Librarian AI retrieves Sustainable Catalyst publications and documents through exact-title priority, section-aware BM25 ranking, optional Gemini embeddings, calibrated reciprocal-rank fusion, and citation-verified synthesis. WordPress remains the canonical publishing and recovery source, while FastAPI stores the production knowledge index durably in Neon Postgres with pgvector.
 
-v7.1.1 makes Neon activation fail closed. The backend verifies pooled/direct database identity, runs migrations automatically, rejects empty or foreign commit markers, and replays the preserved WordPress staging file into a verified Neon generation.
+v7.1.2 makes Neon chunk activation timeout-safe. It checkpoints every record, uses small adaptive batches, bulk-writes chunks, and reconciles WordPress transport timeouts against durable Neon state before retrying.
 
 == Shortcodes ==
 
@@ -38,6 +38,13 @@ v7.1.1 makes Neon activation fail closed. The backend verifies pooled/direct dat
 [sc_research_librarian_platform_handoffs]
 
 == Changelog ==
+
+= 7.1.2 =
+* Process five Neon source records per chunk step by default.
+* Persist the chunk cursor after every record and bulk-insert each record's chunks.
+* Adapt chunk batch size to measured step duration.
+* Reconcile cURL timeout 28 against durable Neon state before retrying.
+* Prevent overlapping retries and show chunk-step diagnostics.
 
 = 7.1.1 =
 * Verify pooled and direct Neon connection identity at startup.
