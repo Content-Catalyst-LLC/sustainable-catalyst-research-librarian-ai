@@ -1,5 +1,5 @@
 <?php
-/** Static release contract checks for Research Librarian AI v7.0.8. */
+/** Static release contract checks for Research Librarian AI v7.1.0. */
 $root=dirname(__DIR__);
 $main=file_get_contents($root.'/sustainable-catalyst-research-librarian-ai.php');
 $module=file_get_contents($root.'/includes/class-sc-rl-v670-governance-center.php');
@@ -8,12 +8,12 @@ $governance=file_get_contents($root.'/backend/app/governance.py');
 $store=file_get_contents($root.'/backend/app/store.py');
 $models=file_get_contents($root.'/backend/app/models.py');
 $docs=file_get_contents($root.'/docs/V670_RESEARCH_QUALITY_GOVERNANCE_CENTER.md');
-$manifest=json_decode(file_get_contents($root.'/data/research_librarian_quality_governance_manifest_v7.0.8.json'),true);
+$manifest=json_decode(file_get_contents($root.'/data/research_librarian_quality_governance_manifest_v7.1.0.json'),true);
 $checks=array(
- 'version_header'=>false!==strpos($main,'Version: 7.0.8'),
- 'version_constant'=>false!==strpos($main,"const VERSION        = '7.0.8';"),
+ 'version_header'=>false!==strpos($main,'Version: 7.1.0'),
+ 'version_constant'=>false!==strpos($main,"const VERSION        = '7.1.0';"),
  'module_loaded'=>false!==strpos($main,'class-sc-rl-v670-governance-center.php'),
- 'module_version'=>false!==strpos($module,"const VERSION = '7.0.8';"),
+ 'module_version'=>false!==strpos($module,"const VERSION = '7.1.0';"),
  'activation'=>false!==strpos($main,"SC_RL6_V670_Governance_Center', 'activate"),
  'schema_nine'=>false!==strpos($store,'SCHEMA_VERSION = 12'),
  'index_nine'=>false!==strpos($store,'sc-research-librarian-knowledge-index/12.0'),
@@ -46,9 +46,9 @@ $checks=array(
  'admin_page'=>false!==strpos($module,'Research Quality and Governance Center'),
  'methodology_shortcode'=>false!==strpos($module,'sc_research_librarian_methodology'),
  'status_shortcode'=>false!==strpos($module,'sc_research_librarian_governance_status'),
- 'manifest_version'=>is_array($manifest)&&'7.0.8'===($manifest['version']??''),
+ 'manifest_version'=>is_array($manifest)&&'7.1.0'===($manifest['version']??''),
  'docs'=>false!==strpos($docs,'Research Quality and Governance Center'),
 );
 $failed=array_keys(array_filter($checks,function($ok){return !$ok;}));
-echo json_encode(array('version'=>'7.0.8','checks'=>$checks,'passed'=>count($checks)-count($failed),'failed'=>count($failed),'failures'=>$failed),JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES).PHP_EOL;
+echo json_encode(array('version'=>'7.1.0','checks'=>$checks,'passed'=>count($checks)-count($failed),'failed'=>count($failed),'failures'=>$failed),JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES).PHP_EOL;
 exit($failed?1:0);

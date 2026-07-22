@@ -1,6 +1,6 @@
 {
   "schema": "sc-research-librarian-release-manifest/1.0",
-  "version": "7.0.8",
+  "version": "7.1.0",
   "title": "Transaction-State Reconciliation and Durable Recovery",
   "sqlite_schema": 12,
   "reconciliation": {

@@ -1,5 +1,14 @@
 # Changelog
 
+## 7.1.0 — Neon Postgres Durable Index
+
+- Moves production source batches, generations, records, chunks, embeddings, and activation cursors to Neon-compatible Postgres.
+- Uses pooled `DATABASE_URL` for runtime traffic and direct `DIRECT_DATABASE_URL` for migrations.
+- Activates a verified generation through an atomic database pointer rather than SQLite file replacement.
+- Adds pgvector storage, database diagnostics, free-tier size reporting, generation rollback, and replay from the preserved WordPress staging file.
+- Keeps SQLite as the local-development default and as the temporary ancillary store for governance and connected-workspace records.
+
+
 ## 7.0.8 — Transaction-State Reconciliation and Durable Recovery
 
 - Fixes the empty-missing-batch ambiguity that could exhaust replay attempts despite reporting no missing batch numbers.

@@ -1,5 +1,5 @@
 <?php
-/** Static release contract for v7.0.8 transaction-state reconciliation and durable recovery. */
+/** Static release contract for v7.1.0 transaction-state reconciliation and durable recovery. */
 $root = dirname( __DIR__ );
 $main = file_get_contents( $root . '/sustainable-catalyst-research-librarian-ai.php' );
 $module = file_get_contents( $root . '/includes/class-sc-rl-v630-durable-index.php' );
@@ -9,9 +9,9 @@ $config = file_get_contents( $root . '/backend/app/config.py' );
 $docs = file_get_contents( $root . '/docs/V708_TRANSACTION_STATE_RECONCILIATION_DURABLE_RECOVERY.md' );
 $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_v708_transaction_state_reconciliation_manifest.json' ), true );
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 7.0.8' ),
-    'durable_version' => false !== strpos( $module, "const VERSION = '7.0.8';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.0.8"' ),
+    'version_header' => false !== strpos( $main, 'Version: 7.1.0' ),
+    'durable_version' => false !== strpos( $module, "const VERSION = '7.1.0';" ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.1.0"' ),
     'schema_twelve' => false !== strpos( $store, 'SCHEMA_VERSION = 12' ),
     'reconcile_endpoint' => false !== strpos( $backend, '/v1/knowledge/sync/jobs/{job_id}/reconcile' ),
     'reconcile_model' => false !== strpos( file_get_contents( $root . '/backend/app/models.py' ), 'class SyncReconcileRequest' ),
@@ -26,8 +26,8 @@ $checks = array(
     'admin_diagnostics' => false !== strpos( $module, 'Transaction state' ) && false !== strpos( $module, 'Recovery action' ) && false !== strpos( $module, 'Transaction ID' ),
     'persistent_disk_autodetect' => false !== strpos( $config, 'render_disk = Path("/var/data")' ),
     'documentation' => false !== strpos( $docs, 'empty `missing_batches` array' ),
-    'manifest' => is_array( $manifest ) && '7.0.8' === ( $manifest['version'] ?? '' ) && 12 === ( $manifest['sqlite_schema'] ?? 0 ),
+    'manifest' => is_array( $manifest ) && '7.1.0' === ( $manifest['version'] ?? '' ) && 12 === ( $manifest['sqlite_schema'] ?? 0 ),
 );
 $failed = array_keys( array_filter( $checks, static function ( $passed ) { return ! $passed; } ) );
-echo json_encode( array( 'version' => '7.0.8', 'checks' => $checks, 'passed' => count( $checks ) - count( $failed ), 'failed' => count( $failed ), 'failures' => $failed ), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . PHP_EOL;
+echo json_encode( array( 'version' => '7.1.0', 'checks' => $checks, 'passed' => count( $checks ) - count( $failed ), 'failed' => count( $failed ), 'failures' => $failed ), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . PHP_EOL;
 exit( $failed ? 1 : 0 );

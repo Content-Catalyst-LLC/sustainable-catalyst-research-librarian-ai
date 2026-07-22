@@ -1,6 +1,6 @@
 <?php
 /**
- * Research Librarian AI v7.0.8 — Transaction-State Reconciliation and Durable Recovery.
+ * Research Librarian AI v7.1.0 — Transaction-State Reconciliation and Durable Recovery.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class SC_RL6_V630_Durable_Index {
-    const VERSION = '7.0.8';
+    const VERSION = '7.1.0';
     const OPTION_NAME = 'sc_rl_v620_python_options';
     const STATUS_OPTION = 'sc_rl_v620_python_status';
     const SYNC_HOOK = 'sc_rl_v620_python_sync_event';
@@ -592,7 +592,7 @@ final class SC_RL6_V630_Durable_Index {
         $recovery_next = wp_next_scheduled( self::RECOVERY_HOOK );
         $retry_next = wp_next_scheduled( self::SYNC_RETRY_HOOK );
         return array(
-            'schema' => 'sc-research-librarian-sync-recovery-export/7.0.8',
+            'schema' => 'sc-research-librarian-sync-recovery-export/7.1.0',
             'version' => self::VERSION,
             'site' => home_url( '/' ),
             'generated_utc' => gmdate( 'c' ),
@@ -831,7 +831,7 @@ final class SC_RL6_V630_Durable_Index {
         $grounding['reason_codes'] = array_values( array_unique( array_merge( $grounding['reason_codes'], array( 'bm25-section-retrieval', 'citation-verification' ), ! empty( $grounding['retrieval_diagnostics']['semantic_used'] ) ? array( 'semantic-retrieval' ) : array() ) ) );
 
         $note = array(
-            'schema' => 'sc-research-librarian-route-note/7.0.8',
+            'schema' => 'sc-research-librarian-route-note/7.1.0',
             'created_at_utc' => gmdate( 'c' ),
             'question' => sanitize_textarea_field( $question ),
             'source' => sanitize_key( isset( $backend['source'] ) ? $backend['source'] : 'python-backend' ),
@@ -1256,7 +1256,7 @@ final class SC_RL6_V630_Durable_Index {
         $deleted_ids = array_values( array_diff( array_keys( $ledger['records'] ), array_keys( $current_ids ) ) );
         $report = array_merge( array(
             'version' => self::VERSION,
-            'schema' => 'sc-rl-sync-report/7.0.8',
+            'schema' => 'sc-rl-sync-report/7.1.0',
             'job_id' => $job_id,
             'state' => 'running',
             'mode' => 'transactional-replace',
@@ -1505,7 +1505,7 @@ final class SC_RL6_V630_Durable_Index {
     }
 
     public static function build_index_pipeline() {
-        return self::start_index_build( 'manual-v7.0.8-index-build' );
+        return self::start_index_build( 'manual-v7.1.0-index-build' );
     }
 
     private static function replace_build_state( $state ) {
@@ -1637,7 +1637,7 @@ final class SC_RL6_V630_Durable_Index {
             return new WP_Error( 'sc_rl_v703_build_file_create', 'The private asynchronous index staging file could not be created.' );
         }
         $state = array(
-            'schema' => 'sc-rl-async-index-build/7.0.8',
+            'schema' => 'sc-rl-async-index-build/7.1.0',
             'version' => self::VERSION,
             'job_id' => $job_id,
             'backend_job_id' => $job_id,
@@ -1919,7 +1919,7 @@ final class SC_RL6_V630_Durable_Index {
         $state['message'] = 'Bounded finalization complete. Record batches are staging in Python while the current index remains live.';
         $report = array(
             'version' => self::VERSION,
-            'schema' => 'sc-rl-sync-report/7.0.8',
+            'schema' => 'sc-rl-sync-report/7.1.0',
             'job_id' => $state['backend_job_id'],
             'state' => 'running',
             'mode' => 'transactional-replace-async',
@@ -2335,7 +2335,7 @@ final class SC_RL6_V630_Durable_Index {
             }
         }
 
-        // v7.0.8 advances exactly one bounded backend step per WordPress job
+        // v7.1.0 advances exactly one bounded backend step per WordPress job
         // iteration. There is no in-process FastAPI background worker to lose.
         $advanced = self::backend_advance_sync_commit( $job_id );
         if ( is_wp_error( $advanced ) ) {
@@ -2480,7 +2480,7 @@ final class SC_RL6_V630_Durable_Index {
             'job_id' => sanitize_text_field( $state['backend_job_id'] ),
             'batch_index' => $batch_number,
             'batch_count' => $batch_count,
-            'reason' => 'wordpress-missing-batch-replay-v7.0.8',
+            'reason' => 'wordpress-missing-batch-replay-v7.1.0',
             'defer_commit' => true,
         ) );
         if ( is_wp_error( $response ) ) {
@@ -2562,7 +2562,7 @@ final class SC_RL6_V630_Durable_Index {
             'job_id' => sanitize_text_field( $state['backend_job_id'] ),
             'batch_index' => $batch_index,
             'batch_count' => $batch_count,
-            'reason' => 'wordpress-async-full-sync-v7.0.8',
+            'reason' => 'wordpress-async-full-sync-v7.1.0',
             'defer_commit' => true,
         ) );
 
@@ -2641,7 +2641,7 @@ final class SC_RL6_V630_Durable_Index {
 
         if ( $is_final ) {
             if ( ! empty( $response['committed'] ) ) {
-                // Backward-compatible path for a pre-v7.0.8 backend.
+                // Backward-compatible path for a pre-v7.1.0 backend.
                 return self::activate_committed_build( $state, $response );
             }
             $transaction_status = self::backend_sync_job_status( $state['backend_job_id'] );
@@ -2815,7 +2815,7 @@ final class SC_RL6_V630_Durable_Index {
             $warnings[] = 'Knowledge records are ready, but semantic embeddings need attention: ' . $embedding_test->get_error_message();
             $state['embedding_state'] = array( 'state' => 'configuration-error', 'last_error' => $embedding_test->get_error_message() );
         } else {
-            $embedding_state = self::schedule_embedding_queue( 'v7.0.8-async-index-build', 10 );
+            $embedding_state = self::schedule_embedding_queue( 'v7.1.0-async-index-build', 10 );
             if ( is_wp_error( $embedding_state ) ) {
                 $warnings[] = 'Knowledge records are ready, but the semantic queue could not be scheduled: ' . $embedding_state->get_error_message();
                 $state['embedding_state'] = array( 'state' => 'manual-continuation-required', 'last_error' => $embedding_state->get_error_message() );
@@ -2904,7 +2904,7 @@ final class SC_RL6_V630_Durable_Index {
     }
 
     public static function sync_and_complete_embeddings() {
-        $sync = self::sync_all_records( 'manual-v7.0.8-repair' );
+        $sync = self::sync_all_records( 'manual-v7.1.0-repair' );
         if ( is_wp_error( $sync ) ) {
             return $sync;
         }
@@ -4016,6 +4016,7 @@ final class SC_RL6_V630_Durable_Index {
         $backend_snapshot_validation = self::request( '/v1/knowledge/snapshots/validate', 'GET' );
         $embedding_status = self::request( '/v1/knowledge/embeddings/status', 'GET' );
         $provider_diagnostics = self::provider_diagnostics();
+        $database_diagnostics = self::request( '/v1/knowledge/database/diagnostics', 'GET' );
         $embedding_queue_state = self::embedding_queue_state();
         $build_state = self::build_state();
         $source_discovery = self::source_discovery_summary();
@@ -4070,16 +4071,19 @@ final class SC_RL6_V630_Durable_Index {
         $backend_reconciliation_action = sanitize_key( $build_state['backend_reconciliation_action'] ?? $build_state['backend_transaction_status']['reconciliation_action'] ?? '' );
         $backend_job_id = sanitize_text_field( $build_state['backend_job_id'] ?? '' );
         $recovery_generation = absint( $build_state['recovery_generation'] ?? 0 );
+        $database_backend = ! is_wp_error( $database_diagnostics ) ? sanitize_key( $database_diagnostics['backend'] ?? $status['storage_engine'] ?? 'sqlite' ) : sanitize_key( $status['storage_engine'] ?? 'sqlite' );
+        $database_megabytes = ! is_wp_error( $database_diagnostics ) ? floatval( $database_diagnostics['database_megabytes'] ?? 0 ) : 0;
+        $vector_enabled = ! is_wp_error( $database_diagnostics ) && ! empty( $database_diagnostics['vector_enabled'] );
         ?>
         <div class="wrap sc-rl-v702-admin">
             <style>
-                .sc-rl-v702-admin{max-width:1320px}.sc-rl-v702-hero{background:#111;color:#fff;border-radius:18px;padding:28px 30px;margin:18px 0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:24px;align-items:center}.sc-rl-v702-hero h1{color:#fff;font-size:30px;line-height:1.15;margin:4px 0 10px}.sc-rl-v702-hero p{color:#d7d7d7;max-width:760px;font-size:15px}.sc-rl-v702-eyebrow{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#ff6b6b}.sc-rl-v702-badge{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:8px 12px;font-weight:700}.sc-rl-v702-badge:before{content:"";width:9px;height:9px;border-radius:50%;background:#d63638}.sc-rl-v702-hero[data-state="ready"] .sc-rl-v702-badge:before{background:#00a32a}.sc-rl-v702-hero[data-state="indexing"] .sc-rl-v702-badge:before,.sc-rl-v702-hero[data-state="action-required"] .sc-rl-v702-badge:before{background:#dba617}.sc-rl-v702-progress{height:8px;background:rgba(255,255,255,.16);border-radius:999px;overflow:hidden;margin-top:18px}.sc-rl-v702-progress span{display:block;height:100%;background:#fff;border-radius:999px}.sc-rl-v702-primary{min-width:260px;text-align:right}.sc-rl-v702-primary .button{min-height:46px;padding:8px 18px;font-size:15px;font-weight:800}.sc-rl-v702-primary small{display:block;color:#bdbdbd;margin-top:10px;max-width:280px}.sc-rl-v702-stages{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:18px 0}.sc-rl-v702-stage{background:#fff;border:1px solid #dcdcde;border-radius:14px;padding:18px;box-shadow:0 1px 2px rgba(0,0,0,.03)}.sc-rl-v702-stage span{display:block;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#646970}.sc-rl-v702-stage strong{display:block;font-size:25px;line-height:1.15;margin:8px 0}.sc-rl-v702-stage p{margin:0;color:#50575e}.sc-rl-v702-stage[data-state="ready"]{border-top:4px solid #00a32a}.sc-rl-v702-stage[data-state="attention"],.sc-rl-v702-stage[data-state="running"]{border-top:4px solid #dba617}.sc-rl-v702-stage[data-state="offline"]{border-top:4px solid #d63638}.sc-rl-v702-source-panel{background:#fff;border:1px solid #dcdcde;border-radius:14px;padding:18px 20px;margin:18px 0}.sc-rl-v702-source-panel h2{margin:0 0 4px}.sc-rl-v702-source-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.sc-rl-v702-source-grid span{background:#f0f0f1;border-radius:999px;padding:7px 10px;font-weight:700}.sc-rl-v702-settings,.sc-rl-v702-diagnostics{background:#fff;border:1px solid #dcdcde;border-radius:14px;padding:0 20px;margin:18px 0}.sc-rl-v702-settings>summary,.sc-rl-v702-diagnostics>summary{cursor:pointer;font-size:16px;font-weight:800;padding:18px 0}.sc-rl-v702-actions{display:flex;flex-wrap:wrap;gap:8px;padding:16px 0 20px;border-top:1px solid #eee}.sc-rl-v702-callout{border-left:4px solid #b00000;background:#fff;padding:14px 16px;margin:16px 0}.sc-rl-v702-build-message{margin-top:10px;color:#d7d7d7}.sc-rl-v702-admin .form-table th{width:250px}.sc-rl-v702-admin code{word-break:break-all}.sc-rl-v703-job{background:#fff;border:1px solid #dcdcde;border-radius:14px;padding:18px 20px;margin:18px 0}.sc-rl-v703-job__head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start}.sc-rl-v703-job__head h2{margin:0 0 4px}.sc-rl-v703-job__grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:16px}.sc-rl-v703-job__metric{background:#f6f7f7;border-radius:10px;padding:12px}.sc-rl-v703-job__metric span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#646970;font-weight:800}.sc-rl-v703-job__metric strong{display:block;font-size:20px;margin-top:5px}.sc-rl-v703-controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}.sc-rl-v703-error{border-left:4px solid #d63638;background:#fcf0f1;padding:12px 14px;margin-top:14px}.sc-rl-v703-cron{border-left:4px solid #dba617;background:#fff8e5;padding:12px 14px;margin-top:14px}@media(max-width:900px){.sc-rl-v702-hero{grid-template-columns:1fr}.sc-rl-v702-primary{text-align:left}.sc-rl-v702-stages{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:760px){.sc-rl-v703-job__grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.sc-rl-v702-stages,.sc-rl-v703-job__grid{grid-template-columns:1fr}.sc-rl-v702-hero{padding:22px}}
+                .sc-rl-v702-admin{max-width:1320px}.sc-rl-v702-hero{background:#111;color:#fff;border-radius:18px;padding:28px 30px;margin:18px 0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:24px;align-items:center}.sc-rl-v702-hero h1{color:#fff;font-size:30px;line-height:1.15;margin:4px 0 10px}.sc-rl-v702-hero p{color:#d7d7d7;max-width:760px;font-size:15px}.sc-rl-v702-eyebrow{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#ff6b6b}.sc-rl-v702-badge{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:8px 12px;font-weight:700}.sc-rl-v702-badge:before{content:"";width:9px;height:9px;border-radius:50%;background:#d63638}.sc-rl-v702-hero[data-state="ready"] .sc-rl-v702-badge:before{background:#00a32a}.sc-rl-v702-hero[data-state="indexing"] .sc-rl-v702-badge:before,.sc-rl-v702-hero[data-state="action-required"] .sc-rl-v702-badge:before{background:#dba617}.sc-rl-v702-progress{height:8px;background:rgba(255,255,255,.16);border-radius:999px;overflow:hidden;margin-top:18px}.sc-rl-v702-progress span{display:block;height:100%;background:#fff;border-radius:999px}.sc-rl-v702-primary{min-width:260px;text-align:right}.sc-rl-v702-primary .button{min-height:46px;padding:8px 18px;font-size:15px;font-weight:800}.sc-rl-v702-primary small{display:block;color:#bdbdbd;margin-top:10px;max-width:280px}.sc-rl-v702-stages{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;margin:18px 0}.sc-rl-v702-stage{background:#fff;border:1px solid #dcdcde;border-radius:14px;padding:18px;box-shadow:0 1px 2px rgba(0,0,0,.03)}.sc-rl-v702-stage span{display:block;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#646970}.sc-rl-v702-stage strong{display:block;font-size:25px;line-height:1.15;margin:8px 0}.sc-rl-v702-stage p{margin:0;color:#50575e}.sc-rl-v702-stage[data-state="ready"]{border-top:4px solid #00a32a}.sc-rl-v702-stage[data-state="attention"],.sc-rl-v702-stage[data-state="running"]{border-top:4px solid #dba617}.sc-rl-v702-stage[data-state="offline"]{border-top:4px solid #d63638}.sc-rl-v702-source-panel{background:#fff;border:1px solid #dcdcde;border-radius:14px;padding:18px 20px;margin:18px 0}.sc-rl-v702-source-panel h2{margin:0 0 4px}.sc-rl-v702-source-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.sc-rl-v702-source-grid span{background:#f0f0f1;border-radius:999px;padding:7px 10px;font-weight:700}.sc-rl-v702-settings,.sc-rl-v702-diagnostics{background:#fff;border:1px solid #dcdcde;border-radius:14px;padding:0 20px;margin:18px 0}.sc-rl-v702-settings>summary,.sc-rl-v702-diagnostics>summary{cursor:pointer;font-size:16px;font-weight:800;padding:18px 0}.sc-rl-v702-actions{display:flex;flex-wrap:wrap;gap:8px;padding:16px 0 20px;border-top:1px solid #eee}.sc-rl-v702-callout{border-left:4px solid #b00000;background:#fff;padding:14px 16px;margin:16px 0}.sc-rl-v702-build-message{margin-top:10px;color:#d7d7d7}.sc-rl-v702-admin .form-table th{width:250px}.sc-rl-v702-admin code{word-break:break-all}.sc-rl-v703-job{background:#fff;border:1px solid #dcdcde;border-radius:14px;padding:18px 20px;margin:18px 0}.sc-rl-v703-job__head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start}.sc-rl-v703-job__head h2{margin:0 0 4px}.sc-rl-v703-job__grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:16px}.sc-rl-v703-job__metric{background:#f6f7f7;border-radius:10px;padding:12px}.sc-rl-v703-job__metric span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#646970;font-weight:800}.sc-rl-v703-job__metric strong{display:block;font-size:20px;margin-top:5px}.sc-rl-v703-controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}.sc-rl-v703-error{border-left:4px solid #d63638;background:#fcf0f1;padding:12px 14px;margin-top:14px}.sc-rl-v703-cron{border-left:4px solid #dba617;background:#fff8e5;padding:12px 14px;margin-top:14px}@media(max-width:900px){.sc-rl-v702-hero{grid-template-columns:1fr}.sc-rl-v702-primary{text-align:left}.sc-rl-v702-stages{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:760px){.sc-rl-v703-job__grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.sc-rl-v702-stages,.sc-rl-v703-job__grid{grid-template-columns:1fr}.sc-rl-v702-hero{padding:22px}}
             </style>
             <?php if ( $notice ) : ?><div class="notice notice-<?php echo esc_attr( $notice_type ); ?> is-dismissible"><p><?php echo esc_html( $notice ); ?></p></div><?php endif; ?>
 
             <section class="sc-rl-v702-hero" data-state="<?php echo esc_attr( $primary_state ); ?>">
                 <div>
-                    <div class="sc-rl-v702-eyebrow">Research Librarian v7.0.8</div>
+                    <div class="sc-rl-v702-eyebrow">Research Librarian v7.1.0</div>
                     <h1>Knowledge Index and AI Readiness</h1>
                     <p>One operational view for the Python connection, WordPress source discovery, durable knowledge synchronization, and Gemini semantic indexing.</p>
                     <div class="sc-rl-v702-badge"><?php echo esc_html( $build_badge ); ?></div>
@@ -4140,7 +4144,8 @@ final class SC_RL6_V630_Durable_Index {
                     </div>
                     <?php if ( $backend_commit_active ) : ?><div class="sc-rl-v703-cron"><strong>All source batches are staged.</strong> WordPress is advancing one bounded Python activation step at a time. Every record, chunk, and verification cursor is saved before the next request.</div><?php endif; ?>
                     <?php if ( $transaction_recovery_ready ) : ?><div class="sc-rl-v703-cron"><strong>Commit recovery is ready.</strong> The complete WordPress staging file is still available. Choose “Repair and Resume Commit” to replay the transaction without rediscovering the 2,000-plus source records.</div><?php endif; ?>
-                    <?php if ( $backend_commit_active && ! $backend_storage_persistent ) : ?><div class="sc-rl-v703-cron"><strong>Persistent Render storage is recommended.</strong> Set <code>SC_RL_DATA_DIR=/var/data/sc-research-librarian</code> and attach a Render persistent disk. The WordPress staging file can still replay the transaction after an ephemeral restart.</div><?php endif; ?>
+                    <?php if ( $backend_commit_active && ! $backend_storage_persistent ) : ?><div class="sc-rl-v703-cron"><strong>Durable storage is not active.</strong> Configure Neon with <code>SC_RL_DATABASE_BACKEND=postgres</code>, <code>DATABASE_URL</code>, and <code>DIRECT_DATABASE_URL</code>. The WordPress staging file remains available for replay.</div><?php endif; ?>
+                    <?php if ( 'postgres' !== $database_backend ) : ?><div class="sc-rl-v703-cron"><strong>SQLite fallback mode.</strong> Local development may still use <code>SC_RL_DATA_DIR=/var/data/sc-research-librarian</code>, but production v7.1.0 should use Neon Postgres.</div><?php endif; ?>
                     <?php if ( ! empty( $build_state['last_error'] ) ) : ?><div class="sc-rl-v703-error"><strong>Last error:</strong> <?php echo esc_html( $build_state['last_error'] ); ?></div><?php endif; ?>
                     <?php if ( defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ) : ?><div class="sc-rl-v703-cron"><strong>WP-Cron is disabled.</strong> Use “Run Next Batch Now,” or configure a real server cron request to <code>wp-cron.php</code>.</div><?php endif; ?>
                     <form method="post" class="sc-rl-v703-controls">
@@ -4158,6 +4163,7 @@ final class SC_RL6_V630_Durable_Index {
                 <article class="sc-rl-v702-stage" data-state="<?php echo esc_attr( $source_count ? 'ready' : 'attention' ); ?>"><span>2 · WordPress sources</span><strong><?php echo esc_html( number_format_i18n( $source_count ) ); ?></strong><p><?php echo esc_html( count( $source_discovery['post_types'] ?? array() ) . ' indexable content type(s) discovered' ); ?></p></article>
                 <article class="sc-rl-v702-stage" data-state="<?php echo esc_attr( $indexed_records ? 'ready' : 'attention' ); ?>"><span>3 · Knowledge index</span><strong><?php echo esc_html( number_format_i18n( $indexed_records ) ); ?></strong><p><?php echo esc_html( $indexed_records ? absint( $status['indexed_titles'] ?? 0 ) . ' distinct titles in Python' : 'Build the index to activate retrieval' ); ?></p></article>
                 <article class="sc-rl-v702-stage" data-state="<?php echo esc_attr( $pending_chunks ? 'running' : ( $indexed_records ? 'ready' : 'attention' ) ); ?>"><span>4 · Semantic search</span><strong><?php echo esc_html( $indexed_chunks ? number_format_i18n( $embedded_chunks ) . '/' . number_format_i18n( $indexed_chunks ) : 'Waiting' ); ?></strong><p><?php echo esc_html( $pending_chunks ? number_format_i18n( $pending_chunks ) . ' chunk(s) remaining' : ( $indexed_records ? 'Embedding queue complete or not required' : 'Starts after the knowledge sync' ) ); ?></p></article>
+                <article class="sc-rl-v702-stage" data-state="<?php echo esc_attr( 'postgres' === $database_backend && $vector_enabled ? 'ready' : 'attention' ); ?>"><span>5 · Durable database</span><strong><?php echo esc_html( 'postgres' === $database_backend ? 'Neon Postgres' : strtoupper( $database_backend ) ); ?></strong><p><?php echo esc_html( 'postgres' === $database_backend ? ( $vector_enabled ? 'pgvector ready' . ( $database_megabytes ? ' · ' . number_format_i18n( $database_megabytes, 1 ) . ' MB used' : '' ) : 'Enable the vector extension in Neon' ) : 'Set SC_RL_DATABASE_BACKEND=postgres and DATABASE_URL' ); ?></p></article>
             </div>
 
             <section class="sc-rl-v702-source-panel">

@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import hashlib
 import json
+import math
 import re
 from typing import Any
 
@@ -123,11 +124,20 @@ async def generate_embedding(text: str, task_type: str = "RETRIEVAL_DOCUMENT") -
         raise RuntimeError("Gemini embeddings are not configured on the Python backend.")
     model_name = settings.gemini_embedding_model.replace("models/", "", 1).strip()
     endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:embedContent"
+    prepared_text = text[:30000]
     payload = {
         "model": f"models/{model_name}",
-        "content": {"parts": [{"text": text[:30000]}]},
-        "taskType": task_type,
+        "content": {"parts": [{"text": prepared_text}]},
+        "output_dimensionality": settings.embedding_dimensions,
     }
+    if model_name == "gemini-embedding-2":
+        if task_type == "RETRIEVAL_QUERY":
+            prepared_text = f"task: search result | query: {prepared_text}"
+        elif task_type == "RETRIEVAL_DOCUMENT":
+            prepared_text = f"title: none | text: {prepared_text}"
+        payload["content"] = {"parts": [{"text": prepared_text}]}
+    else:
+        payload["taskType"] = task_type
     headers = {"X-goog-api-key": settings.gemini_api_key, "Content-Type": "application/json"}
     try:
         async with httpx.AsyncClient(timeout=settings.request_timeout) as client:
@@ -138,6 +148,10 @@ async def generate_embedding(text: str, task_type: str = "RETRIEVAL_DOCUMENT") -
         embedding = [float(value) for value in values]
         if not embedding:
             raise RuntimeError("Gemini returned no embedding values.")
+        if model_name == "gemini-embedding-001" and settings.embedding_dimensions != 3072:
+            magnitude = math.sqrt(sum(value * value for value in embedding))
+            if magnitude > 0:
+                embedding = [value / magnitude for value in embedding]
         return embedding
     except (httpx.HTTPError, ValueError, KeyError, RuntimeError) as exc:
         provider_state.failure(str(exc))

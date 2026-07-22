@@ -1,5 +1,5 @@
 <?php
-/** Static release contract for v7.0.8 asynchronous backend commit recovery. */
+/** Static release contract for v7.1.0 asynchronous backend commit recovery. */
 $root = dirname( __DIR__ );
 $main = file_get_contents( $root . '/sustainable-catalyst-research-librarian-ai.php' );
 $module = file_get_contents( $root . '/includes/class-sc-rl-v630-durable-index.php' );
@@ -10,9 +10,9 @@ $docs = file_get_contents( $root . '/docs/V706_ASYNCHRONOUS_BACKEND_COMMIT_AMBIG
 $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_v706_async_backend_commit_manifest.json' ), true );
 
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 7.0.8' ),
-    'durable_version' => false !== strpos( $module, "const VERSION = '7.0.8';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.0.8"' ),
+    'version_header' => false !== strpos( $main, 'Version: 7.1.0' ),
+    'durable_version' => false !== strpos( $module, "const VERSION = '7.1.0';" ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.1.0"' ),
     'defer_commit_contract' => false !== strpos( $models, 'defer_commit: bool = False' ),
     'sync_passes_defer_commit' => false !== strpos( $backend, 'defer_commit=payload.defer_commit' ),
     'commit_endpoint' => false !== strpos( $backend, '/v1/knowledge/sync/jobs/{job_id}/commit' ),
@@ -38,7 +38,7 @@ $checks = array(
 );
 $failed = array_keys( array_filter( $checks, static function ( $passed ) { return ! $passed; } ) );
 echo json_encode( array(
-    'version' => '7.0.8',
+    'version' => '7.1.0',
     'checks' => $checks,
     'passed' => count( $checks ) - count( $failed ),
     'failed' => count( $failed ),

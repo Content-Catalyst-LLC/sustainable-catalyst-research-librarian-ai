@@ -14,10 +14,10 @@ $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_re
 $benchmarks = json_decode( file_get_contents( $root . '/data/research_librarian_retrieval_benchmarks_v6.5.0.json' ), true );
 
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 7.0.8' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '7.0.8';" ),
-    'module_version' => false !== strpos( $module, "const VERSION = '7.0.8';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.0.8"' ),
+    'version_header' => false !== strpos( $main, 'Version: 7.1.0' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '7.1.0';" ),
+    'module_version' => false !== strpos( $module, "const VERSION = '7.1.0';" ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.1.0"' ),
     'schema_version_six' => false !== strpos( $store, 'SCHEMA_VERSION = 12' ),
     'index_schema_six' => false !== strpos( $store, 'sc-research-librarian-knowledge-index/12.0' ),
     'calibration_module' => false !== strpos( $calibration, 'DEFAULT_RETRIEVAL_CONFIG' ),
@@ -96,7 +96,7 @@ $checks = array(
 );
 $failed = array_keys( array_filter( $checks, static function ( $value ) { return ! $value; } ) );
 echo json_encode( array(
-    'version' => '7.0.8',
+    'version' => '7.1.0',
     'checks' => $checks,
     'passed' => count( $checks ) - count( $failed ),
     'failed' => count( $failed ),

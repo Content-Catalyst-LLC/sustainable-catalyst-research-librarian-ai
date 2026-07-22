@@ -82,7 +82,7 @@ def test_api_commit_endpoint_queues_fully_staged_transaction() -> None:
             "records": [
                 {
                     "id": "v707-api-record",
-                    "title": "v7.0.8 API Record",
+                    "title": "v7.1.0 API Record",
                     "url": "https://sustainablecatalyst.com/v707-api-record/",
                 }
             ],

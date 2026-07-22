@@ -107,7 +107,7 @@ Future work should be maintenance-led: destination intake adoption, project coll
 - v7.0.6 transaction migration and WordPress replay recovery
 - Persistent data-directory support and activation diagnostics
 
-## v7.0.8 — Transaction-State Reconciliation and Durable Recovery — Complete
+## v7.1.0 — Transaction-State Reconciliation and Durable Recovery — Complete
 
 - WordPress/backend expected-batch manifest comparison
 - Explicit committed, activate, replay-missing, and replay-all actions
@@ -115,3 +115,8 @@ Future work should be maintenance-led: destination intake adoption, project coll
 - Missing-batch byte-offset replay
 - Recovery-generation reset for exhausted v7.0.7 jobs
 - Persistent Render disk auto-detection and transaction diagnostics
+
+
+## v7.1.0 — Neon Postgres Durable Index — Complete
+
+Persistent Neon Postgres generations, pgvector embeddings, idempotent batch replay, verified active-generation switching, and free-tier storage diagnostics.

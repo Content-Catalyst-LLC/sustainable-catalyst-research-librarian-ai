@@ -1,13 +1,13 @@
-# Research Librarian v7.0.8 Validation Report
+# Research Librarian v7.1.0 Validation Report
 
-**Release:** v7.0.8 — Transaction-State Reconciliation and Durable Recovery  
+**Release:** v7.1.0 — Transaction-State Reconciliation and Durable Recovery  
 **Validation date:** 2026-07-21
 
 ## Repair target
 
 v7.0.7 could preserve and incrementally activate a complete backend transaction, but WordPress could still stop after exhausted replay attempts when the backend returned an empty `missing_batches` list. That list was ambiguous: it could mean either every expected batch was retained or the backend transaction had disappeared and retained zero batches.
 
-v7.0.8 makes reconciliation deterministic by comparing the WordPress-owned expected batch count with the backend batch manifest before choosing activation or replay.
+v7.1.0 makes reconciliation deterministic by comparing the WordPress-owned expected batch count with the backend batch manifest before choosing activation or replay.
 
 ## Reconciliation states covered
 
@@ -33,7 +33,7 @@ The zero-batch transaction case is explicitly rejected by the backend activation
 
 ## Durable recovery coverage
 
-The v7.0.8 regression suite verifies:
+The v7.1.0 regression suite verifies:
 
 - an empty missing-batch list is accepted only when the backend batch count and complete received-batch manifest match WordPress;
 - a missing or zero-batch backend transaction produces `replay-all` rather than a false activation state;
@@ -53,4 +53,4 @@ For strongest restart durability, attach a Render persistent disk and configure:
 SC_RL_DATA_DIR=/var/data/sc-research-librarian
 ```
 
-When `/var/data` is mounted and writable, v7.0.8 automatically selects it if `SC_RL_DATA_DIR` is not explicitly set. The status response reports the storage path, persistence state, and a warning when backend transaction data still resides under `/tmp`.
+When `/var/data` is mounted and writable, v7.1.0 automatically selects it if `SC_RL_DATA_DIR` is not explicitly set. The status response reports the storage path, persistence state, and a warning when backend transaction data still resides under `/tmp`.

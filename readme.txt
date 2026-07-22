@@ -3,16 +3,16 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 7.0.8
+Stable tag: 7.1.0
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
 
 == Description ==
 
-Research Librarian AI retrieves Sustainable Catalyst publications and documents through exact-title priority, section-aware BM25 ranking, optional Gemini embeddings, calibrated reciprocal-rank fusion, and citation-verified synthesis. WordPress remains the canonical publishing and recovery source, while FastAPI provides a durable SQLite runtime index compatible with free Render infrastructure.
+Research Librarian AI retrieves Sustainable Catalyst publications and documents through exact-title priority, section-aware BM25 ranking, optional Gemini embeddings, calibrated reciprocal-rank fusion, and citation-verified synthesis. WordPress remains the canonical publishing and recovery source, while FastAPI stores the production knowledge index durably in Neon Postgres with pgvector.
 
-v7.0.8 adds deterministic transaction-state reconciliation. WordPress compares its expected batch manifest with backend-retained batches, replays missing work from the durable staging file, and never treats an empty missing-batch list as proof of completeness.
+v7.1.0 adds a Neon Postgres durable index. WordPress can replay the preserved staging file into idempotent Postgres batches, and the backend activates a verified generation only after records, chunks, and checksums are complete.
 
 == Shortcodes ==
 
@@ -38,7 +38,13 @@ v7.0.8 adds deterministic transaction-state reconciliation. WordPress compares i
 [sc_research_librarian_platform_handoffs]
 
 == Changelog ==
-= 7.0.8 =
+
+= 7.1.0 =
+* Adds Neon Postgres as the durable production knowledge-index store.
+* Stores vectors with pgvector and activates verified generations atomically.
+* Recovers preserved WordPress staging files without requiring Render persistent disks.
+* Adds database diagnostics and Neon free-tier storage reporting.
+= 7.1.0 =
 * Removes FastAPI in-process background activation from the index rebuild path.
 * Adds a bounded authenticated commit-step endpoint with durable SQLite cursors.
 * Copies shadow records, builds chunks, and verifies the replacement in resumable batches.

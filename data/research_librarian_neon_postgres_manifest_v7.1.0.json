@@ -1,0 +1,22 @@
+{
+  "schema": "sc-research-librarian-neon-postgres-manifest/1.0",
+  "version": "7.1.0",
+  "title": "Neon Postgres Durable Index",
+  "storage": {
+    "runtime": "DATABASE_URL pooled Postgres connection",
+    "migrations": "DIRECT_DATABASE_URL direct Postgres connection",
+    "vectors": "pgvector",
+    "activation": "verified active-generation pointer",
+    "render_disk_required": false
+  },
+  "recovery": {
+    "wordpress_staging_replay": true,
+    "idempotent_batches": true,
+    "missing_transaction_recreation": true,
+    "atomic_generation_switch": true
+  },
+  "free_tier": {
+    "warning_megabytes": 400,
+    "cleanup_superseded_generations": true
+  }
+}

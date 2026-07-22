@@ -1,8 +1,8 @@
-# v7.0.8 — Transaction-State Reconciliation and Durable Recovery
+# v7.1.0 — Transaction-State Reconciliation and Durable Recovery
 
 ## Purpose
 
-v7.0.8 repairs the reconciliation failure where an empty `missing_batches` array was treated as proof that a backend transaction was complete. An empty list can also describe a lost or empty backend transaction whose batch count is zero. WordPress now compares the backend manifest with its own expected batch count before choosing an activation or replay action.
+v7.1.0 repairs the reconciliation failure where an empty `missing_batches` array was treated as proof that a backend transaction was complete. An empty list can also describe a lost or empty backend transaction whose batch count is zero. WordPress now compares the backend manifest with its own expected batch count before choosing an activation or replay action.
 
 ## Deterministic reconciliation actions
 
@@ -17,7 +17,7 @@ An empty missing-batch list is accepted only when the backend batch count equals
 
 ## Durable recovery
 
-WordPress preserves the complete JSONL staging file until index verification finishes. v7.0.8 records byte offsets for each synchronization batch. When the backend reports specific missing batches, WordPress replays only those batches. When backend state has disappeared or contains an empty shell, WordPress creates a fresh transaction and replays all batches without rediscovering the site.
+WordPress preserves the complete JSONL staging file until index verification finishes. v7.1.0 records byte offsets for each synchronization batch. When the backend reports specific missing batches, WordPress replays only those batches. When backend state has disappeared or contains an empty shell, WordPress creates a fresh transaction and replays all batches without rediscovering the site.
 
 Replay counters reset after successful reconciliation. Resuming a v7.0.7 job that stopped after exhausted reconciliation begins a new recovery generation while preserving the staging file.
 

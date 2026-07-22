@@ -12,6 +12,16 @@ services:
         value: 3.12.12
       - key: SC_RL_ENVIRONMENT
         value: production
+      - key: SC_RL_DATABASE_BACKEND
+        value: postgres
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_DATABASE_URL
+        sync: false
+      - key: SC_RL_POSTGRES_GENERATION_RETENTION
+        value: "1"
+      - key: SC_RL_NEON_FREE_STORAGE_WARNING_MB
+        value: "400"
       - key: SC_RL_AI_PROVIDER
         value: gemini
       - key: SC_RL_GEMINI_MODEL
@@ -28,6 +38,8 @@ services:
         value: "35"
       - key: SC_RL_EMBEDDING_BATCH_LIMIT
         value: "50"
+      - key: SC_RL_EMBEDDING_DIMENSIONS
+        value: "768"
       - key: SC_RL_CITATION_REQUIRED
         value: "true"
       - key: SC_RL_MAX_RUNTIME_SNAPSHOTS
@@ -47,7 +59,7 @@ services:
       - key: SC_RL_ACTIVATION_SNAPSHOT_RECORD_LIMIT
         value: "500"
       - key: SC_RL_RELEASE_VERSION
-        value: "7.0.8"
+        value: "7.1.0"
       - key: SC_RL_HANDOFF_SOURCE_LIMIT
         value: "8"
       - key: SC_RL_HANDOFF_TTL_SECONDS
