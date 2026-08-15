@@ -1,5 +1,5 @@
 <?php
-/** Static release contract for Research Librarian AI v7.5.0 collaborative Research Rooms. */
+/** Static release contract for Research Librarian AI v7.6.0 collaborative Research Rooms. */
 $root = dirname( __DIR__ );
 $main = file_get_contents( $root . '/sustainable-catalyst-research-librarian-ai.php' );
 $module = file_get_contents( $root . '/includes/class-sc-rl-v700-connected-platform.php' );
@@ -18,13 +18,13 @@ $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_co
 $v740 = json_decode( file_get_contents( $root . '/data/research_librarian_persistent_research_state_manifest_v7.4.0.json' ), true );
 
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 7.5.0' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '7.5.0';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.5.0"' ),
-    'module_version' => false !== strpos( $module, "const VERSION = '7.5.0';" ),
-    'api_14' => false !== strpos( $platform, 'sc-connected-research-api/1.4' ),
-    'workspace_24' => false !== strpos( $module, 'sc-research-librarian-public-workspace/2.4' ),
-    'sqlite_schema_15' => false !== strpos( $store, 'SCHEMA_VERSION = 15' ),
+    'version_header' => false !== strpos( $main, 'Version: 7.6.0' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '7.6.0';" ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.6.0"' ),
+    'module_version' => false !== strpos( $module, "const VERSION = '7.6.0';" ),
+    'api_14' => false !== strpos( $platform, 'sc-connected-research-api/1.5' ),
+    'workspace_24' => false !== strpos( $module, 'sc-research-librarian-public-workspace/2.5' ),
+    'sqlite_schema_15' => false !== strpos( $store, 'SCHEMA_VERSION = 16' ),
     'knowledge_index_13' => false !== strpos( $store, 'sc-research-librarian-knowledge-index/13.0' ),
 
     'room_schema' => false !== strpos( $collab, 'sc-research-room/1.0' ),
@@ -131,5 +131,5 @@ $checks = array(
     'docs_browser_identity_boundary' => false !== strpos( $docs, 'Browser payloads do not choose' ),
 );
 $failed = array_keys( array_filter( $checks, static function ( $value ) { return ! $value; } ) );
-echo json_encode( array( 'version' => '7.5.0', 'checks' => $checks, 'passed' => count( $checks ) - count( $failed ), 'failed' => count( $failed ), 'failures' => $failed ), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . PHP_EOL;
+echo json_encode( array( 'version' => '7.6.0', 'checks' => $checks, 'passed' => count( $checks ) - count( $failed ), 'failed' => count( $failed ), 'failures' => $failed ), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . PHP_EOL;
 exit( $failed ? 1 : 0 );

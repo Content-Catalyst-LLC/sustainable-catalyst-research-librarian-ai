@@ -36,7 +36,7 @@ from .models import (
     QualityEvaluationRequest,
     ReleaseGateRequest,
     RetentionRunRequest,
-    ResearchProjectRequest, ResearchInvestigationRequest, ProjectEntityRequest, LibraryObjectRequest, ResearchContextRequest, ResearchRoomRequest, ResearchRoomMemberRequest, ResearchRoomEvidenceStateRequest, ResearchRoomQuestionRequest, ResearchRoomDisagreementRequest, ResearchRoomActivityRequest, SourceEvaluationRequest, EvidenceComparisonRequest, EvidenceGapRequest, ResearchActivityRequest, ResearchObjectStateRequest, ResearchOpenQuestionRequest, WorkflowTemplateRequest, ContradictionRequest, UncertaintyRegisterRequest, PlatformBackupImportRequest,
+    ResearchProjectRequest, ResearchInvestigationRequest, ProjectEntityRequest, LibraryObjectRequest, ResearchContextRequest, ResearchRoomRequest, ResearchRoomMemberRequest, ResearchRoomEvidenceStateRequest, ResearchRoomQuestionRequest, ResearchRoomDisagreementRequest, ResearchRoomActivityRequest, SourceEvaluationRequest, EvidenceComparisonRequest, EvidenceGapRequest, ResearchActivityRequest, ResearchObjectStateRequest, ResearchOpenQuestionRequest, WorkspacePromotionPrepareRequest, WorkspacePromotionReceiptRequest, WorkflowTemplateRequest, ContradictionRequest, UncertaintyRegisterRequest, PlatformBackupImportRequest,
     ArtifactReturnRequest,
     RetrievalCalibrationUpdate,
     RetrievalRequest,
@@ -117,6 +117,19 @@ from .collaboration import (
     normalize_room_activity,
     build_room_synthesis,
     prompt_room_synthesis,
+)
+
+from .workspace_promotion import (
+    PROMOTION_SCHEMA,
+    PROMOTION_PACKET_SCHEMA,
+    PROMOTION_SUMMARY_SCHEMA,
+    PROMOTION_RECEIPT_SCHEMA,
+    WORKSPACE_IMPORT_CONTRACT,
+    artifact_catalog,
+    build_workspace_packet,
+    normalize_promotion,
+    apply_promotion_receipt,
+    promotion_summary,
 )
 
 
@@ -212,7 +225,7 @@ def _follow_up_prompts(mode: str, best: RetrievedSource | None, related: list[Re
 
 def _workspace_summary(mode: str, matches: list[RetrievedSource], related: list[RetrievedSource], ai_used: bool, gate: dict[str, Any]) -> dict[str, Any]:
     return {
-        "schema": "sc-research-librarian-public-workspace/2.4",
+        "schema": "sc-research-librarian-public-workspace/2.5",
         "mode": mode,
         "mode_label": _RESEARCH_MODES.get(mode, _RESEARCH_MODES["auto"])["label"],
         "verified_sources": len(matches),
@@ -1280,7 +1293,7 @@ def _research_state_summary(owner_ref: str = "", project_id: str = "", context_i
 
 @app.get("/v1/platform/api", dependencies=[Depends(require_key)])
 def connected_api_manifest() -> dict[str, Any]:
-    return {"schema": API_SCHEMA, "version": __version__, "stability": "stable-v7", "resources": ["projects", "investigations", "entities", "library-objects", "research-contexts", "research-rooms", "room-members", "room-evidence", "room-questions", "room-disagreements", "room-synthesis", "source-evaluations", "evidence-comparisons", "evidence-gaps", "research-state", "research-activity", "object-review-state", "open-questions", "workflows", "contradictions", "uncertainties", "backups", "handoffs", "artifacts"], "object_model": object_model_manifest(), "evidence_quality": {"source_evaluation_schema": SOURCE_EVALUATION_SCHEMA, "comparison_schema": EVIDENCE_COMPARISON_SCHEMA, "gap_schema": EVIDENCE_GAP_SCHEMA, "quality_signals_schema": QUALITY_SIGNALS_SCHEMA, "truth_score": False}, "research_state": {"summary_schema": RESEARCH_STATE_SUMMARY_SCHEMA, "activity_schema": RESEARCH_ACTIVITY_SCHEMA, "object_state_schema": RESEARCH_OBJECT_STATE_SCHEMA, "open_question_schema": OPEN_QUESTION_SCHEMA, "workflow_memory_only": True, "not_evidence": True}, "research_rooms": {"room_schema": ROOM_SCHEMA, "member_schema": ROOM_MEMBER_SCHEMA, "evidence_state_schema": ROOM_EVIDENCE_STATE_SCHEMA, "question_schema": ROOM_QUESTION_SCHEMA, "disagreement_schema": ROOM_DISAGREEMENT_SCHEMA, "activity_schema": ROOM_ACTIVITY_SCHEMA, "synthesis_schema": ROOM_SYNTHESIS_SCHEMA, "prompt_schema": ROOM_PROMPT_SCHEMA, "participant_attribution": True, "individual_shared_state_separate": True, "not_evidence": True}, "generation_boundary": adapter_status()}
+    return {"schema": API_SCHEMA, "version": __version__, "stability": "stable-v7", "resources": ["projects", "investigations", "entities", "library-objects", "research-contexts", "research-rooms", "room-members", "room-evidence", "room-questions", "room-disagreements", "room-synthesis", "source-evaluations", "evidence-comparisons", "evidence-gaps", "research-state", "research-activity", "object-review-state", "open-questions", "workflows", "contradictions", "uncertainties", "backups", "handoffs", "artifacts", "workspace-promotions"], "object_model": object_model_manifest(), "evidence_quality": {"source_evaluation_schema": SOURCE_EVALUATION_SCHEMA, "comparison_schema": EVIDENCE_COMPARISON_SCHEMA, "gap_schema": EVIDENCE_GAP_SCHEMA, "quality_signals_schema": QUALITY_SIGNALS_SCHEMA, "truth_score": False}, "research_state": {"summary_schema": RESEARCH_STATE_SUMMARY_SCHEMA, "activity_schema": RESEARCH_ACTIVITY_SCHEMA, "object_state_schema": RESEARCH_OBJECT_STATE_SCHEMA, "open_question_schema": OPEN_QUESTION_SCHEMA, "workflow_memory_only": True, "not_evidence": True}, "research_rooms": {"room_schema": ROOM_SCHEMA, "member_schema": ROOM_MEMBER_SCHEMA, "evidence_state_schema": ROOM_EVIDENCE_STATE_SCHEMA, "question_schema": ROOM_QUESTION_SCHEMA, "disagreement_schema": ROOM_DISAGREEMENT_SCHEMA, "activity_schema": ROOM_ACTIVITY_SCHEMA, "synthesis_schema": ROOM_SYNTHESIS_SCHEMA, "prompt_schema": ROOM_PROMPT_SCHEMA, "participant_attribution": True, "individual_shared_state_separate": True, "not_evidence": True}, "workspace_promotions": {"promotion_schema": PROMOTION_SCHEMA, "packet_schema": PROMOTION_PACKET_SCHEMA, "receipt_schema": PROMOTION_RECEIPT_SCHEMA, "workspace_import_contract": WORKSPACE_IMPORT_CONTRACT, "artifact_types": artifact_catalog(), "explicit_import_required": True}, "generation_boundary": adapter_status()}
 
 @app.get("/v1/platform/summary", dependencies=[Depends(require_key)])
 def connected_platform_summary() -> dict[str, Any]:
@@ -1777,6 +1790,138 @@ def save_research_question(payload: ResearchOpenQuestionRequest) -> dict[str, An
     return stored
 
 
+
+
+def _workspace_promotion_scope(payload: WorkspacePromotionPrepareRequest) -> tuple[dict[str, Any] | None, dict[str, Any] | None, dict[str, Any] | None, list[dict[str, Any]], dict[str, Any], dict[str, Any], dict[str, Any]]:
+    """Resolve only research material the promotion owner can legitimately export."""
+    owner_ref = str(payload.owner_ref or "")[:220]
+    project = store.research_project(payload.project_id) if payload.project_id else None
+    if payload.project_id and not project:
+        raise HTTPException(status_code=404, detail="Unknown research project.")
+    if project and str(project.get("owner_ref") or "") != owner_ref:
+        raise HTTPException(status_code=403, detail="Workspace promotion owner does not own this research project.")
+
+    context = store.research_context(payload.context_id) if payload.context_id else None
+    if payload.context_id and not context:
+        raise HTTPException(status_code=404, detail="Unknown research context.")
+    if context and str(context.get("owner_ref") or "") != owner_ref:
+        raise HTTPException(status_code=403, detail="Workspace promotion owner does not own this research context.")
+
+    room_id = str(payload.room_id or (context or {}).get("room_id") or "")[:220]
+    room = None
+    if room_id:
+        room, _ = _require_room_member(room_id, owner_ref)
+
+    project_id = str(payload.project_id or (context or {}).get("project_id") or (room or {}).get("project_id") or "")[:220]
+    if project_id and not project:
+        project = store.research_project(project_id)
+        if project and str(project.get("owner_ref") or "") != owner_ref and not room_id:
+            raise HTTPException(status_code=403, detail="Workspace promotion owner does not own this research project.")
+
+    if context:
+        resolution = resolve_saved_research_context(str(context.get("context_id") or ""))
+        sources = list(resolution.get("objects") or [])[:500]
+    elif room_id:
+        sources = store.library_objects_for_room(room_id, 1000)[:500]
+    elif project_id:
+        try:
+            sources = list(store.project_bundle(project_id).get("library_objects") or [])[:500]
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+    else:
+        sources = store.library_objects(500, owner_ref)
+
+    research_state = _research_state_summary(owner_ref, project_id, str((context or {}).get("context_id") or ""))
+    quality = {
+        "schema": QUALITY_SIGNALS_SCHEMA,
+        "summary": quality_summary(sources),
+        "comparison": compare_sources(sources),
+        "gaps": evidence_gaps(sources),
+        "governance": {"descriptive_only": True, "truth_score": False},
+    }
+    room_synthesis = _room_synthesis(room_id) if room_id else {}
+    return project, context, room, sources, research_state, quality, room_synthesis
+
+
+@app.get("/v1/workspace/promotions/catalog", dependencies=[Depends(require_key)])
+def workspace_promotion_catalog() -> dict[str, Any]:
+    return {"schema": "sc-workspace-artifact-catalog/1.0", "version": __version__, "workspace_import_contract": WORKSPACE_IMPORT_CONTRACT, "artifact_types": artifact_catalog(), "governance": {"explicit_import_required": True, "promotion_is_not_publication": True}}
+
+
+@app.get("/v1/workspace/promotions", dependencies=[Depends(require_key)])
+def list_workspace_promotions(limit: int = 200, owner_ref: str = "", project_id: str = "", context_id: str = "", room_id: str = "", status: str = "") -> dict[str, Any]:
+    promotions = store.workspace_promotions(limit, owner_ref, project_id, context_id, room_id, status)
+    return {"schema": PROMOTION_SUMMARY_SCHEMA, "version": __version__, "summary": promotion_summary(promotions), "promotions": promotions}
+
+
+@app.get("/v1/workspace/promotions/{promotion_id}", dependencies=[Depends(require_key)])
+def get_workspace_promotion(promotion_id: str, owner_ref: str = "") -> dict[str, Any]:
+    promotion = store.workspace_promotion(promotion_id)
+    if not promotion:
+        raise HTTPException(status_code=404, detail="Unknown Workspace promotion.")
+    if owner_ref and str(promotion.get("owner_ref") or "") != owner_ref:
+        raise HTTPException(status_code=403, detail="Workspace promotion does not belong to this owner.")
+    return promotion
+
+
+@app.post("/v1/workspace/promotions/prepare", dependencies=[Depends(require_key)])
+def prepare_workspace_promotion(payload: WorkspacePromotionPrepareRequest) -> dict[str, Any]:
+    project, context, room, sources, research_state, quality, room_synthesis = _workspace_promotion_scope(payload)
+    promotion_id = str(payload.promotion_id or "")[:220]
+    existing = store.workspace_promotion(promotion_id) if promotion_id else None
+    if existing and str(existing.get("owner_ref") or "") != payload.owner_ref:
+        raise HTTPException(status_code=403, detail="Workspace promotion does not belong to this owner.")
+    try:
+        packet = build_workspace_packet(
+            artifact_type=payload.artifact_type,
+            title=payload.title,
+            owner_ref=payload.owner_ref,
+            project=project,
+            context=context or {"context_id": "", "title": "Research Room handoff" if room else "Project handoff", "scopes": ["current-research-room"] if room else (["current-project"] if project else ["my-library"]), "project_id": str((project or {}).get("project_id") or ""), "room_id": str((room or {}).get("room_id") or "")},
+            sources=sources,
+            research_state=research_state,
+            evidence_quality=quality,
+            room_synthesis=room_synthesis,
+            selected_object_ids=payload.selected_object_ids,
+            include_rejected=payload.include_rejected,
+            notes=payload.notes,
+            promotion_id=promotion_id,
+        )
+        promotion = normalize_promotion({**payload.model_dump(), "project_id": str((project or {}).get("project_id") or payload.project_id), "context_id": str((context or {}).get("context_id") or payload.context_id), "room_id": str((room or {}).get("room_id") or payload.room_id)}, packet, existing)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    stored = store.save_workspace_promotion(promotion)
+    project_id = str(stored.get("project_id") or "")
+    if project_id:
+        store.save_project_event(project_id, "workspace-promotion-prepared", {"promotion_id": stored["promotion_id"], "artifact_type": stored["artifact_type"], "packet_fingerprint": stored["packet_fingerprint"]}, payload.owner_ref)
+    store.save_research_activity(normalize_activity({"owner_ref": payload.owner_ref, "project_id": project_id, "context_id": str(stored.get("context_id") or ""), "event_type": "workspace-promotion-prepared", "note": stored["title"], "metadata": {"promotion_id": stored["promotion_id"], "artifact_type": stored["artifact_type"], "packet_fingerprint": stored["packet_fingerprint"]}}))
+    if stored.get("room_id"):
+        store.save_room_activity(normalize_room_activity({"room_id": stored["room_id"], "actor_ref": payload.owner_ref, "event_type": "workspace-promotion-prepared", "note": stored["title"], "metadata": {"promotion_id": stored["promotion_id"], "artifact_type": stored["artifact_type"]}}))
+    return stored
+
+
+@app.post("/v1/workspace/promotions/{promotion_id}/receipt", dependencies=[Depends(require_key)])
+def receive_workspace_promotion_receipt(promotion_id: str, payload: WorkspacePromotionReceiptRequest) -> dict[str, Any]:
+    if promotion_id != payload.promotion_id:
+        raise HTTPException(status_code=422, detail="Workspace promotion path and payload promotion_id must match.")
+    promotion = store.workspace_promotion(promotion_id)
+    if not promotion:
+        raise HTTPException(status_code=404, detail="Unknown Workspace promotion.")
+    if str(promotion.get("owner_ref") or "") != payload.owner_ref:
+        raise HTTPException(status_code=403, detail="Workspace promotion does not belong to this owner.")
+    try:
+        updated = apply_promotion_receipt(promotion, payload.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    stored = store.save_workspace_promotion(updated)
+    if stored.get("project_id"):
+        store.save_project_event(str(stored["project_id"]), "workspace-promotion-imported", {"promotion_id": promotion_id, "workspace_artifact_id": str((stored.get("receipt") or {}).get("workspace_artifact_id") or ""), "packet_fingerprint": stored["packet_fingerprint"]}, payload.owner_ref)
+    store.save_research_activity(normalize_activity({"owner_ref": payload.owner_ref, "project_id": str(stored.get("project_id") or ""), "context_id": str(stored.get("context_id") or ""), "event_type": "workspace-promotion-imported", "note": stored["title"], "metadata": {"promotion_id": promotion_id, "workspace_artifact_id": str((stored.get("receipt") or {}).get("workspace_artifact_id") or "")}}))
+    if stored.get("room_id"):
+        store.save_room_activity(normalize_room_activity({"room_id": str(stored["room_id"]), "actor_ref": payload.owner_ref, "event_type": "workspace-promotion-imported", "note": stored["title"], "metadata": {"promotion_id": promotion_id}}))
+    return stored
+
+
 @app.get("/v1/projects", dependencies=[Depends(require_key)])
 def list_projects(limit: int = 100, owner_ref: str = "") -> dict[str, Any]:
     return {"schema":"sc-research-project-list/1.0","projects":store.research_projects(limit, owner_ref),"summary":store.connected_platform_summary()}
@@ -1847,7 +1992,7 @@ def import_platform_backup(payload: PlatformBackupImportRequest) -> dict[str, An
     verification=verify_backup(payload.envelope)
     if not verification["ok"]: raise HTTPException(status_code=422,detail="Backup checksum validation failed.")
     body=payload.envelope.get("payload") or {}; project=body.get("project") or {}
-    result={"ok":True,"dry_run":payload.dry_run,"verification":verification,"counts":{"investigations":len(body.get("investigations") or []),"entities":len(body.get("entities") or []),"library_objects":len(body.get("library_objects") or []),"research_activity":len(body.get("research_activity") or []),"object_states":len(body.get("object_states") or []),"open_questions":len(body.get("open_questions") or []),"research_rooms":len(body.get("research_rooms") or [])}}
+    result={"ok":True,"dry_run":payload.dry_run,"verification":verification,"counts":{"investigations":len(body.get("investigations") or []),"entities":len(body.get("entities") or []),"library_objects":len(body.get("library_objects") or []),"research_activity":len(body.get("research_activity") or []),"object_states":len(body.get("object_states") or []),"open_questions":len(body.get("open_questions") or []),"research_rooms":len(body.get("research_rooms") or []),"workspace_promotions":len(body.get("workspace_promotions") or [])}}
     if not payload.dry_run:
         saved=normalize_project(project,store.research_project(str(project.get("project_id") or "")))
         store.save_research_project(saved)
@@ -1887,6 +2032,14 @@ def import_platform_backup(payload: PlatformBackupImportRequest) -> dict[str, An
             for activity_payload in room_bundle.get("activity") or []:
                 if isinstance(activity_payload,dict):
                     store.save_room_activity(normalize_room_activity({**activity_payload,"room_id":room["room_id"]}))
+        for promotion_payload in body.get("workspace_promotions") or []:
+            if isinstance(promotion_payload,dict):
+                packet=promotion_payload.get("packet") if isinstance(promotion_payload.get("packet"),dict) else {}
+                if packet:
+                    try:
+                        store.save_workspace_promotion(normalize_promotion({**promotion_payload,"owner_ref":saved.get("owner_ref", ""),"project_id":saved["project_id"]},packet,store.workspace_promotion(str(promotion_payload.get("promotion_id") or ""))))
+                    except ValueError:
+                        continue
         result["project_id"]=saved["project_id"]
     return result
 

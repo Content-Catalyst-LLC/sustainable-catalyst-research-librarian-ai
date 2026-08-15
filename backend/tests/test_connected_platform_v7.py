@@ -10,12 +10,12 @@ def test_stable_api_manifest_and_summary():
     api=client.get('/v1/platform/api',headers=HEADERS)
     assert api.status_code==200
     body=api.json()
-    assert body['schema']=='sc-connected-research-api/1.4'
+    assert body['schema']=='sc-connected-research-api/1.5'
     assert body['stability']=='stable-v7'
     assert body['generation_boundary']['fallback']=='deterministic'
     summary=client.get('/v1/platform/summary',headers=HEADERS).json()
-    assert summary['version']=='7.5.0'
-    assert summary['workspace_schema']=='sc-research-librarian-public-workspace/2.4'
+    assert summary['version']=='7.6.0'
+    assert summary['workspace_schema']=='sc-research-librarian-public-workspace/2.5'
 
 def test_project_investigation_entities_and_bundle():
     project=client.post('/v1/projects',headers=HEADERS,json={'title':'Connected Climate Research','objective':'Compare evidence and prepare reusable analysis.'})

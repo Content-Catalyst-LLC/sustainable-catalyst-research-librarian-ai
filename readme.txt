@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 7.5.0
+Stable tag: 7.6.0
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
@@ -12,7 +12,7 @@ A connected, site-scoped research intelligence platform for Sustainable Catalyst
 
 Research Librarian AI retrieves Sustainable Catalyst publications and documents through exact-title priority, section-aware BM25 ranking, optional Gemini embeddings, calibrated reciprocal-rank fusion, and citation-verified synthesis. WordPress remains the canonical publishing and recovery source, while FastAPI stores the production knowledge index durably in Neon Postgres with pgvector.
 
-v7.5.0 turns Research Rooms into durable, membership-authorized collaboration objects with explicit roles, shared evidence state, collaborative questions, participant-attributed disagreements, activity history, and bounded room synthesis. Shared room state remains separate from personal v7.4.0 research state, and room metadata is never treated as verified evidence or model instructions.
+v7.6.0 adds a governed Promote to Workspace outbox for Notebook, Evidence Set, Analysis, Document, and Citation Pack handoffs. Promotion packets preserve source ownership/scope, fingerprints, individual-versus-room provenance, and require explicit Workspace import; preparation is not publication or editorial approval.
 
 == Shortcodes ==
 
@@ -38,6 +38,17 @@ v7.5.0 turns Research Rooms into durable, membership-authorized collaboration ob
 [sc_research_librarian_platform_handoffs]
 
 == Changelog ==
+
+= 7.6.0 =
+* Add governed Workspace promotion for Notebook, Evidence Set, Analysis, Document, and Citation Pack seeds.
+* Prepare versioned fingerprinted handoff packets instead of silently importing or publishing Workspace artifacts.
+* Preserve source owner, Library scope, object type, source fingerprints, project linkage, and Research Room attribution.
+* Keep personal research state and shared room state distinct in exported provenance.
+* Exclude rejected sources by default while allowing explicit opt-in inclusion.
+* Require explicit Workspace import and validate export/import receipts against the prepared packet fingerprint.
+* Resolve owner/actor identity and context/project/room/object access server-side through WordPress.
+* Include Workspace promotion packets and receipts in project backup/import.
+* Advance ancillary SQLite to schema 16 and connected API/workspace contracts to 1.5/2.5; the Neon knowledge index remains schema 13.0 with no Postgres migration.
 
 = 7.5.0 =
 * Add durable Research Rooms with Owner, Editor, Researcher, and Viewer membership roles.

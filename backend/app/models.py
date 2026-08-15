@@ -566,6 +566,31 @@ class ResearchOpenQuestionRequest(BaseModel):
     linked_object_ids: list[str] = Field(default_factory=list, max_length=100)
     resolution: str = Field(default="", max_length=6000)
 
+
+
+class WorkspacePromotionPrepareRequest(BaseModel):
+    promotion_id: str = Field(default="", max_length=220)
+    owner_ref: str = Field(min_length=1, max_length=220)
+    project_id: str = Field(default="", max_length=220)
+    context_id: str = Field(default="", max_length=220)
+    room_id: str = Field(default="", max_length=220)
+    artifact_type: str = Field(default="notebook", max_length=80)
+    title: str = Field(default="", max_length=500)
+    selected_object_ids: list[str] = Field(default_factory=list, max_length=500)
+    include_rejected: bool = False
+    notes: str = Field(default="", max_length=12000)
+
+
+class WorkspacePromotionReceiptRequest(BaseModel):
+    promotion_id: str = Field(min_length=1, max_length=220)
+    owner_ref: str = Field(min_length=1, max_length=220)
+    packet_fingerprint: str = Field(min_length=1, max_length=128)
+    status: str = Field(default="imported", max_length=40)
+    workspace_artifact_id: str = Field(default="", max_length=220)
+    workspace_artifact_type: str = Field(default="", max_length=80)
+    workspace_url: str = Field(default="", max_length=2000)
+    actor_ref: str = Field(default="", max_length=220)
+
 class WorkflowTemplateRequest(BaseModel):
     project_id: str = Field(default="", max_length=220)
     investigation_id: str = Field(default="", max_length=220)

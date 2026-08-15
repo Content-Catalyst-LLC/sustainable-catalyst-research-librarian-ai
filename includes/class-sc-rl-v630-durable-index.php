@@ -1,6 +1,6 @@
 <?php
 /**
- * Research Librarian AI v7.5.0 — Library Context Alignment with Durable Recovery.
+ * Research Librarian AI v7.6.0 — Library Context Alignment with Durable Recovery.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class SC_RL6_V630_Durable_Index {
-    const VERSION = '7.5.0';
+    const VERSION = '7.6.0';
     const OPTION_NAME = 'sc_rl_v620_python_options';
     const STATUS_OPTION = 'sc_rl_v620_python_status';
     const SYNC_HOOK = 'sc_rl_v620_python_sync_event';
@@ -4239,7 +4239,7 @@ final class SC_RL6_V630_Durable_Index {
 
             <section class="sc-rl-v702-hero" data-state="<?php echo esc_attr( $primary_state ); ?>">
                 <div>
-                    <div class="sc-rl-v702-eyebrow">Research Librarian v7.5.0</div>
+                    <div class="sc-rl-v702-eyebrow">Research Librarian v7.6.0</div>
                     <h1>Knowledge Index and AI Readiness</h1>
                     <p>One operational view for the Python connection, WordPress source discovery, durable knowledge synchronization, and Gemini semantic indexing.</p>
                     <div class="sc-rl-v702-badge"><?php echo esc_html( $build_badge ); ?></div>
@@ -4307,7 +4307,7 @@ final class SC_RL6_V630_Durable_Index {
                     <?php if ( $backend_commit_active ) : ?><div class="sc-rl-v703-cron"><strong>All source batches are staged.</strong> WordPress is advancing one bounded Python activation step at a time. Every record, chunk, and verification cursor is saved before the next request.</div><?php endif; ?>
                     <?php if ( $transaction_recovery_ready ) : ?><div class="sc-rl-v703-cron"><strong>Commit recovery is ready.</strong> The complete WordPress staging file is still available. Choose “Repair and Resume Commit” to replay the transaction without rediscovering the 2,000-plus source records.</div><?php endif; ?>
                     <?php if ( $backend_commit_active && ! $backend_storage_persistent ) : ?><div class="sc-rl-v703-cron"><strong>Durable storage is not active.</strong> Configure Neon with <code>SC_RL_DATABASE_BACKEND=postgres</code>, <code>DATABASE_URL</code>, and <code>DIRECT_DATABASE_URL</code>. The WordPress staging file remains available for replay.</div><?php endif; ?>
-                    <?php if ( 'postgres' !== $database_backend ) : ?><div class="sc-rl-v703-cron"><strong>SQLite fallback mode.</strong> Local development may still use <code>SC_RL_DATA_DIR=/var/data/sc-research-librarian</code>, but production v7.5.0 requires verified Neon Postgres.</div><?php endif; ?>
+                    <?php if ( 'postgres' !== $database_backend ) : ?><div class="sc-rl-v703-cron"><strong>SQLite fallback mode.</strong> Local development may still use <code>SC_RL_DATA_DIR=/var/data/sc-research-librarian</code>, but production v7.6.0 requires verified Neon Postgres.</div><?php endif; ?>
                     <?php if ( ! empty( $build_state['last_error'] ) ) : ?><div class="sc-rl-v703-error"><strong>Last error:</strong> <?php echo esc_html( $build_state['last_error'] ); ?></div><?php endif; ?>
                     <?php if ( defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ) : ?><div class="sc-rl-v703-cron"><strong>WP-Cron is disabled.</strong> Use “Run Next Batch Now,” or configure a real server cron request to <code>wp-cron.php</code>.</div><?php endif; ?>
                     <form method="post" class="sc-rl-v703-controls">

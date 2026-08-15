@@ -1,5 +1,17 @@
 # Changelog
 
+## 7.6.0 — Workspace Research Handoff & Artifact Promotion
+
+- Adds a governed **Promote to Workspace** outbox for Notebook, Evidence Set, Analysis, Document, and Citation Pack artifact seeds.
+- Builds `sc-workspace-research-handoff/1.0` packets with deterministic SHA-256 fingerprints and explicit `sc-workspace-research-import/1.0` semantics.
+- Preserves Library source owner, scope, object type, source fingerprint, project relationships, and Research Room participant attribution during promotion.
+- Keeps v7.4 individual research state and v7.5 shared room state distinct while allowing both to be represented in a bounded handoff.
+- Excludes rejected sources by default; deliberate inclusion remains available for audit/counter-evidence workflows.
+- Adds fingerprint-verified export/import receipts that confirm transfer only, never publication or editorial endorsement.
+- Adds authenticated WordPress promotion preparation, history, JSON download, and Workspace-open controls with server-side owner/actor resolution and context/project/room/object authorization.
+- Includes promotion packets and receipts in project backup/import.
+- Advances ancillary SQLite to schema 16 and Connected Research API/workspace contracts to 1.5/2.5; the Neon/Postgres knowledge index remains schema 13.0 and requires no migration.
+
 ## 7.5.0 — Collaborative Research Room Intelligence
 
 - Turns Research Rooms into durable collaboration objects with explicit Owner, Editor, Researcher, and Viewer membership roles.

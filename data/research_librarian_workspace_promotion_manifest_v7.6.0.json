@@ -1,0 +1,52 @@
+{
+  "schema": "sc-research-librarian-workspace-promotion-manifest/1.0",
+  "version": "7.6.0",
+  "api_schema": "sc-connected-research-api/1.5",
+  "workspace_schema": "sc-research-librarian-public-workspace/2.5",
+  "promotion_schema": "sc-workspace-artifact-promotion/1.0",
+  "handoff_schema": "sc-workspace-research-handoff/1.0",
+  "receipt_schema": "sc-workspace-promotion-receipt/1.0",
+  "workspace_import_contract": "sc-workspace-research-import/1.0",
+  "artifact_types": [
+    "notebook",
+    "evidence-set",
+    "analysis",
+    "document",
+    "citation-pack"
+  ],
+  "storage": {
+    "ancillary_sqlite_schema_version": 16,
+    "knowledge_index_schema": "sc-research-librarian-knowledge-index/13.0",
+    "new_postgres_migration_required": false
+  },
+  "governance": {
+    "explicit_workspace_import_required": true,
+    "promotion_is_not_publication": true,
+    "promotion_is_not_editorial_approval": true,
+    "promotion_is_not_truth_judgment": true,
+    "source_scope_preserved": true,
+    "source_owner_attribution_preserved": true,
+    "source_fingerprint_preserved": true,
+    "room_participant_attribution_preserved": true,
+    "personal_and_room_state_remain_distinct": true,
+    "rejected_sources_excluded_by_default": true,
+    "workspace_may_not_silently_reclassify_source_scope": true
+  },
+  "privacy_boundaries": {
+    "browser_cannot_choose_owner_or_actor_identity": true,
+    "context_ownership_required": true,
+    "project_access_required": true,
+    "room_membership_required": true,
+    "selected_object_access_required": true
+  },
+  "receipts": {
+    "packet_fingerprint_must_match": true,
+    "supported_states": ["exported", "imported"],
+    "receipt_confirms_transfer_only": true,
+    "receipt_does_not_confirm_publication": true
+  },
+  "backup": {
+    "workspace_promotions_included": true,
+    "promotion_packets_are_portable_snapshots": true
+  }
+}

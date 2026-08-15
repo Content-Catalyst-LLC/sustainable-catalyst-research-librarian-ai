@@ -20,7 +20,7 @@ from .models import KnowledgeChunk, KnowledgeRecord, utc_now
 from .governance import DEFAULT_GOVERNANCE_POLICY, sanitize_governance_policy
 
 
-SCHEMA_VERSION = 15
+SCHEMA_VERSION = 16
 INDEX_SCHEMA = "sc-research-librarian-knowledge-index/13.0"
 SNAPSHOT_SCHEMA = "sc-research-librarian-runtime-snapshot/4.0"
 
@@ -519,6 +519,25 @@ class KnowledgeStore:
                 );
                 CREATE INDEX IF NOT EXISTS idx_room_activity_room ON research_room_activity(room_id, created_utc DESC);
                 CREATE INDEX IF NOT EXISTS idx_room_activity_actor ON research_room_activity(actor_ref, created_utc DESC);
+                CREATE TABLE IF NOT EXISTS research_workspace_promotions (
+                    promotion_id TEXT PRIMARY KEY,
+                    owner_ref TEXT NOT NULL DEFAULT '',
+                    project_id TEXT NOT NULL DEFAULT '',
+                    context_id TEXT NOT NULL DEFAULT '',
+                    room_id TEXT NOT NULL DEFAULT '',
+                    artifact_type TEXT NOT NULL DEFAULT 'notebook',
+                    status TEXT NOT NULL DEFAULT 'prepared',
+                    title TEXT NOT NULL DEFAULT '',
+                    created_utc TEXT NOT NULL,
+                    updated_utc TEXT NOT NULL,
+                    packet_fingerprint TEXT NOT NULL DEFAULT '',
+                    fingerprint TEXT NOT NULL,
+                    payload_json TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_workspace_promotions_owner ON research_workspace_promotions(owner_ref, status, updated_utc DESC);
+                CREATE INDEX IF NOT EXISTS idx_workspace_promotions_project ON research_workspace_promotions(project_id, updated_utc DESC);
+                CREATE INDEX IF NOT EXISTS idx_workspace_promotions_context ON research_workspace_promotions(context_id, updated_utc DESC);
+                CREATE INDEX IF NOT EXISTS idx_workspace_promotions_room ON research_workspace_promotions(room_id, updated_utc DESC);
                 CREATE TABLE IF NOT EXISTS connected_platform_backups (
                     backup_id TEXT PRIMARY KEY,
                     created_utc TEXT NOT NULL,
@@ -2519,7 +2538,8 @@ class KnowledgeStore:
                 "disagreements":self.room_disagreements(room_id,500),
                 "activity":self.room_activities(room_id,1000),
             })
-        return {"project":project,"investigations":self.research_investigations(project_id,500),"entities":self.project_entities(project_id,"",1000),"library_objects":library_objects,"research_activity":self.research_activities(1000,owner_ref,project_id),"object_states":self.research_object_states(1000,owner_ref,project_id),"open_questions":self.research_open_questions(1000,owner_ref,project_id),"research_rooms":room_bundles,"handoffs":handoffs,"artifacts":artifacts}
+        promotions=self.workspace_promotions(1000,owner_ref=owner_ref,project_id=project_id)
+        return {"project":project,"investigations":self.research_investigations(project_id,500),"entities":self.project_entities(project_id,"",1000),"library_objects":library_objects,"research_activity":self.research_activities(1000,owner_ref,project_id),"object_states":self.research_object_states(1000,owner_ref,project_id),"open_questions":self.research_open_questions(1000,owner_ref,project_id),"research_rooms":room_bundles,"workspace_promotions":promotions,"handoffs":handoffs,"artifacts":artifacts}
 
     def save_library_object(self, library_object: dict[str, Any]) -> dict[str, Any]:
         with self._lock, self._connection() as connection:
@@ -2827,6 +2847,33 @@ class KnowledgeStore:
             rows=connection.execute(f"SELECT payload_json FROM research_room_activity WHERE {' AND '.join(clauses)} ORDER BY created_utc DESC LIMIT ?",tuple(values))
             return [json.loads(str(row["payload_json"])) for row in rows]
 
+    def save_workspace_promotion(self, promotion: dict[str, Any]) -> dict[str, Any]:
+        promotion_id=str(promotion.get("promotion_id") or "")
+        if not promotion_id:
+            raise ValueError("Workspace promotion requires promotion_id.")
+        with self._lock, self._connection() as connection:
+            connection.execute(
+                "INSERT OR REPLACE INTO research_workspace_promotions(promotion_id,owner_ref,project_id,context_id,room_id,artifact_type,status,title,created_utc,updated_utc,packet_fingerprint,fingerprint,payload_json) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (promotion_id,str(promotion.get("owner_ref") or ""),str(promotion.get("project_id") or ""),str(promotion.get("context_id") or ""),str(promotion.get("room_id") or ""),str(promotion.get("artifact_type") or "notebook"),str(promotion.get("status") or "prepared"),str(promotion.get("title") or ""),str(promotion.get("created_utc") or utc_now()),str(promotion.get("updated_utc") or utc_now()),str(promotion.get("packet_fingerprint") or ""),str(promotion.get("fingerprint") or ""),_canonical_json(promotion)),
+            )
+        return promotion
+
+    def workspace_promotion(self, promotion_id: str) -> dict[str, Any] | None:
+        with self._lock, self._connection() as connection:
+            row=connection.execute("SELECT payload_json FROM research_workspace_promotions WHERE promotion_id=?",(promotion_id,)).fetchone()
+            return json.loads(str(row["payload_json"])) if row else None
+
+    def workspace_promotions(self, limit: int = 200, owner_ref: str = "", project_id: str = "", context_id: str = "", room_id: str = "", status: str = "") -> list[dict[str, Any]]:
+        clauses=[]; values=[]
+        for field,value in (("owner_ref",owner_ref),("project_id",project_id),("context_id",context_id),("room_id",room_id),("status",status)):
+            if value:
+                clauses.append(f"{field}=?"); values.append(value)
+        where=(" WHERE "+" AND ".join(clauses)) if clauses else ""
+        values.append(max(1,min(1000,int(limit))))
+        with self._lock, self._connection() as connection:
+            rows=connection.execute(f"SELECT payload_json FROM research_workspace_promotions{where} ORDER BY updated_utc DESC LIMIT ?",tuple(values))
+            return [json.loads(str(row["payload_json"])) for row in rows]
+
     def save_connected_backup(self, envelope: dict[str, Any], state: str = "created") -> dict[str, Any]:
         backup_id=str(envelope.get("backup_id") or "backup-"+uuid.uuid4().hex); clean={**envelope,"backup_id":backup_id}
         with self._lock, self._connection() as connection:
@@ -2840,8 +2887,8 @@ class KnowledgeStore:
 
     def connected_platform_summary(self) -> dict[str, Any]:
         with self._lock, self._connection() as connection:
-            counts={name:int(connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]) for name,table in {"projects":"research_projects","investigations":"research_investigations","entities":"research_project_entities","library_objects":"research_library_objects","research_contexts":"research_contexts","research_activity":"research_activity_events","object_states":"research_object_states","open_questions":"research_open_questions","research_rooms":"research_rooms","room_members":"research_room_members","room_evidence":"research_room_evidence_states","room_questions":"research_room_questions","room_disagreements":"research_room_disagreements","room_activity":"research_room_activity","backups":"connected_platform_backups"}.items()}
-        return {"schema":"sc-connected-research-platform-summary/1.4","version":"7.5.0","counts":counts,"workspace_schema":"sc-research-librarian-public-workspace/2.4","api_schema":"sc-connected-research-api/1.4","object_model_schema":"sc-research-library-object-model/1.0","context_schema":"sc-research-context/1.0","research_state_schema":"sc-research-state-summary/1.0","room_schema":"sc-research-room/1.0","room_synthesis_schema":"sc-research-room-synthesis/1.0"}
+            counts={name:int(connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]) for name,table in {"projects":"research_projects","investigations":"research_investigations","entities":"research_project_entities","library_objects":"research_library_objects","research_contexts":"research_contexts","research_activity":"research_activity_events","object_states":"research_object_states","open_questions":"research_open_questions","research_rooms":"research_rooms","room_members":"research_room_members","room_evidence":"research_room_evidence_states","room_questions":"research_room_questions","room_disagreements":"research_room_disagreements","room_activity":"research_room_activity","workspace_promotions":"research_workspace_promotions","backups":"connected_platform_backups"}.items()}
+        return {"schema":"sc-connected-research-platform-summary/1.5","version":"7.6.0","counts":counts,"workspace_schema":"sc-research-librarian-public-workspace/2.5","api_schema":"sc-connected-research-api/1.5","object_model_schema":"sc-research-library-object-model/1.0","context_schema":"sc-research-context/1.0","research_state_schema":"sc-research-state-summary/1.0","room_schema":"sc-research-room/1.0","room_synthesis_schema":"sc-research-room-synthesis/1.0","workspace_promotion_schema":"sc-workspace-artifact-promotion/1.0","workspace_handoff_schema":"sc-workspace-research-handoff/1.0"}
 
 
 def create_store() -> Any:

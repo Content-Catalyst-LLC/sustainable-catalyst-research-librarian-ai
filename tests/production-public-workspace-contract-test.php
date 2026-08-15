@@ -14,10 +14,10 @@ $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_pu
 
 $modes = array( 'auto', 'title', 'subject', 'path', 'evidence', 'analyze', 'compare', 'decision' );
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 7.5.0' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '7.5.0';" ),
-    'module_version' => false !== strpos( $module, "const VERSION = '7.5.0';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.5.0"' ),
+    'version_header' => false !== strpos( $main, 'Version: 7.6.0' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '7.6.0';" ),
+    'module_version' => false !== strpos( $module, "const VERSION = '7.6.0';" ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.6.0"' ),
     'workspace_root_class' => false !== strpos( $main, 'sc-rl-ai--workspace' ),
     'workspace_data_version' => false !== strpos( $main, 'data-workspace-version="2.1"' ),
     'mode_picker' => false !== strpos( $main, 'data-sc-rl-mode-picker' ),
@@ -49,7 +49,7 @@ $checks = array(
     'mode_resolver' => false !== strpos( $backend, 'def _resolve_research_mode' ),
     'followup_builder' => false !== strpos( $backend, 'def _follow_up_prompts' ),
     'workspace_builder' => false !== strpos( $backend, 'def _workspace_summary' ),
-    'workspace_schema' => false !== strpos( $backend, 'sc-research-librarian-public-workspace/2.4' ),
+    'workspace_schema' => false !== strpos( $backend, 'sc-research-librarian-public-workspace/2.5' ),
     'session_reset_endpoint' => false !== strpos( $backend, '@app.post("/v1/session/reset"' ),
     'ask_resolves_mode' => false !== strpos( $backend, 'research_mode = _resolve_research_mode' ),
     'ask_returns_followups' => false !== strpos( $backend, 'follow_up_prompts=_follow_up_prompts' ),
@@ -102,7 +102,7 @@ foreach ( $modes as $mode ) {
 }
 $failed = array_keys( array_filter( $checks, static function ( $value ) { return ! $value; } ) );
 echo json_encode( array(
-    'version' => '7.5.0',
+    'version' => '7.6.0',
     'checks' => $checks,
     'passed' => count( $checks ) - count( $failed ),
     'failed' => count( $failed ),

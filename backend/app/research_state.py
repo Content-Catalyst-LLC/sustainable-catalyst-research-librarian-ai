@@ -34,6 +34,8 @@ ACTIVITY_TYPES = {
     "question-opened",
     "question-resolved",
     "question-deferred",
+    "workspace-promotion-prepared",
+    "workspace-promotion-imported",
     "note",
 }
 
