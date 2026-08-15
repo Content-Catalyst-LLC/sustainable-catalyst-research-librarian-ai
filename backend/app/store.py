@@ -20,7 +20,7 @@ from .models import KnowledgeChunk, KnowledgeRecord, utc_now
 from .governance import DEFAULT_GOVERNANCE_POLICY, sanitize_governance_policy
 
 
-SCHEMA_VERSION = 16
+SCHEMA_VERSION = 17
 INDEX_SCHEMA = "sc-research-librarian-knowledge-index/13.0"
 SNAPSHOT_SCHEMA = "sc-research-librarian-runtime-snapshot/4.0"
 
@@ -519,6 +519,20 @@ class KnowledgeStore:
                 );
                 CREATE INDEX IF NOT EXISTS idx_room_activity_room ON research_room_activity(room_id, created_utc DESC);
                 CREATE INDEX IF NOT EXISTS idx_room_activity_actor ON research_room_activity(actor_ref, created_utc DESC);
+                CREATE TABLE IF NOT EXISTS research_federated_searches (
+                    search_id TEXT PRIMARY KEY,
+                    owner_ref TEXT NOT NULL DEFAULT '',
+                    project_id TEXT NOT NULL DEFAULT '',
+                    context_id TEXT NOT NULL DEFAULT '',
+                    status TEXT NOT NULL DEFAULT 'complete',
+                    query TEXT NOT NULL DEFAULT '',
+                    created_utc TEXT NOT NULL,
+                    fingerprint TEXT NOT NULL,
+                    payload_json TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_federated_searches_owner ON research_federated_searches(owner_ref, created_utc DESC);
+                CREATE INDEX IF NOT EXISTS idx_federated_searches_project ON research_federated_searches(project_id, created_utc DESC);
+                CREATE INDEX IF NOT EXISTS idx_federated_searches_context ON research_federated_searches(context_id, created_utc DESC);
                 CREATE TABLE IF NOT EXISTS research_workspace_promotions (
                     promotion_id TEXT PRIMARY KEY,
                     owner_ref TEXT NOT NULL DEFAULT '',
@@ -2538,8 +2552,9 @@ class KnowledgeStore:
                 "disagreements":self.room_disagreements(room_id,500),
                 "activity":self.room_activities(room_id,1000),
             })
+        federated_searches=self.federated_searches(1000,owner_ref=owner_ref,project_id=project_id)
         promotions=self.workspace_promotions(1000,owner_ref=owner_ref,project_id=project_id)
-        return {"project":project,"investigations":self.research_investigations(project_id,500),"entities":self.project_entities(project_id,"",1000),"library_objects":library_objects,"research_activity":self.research_activities(1000,owner_ref,project_id),"object_states":self.research_object_states(1000,owner_ref,project_id),"open_questions":self.research_open_questions(1000,owner_ref,project_id),"research_rooms":room_bundles,"workspace_promotions":promotions,"handoffs":handoffs,"artifacts":artifacts}
+        return {"project":project,"investigations":self.research_investigations(project_id,500),"entities":self.project_entities(project_id,"",1000),"library_objects":library_objects,"research_activity":self.research_activities(1000,owner_ref,project_id),"object_states":self.research_object_states(1000,owner_ref,project_id),"open_questions":self.research_open_questions(1000,owner_ref,project_id),"research_rooms":room_bundles,"federated_searches":federated_searches,"workspace_promotions":promotions,"handoffs":handoffs,"artifacts":artifacts}
 
     def save_library_object(self, library_object: dict[str, Any]) -> dict[str, Any]:
         with self._lock, self._connection() as connection:
@@ -2847,6 +2862,33 @@ class KnowledgeStore:
             rows=connection.execute(f"SELECT payload_json FROM research_room_activity WHERE {' AND '.join(clauses)} ORDER BY created_utc DESC LIMIT ?",tuple(values))
             return [json.loads(str(row["payload_json"])) for row in rows]
 
+    def save_federated_search(self, search: dict[str, Any]) -> dict[str, Any]:
+        search_id=str(search.get("search_id") or "")
+        if not search_id:
+            raise ValueError("Federated search requires search_id.")
+        with self._lock, self._connection() as connection:
+            connection.execute(
+                "INSERT OR REPLACE INTO research_federated_searches(search_id,owner_ref,project_id,context_id,status,query,created_utc,fingerprint,payload_json) VALUES(?,?,?,?,?,?,?,?,?)",
+                (search_id,str(search.get("owner_ref") or ""),str(search.get("project_id") or ""),str(search.get("context_id") or ""),str(search.get("status") or "complete"),str(search.get("query") or ""),str(search.get("created_utc") or utc_now()),str(search.get("fingerprint") or ""),_canonical_json(search)),
+            )
+        return search
+
+    def federated_search(self, search_id: str) -> dict[str, Any] | None:
+        with self._lock, self._connection() as connection:
+            row=connection.execute("SELECT payload_json FROM research_federated_searches WHERE search_id=?",(search_id,)).fetchone()
+            return json.loads(str(row["payload_json"])) if row else None
+
+    def federated_searches(self, limit: int = 200, owner_ref: str = "", project_id: str = "", context_id: str = "") -> list[dict[str, Any]]:
+        clauses=[]; values=[]
+        for field,value in (("owner_ref",owner_ref),("project_id",project_id),("context_id",context_id)):
+            if value:
+                clauses.append(f"{field}=?"); values.append(value)
+        where=(" WHERE "+" AND ".join(clauses)) if clauses else ""
+        values.append(max(1,min(1000,int(limit))))
+        with self._lock, self._connection() as connection:
+            rows=connection.execute(f"SELECT payload_json FROM research_federated_searches{where} ORDER BY created_utc DESC LIMIT ?",tuple(values))
+            return [json.loads(str(row["payload_json"])) for row in rows]
+
     def save_workspace_promotion(self, promotion: dict[str, Any]) -> dict[str, Any]:
         promotion_id=str(promotion.get("promotion_id") or "")
         if not promotion_id:
@@ -2887,8 +2929,8 @@ class KnowledgeStore:
 
     def connected_platform_summary(self) -> dict[str, Any]:
         with self._lock, self._connection() as connection:
-            counts={name:int(connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]) for name,table in {"projects":"research_projects","investigations":"research_investigations","entities":"research_project_entities","library_objects":"research_library_objects","research_contexts":"research_contexts","research_activity":"research_activity_events","object_states":"research_object_states","open_questions":"research_open_questions","research_rooms":"research_rooms","room_members":"research_room_members","room_evidence":"research_room_evidence_states","room_questions":"research_room_questions","room_disagreements":"research_room_disagreements","room_activity":"research_room_activity","workspace_promotions":"research_workspace_promotions","backups":"connected_platform_backups"}.items()}
-        return {"schema":"sc-connected-research-platform-summary/1.5","version":"7.6.0","counts":counts,"workspace_schema":"sc-research-librarian-public-workspace/2.5","api_schema":"sc-connected-research-api/1.5","object_model_schema":"sc-research-library-object-model/1.0","context_schema":"sc-research-context/1.0","research_state_schema":"sc-research-state-summary/1.0","room_schema":"sc-research-room/1.0","room_synthesis_schema":"sc-research-room-synthesis/1.0","workspace_promotion_schema":"sc-workspace-artifact-promotion/1.0","workspace_handoff_schema":"sc-workspace-research-handoff/1.0"}
+            counts={name:int(connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]) for name,table in {"projects":"research_projects","investigations":"research_investigations","entities":"research_project_entities","library_objects":"research_library_objects","research_contexts":"research_contexts","research_activity":"research_activity_events","object_states":"research_object_states","open_questions":"research_open_questions","research_rooms":"research_rooms","room_members":"research_room_members","room_evidence":"research_room_evidence_states","room_questions":"research_room_questions","room_disagreements":"research_room_disagreements","room_activity":"research_room_activity","federated_searches":"research_federated_searches","workspace_promotions":"research_workspace_promotions","backups":"connected_platform_backups"}.items()}
+        return {"schema":"sc-connected-research-platform-summary/1.6","version":"7.7.0","counts":counts,"workspace_schema":"sc-research-librarian-public-workspace/2.6","api_schema":"sc-connected-research-api/1.6","object_model_schema":"sc-research-library-object-model/1.0","context_schema":"sc-research-context/1.0","research_state_schema":"sc-research-state-summary/1.0","room_schema":"sc-research-room/1.0","room_synthesis_schema":"sc-research-room-synthesis/1.0","federated_search_schema":"sc-federated-research-search/1.0","workspace_promotion_schema":"sc-workspace-artifact-promotion/1.0","workspace_handoff_schema":"sc-workspace-research-handoff/1.0"}
 
 
 def create_store() -> Any:

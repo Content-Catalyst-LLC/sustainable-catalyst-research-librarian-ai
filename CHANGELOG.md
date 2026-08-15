@@ -1,5 +1,14 @@
 # Changelog
 
+## 7.7.0 — Global Library Discovery & Federated Research
+
+- Added fixed, server-side federated adapters for OpenAlex, Crossref, Europe PMC, Open Library, and arXiv.
+- Added normalized external result contracts, DOI/ISBN/arXiv-aware deduplication, provider-specific record provenance, access signals, and partial-provider failure reporting.
+- Added durable federated-search snapshots to the ancillary research workspace ledger and project backup/import.
+- Added authenticated WordPress global-discovery UI, recent-search history, and explicit **Save to My Library** imports.
+- Federated saves create private `external-reference` Library objects and never imply Sustainable Catalyst editorial approval, verified evidence, or a truth judgment.
+- Advanced ancillary SQLite schema to 17, Connected Research API to 1.6, and public workspace schema to 2.6. The durable Neon/Postgres knowledge-index contract remains `sc-research-librarian-knowledge-index/13.0`; no knowledge-index migration is required.
+
 ## 7.6.0 — Workspace Research Handoff & Artifact Promotion
 
 - Adds a governed **Promote to Workspace** outbox for Notebook, Evidence Set, Analysis, Document, and Citation Pack artifact seeds.

@@ -41,7 +41,7 @@ $result = array(
     'tamper_rejected' => empty( $invalid['ok'] ) && in_array( 'Payload fingerprint does not match the handoff contents.', $invalid['errors'] ?? array(), true ),
 );
 echo json_encode( $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . PHP_EOL;
-$passed = '7.6.0' === $result['version']
+$passed = '7.7.0' === $result['version']
     && 'sc-research-handoff/2.0' === $result['schema']
     && 'sc-workbench-task/1.0' === $result['destination_contract']
     && $result['fingerprint_present']

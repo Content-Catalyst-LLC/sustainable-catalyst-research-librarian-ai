@@ -18,13 +18,13 @@ $v750 = json_decode( file_get_contents( $root . '/data/research_librarian_collab
 $migrations = glob( $root . '/backend/migrations/*.sql' );
 
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 7.6.0' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '7.6.0';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.6.0"' ),
-    'module_version' => false !== strpos( $module, "const VERSION = '7.6.0';" ),
-    'api_15' => false !== strpos( $platform, 'sc-connected-research-api/1.5' ),
-    'workspace_25' => false !== strpos( $module, 'sc-research-librarian-public-workspace/2.5' ),
-    'sqlite_schema_16' => false !== strpos( $store, 'SCHEMA_VERSION = 16' ),
+    'version_header' => false !== strpos( $main, 'Version: 7.7.0' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '7.7.0';" ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.7.0"' ),
+    'module_version' => false !== strpos( $module, "const VERSION = '7.7.0';" ),
+    'api_15' => false !== strpos( $platform, 'sc-connected-research-api/1.6' ),
+    'workspace_25' => false !== strpos( $module, 'sc-research-librarian-public-workspace/2.6' ),
+    'sqlite_schema_16' => false !== strpos( $store, 'SCHEMA_VERSION = 17' ),
     'knowledge_index_13' => false !== strpos( $store, 'sc-research-librarian-knowledge-index/13.0' ),
     'no_new_postgres_migration' => 3 === count( $migrations ),
 

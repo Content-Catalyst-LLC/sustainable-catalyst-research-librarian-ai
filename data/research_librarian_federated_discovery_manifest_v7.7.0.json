@@ -1,0 +1,58 @@
+{
+  "schema": "sc-research-librarian-federated-discovery-manifest/1.0",
+  "version": "7.7.0",
+  "api_schema": "sc-connected-research-api/1.6",
+  "workspace_schema": "sc-research-librarian-public-workspace/2.6",
+  "provider_catalog_schema": "sc-federated-provider-catalog/1.0",
+  "search_schema": "sc-federated-research-search/1.0",
+  "result_schema": "sc-federated-research-result/1.0",
+  "import_schema": "sc-federated-library-import/1.0",
+  "providers": [
+    "openalex",
+    "crossref",
+    "europe-pmc",
+    "open-library",
+    "arxiv"
+  ],
+  "storage": {
+    "ancillary_sqlite_schema_version": 17,
+    "knowledge_index_schema": "sc-research-librarian-knowledge-index/13.0",
+    "new_postgres_migration_required": false
+  },
+  "discovery": {
+    "fixed_provider_allowlist": true,
+    "arbitrary_remote_urls_forbidden": true,
+    "cross_provider_normalization": true,
+    "identifier_aware_deduplication": [
+      "doi",
+      "isbn",
+      "arxiv"
+    ],
+    "partial_provider_failures_visible": true,
+    "provider_identity_preserved_after_deduplication": true,
+    "saved_search_snapshots_persisted": true
+  },
+  "governance": {
+    "external_discovery_is_not_editorial": true,
+    "external_discovery_is_not_verified_evidence": true,
+    "explicit_save_to_library_required": true,
+    "saved_source_scope": "external-reference",
+    "saved_visibility": "private",
+    "provider_identity_preserved": true,
+    "access_state_preserved": true,
+    "save_is_not_truth_judgment": true
+  },
+  "privacy_boundaries": {
+    "wordpress_resolves_owner_server_side": true,
+    "context_ownership_required": true,
+    "project_access_required": true,
+    "saved_search_owner_rechecked_before_import": true,
+    "browser_cannot_submit_arbitrary_result_payload_for_import": true,
+    "query_terms_sent_to_selected_external_providers": true,
+    "wordpress_user_identity_not_forwarded_to_providers": true
+  },
+  "backup": {
+    "federated_searches_included": true,
+    "search_snapshots_restore_with_project_backup": true
+  }
+}

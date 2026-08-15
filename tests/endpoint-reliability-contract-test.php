@@ -11,7 +11,7 @@ $store = file_get_contents( $root . '/backend/app/store.py' );
 $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_cold_start_recovery_manifest_v6.3.1.json' ), true );
 
 $checks = array(
-    'plugin_version' => false !== strpos( $main, "const VERSION        = '7.6.0';" ),
+    'plugin_version' => false !== strpos( $main, "const VERSION        = '7.7.0';" ),
     'durable_module' => false !== strpos( $module, 'final class SC_RL6_V630_Durable_Index' ),
     'nonce_route' => false !== strpos( $main, "'/nonce'" ) && false !== strpos( $main, 'handle_nonce_request' ),
     'single_nonce_retry' => false !== strpos( $js, 'function fetchWithNonce' ) && false !== strpos( $js, 'fetchWithNonce(url, options, false)' ),

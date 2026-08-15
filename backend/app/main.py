@@ -36,7 +36,7 @@ from .models import (
     QualityEvaluationRequest,
     ReleaseGateRequest,
     RetentionRunRequest,
-    ResearchProjectRequest, ResearchInvestigationRequest, ProjectEntityRequest, LibraryObjectRequest, ResearchContextRequest, ResearchRoomRequest, ResearchRoomMemberRequest, ResearchRoomEvidenceStateRequest, ResearchRoomQuestionRequest, ResearchRoomDisagreementRequest, ResearchRoomActivityRequest, SourceEvaluationRequest, EvidenceComparisonRequest, EvidenceGapRequest, ResearchActivityRequest, ResearchObjectStateRequest, ResearchOpenQuestionRequest, WorkspacePromotionPrepareRequest, WorkspacePromotionReceiptRequest, WorkflowTemplateRequest, ContradictionRequest, UncertaintyRegisterRequest, PlatformBackupImportRequest,
+    ResearchProjectRequest, ResearchInvestigationRequest, ProjectEntityRequest, LibraryObjectRequest, ResearchContextRequest, ResearchRoomRequest, ResearchRoomMemberRequest, ResearchRoomEvidenceStateRequest, ResearchRoomQuestionRequest, ResearchRoomDisagreementRequest, ResearchRoomActivityRequest, SourceEvaluationRequest, EvidenceComparisonRequest, EvidenceGapRequest, ResearchActivityRequest, ResearchObjectStateRequest, ResearchOpenQuestionRequest, FederatedSearchRequest, FederatedResultSaveRequest, WorkspacePromotionPrepareRequest, WorkspacePromotionReceiptRequest, WorkflowTemplateRequest, ContradictionRequest, UncertaintyRegisterRequest, PlatformBackupImportRequest,
     ArtifactReturnRequest,
     RetrievalCalibrationUpdate,
     RetrievalRequest,
@@ -117,6 +117,19 @@ from .collaboration import (
     normalize_room_activity,
     build_room_synthesis,
     prompt_room_synthesis,
+)
+
+from .federated_discovery import (
+    FEDERATED_PROVIDER_CATALOG_SCHEMA,
+    FEDERATED_SEARCH_SCHEMA,
+    FEDERATED_RESULT_SCHEMA,
+    FEDERATED_IMPORT_SCHEMA,
+    FEDERATED_SEARCH_SUMMARY_SCHEMA,
+    provider_catalog,
+    run_federated_search,
+    normalize_search_record,
+    search_summary,
+    result_to_library_payload,
 )
 
 from .workspace_promotion import (
@@ -225,7 +238,7 @@ def _follow_up_prompts(mode: str, best: RetrievedSource | None, related: list[Re
 
 def _workspace_summary(mode: str, matches: list[RetrievedSource], related: list[RetrievedSource], ai_used: bool, gate: dict[str, Any]) -> dict[str, Any]:
     return {
-        "schema": "sc-research-librarian-public-workspace/2.5",
+        "schema": "sc-research-librarian-public-workspace/2.6",
         "mode": mode,
         "mode_label": _RESEARCH_MODES.get(mode, _RESEARCH_MODES["auto"])["label"],
         "verified_sources": len(matches),
@@ -1293,7 +1306,7 @@ def _research_state_summary(owner_ref: str = "", project_id: str = "", context_i
 
 @app.get("/v1/platform/api", dependencies=[Depends(require_key)])
 def connected_api_manifest() -> dict[str, Any]:
-    return {"schema": API_SCHEMA, "version": __version__, "stability": "stable-v7", "resources": ["projects", "investigations", "entities", "library-objects", "research-contexts", "research-rooms", "room-members", "room-evidence", "room-questions", "room-disagreements", "room-synthesis", "source-evaluations", "evidence-comparisons", "evidence-gaps", "research-state", "research-activity", "object-review-state", "open-questions", "workflows", "contradictions", "uncertainties", "backups", "handoffs", "artifacts", "workspace-promotions"], "object_model": object_model_manifest(), "evidence_quality": {"source_evaluation_schema": SOURCE_EVALUATION_SCHEMA, "comparison_schema": EVIDENCE_COMPARISON_SCHEMA, "gap_schema": EVIDENCE_GAP_SCHEMA, "quality_signals_schema": QUALITY_SIGNALS_SCHEMA, "truth_score": False}, "research_state": {"summary_schema": RESEARCH_STATE_SUMMARY_SCHEMA, "activity_schema": RESEARCH_ACTIVITY_SCHEMA, "object_state_schema": RESEARCH_OBJECT_STATE_SCHEMA, "open_question_schema": OPEN_QUESTION_SCHEMA, "workflow_memory_only": True, "not_evidence": True}, "research_rooms": {"room_schema": ROOM_SCHEMA, "member_schema": ROOM_MEMBER_SCHEMA, "evidence_state_schema": ROOM_EVIDENCE_STATE_SCHEMA, "question_schema": ROOM_QUESTION_SCHEMA, "disagreement_schema": ROOM_DISAGREEMENT_SCHEMA, "activity_schema": ROOM_ACTIVITY_SCHEMA, "synthesis_schema": ROOM_SYNTHESIS_SCHEMA, "prompt_schema": ROOM_PROMPT_SCHEMA, "participant_attribution": True, "individual_shared_state_separate": True, "not_evidence": True}, "workspace_promotions": {"promotion_schema": PROMOTION_SCHEMA, "packet_schema": PROMOTION_PACKET_SCHEMA, "receipt_schema": PROMOTION_RECEIPT_SCHEMA, "workspace_import_contract": WORKSPACE_IMPORT_CONTRACT, "artifact_types": artifact_catalog(), "explicit_import_required": True}, "generation_boundary": adapter_status()}
+    return {"schema": API_SCHEMA, "version": __version__, "stability": "stable-v7", "resources": ["projects", "investigations", "entities", "library-objects", "research-contexts", "research-rooms", "room-members", "room-evidence", "room-questions", "room-disagreements", "room-synthesis", "source-evaluations", "evidence-comparisons", "evidence-gaps", "research-state", "research-activity", "object-review-state", "open-questions", "workflows", "contradictions", "uncertainties", "backups", "handoffs", "artifacts", "federated-providers", "federated-search", "federated-history", "federated-library-import", "workspace-promotions"], "object_model": object_model_manifest(), "evidence_quality": {"source_evaluation_schema": SOURCE_EVALUATION_SCHEMA, "comparison_schema": EVIDENCE_COMPARISON_SCHEMA, "gap_schema": EVIDENCE_GAP_SCHEMA, "quality_signals_schema": QUALITY_SIGNALS_SCHEMA, "truth_score": False}, "research_state": {"summary_schema": RESEARCH_STATE_SUMMARY_SCHEMA, "activity_schema": RESEARCH_ACTIVITY_SCHEMA, "object_state_schema": RESEARCH_OBJECT_STATE_SCHEMA, "open_question_schema": OPEN_QUESTION_SCHEMA, "workflow_memory_only": True, "not_evidence": True}, "research_rooms": {"room_schema": ROOM_SCHEMA, "member_schema": ROOM_MEMBER_SCHEMA, "evidence_state_schema": ROOM_EVIDENCE_STATE_SCHEMA, "question_schema": ROOM_QUESTION_SCHEMA, "disagreement_schema": ROOM_DISAGREEMENT_SCHEMA, "activity_schema": ROOM_ACTIVITY_SCHEMA, "synthesis_schema": ROOM_SYNTHESIS_SCHEMA, "prompt_schema": ROOM_PROMPT_SCHEMA, "participant_attribution": True, "individual_shared_state_separate": True, "not_evidence": True}, "federated_discovery": {"provider_catalog_schema": FEDERATED_PROVIDER_CATALOG_SCHEMA, "search_schema": FEDERATED_SEARCH_SCHEMA, "result_schema": FEDERATED_RESULT_SCHEMA, "import_schema": FEDERATED_IMPORT_SCHEMA, "external_discovery_only": True, "explicit_library_save_required": True}, "workspace_promotions": {"promotion_schema": PROMOTION_SCHEMA, "packet_schema": PROMOTION_PACKET_SCHEMA, "receipt_schema": PROMOTION_RECEIPT_SCHEMA, "workspace_import_contract": WORKSPACE_IMPORT_CONTRACT, "artifact_types": artifact_catalog(), "explicit_import_required": True}, "generation_boundary": adapter_status()}
 
 @app.get("/v1/platform/summary", dependencies=[Depends(require_key)])
 def connected_platform_summary() -> dict[str, Any]:
@@ -1792,6 +1805,98 @@ def save_research_question(payload: ResearchOpenQuestionRequest) -> dict[str, An
 
 
 
+@app.get("/v1/federation/providers", dependencies=[Depends(require_key)])
+def federated_provider_catalog() -> dict[str, Any]:
+    return {"ok": True, "version": __version__, **provider_catalog()}
+
+
+@app.get("/v1/federation/searches", dependencies=[Depends(require_key)])
+def list_federated_searches(limit: int = 100, owner_ref: str = "", project_id: str = "", context_id: str = "") -> dict[str, Any]:
+    searches = store.federated_searches(limit, owner_ref, project_id, context_id)
+    return {"schema": FEDERATED_SEARCH_SUMMARY_SCHEMA, "version": __version__, "summary": search_summary(searches), "searches": searches}
+
+
+@app.get("/v1/federation/searches/{search_id}", dependencies=[Depends(require_key)])
+def get_federated_search(search_id: str, owner_ref: str = "") -> dict[str, Any]:
+    search = store.federated_search(search_id)
+    if not search:
+        raise HTTPException(status_code=404, detail="Unknown federated search.")
+    if owner_ref and str(search.get("owner_ref") or "") != owner_ref:
+        raise HTTPException(status_code=403, detail="Federated search does not belong to this owner.")
+    return search
+
+
+@app.post("/v1/federation/search", dependencies=[Depends(require_key)])
+async def search_federated_research(payload: FederatedSearchRequest) -> dict[str, Any]:
+    if not settings.federated_discovery_enabled:
+        raise HTTPException(status_code=503, detail="Federated research discovery is disabled.")
+    if payload.project_id:
+        project = store.research_project(payload.project_id)
+        if not project or str(project.get("owner_ref") or "") != payload.owner_ref:
+            raise HTTPException(status_code=403, detail="Federated search owner does not own this research project.")
+    resolved_project_id = payload.project_id
+    if payload.context_id:
+        context = store.research_context(payload.context_id)
+        if not context or str(context.get("owner_ref") or "") != payload.owner_ref:
+            raise HTTPException(status_code=403, detail="Federated search owner does not own this research context.")
+        if not resolved_project_id:
+            resolved_project_id = str(context.get("project_id") or "")
+    if resolved_project_id and resolved_project_id != payload.project_id:
+        project = store.research_project(resolved_project_id)
+        if not project or str(project.get("owner_ref") or "") != payload.owner_ref:
+            raise HTTPException(status_code=403, detail="Federated search context references a project this owner cannot use.")
+    try:
+        result = await run_federated_search(
+            query=payload.query,
+            provider_ids=payload.providers or None,
+            limit_per_provider=min(payload.limit_per_provider, settings.federated_provider_result_limit),
+            result_limit=min(payload.result_limit, settings.federated_result_limit),
+            timeout_seconds=settings.federated_timeout_seconds,
+            openalex_api_key=settings.openalex_api_key,
+            contact_email=settings.federated_contact_email,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    stored = store.save_federated_search(normalize_search_record(result, owner_ref=payload.owner_ref, project_id=resolved_project_id, context_id=payload.context_id))
+    store.save_research_activity(normalize_activity({"owner_ref": payload.owner_ref, "project_id": resolved_project_id, "context_id": payload.context_id, "event_type": "federated-search", "query": payload.query, "note": f"Federated discovery across {len(stored.get('providers') or [])} provider(s)", "metadata": {"search_id": stored["search_id"], "status": stored.get("status"), "result_count": stored.get("result_count"), "providers": stored.get("providers")}}))
+    if resolved_project_id:
+        store.save_project_event(resolved_project_id, "federated-search", {"search_id": stored["search_id"], "query": payload.query, "result_count": stored.get("result_count"), "providers": stored.get("providers")}, payload.owner_ref)
+    return stored
+
+
+@app.post("/v1/federation/searches/{search_id}/results/{result_id}/save", dependencies=[Depends(require_key)])
+def save_federated_result(search_id: str, result_id: str, payload: FederatedResultSaveRequest) -> dict[str, Any]:
+    search = store.federated_search(search_id)
+    if not search:
+        raise HTTPException(status_code=404, detail="Unknown federated search.")
+    if str(search.get("owner_ref") or "") != payload.owner_ref:
+        raise HTTPException(status_code=403, detail="Federated search does not belong to this owner.")
+    resolved_project_id = payload.project_id
+    if payload.context_id:
+        context = store.research_context(payload.context_id)
+        if not context or str(context.get("owner_ref") or "") != payload.owner_ref:
+            raise HTTPException(status_code=403, detail="Federated import owner does not own this research context.")
+        if not resolved_project_id:
+            resolved_project_id = str(context.get("project_id") or "")
+    if resolved_project_id:
+        project = store.research_project(resolved_project_id)
+        if not project or str(project.get("owner_ref") or "") != payload.owner_ref:
+            raise HTTPException(status_code=403, detail="Federated import owner does not own this research project.")
+    result = next((item for item in list(search.get("results") or []) if isinstance(item, dict) and str(item.get("result_id") or "") == result_id), None)
+    if not result:
+        raise HTTPException(status_code=404, detail="Federated result is not present in this saved search snapshot.")
+    try:
+        library_object = normalize_library_object(result_to_library_payload(result, owner_ref=payload.owner_ref, project_id=resolved_project_id, tags=payload.tags))
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    stored = store.save_library_object(library_object)
+    relationship = None
+    if resolved_project_id:
+        relationship = store.save_project_entity({"project_id": resolved_project_id, "entity_type": "library-object-ref", "title": stored["title"], "payload": {"library_object_id": stored["object_id"], "object_type": stored["object_type"], "source_scope": stored["source_scope"], "source": "federated-discovery", "federated_search_id": search_id, "federated_result_id": result_id}})
+    store.save_research_activity(normalize_activity({"owner_ref": payload.owner_ref, "project_id": resolved_project_id, "context_id": payload.context_id, "object_id": stored["object_id"], "event_type": "federated-result-saved", "note": stored["title"], "metadata": {"search_id": search_id, "result_id": result_id, "providers": result.get("providers"), "source_scope": "external-reference"}}))
+    return {"schema": FEDERATED_IMPORT_SCHEMA, "version": __version__, "library_object": stored, "project_link": relationship, "governance": {"source_scope": "external-reference", "not_editorial_approval": True, "not_truth_judgment": True, "provider_identity_preserved": True}}
+
+
 def _workspace_promotion_scope(payload: WorkspacePromotionPrepareRequest) -> tuple[dict[str, Any] | None, dict[str, Any] | None, dict[str, Any] | None, list[dict[str, Any]], dict[str, Any], dict[str, Any], dict[str, Any]]:
     """Resolve only research material the promotion owner can legitimately export."""
     owner_ref = str(payload.owner_ref or "")[:220]
@@ -1992,7 +2097,7 @@ def import_platform_backup(payload: PlatformBackupImportRequest) -> dict[str, An
     verification=verify_backup(payload.envelope)
     if not verification["ok"]: raise HTTPException(status_code=422,detail="Backup checksum validation failed.")
     body=payload.envelope.get("payload") or {}; project=body.get("project") or {}
-    result={"ok":True,"dry_run":payload.dry_run,"verification":verification,"counts":{"investigations":len(body.get("investigations") or []),"entities":len(body.get("entities") or []),"library_objects":len(body.get("library_objects") or []),"research_activity":len(body.get("research_activity") or []),"object_states":len(body.get("object_states") or []),"open_questions":len(body.get("open_questions") or []),"research_rooms":len(body.get("research_rooms") or []),"workspace_promotions":len(body.get("workspace_promotions") or [])}}
+    result={"ok":True,"dry_run":payload.dry_run,"verification":verification,"counts":{"investigations":len(body.get("investigations") or []),"entities":len(body.get("entities") or []),"library_objects":len(body.get("library_objects") or []),"research_activity":len(body.get("research_activity") or []),"object_states":len(body.get("object_states") or []),"open_questions":len(body.get("open_questions") or []),"research_rooms":len(body.get("research_rooms") or []),"federated_searches":len(body.get("federated_searches") or []),"workspace_promotions":len(body.get("workspace_promotions") or [])}}
     if not payload.dry_run:
         saved=normalize_project(project,store.research_project(str(project.get("project_id") or "")))
         store.save_research_project(saved)
@@ -2032,6 +2137,10 @@ def import_platform_backup(payload: PlatformBackupImportRequest) -> dict[str, An
             for activity_payload in room_bundle.get("activity") or []:
                 if isinstance(activity_payload,dict):
                     store.save_room_activity(normalize_room_activity({**activity_payload,"room_id":room["room_id"]}))
+        for search_payload in body.get("federated_searches") or []:
+            if isinstance(search_payload,dict):
+                restored = normalize_search_record({**search_payload,"project_id":saved["project_id"]}, owner_ref=str(saved.get("owner_ref") or ""), project_id=saved["project_id"], context_id=str(search_payload.get("context_id") or ""))
+                store.save_federated_search(restored)
         for promotion_payload in body.get("workspace_promotions") or []:
             if isinstance(promotion_payload,dict):
                 packet=promotion_payload.get("packet") if isinstance(promotion_payload.get("packet"),dict) else {}

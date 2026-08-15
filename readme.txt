@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 7.6.0
+Stable tag: 7.7.0
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
@@ -12,7 +12,7 @@ A connected, site-scoped research intelligence platform for Sustainable Catalyst
 
 Research Librarian AI retrieves Sustainable Catalyst publications and documents through exact-title priority, section-aware BM25 ranking, optional Gemini embeddings, calibrated reciprocal-rank fusion, and citation-verified synthesis. WordPress remains the canonical publishing and recovery source, while FastAPI stores the production knowledge index durably in Neon Postgres with pgvector.
 
-v7.6.0 adds a governed Promote to Workspace outbox for Notebook, Evidence Set, Analysis, Document, and Citation Pack handoffs. Promotion packets preserve source ownership/scope, fingerprints, individual-versus-room provenance, and require explicit Workspace import; preparation is not publication or editorial approval.
+v7.7.0 adds Global Library Discovery & Federated Research across fixed external scholarly and library providers. Results preserve provider identity and access provenance, remain separate from Sustainable Catalyst editorial material, and enter My Library only through an explicit private external-reference save. v7.6.0 Workspace promotion remains available.
 
 == Shortcodes ==
 
@@ -38,6 +38,14 @@ v7.6.0 adds a governed Promote to Workspace outbox for Notebook, Evidence Set, A
 [sc_research_librarian_platform_handoffs]
 
 == Changelog ==
+
+= 7.7.0 =
+* Add fixed-provider federated research discovery for OpenAlex, Crossref, Europe PMC, Open Library, and arXiv.
+* Normalize and deduplicate external records while preserving provider identity and provider-specific record provenance.
+* Persist federated search snapshots in the ancillary research workspace ledger for audit, project backup, and research continuity.
+* Add explicit Save to My Library import as private `external-reference` objects; discovery alone does not create evidence or editorial approval.
+* Add partial-provider failure reporting, provider/access signals, recent-search history, and authenticated WordPress discovery UI.
+* Advance ancillary SQLite schema to 17, Connected Research API to 1.6, and public workspace to 2.6; Neon/Postgres knowledge-index schema remains 13.0.
 
 = 7.6.0 =
 * Add governed Workspace promotion for Notebook, Evidence Set, Analysis, Document, and Citation Pack seeds.

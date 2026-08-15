@@ -1,22 +1,19 @@
-# Sustainable Catalyst Research Librarian AI v7.6.0
+# Sustainable Catalyst Research Librarian AI v7.7.0
 
-A site-scoped connected research intelligence platform with Library-native research objects, persistent individual research state, collaborative Research Rooms, descriptive evidence-quality signals, governed Workspace artifact promotion, Neon/Postgres durable indexing, verified retrieval, Gemini semantic search, transaction recovery, and a visible public research workspace. See `docs/V760_WORKSPACE_RESEARCH_HANDOFF_ARTIFACT_PROMOTION.md`.
+A site-scoped connected research intelligence platform with Library-native research objects, persistent individual research state, collaborative Research Rooms, descriptive evidence-quality signals, governed Workspace artifact promotion, Neon/Postgres durable indexing, verified retrieval, Gemini semantic search, transaction recovery, and a visible public research workspace. See `docs/V770_GLOBAL_LIBRARY_DISCOVERY_FEDERATED_RESEARCH.md`.
 
-## v7.6.0 highlights
+## v7.7.0 highlights
 
-- Adds a governed **Promote to Workspace** outbox for Notebook, Evidence Set, Analysis, Document, and Citation Pack seeds.
-- Builds versioned, SHA-256-fingerprinted research handoff packets instead of silently creating or publishing Workspace artifacts.
-- Preserves Library source owner, source scope, object type, source fingerprint, project relationship, and Research Room participant attribution.
-- Carries bounded v7.4 personal research state and v7.5 shared room state without merging their provenance.
-- Excludes rejected sources by default while allowing deliberate inclusion for audit or counter-evidence workflows.
-- Requires explicit Workspace import and validates optional export/import receipts against the prepared packet fingerprint.
-- Resolves owner/actor identity and context/project/room/object access server-side through WordPress.
-- Includes promotion packets and receipts in project backup/import.
-- Advances the ancillary SQLite workspace store to schema 16, Connected Research API to 1.5, and public workspace to 2.5 without changing the Neon/Postgres knowledge-index schema.
+- Global Library Discovery with fixed adapters for OpenAlex, Crossref, Europe PMC, Open Library, and arXiv.
+- Normalized federated result contract with DOI/ISBN/arXiv-aware deduplication and provider identity preserved.
+- Partial-provider failure reporting and durable federated search history in the ancillary research workspace ledger.
+- Explicit **Save to My Library** boundary: external discovery remains separate until the user saves a private `external-reference` object.
+- Server-side WordPress owner/context/project authorization and stored-snapshot revalidation before Library import.
+- v7.6 Workspace promotion, v7.5 Research Rooms, v7.4 research state, and v7.3 evidence-quality contracts remain intact.
 
 ## Architecture
 
-WordPress remains the canonical publishing, administration, identity, and recovery boundary. FastAPI uses Neon/Postgres for production knowledge generations, source records, retrieval chunks, and pgvector embeddings. SQLite remains the local-development and ancillary governance/workspace/Library-context/research-state/collaboration/promotion store in v7.6.0. Generation is isolated behind `sc-generation-adapter/1.0`; deterministic retrieval and project continuity remain usable when generation is unavailable.
+WordPress remains the canonical publishing, administration, identity, and recovery boundary. FastAPI uses Neon/Postgres for production knowledge generations, source records, retrieval chunks, and pgvector embeddings. SQLite remains the local-development and ancillary governance/workspace/Library-context/research-state/collaboration/promotion store in v7.7.0. Generation is isolated behind `sc-generation-adapter/1.0`; deterministic retrieval and project continuity remain usable when generation is unavailable.
 
 ## Public shortcodes
 
@@ -31,7 +28,7 @@ WordPress remains the canonical publishing, administration, identity, and recove
 
 ## Backend resources
 
-`/v1/projects`, `/v1/investigations`, `/v1/projects/entities`, `/v1/library/object-model`, `/v1/library/objects`, `/v1/research/contexts`, `/v1/research/contexts/{context_id}/evidence-quality`, `/v1/research/sources/evaluate`, `/v1/research/evidence/compare`, `/v1/research/evidence/gaps`, `/v1/research/state/summary`, `/v1/research/activity`, `/v1/research/object-states`, `/v1/research/questions`, `/v1/research/rooms`, `/v1/research/rooms/{room_id}`, `/v1/research/rooms/{room_id}/members`, `/v1/research/rooms/{room_id}/evidence`, `/v1/research/rooms/{room_id}/questions`, `/v1/research/rooms/{room_id}/disagreements`, `/v1/research/rooms/{room_id}/activity`, `/v1/research/rooms/{room_id}/synthesis`, `/v1/workspace/promotions/catalog`, `/v1/workspace/promotions`, `/v1/workspace/promotions/{promotion_id}`, `/v1/workspace/promotions/{promotion_id}/receipt`, `/v1/workflows/template`, `/v1/research/contradictions`, `/v1/research/uncertainties`, `/v1/projects/{project_id}/backup`, `/v1/platform/backups/import`, `/v1/platform/api`, and `/v1/platform/summary`.
+`/v1/projects`, `/v1/investigations`, `/v1/projects/entities`, `/v1/library/object-model`, `/v1/library/objects`, `/v1/research/contexts`, `/v1/research/contexts/{context_id}/evidence-quality`, `/v1/research/sources/evaluate`, `/v1/research/evidence/compare`, `/v1/research/evidence/gaps`, `/v1/research/state/summary`, `/v1/research/activity`, `/v1/research/object-states`, `/v1/research/questions`, `/v1/research/rooms`, `/v1/research/rooms/{room_id}`, `/v1/research/rooms/{room_id}/members`, `/v1/research/rooms/{room_id}/evidence`, `/v1/research/rooms/{room_id}/questions`, `/v1/research/rooms/{room_id}/disagreements`, `/v1/research/rooms/{room_id}/activity`, `/v1/research/rooms/{room_id}/synthesis`, `/v1/federation/providers`, `/v1/federation/search`, `/v1/federation/searches`, `/v1/federation/searches/{search_id}`, `/v1/federation/searches/{search_id}/results/{result_id}/save`, `/v1/workspace/promotions/catalog`, `/v1/workspace/promotions`, `/v1/workspace/promotions/{promotion_id}`, `/v1/workspace/promotions/{promotion_id}/receipt`, `/v1/workflows/template`, `/v1/research/contradictions`, `/v1/research/uncertainties`, `/v1/projects/{project_id}/backup`, `/v1/platform/backups/import`, `/v1/platform/api`, and `/v1/platform/summary`.
 
 ## Runtime
 

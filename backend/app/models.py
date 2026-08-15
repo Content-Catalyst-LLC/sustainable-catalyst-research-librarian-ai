@@ -568,6 +568,23 @@ class ResearchOpenQuestionRequest(BaseModel):
 
 
 
+class FederatedSearchRequest(BaseModel):
+    query: str = Field(min_length=2, max_length=3000)
+    owner_ref: str = Field(min_length=1, max_length=220)
+    project_id: str = Field(default="", max_length=220)
+    context_id: str = Field(default="", max_length=220)
+    providers: list[str] = Field(default_factory=list, max_length=10)
+    limit_per_provider: int = Field(default=10, ge=1, le=50)
+    result_limit: int = Field(default=50, ge=5, le=200)
+
+
+class FederatedResultSaveRequest(BaseModel):
+    owner_ref: str = Field(min_length=1, max_length=220)
+    project_id: str = Field(default="", max_length=220)
+    context_id: str = Field(default="", max_length=220)
+    tags: list[str] = Field(default_factory=list, max_length=50)
+
+
 class WorkspacePromotionPrepareRequest(BaseModel):
     promotion_id: str = Field(default="", max_length=220)
     owner_ref: str = Field(min_length=1, max_length=220)

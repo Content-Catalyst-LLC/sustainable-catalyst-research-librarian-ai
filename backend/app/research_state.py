@@ -36,6 +36,8 @@ ACTIVITY_TYPES = {
     "question-deferred",
     "workspace-promotion-prepared",
     "workspace-promotion-imported",
+    "federated-search",
+    "federated-result-saved",
     "note",
 }
 

@@ -2,7 +2,7 @@
 $root = dirname(__DIR__);
 $module = file_get_contents($root . '/includes/class-sc-rl-v630-durable-index.php');
 $checks = array(
- 'version' => false !== strpos($module, "const VERSION = '7.6.0'"),
+ 'version' => false !== strpos($module, "const VERSION = '7.7.0'"),
  'bounded_stage' => false !== strpos($module, "'finalizing-discovery'"),
  'bounded_processor' => false !== strpos($module, 'process_build_finalization_step'),
  'cursor_saved' => false !== strpos($module, "'finalization_offset'"),

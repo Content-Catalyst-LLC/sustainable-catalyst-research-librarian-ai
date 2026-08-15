@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Collaborative Research Room contracts for Research Librarian v7.6.0.
+"""Collaborative Research Room contracts for Research Librarian v7.7.0.
 
 Room collaboration is explicit shared workflow state. Individual reading/review state
 continues to live in the v7.4.0 personal research-state ledger. Room evidence state,
@@ -317,7 +317,7 @@ def build_room_synthesis(
 
     synthesis = {
         "schema": ROOM_SYNTHESIS_SCHEMA,
-        "version": "7.6.0",
+        "version": "7.7.0",
         "room": room,
         "counts": {
             "members": len(active_members),

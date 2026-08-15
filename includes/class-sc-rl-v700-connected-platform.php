@@ -1,18 +1,18 @@
 <?php
 /**
- * Research Librarian AI v7.6.0 — Connected Research Intelligence Platform.
+ * Research Librarian AI v7.7.0 — Connected Research Intelligence Platform.
  *
- * v7.6.0 adds governed Workspace artifact promotion for notebooks, evidence sets,
- * analyses, documents, and citation packs while preserving source and room provenance.
+ * v7.7.0 adds governed global Library discovery and federated research while preserving
+ * provider identity, access boundaries, source scope, and explicit Library-save semantics.
  */
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 final class SC_RL6_V700_Connected_Platform {
-    const VERSION = '7.6.0';
+    const VERSION = '7.7.0';
     const OPTION_NAME = 'sc_rl_v700_platform_options';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const API_SCHEMA = 'sc-connected-research-api/1.5';
-    const WORKSPACE_SCHEMA = 'sc-research-librarian-public-workspace/2.5';
+    const API_SCHEMA = 'sc-connected-research-api/1.6';
+    const WORKSPACE_SCHEMA = 'sc-research-librarian-public-workspace/2.6';
     const OBJECT_MODEL_SCHEMA = 'sc-research-library-object-model/1.0';
     const CONTEXT_SCHEMA = 'sc-research-context/1.0';
     const QUALITY_SCHEMA = 'sc-research-quality-signals/1.0';
@@ -21,6 +21,9 @@ final class SC_RL6_V700_Connected_Platform {
     const ROOM_SYNTHESIS_SCHEMA = 'sc-research-room-synthesis/1.0';
     const WORKSPACE_PROMOTION_SCHEMA = 'sc-workspace-artifact-promotion/1.0';
     const WORKSPACE_HANDOFF_SCHEMA = 'sc-workspace-research-handoff/1.0';
+    const FEDERATED_PROVIDER_SCHEMA = 'sc-federated-provider-catalog/1.0';
+    const FEDERATED_SEARCH_SCHEMA = 'sc-federated-research-search/1.0';
+    const FEDERATED_IMPORT_SCHEMA = 'sc-federated-library-import/1.0';
 
     public static function init() {
         add_action( 'rest_api_init', array( __CLASS__, 'register_rest_routes' ), 140 );
@@ -63,6 +66,9 @@ final class SC_RL6_V700_Connected_Platform {
             'workspace_artifact_promotion' => '1',
             'workspace_promotion_receipts' => '1',
             'workspace_explicit_import' => '1',
+            'federated_discovery' => '1',
+            'federated_provider_provenance' => '1',
+            'federated_explicit_save' => '1',
             'api_public_status' => '1',
             'default_visibility' => 'private',
         );
@@ -186,6 +192,13 @@ final class SC_RL6_V700_Connected_Platform {
         ) );
         register_rest_route( self::REST_NAMESPACE, '/platform/v7/rooms/(?P<room_id>[A-Za-z0-9._-]+)/activity', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'rest_room_activity' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ) );
         register_rest_route( self::REST_NAMESPACE, '/platform/v7/rooms/(?P<room_id>[A-Za-z0-9._-]+)/synthesis', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'rest_room_synthesis' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ) );
+        register_rest_route( self::REST_NAMESPACE, '/platform/v7/federation/providers', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'rest_federated_providers' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ) );
+        register_rest_route( self::REST_NAMESPACE, '/platform/v7/federation/searches', array(
+            array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'rest_federated_searches' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ),
+            array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'rest_federated_search_create' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ),
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/platform/v7/federation/searches/(?P<search_id>[A-Za-z0-9._-]+)', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'rest_federated_search' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ) );
+        register_rest_route( self::REST_NAMESPACE, '/platform/v7/federation/searches/(?P<search_id>[A-Za-z0-9._-]+)/results/(?P<result_id>[A-Za-z0-9._-]+)/save', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'rest_federated_result_save' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ) );
         register_rest_route( self::REST_NAMESPACE, '/platform/v7/workspace/promotions', array(
             array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'rest_workspace_promotions' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ),
             array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'rest_workspace_promotion_prepare' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ),
@@ -526,6 +539,67 @@ final class SC_RL6_V700_Connected_Platform {
         return self::respond(self::backend_request('/v1/research/contexts','POST',$payload));
     }
 
+    private static function federated_scope_for_current_user( $context_id = '', $project_id = '' ) {
+        $context_id = sanitize_text_field( $context_id );
+        $project_id = sanitize_text_field( $project_id );
+        if ( $context_id ) {
+            $context = self::authorized_context( $context_id );
+            if ( is_wp_error( $context ) ) { return $context; }
+            if ( ! $project_id ) { $project_id = sanitize_text_field( $context['project_id'] ?? '' ); }
+        }
+        if ( $project_id ) {
+            $project = self::authorized_project( $project_id, false );
+            if ( is_wp_error( $project ) ) { return $project; }
+        }
+        return array( 'owner_ref' => self::owner_ref(), 'project_id' => $project_id, 'context_id' => $context_id );
+    }
+
+    public static function rest_federated_providers() {
+        return self::respond( self::backend_request( '/v1/federation/providers', 'GET' ) );
+    }
+
+    public static function rest_federated_searches( WP_REST_Request $request ) {
+        $scope = self::federated_scope_for_current_user( $request->get_param( 'context_id' ), $request->get_param( 'project_id' ) );
+        if ( is_wp_error( $scope ) ) { return $scope; }
+        $query = '/v1/federation/searches?limit=' . max( 1, min( 100, absint( $request->get_param( 'limit' ) ?: 20 ) ) ) . '&owner_ref=' . rawurlencode( $scope['owner_ref'] );
+        if ( $scope['project_id'] ) { $query .= '&project_id=' . rawurlencode( $scope['project_id'] ); }
+        if ( $scope['context_id'] ) { $query .= '&context_id=' . rawurlencode( $scope['context_id'] ); }
+        return self::respond( self::backend_request( $query, 'GET' ) );
+    }
+
+    public static function rest_federated_search_create( WP_REST_Request $request ) {
+        $p = self::checked_json( $request ); if ( is_wp_error( $p ) ) { return $p; }
+        $scope = self::federated_scope_for_current_user( $p['context_id'] ?? '', $p['project_id'] ?? '' );
+        if ( is_wp_error( $scope ) ) { return $scope; }
+        $allowed = array( 'openalex', 'crossref', 'europe-pmc', 'open-library', 'arxiv' );
+        $providers = array_values( array_intersect( $allowed, self::sanitize_list( $p['providers'] ?? array(), 10 ) ) );
+        if ( array_key_exists( 'providers', $p ) && ! $providers ) { return new WP_Error( 'sc_rl_v770_provider_required', 'Choose at least one supported external provider.', array( 'status' => 422 ) ); }
+        $query = sanitize_textarea_field( $p['query'] ?? '' );
+        if ( strlen( trim( $query ) ) < 2 ) { return new WP_Error( 'sc_rl_v770_query_required', 'Enter a research query.', array( 'status' => 422 ) ); }
+        return self::respond( self::backend_request( '/v1/federation/search', 'POST', array(
+            'query' => $query, 'owner_ref' => $scope['owner_ref'], 'project_id' => $scope['project_id'], 'context_id' => $scope['context_id'],
+            'providers' => $providers, 'limit_per_provider' => max( 1, min( 25, absint( $p['limit_per_provider'] ?? 8 ) ) ), 'result_limit' => max( 5, min( 100, absint( $p['result_limit'] ?? 40 ) ) ),
+        ) ) );
+    }
+
+    public static function rest_federated_search( WP_REST_Request $request ) {
+        $search_id = sanitize_text_field( $request['search_id'] );
+        return self::respond( self::backend_request( '/v1/federation/searches/' . rawurlencode( $search_id ) . '?owner_ref=' . rawurlencode( self::owner_ref() ), 'GET' ) );
+    }
+
+    public static function rest_federated_result_save( WP_REST_Request $request ) {
+        $p = self::checked_json( $request ); if ( is_wp_error( $p ) ) { return $p; }
+        $scope = self::federated_scope_for_current_user( $p['context_id'] ?? '', $p['project_id'] ?? '' );
+        if ( is_wp_error( $scope ) ) { return $scope; }
+        $search_id = sanitize_text_field( $request['search_id'] );
+        $result_id = sanitize_text_field( $request['result_id'] );
+        $owned = self::backend_request( '/v1/federation/searches/' . rawurlencode( $search_id ) . '?owner_ref=' . rawurlencode( self::owner_ref() ), 'GET' );
+        if ( is_wp_error( $owned ) ) { return $owned; }
+        return self::respond( self::backend_request( '/v1/federation/searches/' . rawurlencode( $search_id ) . '/results/' . rawurlencode( $result_id ) . '/save', 'POST', array(
+            'owner_ref' => $scope['owner_ref'], 'project_id' => $scope['project_id'], 'context_id' => $scope['context_id'], 'tags' => self::sanitize_list( $p['tags'] ?? array(), 50 ),
+        ) ) );
+    }
+
     public static function rest_workspace_promotions( WP_REST_Request $request ) {
         $query = '/v1/workspace/promotions?limit=' . max( 1, min( 200, absint( $request->get_param( 'limit' ) ?: 100 ) ) ) . '&owner_ref=' . rawurlencode( self::owner_ref() );
         return self::respond( self::backend_request( $query, 'GET' ) );
@@ -598,9 +672,9 @@ final class SC_RL6_V700_Connected_Platform {
             update_option(self::OPTION_NAME,$clean,false); echo '<div class="notice notice-success"><p>Connected Research Platform settings saved.</p></div>';
         }
         $o=self::options(); $status=self::backend_request('/v1/platform/summary','GET'); $api=self::backend_request('/v1/platform/api','GET'); ?>
-        <div class="wrap"><h1>Connected Research Intelligence Platform</h1><p>v7.6.0 adds governed Workspace artifact promotion for notebooks, evidence sets, analyses, documents, and citation packs. Prepared handoffs preserve source scope, fingerprints, participant attribution, and personal/shared state boundaries; import remains explicit.</p>
+        <div class="wrap"><h1>Connected Research Intelligence Platform</h1><p>v7.7.0 adds global Library discovery across fixed research/catalog providers. External results preserve provider identity and access state, remain separate from Sustainable Catalyst editorial material, and require an explicit Save to My Library action.</p>
         <div class="card"><h2>Platform state</h2><p><strong>Backend:</strong> <?php echo is_wp_error($status)?esc_html($status->get_error_message()):'Connected'; ?></p><p><strong>Stable API:</strong> <?php echo is_wp_error($api)?'Unavailable':esc_html($api['schema']??self::API_SCHEMA); ?></p><p><strong>Object model:</strong> <?php echo esc_html(self::OBJECT_MODEL_SCHEMA); ?></p><?php if(!is_wp_error($status)&&!empty($status['counts'])):?><ul><?php foreach($status['counts'] as $key=>$value):?><li><strong><?php echo esc_html(ucwords(str_replace('_',' ',$key))); ?>:</strong> <?php echo esc_html(absint($value)); ?></li><?php endforeach;?></ul><?php endif;?></div>
-        <form method="post"><?php wp_nonce_field('sc_rl_v700_save');?><table class="form-table"><tbody><tr><th>Workspace mode</th><td><select name="workspace_mode"><?php foreach(array('public'=>'Public','editorial'=>'Editorial','institutional'=>'Institutional') as $value=>$label):?><option value="<?php echo esc_attr($value);?>" <?php selected($o['workspace_mode'],$value);?>><?php echo esc_html($label);?></option><?php endforeach;?></select></td></tr><tr><th>Default visibility</th><td><select name="default_visibility"><?php foreach(array('private'=>'Private','shared'=>'Shared','public'=>'Public') as $value=>$label):?><option value="<?php echo esc_attr($value);?>" <?php selected($o['default_visibility'],$value);?>><?php echo esc_html($label);?></option><?php endforeach;?></select></td></tr><tr><th>Capabilities</th><td><?php foreach(array('persistent_projects'=>'Persistent projects','portable_backups'=>'Portable backup and recovery','contradiction_analysis'=>'Contradiction tracking','uncertainty_registers'=>'Uncertainty registers','workflow_templates'=>'Reusable workflow templates','library_object_model'=>'Library object model','contextual_research'=>'Context-aware research','personal_library_separation'=>'Personal/editorial collection separation','source_scope_provenance'=>'Source-scope provenance','human_publication_review'=>'Human publication review','source_evaluation'=>'Descriptive source evaluation','evidence_comparison'=>'Evidence comparison','evidence_gap_detection'=>'Evidence-gap detection','persistent_research_state'=>'Persistent research state','reading_review_history'=>'Reading and review history','open_question_register'=>'Open-question register','research_rooms'=>'Collaborative Research Rooms','room_membership_roles'=>'Room membership roles','shared_evidence_state'=>'Shared evidence state','collaborative_questions'=>'Collaborative room questions','room_disagreements'=>'Attributed disagreements','participant_activity'=>'Participant activity','room_synthesis'=>'Room-level synthesis','workspace_artifact_promotion'=>'Workspace artifact promotion','workspace_promotion_receipts'=>'Workspace promotion receipts','workspace_explicit_import'=>'Explicit Workspace import boundary','api_public_status'=>'Public platform status') as $key=>$label):?><label style="display:block;margin:0 0 8px"><input type="checkbox" name="<?php echo esc_attr($key);?>" <?php checked($o[$key],'1');?>> <?php echo esc_html($label);?></label><?php endforeach;?></td></tr></tbody></table><?php submit_button('Save Platform Settings','primary','sc_rl_v700_save');?></form>
+        <form method="post"><?php wp_nonce_field('sc_rl_v700_save');?><table class="form-table"><tbody><tr><th>Workspace mode</th><td><select name="workspace_mode"><?php foreach(array('public'=>'Public','editorial'=>'Editorial','institutional'=>'Institutional') as $value=>$label):?><option value="<?php echo esc_attr($value);?>" <?php selected($o['workspace_mode'],$value);?>><?php echo esc_html($label);?></option><?php endforeach;?></select></td></tr><tr><th>Default visibility</th><td><select name="default_visibility"><?php foreach(array('private'=>'Private','shared'=>'Shared','public'=>'Public') as $value=>$label):?><option value="<?php echo esc_attr($value);?>" <?php selected($o['default_visibility'],$value);?>><?php echo esc_html($label);?></option><?php endforeach;?></select></td></tr><tr><th>Capabilities</th><td><?php foreach(array('persistent_projects'=>'Persistent projects','portable_backups'=>'Portable backup and recovery','contradiction_analysis'=>'Contradiction tracking','uncertainty_registers'=>'Uncertainty registers','workflow_templates'=>'Reusable workflow templates','library_object_model'=>'Library object model','contextual_research'=>'Context-aware research','personal_library_separation'=>'Personal/editorial collection separation','source_scope_provenance'=>'Source-scope provenance','human_publication_review'=>'Human publication review','source_evaluation'=>'Descriptive source evaluation','evidence_comparison'=>'Evidence comparison','evidence_gap_detection'=>'Evidence-gap detection','persistent_research_state'=>'Persistent research state','reading_review_history'=>'Reading and review history','open_question_register'=>'Open-question register','research_rooms'=>'Collaborative Research Rooms','room_membership_roles'=>'Room membership roles','shared_evidence_state'=>'Shared evidence state','collaborative_questions'=>'Collaborative room questions','room_disagreements'=>'Attributed disagreements','participant_activity'=>'Participant activity','room_synthesis'=>'Room-level synthesis','workspace_artifact_promotion'=>'Workspace artifact promotion','workspace_promotion_receipts'=>'Workspace promotion receipts','workspace_explicit_import'=>'Explicit Workspace import boundary','federated_discovery'=>'Federated research discovery','federated_provider_provenance'=>'Federated provider provenance','federated_explicit_save'=>'Explicit Save to My Library boundary','api_public_status'=>'Public platform status') as $key=>$label):?><label style="display:block;margin:0 0 8px"><input type="checkbox" name="<?php echo esc_attr($key);?>" <?php checked($o[$key],'1');?>> <?php echo esc_html($label);?></label><?php endforeach;?></td></tr></tbody></table><?php submit_button('Save Platform Settings','primary','sc_rl_v700_save');?></form>
         <p><code>[sc_connected_research_workspace]</code> renders the authenticated project and research-context workspace. <code>[sc_research_projects_summary]</code> and <code>[sc_connected_research_platform_status]</code> render compact summaries.</p></div><?php
     }
 
@@ -609,13 +683,14 @@ final class SC_RL6_V700_Connected_Platform {
         wp_enqueue_script( 'sc-rl-v700-connected-platform', plugins_url( '../assets/sc-research-platform-v7.js', __FILE__ ), array(), self::VERSION, true );
         wp_enqueue_script( 'sc-rl-v750-research-rooms', plugins_url( '../assets/sc-research-platform-v750-rooms.js', __FILE__ ), array( 'sc-rl-v700-connected-platform' ), self::VERSION, true );
         wp_enqueue_script( 'sc-rl-v760-workspace-promotion', plugins_url( '../assets/sc-research-platform-v760-workspace.js', __FILE__ ), array( 'sc-rl-v700-connected-platform', 'sc-rl-v750-research-rooms' ), self::VERSION, true );
-        wp_localize_script( 'sc-rl-v700-connected-platform', 'SCRLPlatformV7', array( 'root' => esc_url_raw( rest_url( self::REST_NAMESPACE . '/platform/v7/' ) ), 'nonce' => wp_create_nonce( 'wp_rest' ), 'authenticated' => is_user_logged_in(), 'workspaceMode' => self::options()['workspace_mode'], 'objectModelSchema' => self::OBJECT_MODEL_SCHEMA, 'contextSchema' => self::CONTEXT_SCHEMA, 'qualitySchema' => self::QUALITY_SCHEMA, 'stateSchema' => self::STATE_SCHEMA, 'roomSchema' => self::ROOM_SCHEMA, 'roomSynthesisSchema' => self::ROOM_SYNTHESIS_SCHEMA, 'workspacePromotionSchema' => self::WORKSPACE_PROMOTION_SCHEMA, 'workspaceHandoffSchema' => self::WORKSPACE_HANDOFF_SCHEMA, 'workspaceUrl' => esc_url_raw( home_url( '/workspace/' ) ) ) );
+        wp_enqueue_script( 'sc-rl-v770-federated-research', plugins_url( '../assets/sc-research-platform-v770-federation.js', __FILE__ ), array( 'sc-rl-v700-connected-platform', 'sc-rl-v760-workspace-promotion' ), self::VERSION, true );
+        wp_localize_script( 'sc-rl-v700-connected-platform', 'SCRLPlatformV7', array( 'root' => esc_url_raw( rest_url( self::REST_NAMESPACE . '/platform/v7/' ) ), 'nonce' => wp_create_nonce( 'wp_rest' ), 'authenticated' => is_user_logged_in(), 'workspaceMode' => self::options()['workspace_mode'], 'objectModelSchema' => self::OBJECT_MODEL_SCHEMA, 'contextSchema' => self::CONTEXT_SCHEMA, 'qualitySchema' => self::QUALITY_SCHEMA, 'stateSchema' => self::STATE_SCHEMA, 'roomSchema' => self::ROOM_SCHEMA, 'roomSynthesisSchema' => self::ROOM_SYNTHESIS_SCHEMA, 'workspacePromotionSchema' => self::WORKSPACE_PROMOTION_SCHEMA, 'workspaceHandoffSchema' => self::WORKSPACE_HANDOFF_SCHEMA, 'federatedProviderSchema' => self::FEDERATED_PROVIDER_SCHEMA, 'federatedSearchSchema' => self::FEDERATED_SEARCH_SCHEMA, 'federatedImportSchema' => self::FEDERATED_IMPORT_SCHEMA, 'workspaceUrl' => esc_url_raw( home_url( '/workspace/' ) ) ) );
     }
 
     public static function render_workspace() {
         self::enqueue_workspace_assets(); ob_start(); ?>
         <section class="sc-rl-v7-platform sc-rl-v7-platform--context" data-sc-rl-v7-workspace>
-          <header><p class="sc-rl-product__eyebrow">Connected Research Intelligence Platform</p><h2>Research Projects, Context, Evidence Quality, Research State &amp; Rooms</h2><p>Move between Sustainable Catalyst's editorial collection, your private Library, active projects, and collaborative Research Rooms while preserving personal and shared provenance. Room synthesis keeps participant attribution visible and remains separate from factual evidence and editorial approval.</p></header>
+          <header><p class="sc-rl-product__eyebrow">Connected Research Intelligence Platform</p><h2>Research Projects, Context, Evidence Quality, Research State, Rooms &amp; Global Discovery</h2><p>Move between Sustainable Catalyst's editorial collection, your private Library, active projects, and collaborative Research Rooms while preserving personal and shared provenance. Room synthesis keeps participant attribution visible and remains separate from factual evidence and editorial approval.</p></header>
           <div class="sc-rl-v720-context-model" aria-label="Research context model">
             <article><span>Editorial</span><strong>Sustainable Catalyst Collection</strong><p>Public knowledge and official editorial recommendations.</p></article>
             <article><span>Private</span><strong>My Library</strong><p>Your saved sources, recommendations, searches, watchlists, and queue.</p></article>
@@ -631,6 +706,7 @@ final class SC_RL6_V700_Connected_Platform {
             <button type="button" data-sc-rl-v740-state-run>Research state</button>
             <button type="button" data-sc-rl-v750-room-run>Research rooms</button>
             <button type="button" data-sc-rl-v760-workspace-run>Promote to Workspace</button>
+            <button type="button" data-sc-rl-v770-federation-run>Discover globally</button>
           </div>
           <form class="sc-rl-v720-context-form" data-sc-rl-v720-context-form hidden>
             <label>Context name<input name="title" maxlength="240" value="My Library research"></label>
@@ -675,10 +751,19 @@ final class SC_RL6_V700_Connected_Platform {
             </form>
             <div data-sc-rl-v760-workspace-content><p>No Workspace handoff has been prepared in this view.</p></div>
           </section>
+          <section class="sc-rl-v770-federation-panel" data-sc-rl-v770-federation-panel hidden aria-live="polite">
+            <header><p class="sc-rl-product__eyebrow">Global Library Discovery</p><h3>Federated research across external scholarly and library catalogs</h3><p>Search external providers without merging them into Sustainable Catalyst's editorial collection. Provider identity, access state, and retrieval provenance remain visible; a result becomes a private Library object only when you explicitly save it. Search terms are sent to the external providers you select, but your WordPress account identity is not forwarded.</p></header>
+            <form data-sc-rl-v770-federation-form>
+              <label>Research query<input name="query" maxlength="3000" required placeholder="Topic, title, author, DOI, ISBN, or research question"></label>
+              <fieldset><legend>Providers</legend><label><input type="checkbox" name="providers" value="openalex" checked> OpenAlex</label><label><input type="checkbox" name="providers" value="crossref" checked> Crossref</label><label><input type="checkbox" name="providers" value="europe-pmc" checked> Europe PMC</label><label><input type="checkbox" name="providers" value="open-library" checked> Open Library</label><label><input type="checkbox" name="providers" value="arxiv" checked> arXiv</label></fieldset>
+              <button type="submit">Search external research</button><button type="button" data-sc-rl-v770-history>Recent searches</button><p role="status" data-sc-rl-v770-federation-status></p>
+            </form>
+            <div data-sc-rl-v770-federation-content><p>No federated search has been run in this view.</p></div>
+          </section>
           <div class="sc-rl-v7-layout"><aside class="sc-rl-v7-create"><h3>New project</h3><form data-sc-rl-v7-project-form><label>Project title<input name="title" required maxlength="240"></label><label>Research objective<textarea name="objective" rows="5" maxlength="4000"></textarea></label><button type="submit">Create project</button><p role="status" aria-live="polite" data-sc-rl-v7-form-status></p></form><div class="sc-rl-v720-library-summary" data-sc-rl-v720-library-summary><strong>Library objects</strong><p>Loading your Library object model…</p></div></aside><div><div class="sc-rl-v7-toolbar"><h3>Your projects</h3><button type="button" data-sc-rl-v7-refresh>Refresh</button></div><div data-sc-rl-v7-projects role="region" aria-live="polite"><p>Loading research projects…</p></div></div></div><?php endif;?>
         </section><?php return ob_get_clean();
     }
 
     public static function render_summary() { $status=self::backend_request('/v1/platform/summary','GET'); $counts=is_wp_error($status)?array('projects'=>0,'investigations'=>0,'entities'=>0,'library_objects'=>0,'research_contexts'=>0,'backups'=>0):($status['counts']??array()); ob_start();?><section class="sc-rl-v7-summary"><p class="sc-rl-product__eyebrow">Connected Research Platform</p><h2>Research Workspace Summary</h2><div class="sc-rl-product__grid"><?php foreach($counts as $key=>$value):?><article><span><?php echo esc_html(absint($value));?></span><strong><?php echo esc_html(ucwords(str_replace('_',' ',$key)));?></strong></article><?php endforeach;?></div></section><?php return ob_get_clean(); }
-    public static function render_status() { $status=self::backend_request('/v1/platform/summary','GET'); $connected=!is_wp_error($status); ob_start();?><section class="sc-rl-governance sc-rl-governance--status"><p class="sc-rl-product__eyebrow">Platform Status</p><h2>Connected Research Intelligence</h2><div class="sc-rl-product__grid"><article><span><?php echo $connected?'Connected':'Fallback';?></span><strong>Platform state</strong><p><?php echo $connected?'Persistent project, Library-context, evidence-quality, research-state, collaborative room, and Workspace promotion services are available.':'The public Librarian remains available; private research context requires the backend.';?></p></article><article><span>v7.6.0</span><strong>Stable API</strong><p><?php echo esc_html(self::API_SCHEMA);?></p></article><article><span>Governed</span><strong>Workspace promotion</strong><p>Research can be promoted as a fingerprinted Workspace handoff without changing source scope, attribution, or publication state.</p></article></div></section><?php return ob_get_clean(); }
+    public static function render_status() { $status=self::backend_request('/v1/platform/summary','GET'); $connected=!is_wp_error($status); ob_start();?><section class="sc-rl-governance sc-rl-governance--status"><p class="sc-rl-product__eyebrow">Platform Status</p><h2>Connected Research Intelligence</h2><div class="sc-rl-product__grid"><article><span><?php echo $connected?'Connected':'Fallback';?></span><strong>Platform state</strong><p><?php echo $connected?'Persistent project, Library-context, evidence-quality, research-state, collaborative room, Workspace promotion, and federated discovery services are available.':'The public Librarian remains available; private research context requires the backend.';?></p></article><article><span>v7.7.0</span><strong>Stable API</strong><p><?php echo esc_html(self::API_SCHEMA);?></p></article><article><span>Governed</span><strong>Federated discovery</strong><p>External discovery preserves provider provenance and requires explicit Library saving; it does not create editorial approval or verified evidence.</p></article></div></section><?php return ob_get_clean(); }
 }

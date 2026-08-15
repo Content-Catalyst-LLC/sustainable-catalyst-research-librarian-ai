@@ -41,7 +41,7 @@ def test_ask_creates_privacy_minimized_trace():
     trace_id=body['provenance']['answer_trace_id']
     trace=client.get('/v1/governance/traces/'+trace_id,headers=HEADERS).json()['trace']
     assert trace['schema']=='sc-research-answer-trace/1.0'
-    assert trace['prompt_version']=='research-librarian-answer-v7.6.0'
+    assert trace['prompt_version']=='research-librarian-answer-v7.7.0'
     assert 'query' not in trace
     assert 'answer' not in trace
     assert trace['trace_fingerprint']
