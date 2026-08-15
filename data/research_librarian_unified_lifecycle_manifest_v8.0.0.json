@@ -1,0 +1,38 @@
+{
+  "schema": "sc-research-librarian-release-manifest/1.0",
+  "version": "8.0.0",
+  "name": "Unified Research Intelligence & Research Lifecycle Orchestration",
+  "api_schema": "sc-connected-research-api/2.0",
+  "workspace_schema": "sc-research-librarian-public-workspace/3.0",
+  "research_lifecycle_schema": "sc-research-lifecycle/1.0",
+  "research_lifecycle_summary_schema": "sc-research-lifecycle-summary/1.0",
+  "research_lifecycle_checkpoint_schema": "sc-research-lifecycle-checkpoint/1.0",
+  "stages": ["frame", "discover", "evaluate", "organize", "collaborate", "synthesize", "promote", "preserve"],
+  "storage": {
+    "ancillary_sqlite_schema_version": 18,
+    "knowledge_index_schema": "sc-research-librarian-knowledge-index/13.0",
+    "postgres_schema_version": 3,
+    "new_postgres_migration_required": false,
+    "tables": ["research_lifecycles", "research_lifecycle_events", "research_lifecycle_checkpoints"]
+  },
+  "orchestration": {
+    "persistent_lifecycle_object": true,
+    "deterministic_readiness": true,
+    "human_confirmed_transitions": true,
+    "automatic_stage_advancement": false,
+    "immutable_fingerprinted_checkpoints": true,
+    "project_backup_includes_lifecycle_lineage": true
+  },
+  "governance": {
+    "lifecycle_state_is_not_evidence": true,
+    "lifecycle_state_is_not_truth_judgment": true,
+    "lifecycle_state_is_not_editorial_approval": true,
+    "federated_save_to_library_remains_explicit": true,
+    "workspace_import_remains_explicit": true,
+    "individual_and_room_provenance_remain_separate": true
+  },
+  "compatibility": {
+    "wordpress_rest_namespace_retained": "/platform/v7/",
+    "v7_7_federated_manifest_preserved": true
+  }
+}

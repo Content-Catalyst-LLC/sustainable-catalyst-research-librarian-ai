@@ -38,6 +38,8 @@ ACTIVITY_TYPES = {
     "workspace-promotion-imported",
     "federated-search",
     "federated-result-saved",
+    "lifecycle-stage-transition",
+    "lifecycle-checkpoint",
     "note",
 }
 

@@ -1,11 +1,11 @@
 <?php
 /**
- * Research Librarian AI v7.7.0 — Research Quality, Context Boundaries, and Governance Center.
+ * Research Librarian AI v8.0.0 — Research Quality, Context Boundaries, and Governance Center.
  */
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 final class SC_RL6_V670_Governance_Center {
-    const VERSION = '7.7.0';
+    const VERSION = '8.0.0';
     const OPTION_NAME = 'sc_rl_v670_governance_options';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
     const POLICY_SCHEMA = 'sc-research-governance-policy/1.0';

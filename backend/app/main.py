@@ -36,7 +36,7 @@ from .models import (
     QualityEvaluationRequest,
     ReleaseGateRequest,
     RetentionRunRequest,
-    ResearchProjectRequest, ResearchInvestigationRequest, ProjectEntityRequest, LibraryObjectRequest, ResearchContextRequest, ResearchRoomRequest, ResearchRoomMemberRequest, ResearchRoomEvidenceStateRequest, ResearchRoomQuestionRequest, ResearchRoomDisagreementRequest, ResearchRoomActivityRequest, SourceEvaluationRequest, EvidenceComparisonRequest, EvidenceGapRequest, ResearchActivityRequest, ResearchObjectStateRequest, ResearchOpenQuestionRequest, FederatedSearchRequest, FederatedResultSaveRequest, WorkspacePromotionPrepareRequest, WorkspacePromotionReceiptRequest, WorkflowTemplateRequest, ContradictionRequest, UncertaintyRegisterRequest, PlatformBackupImportRequest,
+    ResearchProjectRequest, ResearchInvestigationRequest, ProjectEntityRequest, LibraryObjectRequest, ResearchContextRequest, ResearchRoomRequest, ResearchRoomMemberRequest, ResearchRoomEvidenceStateRequest, ResearchRoomQuestionRequest, ResearchRoomDisagreementRequest, ResearchRoomActivityRequest, SourceEvaluationRequest, EvidenceComparisonRequest, EvidenceGapRequest, ResearchActivityRequest, ResearchObjectStateRequest, ResearchOpenQuestionRequest, FederatedSearchRequest, FederatedResultSaveRequest, WorkspacePromotionPrepareRequest, WorkspacePromotionReceiptRequest, ResearchLifecycleRequest, ResearchLifecycleTransitionRequest, ResearchLifecycleCheckpointRequest, WorkflowTemplateRequest, ContradictionRequest, UncertaintyRegisterRequest, PlatformBackupImportRequest,
     ArtifactReturnRequest,
     RetrievalCalibrationUpdate,
     RetrievalRequest,
@@ -145,6 +145,20 @@ from .workspace_promotion import (
     promotion_summary,
 )
 
+from .research_lifecycle import (
+    LIFECYCLE_SCHEMA,
+    LIFECYCLE_CATALOG_SCHEMA,
+    LIFECYCLE_SUMMARY_SCHEMA,
+    LIFECYCLE_EVENT_SCHEMA,
+    LIFECYCLE_CHECKPOINT_SCHEMA,
+    lifecycle_catalog,
+    normalize_lifecycle,
+    normalize_lifecycle_event,
+    transition_lifecycle,
+    build_checkpoint,
+    evaluate_lifecycle,
+)
+
 
 app = FastAPI(
     title="Sustainable Catalyst Research Librarian AI",
@@ -238,7 +252,7 @@ def _follow_up_prompts(mode: str, best: RetrievedSource | None, related: list[Re
 
 def _workspace_summary(mode: str, matches: list[RetrievedSource], related: list[RetrievedSource], ai_used: bool, gate: dict[str, Any]) -> dict[str, Any]:
     return {
-        "schema": "sc-research-librarian-public-workspace/2.6",
+        "schema": "sc-research-librarian-public-workspace/3.0",
         "mode": mode,
         "mode_label": _RESEARCH_MODES.get(mode, _RESEARCH_MODES["auto"])["label"],
         "verified_sources": len(matches),
@@ -1306,7 +1320,7 @@ def _research_state_summary(owner_ref: str = "", project_id: str = "", context_i
 
 @app.get("/v1/platform/api", dependencies=[Depends(require_key)])
 def connected_api_manifest() -> dict[str, Any]:
-    return {"schema": API_SCHEMA, "version": __version__, "stability": "stable-v7", "resources": ["projects", "investigations", "entities", "library-objects", "research-contexts", "research-rooms", "room-members", "room-evidence", "room-questions", "room-disagreements", "room-synthesis", "source-evaluations", "evidence-comparisons", "evidence-gaps", "research-state", "research-activity", "object-review-state", "open-questions", "workflows", "contradictions", "uncertainties", "backups", "handoffs", "artifacts", "federated-providers", "federated-search", "federated-history", "federated-library-import", "workspace-promotions"], "object_model": object_model_manifest(), "evidence_quality": {"source_evaluation_schema": SOURCE_EVALUATION_SCHEMA, "comparison_schema": EVIDENCE_COMPARISON_SCHEMA, "gap_schema": EVIDENCE_GAP_SCHEMA, "quality_signals_schema": QUALITY_SIGNALS_SCHEMA, "truth_score": False}, "research_state": {"summary_schema": RESEARCH_STATE_SUMMARY_SCHEMA, "activity_schema": RESEARCH_ACTIVITY_SCHEMA, "object_state_schema": RESEARCH_OBJECT_STATE_SCHEMA, "open_question_schema": OPEN_QUESTION_SCHEMA, "workflow_memory_only": True, "not_evidence": True}, "research_rooms": {"room_schema": ROOM_SCHEMA, "member_schema": ROOM_MEMBER_SCHEMA, "evidence_state_schema": ROOM_EVIDENCE_STATE_SCHEMA, "question_schema": ROOM_QUESTION_SCHEMA, "disagreement_schema": ROOM_DISAGREEMENT_SCHEMA, "activity_schema": ROOM_ACTIVITY_SCHEMA, "synthesis_schema": ROOM_SYNTHESIS_SCHEMA, "prompt_schema": ROOM_PROMPT_SCHEMA, "participant_attribution": True, "individual_shared_state_separate": True, "not_evidence": True}, "federated_discovery": {"provider_catalog_schema": FEDERATED_PROVIDER_CATALOG_SCHEMA, "search_schema": FEDERATED_SEARCH_SCHEMA, "result_schema": FEDERATED_RESULT_SCHEMA, "import_schema": FEDERATED_IMPORT_SCHEMA, "external_discovery_only": True, "explicit_library_save_required": True}, "workspace_promotions": {"promotion_schema": PROMOTION_SCHEMA, "packet_schema": PROMOTION_PACKET_SCHEMA, "receipt_schema": PROMOTION_RECEIPT_SCHEMA, "workspace_import_contract": WORKSPACE_IMPORT_CONTRACT, "artifact_types": artifact_catalog(), "explicit_import_required": True}, "generation_boundary": adapter_status()}
+    return {"schema": API_SCHEMA, "version": __version__, "stability": "stable-v8", "resources": ["projects", "investigations", "entities", "library-objects", "research-contexts", "research-rooms", "room-members", "room-evidence", "room-questions", "room-disagreements", "room-synthesis", "source-evaluations", "evidence-comparisons", "evidence-gaps", "research-state", "research-activity", "object-review-state", "open-questions", "workflows", "contradictions", "uncertainties", "backups", "handoffs", "artifacts", "federated-providers", "federated-search", "federated-history", "federated-library-import", "workspace-promotions", "research-lifecycles", "lifecycle-transitions", "lifecycle-checkpoints"], "object_model": object_model_manifest(), "evidence_quality": {"source_evaluation_schema": SOURCE_EVALUATION_SCHEMA, "comparison_schema": EVIDENCE_COMPARISON_SCHEMA, "gap_schema": EVIDENCE_GAP_SCHEMA, "quality_signals_schema": QUALITY_SIGNALS_SCHEMA, "truth_score": False}, "research_state": {"summary_schema": RESEARCH_STATE_SUMMARY_SCHEMA, "activity_schema": RESEARCH_ACTIVITY_SCHEMA, "object_state_schema": RESEARCH_OBJECT_STATE_SCHEMA, "open_question_schema": OPEN_QUESTION_SCHEMA, "workflow_memory_only": True, "not_evidence": True}, "research_rooms": {"room_schema": ROOM_SCHEMA, "member_schema": ROOM_MEMBER_SCHEMA, "evidence_state_schema": ROOM_EVIDENCE_STATE_SCHEMA, "question_schema": ROOM_QUESTION_SCHEMA, "disagreement_schema": ROOM_DISAGREEMENT_SCHEMA, "activity_schema": ROOM_ACTIVITY_SCHEMA, "synthesis_schema": ROOM_SYNTHESIS_SCHEMA, "prompt_schema": ROOM_PROMPT_SCHEMA, "participant_attribution": True, "individual_shared_state_separate": True, "not_evidence": True}, "federated_discovery": {"provider_catalog_schema": FEDERATED_PROVIDER_CATALOG_SCHEMA, "search_schema": FEDERATED_SEARCH_SCHEMA, "result_schema": FEDERATED_RESULT_SCHEMA, "import_schema": FEDERATED_IMPORT_SCHEMA, "external_discovery_only": True, "explicit_library_save_required": True}, "workspace_promotions": {"promotion_schema": PROMOTION_SCHEMA, "packet_schema": PROMOTION_PACKET_SCHEMA, "receipt_schema": PROMOTION_RECEIPT_SCHEMA, "workspace_import_contract": WORKSPACE_IMPORT_CONTRACT, "artifact_types": artifact_catalog(), "explicit_import_required": True}, "research_lifecycle": {"lifecycle_schema": LIFECYCLE_SCHEMA, "summary_schema": LIFECYCLE_SUMMARY_SCHEMA, "event_schema": LIFECYCLE_EVENT_SCHEMA, "checkpoint_schema": LIFECYCLE_CHECKPOINT_SCHEMA, "catalog": lifecycle_catalog(), "human_confirmed_transitions": True, "automatic_stage_advancement": False, "not_evidence": True}, "generation_boundary": adapter_status()}
 
 @app.get("/v1/platform/summary", dependencies=[Depends(require_key)])
 def connected_platform_summary() -> dict[str, Any]:
@@ -2027,6 +2041,169 @@ def receive_workspace_promotion_receipt(promotion_id: str, payload: WorkspacePro
     return stored
 
 
+def _lifecycle_scope(lifecycle: dict[str, Any]) -> tuple[dict[str, Any] | None, dict[str, Any] | None, dict[str, Any] | None, list[dict[str, Any]], dict[str, Any], dict[str, Any], list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+    owner_ref = str(lifecycle.get("owner_ref") or "")[:220]
+    project_id = str(lifecycle.get("project_id") or "")[:220]
+    context_id = str(lifecycle.get("context_id") or "")[:220]
+    room_id = str(lifecycle.get("room_id") or "")[:220]
+    project = store.research_project(project_id) if project_id else None
+    if project_id and not project:
+        raise HTTPException(status_code=404, detail="Unknown research project.")
+    if project and str(project.get("owner_ref") or "") != owner_ref:
+        raise HTTPException(status_code=403, detail="Research lifecycle owner does not own this project.")
+    context = store.research_context(context_id) if context_id else None
+    if context_id and not context:
+        raise HTTPException(status_code=404, detail="Unknown research context.")
+    if context and str(context.get("owner_ref") or "") != owner_ref:
+        raise HTTPException(status_code=403, detail="Research lifecycle owner does not own this context.")
+    room = None
+    if room_id:
+        room, _ = _require_room_member(room_id, owner_ref)
+    if context:
+        resolution = resolve_saved_research_context(context_id)
+        sources = list(resolution.get("objects") or [])[:500]
+        project_id = project_id or str(context.get("project_id") or "")[:220]
+        room_id = room_id or str(context.get("room_id") or "")[:220]
+        if project_id and not project:
+            project = store.research_project(project_id)
+            if not project:
+                raise HTTPException(status_code=404, detail="Unknown research project.")
+            if str(project.get("owner_ref") or "") != owner_ref:
+                raise HTTPException(status_code=403, detail="Research lifecycle owner does not own this project.")
+        if room_id and not room:
+            room, _ = _require_room_member(room_id, owner_ref)
+    elif room_id:
+        sources = store.library_objects_for_room(room_id, 1000)[:500]
+        project_id = project_id or str((room or {}).get("project_id") or "")[:220]
+        if project_id and not project:
+            project = store.research_project(project_id)
+            if not project:
+                raise HTTPException(status_code=404, detail="Unknown research project.")
+            if str(project.get("owner_ref") or "") != owner_ref:
+                raise HTTPException(status_code=403, detail="Research lifecycle owner does not own this project.")
+    elif project_id:
+        sources = list(store.project_bundle(project_id).get("library_objects") or [])[:500]
+    else:
+        sources = store.library_objects(500, owner_ref)
+    research_state = _research_state_summary(owner_ref, project_id, context_id)
+    quality = {
+        "schema": QUALITY_SIGNALS_SCHEMA,
+        "summary": quality_summary(sources),
+        "comparison": compare_sources(sources),
+        "gaps": evidence_gaps(sources),
+        "governance": {"descriptive_only": True, "truth_score": False},
+    }
+    searches = store.federated_searches(500, owner_ref=owner_ref, project_id=project_id, context_id=context_id)
+    promotions = store.workspace_promotions(500, owner_ref=owner_ref, project_id=project_id, context_id=context_id, room_id=room_id)
+    room_activity = store.room_activities(room_id, 500) if room_id else []
+    return project, context, room, sources, research_state, quality, searches, promotions, room_activity
+
+
+def _lifecycle_summary(lifecycle: dict[str, Any]) -> dict[str, Any]:
+    project, context, room, sources, research_state, quality, searches, promotions, room_activity = _lifecycle_scope(lifecycle)
+    checkpoints = store.lifecycle_checkpoints(str(lifecycle.get("lifecycle_id") or ""), 500)
+    return evaluate_lifecycle(
+        lifecycle,
+        project=project,
+        context=context,
+        room=room,
+        sources=sources,
+        research_state=research_state,
+        quality=quality,
+        federated_searches=searches,
+        promotions=promotions,
+        checkpoints=checkpoints,
+        room_activity=room_activity,
+    )
+
+
+@app.get("/v1/research/lifecycle/catalog", dependencies=[Depends(require_key)])
+def research_lifecycle_catalog() -> dict[str, Any]:
+    return {"version": __version__, **lifecycle_catalog()}
+
+
+@app.get("/v1/research/lifecycles", dependencies=[Depends(require_key)])
+def list_research_lifecycles(limit: int = 200, owner_ref: str = "", project_id: str = "", context_id: str = "", room_id: str = "", status: str = "") -> dict[str, Any]:
+    rows = store.research_lifecycles(limit, owner_ref, project_id, context_id, room_id, status)
+    return {"schema": "sc-research-lifecycle-list/1.0", "version": __version__, "lifecycles": rows, "count": len(rows)}
+
+
+@app.post("/v1/research/lifecycles", dependencies=[Depends(require_key)])
+def save_research_lifecycle(payload: ResearchLifecycleRequest) -> dict[str, Any]:
+    existing = store.research_lifecycle(payload.lifecycle_id) if payload.lifecycle_id else None
+    if existing and str(existing.get("owner_ref") or "") != payload.owner_ref:
+        raise HTTPException(status_code=403, detail="Research lifecycle does not belong to this owner.")
+    try:
+        lifecycle = normalize_lifecycle(payload.model_dump(), existing)
+        _lifecycle_scope(lifecycle)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    stored = store.save_research_lifecycle(lifecycle)
+    if not existing:
+        store.save_lifecycle_event(normalize_lifecycle_event({"lifecycle_id": stored["lifecycle_id"], "owner_ref": stored["owner_ref"], "actor_ref": stored["owner_ref"], "event_type": "created", "to_stage": stored["current_stage"], "note": stored["title"]}))
+    return {**stored, "summary": _lifecycle_summary(stored)}
+
+
+@app.get("/v1/research/lifecycles/{lifecycle_id}", dependencies=[Depends(require_key)])
+def get_research_lifecycle(lifecycle_id: str, owner_ref: str = "") -> dict[str, Any]:
+    lifecycle = store.research_lifecycle(lifecycle_id)
+    if not lifecycle:
+        raise HTTPException(status_code=404, detail="Unknown research lifecycle.")
+    if owner_ref and str(lifecycle.get("owner_ref") or "") != owner_ref:
+        raise HTTPException(status_code=403, detail="Research lifecycle does not belong to this owner.")
+    return {**lifecycle, "summary": _lifecycle_summary(lifecycle), "events": store.lifecycle_events(lifecycle_id, 200), "checkpoints": store.lifecycle_checkpoints(lifecycle_id, 100)}
+
+
+@app.get("/v1/research/lifecycles/{lifecycle_id}/summary", dependencies=[Depends(require_key)])
+def get_research_lifecycle_summary(lifecycle_id: str, owner_ref: str = "") -> dict[str, Any]:
+    lifecycle = store.research_lifecycle(lifecycle_id)
+    if not lifecycle:
+        raise HTTPException(status_code=404, detail="Unknown research lifecycle.")
+    if owner_ref and str(lifecycle.get("owner_ref") or "") != owner_ref:
+        raise HTTPException(status_code=403, detail="Research lifecycle does not belong to this owner.")
+    return _lifecycle_summary(lifecycle)
+
+
+@app.post("/v1/research/lifecycles/{lifecycle_id}/transition", dependencies=[Depends(require_key)])
+def transition_research_lifecycle(lifecycle_id: str, payload: ResearchLifecycleTransitionRequest) -> dict[str, Any]:
+    lifecycle = store.research_lifecycle(lifecycle_id)
+    if not lifecycle:
+        raise HTTPException(status_code=404, detail="Unknown research lifecycle.")
+    if str(lifecycle.get("owner_ref") or "") != payload.owner_ref:
+        raise HTTPException(status_code=403, detail="Research lifecycle does not belong to this owner.")
+    actor_ref = str(payload.actor_ref or payload.owner_ref)[:220]
+    if actor_ref != payload.owner_ref:
+        raise HTTPException(status_code=403, detail="Lifecycle transition actor must match the authenticated lifecycle owner at this API boundary.")
+    summary_before = _lifecycle_summary(lifecycle)
+    blockers = list(summary_before.get("current_stage_blockers") or [])
+    try:
+        updated, event = transition_lifecycle(lifecycle, target_stage=payload.target_stage, actor_ref=actor_ref, reason=payload.reason, confirmed=payload.confirmed, blockers_acknowledged=payload.blockers_acknowledged)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    stored = store.save_research_lifecycle(updated)
+    store.save_lifecycle_event(event)
+    store.save_research_activity(normalize_activity({"owner_ref": stored["owner_ref"], "project_id": stored.get("project_id", ""), "context_id": stored.get("context_id", ""), "event_type": "lifecycle-stage-transition", "note": f"{event.get('from_stage','')} → {event.get('to_stage','')}", "metadata": {"lifecycle_id": lifecycle_id, "blockers_before_transition": blockers, "explicit_confirmation": True}}))
+    return {**stored, "transition": event, "summary": _lifecycle_summary(stored)}
+
+
+@app.post("/v1/research/lifecycles/{lifecycle_id}/checkpoint", dependencies=[Depends(require_key)])
+def checkpoint_research_lifecycle(lifecycle_id: str, payload: ResearchLifecycleCheckpointRequest) -> dict[str, Any]:
+    lifecycle = store.research_lifecycle(lifecycle_id)
+    if not lifecycle:
+        raise HTTPException(status_code=404, detail="Unknown research lifecycle.")
+    if str(lifecycle.get("owner_ref") or "") != payload.owner_ref:
+        raise HTTPException(status_code=403, detail="Research lifecycle does not belong to this owner.")
+    actor_ref = str(payload.actor_ref or payload.owner_ref)[:220]
+    if actor_ref != payload.owner_ref:
+        raise HTTPException(status_code=403, detail="Lifecycle checkpoint actor must match the authenticated lifecycle owner at this API boundary.")
+    summary = _lifecycle_summary(lifecycle)
+    checkpoint = build_checkpoint(lifecycle, summary, actor_ref=actor_ref, note=payload.note)
+    store.save_lifecycle_checkpoint(checkpoint)
+    store.save_lifecycle_event(normalize_lifecycle_event({"lifecycle_id": lifecycle_id, "owner_ref": payload.owner_ref, "actor_ref": actor_ref, "event_type": "checkpoint", "from_stage": lifecycle.get("current_stage", "frame"), "to_stage": lifecycle.get("current_stage", "frame"), "note": payload.note, "metadata": {"checkpoint_id": checkpoint["checkpoint_id"], "checkpoint_fingerprint": checkpoint["fingerprint"]}}))
+    store.save_research_activity(normalize_activity({"owner_ref": payload.owner_ref, "project_id": lifecycle.get("project_id", ""), "context_id": lifecycle.get("context_id", ""), "event_type": "lifecycle-checkpoint", "note": payload.note, "metadata": {"lifecycle_id": lifecycle_id, "checkpoint_id": checkpoint["checkpoint_id"], "checkpoint_fingerprint": checkpoint["fingerprint"]}}))
+    return {"schema": LIFECYCLE_CHECKPOINT_SCHEMA, "version": __version__, "checkpoint": checkpoint, "summary": _lifecycle_summary(lifecycle)}
+
+
 @app.get("/v1/projects", dependencies=[Depends(require_key)])
 def list_projects(limit: int = 100, owner_ref: str = "") -> dict[str, Any]:
     return {"schema":"sc-research-project-list/1.0","projects":store.research_projects(limit, owner_ref),"summary":store.connected_platform_summary()}
@@ -2097,7 +2274,7 @@ def import_platform_backup(payload: PlatformBackupImportRequest) -> dict[str, An
     verification=verify_backup(payload.envelope)
     if not verification["ok"]: raise HTTPException(status_code=422,detail="Backup checksum validation failed.")
     body=payload.envelope.get("payload") or {}; project=body.get("project") or {}
-    result={"ok":True,"dry_run":payload.dry_run,"verification":verification,"counts":{"investigations":len(body.get("investigations") or []),"entities":len(body.get("entities") or []),"library_objects":len(body.get("library_objects") or []),"research_activity":len(body.get("research_activity") or []),"object_states":len(body.get("object_states") or []),"open_questions":len(body.get("open_questions") or []),"research_rooms":len(body.get("research_rooms") or []),"federated_searches":len(body.get("federated_searches") or []),"workspace_promotions":len(body.get("workspace_promotions") or [])}}
+    result={"ok":True,"dry_run":payload.dry_run,"verification":verification,"counts":{"investigations":len(body.get("investigations") or []),"entities":len(body.get("entities") or []),"library_objects":len(body.get("library_objects") or []),"research_activity":len(body.get("research_activity") or []),"object_states":len(body.get("object_states") or []),"open_questions":len(body.get("open_questions") or []),"research_rooms":len(body.get("research_rooms") or []),"federated_searches":len(body.get("federated_searches") or []),"workspace_promotions":len(body.get("workspace_promotions") or []),"research_lifecycles":len(body.get("research_lifecycles") or [])}}
     if not payload.dry_run:
         saved=normalize_project(project,store.research_project(str(project.get("project_id") or "")))
         store.save_research_project(saved)
@@ -2149,6 +2326,25 @@ def import_platform_backup(payload: PlatformBackupImportRequest) -> dict[str, An
                         store.save_workspace_promotion(normalize_promotion({**promotion_payload,"owner_ref":saved.get("owner_ref", ""),"project_id":saved["project_id"]},packet,store.workspace_promotion(str(promotion_payload.get("promotion_id") or ""))))
                     except ValueError:
                         continue
+        for lifecycle_bundle in body.get("research_lifecycles") or []:
+            if not isinstance(lifecycle_bundle,dict):
+                continue
+            lifecycle_payload=lifecycle_bundle.get("lifecycle") if isinstance(lifecycle_bundle.get("lifecycle"),dict) else {}
+            if not lifecycle_payload:
+                continue
+            try:
+                lifecycle=normalize_lifecycle({**lifecycle_payload,"owner_ref":saved.get("owner_ref", ""),"project_id":saved["project_id"]},store.research_lifecycle(str(lifecycle_payload.get("lifecycle_id") or "")))
+                store.save_research_lifecycle(lifecycle)
+            except ValueError:
+                continue
+            for event_payload in lifecycle_bundle.get("events") or []:
+                if isinstance(event_payload,dict):
+                    try: store.save_lifecycle_event(normalize_lifecycle_event({**event_payload,"lifecycle_id":lifecycle["lifecycle_id"],"owner_ref":saved.get("owner_ref", "")}))
+                    except ValueError: continue
+            for checkpoint_payload in lifecycle_bundle.get("checkpoints") or []:
+                if isinstance(checkpoint_payload,dict):
+                    checkpoint={**checkpoint_payload,"lifecycle_id":lifecycle["lifecycle_id"],"owner_ref":saved.get("owner_ref", "")}
+                    store.save_lifecycle_checkpoint(checkpoint)
         result["project_id"]=saved["project_id"]
     return result
 

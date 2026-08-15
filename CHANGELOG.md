@@ -1,5 +1,15 @@
 # Changelog
 
+## 8.0.0 — Unified Research Intelligence & Research Lifecycle Orchestration
+
+- Adds a persistent eight-stage research lifecycle: Frame, Discover, Evaluate, Organize, Collaborate, Synthesize, Promote, and Preserve.
+- Adds deterministic, inspectable stage-readiness signals, blockers, and next-action recommendations without automatic stage advancement.
+- Requires explicit authenticated human confirmation for lifecycle transitions and records stage lineage as visible events.
+- Adds immutable SHA-256-fingerprinted lifecycle checkpoints and includes lifecycle records/events/checkpoints in project backup/import.
+- Adds authenticated WordPress lifecycle controls while retaining the `/platform/v7/` REST route namespace for compatibility.
+- Keeps lifecycle metadata outside evidence, truth scoring, editorial approval, publication, federated import, and Workspace import semantics.
+- Advances ancillary SQLite to schema 18, Connected Research API to 2.0, and the public workspace contract to 3.0. The durable Neon/Postgres knowledge index remains `sc-research-librarian-knowledge-index/13.0`; no knowledge-index migration is required.
+
 ## 7.7.0 — Global Library Discovery & Federated Research
 
 - Added fixed, server-side federated adapters for OpenAlex, Crossref, Europe PMC, Open Library, and arXiv.

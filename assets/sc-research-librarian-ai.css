@@ -2045,3 +2045,93 @@
 .sc-rl-v770-history-list{display:grid;gap:8px;margin-top:18px}
 .sc-rl-v770-history-item{display:flex;justify-content:space-between;gap:16px;width:100%;padding:12px;text-align:left;border:1px solid #ddd;background:#fff}
 @media(max-width:720px){.sc-rl-v770-history-item{display:block}.sc-rl-v770-history-item small{display:block;margin-top:4px}}
+
+/* Research Librarian v8.0.0 — unified research lifecycle orchestration */
+.sc-rl-v800-lifecycle-panel {
+  margin: 20px 0;
+  padding: 22px;
+  border: 1px solid #d7d7d7;
+  background: #fff;
+}
+.sc-rl-v800-lifecycle-panel[hidden] { display: none !important; }
+.sc-rl-v800-lifecycle-toolbar,
+.sc-rl-v800-lifecycle-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.sc-rl-v800-lifecycle-toolbar label,
+.sc-rl-v800-lifecycle-panel form label {
+  display: grid;
+  gap: 6px;
+  font-weight: 650;
+}
+.sc-rl-v800-lifecycle-panel select,
+.sc-rl-v800-lifecycle-panel input {
+  min-height: 42px;
+  border: 1px solid #bdbdbd;
+  background: #fff;
+  color: #111;
+}
+.sc-rl-v800-lifecycle-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 18px 0;
+}
+.sc-rl-v800-lifecycle-metrics > div {
+  padding: 12px;
+  border-top: 3px solid #111;
+  background: #f6f6f6;
+}
+.sc-rl-v800-lifecycle-metrics strong,
+.sc-rl-v800-lifecycle-metrics span { display: block; }
+.sc-rl-v800-lifecycle-metrics strong { font-size: 1.2rem; }
+.sc-rl-v800-stage-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 18px 0;
+}
+.sc-rl-v800-stage {
+  position: relative;
+  min-height: 190px;
+  padding: 16px;
+  border: 1px solid #d0d0d0;
+  background: #fff;
+}
+.sc-rl-v800-stage.is-current { border: 2px solid #111; }
+.sc-rl-v800-stage.is-ready::before {
+  content: "Ready";
+  display: inline-block;
+  margin-bottom: 8px;
+  font-size: .72rem;
+  font-weight: 750;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.sc-rl-v800-stage h4 { margin: 0 0 8px; }
+.sc-rl-v800-stage p { margin: 0 0 10px; }
+.sc-rl-v800-stage ul { margin: 8px 0 0 18px; }
+.sc-rl-v800-next-actions,
+.sc-rl-v800-lineage,
+.sc-rl-v800-boundary {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-left: 3px solid #111;
+  background: #f7f7f7;
+}
+.sc-rl-v800-boundary {
+  font-size: .92rem;
+}
+@media (max-width: 1000px) {
+  .sc-rl-v800-stage-grid,
+  .sc-rl-v800-lifecycle-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .sc-rl-v800-stage-grid,
+  .sc-rl-v800-lifecycle-metrics { grid-template-columns: 1fr; }
+  .sc-rl-v800-lifecycle-panel { padding: 16px; }
+}

@@ -608,6 +608,32 @@ class WorkspacePromotionReceiptRequest(BaseModel):
     workspace_url: str = Field(default="", max_length=2000)
     actor_ref: str = Field(default="", max_length=220)
 
+class ResearchLifecycleRequest(BaseModel):
+    lifecycle_id: str = Field(default="", max_length=220)
+    owner_ref: str = Field(min_length=1, max_length=220)
+    project_id: str = Field(default="", max_length=220)
+    context_id: str = Field(default="", max_length=220)
+    room_id: str = Field(default="", max_length=220)
+    title: str = Field(default="Research lifecycle", max_length=500)
+    status: str = Field(default="active", max_length=40)
+    current_stage: str = Field(default="frame", max_length=40)
+    notes: str = Field(default="", max_length=12000)
+
+
+class ResearchLifecycleTransitionRequest(BaseModel):
+    owner_ref: str = Field(min_length=1, max_length=220)
+    actor_ref: str = Field(default="", max_length=220)
+    target_stage: str = Field(min_length=1, max_length=40)
+    reason: str = Field(default="", max_length=6000)
+    confirmed: bool = False
+    blockers_acknowledged: list[str] = Field(default_factory=list, max_length=50)
+
+
+class ResearchLifecycleCheckpointRequest(BaseModel):
+    owner_ref: str = Field(min_length=1, max_length=220)
+    actor_ref: str = Field(default="", max_length=220)
+    note: str = Field(default="", max_length=6000)
+
 class WorkflowTemplateRequest(BaseModel):
     project_id: str = Field(default="", max_length=220)
     investigation_id: str = Field(default="", max_length=220)

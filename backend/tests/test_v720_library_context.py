@@ -23,7 +23,7 @@ def test_library_object_model_declares_library_native_types_and_boundaries() -> 
     response = client.get("/v1/library/object-model", headers=HEADERS)
     assert response.status_code == 200, response.text
     body = response.json()
-    assert body["version"] == "7.7.0"
+    assert body["version"] == "8.0.0"
     assert body["schema"] == "sc-research-library-object-model/1.0"
     required = {
         "source",
@@ -208,7 +208,7 @@ def test_inline_context_is_bounded_and_ask_echoes_authorized_context_metadata() 
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["research_context"]["context_id"] == "context-v720-test"
-    assert body["workspace"]["schema"] == "sc-research-librarian-public-workspace/2.6"
+    assert body["workspace"]["schema"] == "sc-research-librarian-public-workspace/3.0"
     assert body["workspace"]["research_context"]["object_count"] == 50
     assert body["provenance"]["research_context"]["object_count"] == 50
     assert body["retrieval_diagnostics"]["research_context_retrieval"]["enabled"] is True

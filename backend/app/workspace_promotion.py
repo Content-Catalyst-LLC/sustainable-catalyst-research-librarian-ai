@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Governed Workspace artifact promotion contracts for Research Librarian v7.7.0.
+"""Governed Workspace artifact promotion contracts for Research Librarian v8.0.0.
 
 A promotion is an exportable research handoff snapshot, not publication and not a
 claim that the included evidence is true. It preserves source ownership/scope,

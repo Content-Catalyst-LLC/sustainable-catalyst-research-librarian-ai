@@ -10,12 +10,12 @@ $models=file_get_contents($root.'/backend/app/models.py');
 $docs=file_get_contents($root.'/docs/V670_RESEARCH_QUALITY_GOVERNANCE_CENTER.md');
 $manifest=json_decode(file_get_contents($root.'/data/research_librarian_quality_governance_manifest_v7.1.2.json'),true);
 $checks=array(
- 'version_header'=>false!==strpos($main,'Version: 7.7.0'),
- 'version_constant'=>false!==strpos($main,"const VERSION        = '7.7.0';"),
+ 'version_header'=>false!==strpos($main,'Version: 8.0.0'),
+ 'version_constant'=>false!==strpos($main,"const VERSION        = '8.0.0';"),
  'module_loaded'=>false!==strpos($main,'class-sc-rl-v670-governance-center.php'),
- 'module_version'=>false!==strpos($module,"const VERSION = '7.7.0';"),
+ 'module_version'=>false!==strpos($module,"const VERSION = '8.0.0';"),
  'activation'=>false!==strpos($main,"SC_RL6_V670_Governance_Center', 'activate"),
- 'schema_nine'=>false!==strpos($store,'SCHEMA_VERSION = 17'),
+ 'schema_nine'=>false!==strpos($store,'SCHEMA_VERSION = 18'),
  'index_nine'=>false!==strpos($store,'sc-research-librarian-knowledge-index/13.0'),
  'policy_contract'=>false!==strpos($governance,'sc-research-governance-policy/1.0'),
  'source_contract'=>false!==strpos($governance,'sc-research-source-review/1.0'),

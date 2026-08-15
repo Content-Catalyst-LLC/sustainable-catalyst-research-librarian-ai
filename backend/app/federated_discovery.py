@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Federated external discovery contracts for Research Librarian v7.7.0.
+"""Federated external discovery contracts for Research Librarian v8.0.0.
 
 External discovery is a research lead layer, not Sustainable Catalyst editorial
 content and not verified evidence. Provider identity, record identifiers, access
@@ -428,7 +428,7 @@ async def search_provider(
         raise ValueError(f"Unsupported federated provider: {provider_id}")
     url, params = provider_request(provider_id, query, limit, openalex_api_key=openalex_api_key, contact_email=contact_email)
     owned = client is None
-    active = client or httpx.AsyncClient(timeout=timeout_seconds, follow_redirects=True, headers={"Accept": "application/json, application/atom+xml;q=0.9", "User-Agent": "Sustainable-Catalyst-Research-Librarian/7.7.0"})
+    active = client or httpx.AsyncClient(timeout=timeout_seconds, follow_redirects=True, headers={"Accept": "application/json, application/atom+xml;q=0.9", "User-Agent": "Sustainable-Catalyst-Research-Librarian/8.0.0"})
     try:
         response = await active.get(url, params=params)
         response.raise_for_status()

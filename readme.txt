@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 7.7.0
+Stable tag: 8.0.0
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
@@ -12,7 +12,7 @@ A connected, site-scoped research intelligence platform for Sustainable Catalyst
 
 Research Librarian AI retrieves Sustainable Catalyst publications and documents through exact-title priority, section-aware BM25 ranking, optional Gemini embeddings, calibrated reciprocal-rank fusion, and citation-verified synthesis. WordPress remains the canonical publishing and recovery source, while FastAPI stores the production knowledge index durably in Neon Postgres with pgvector.
 
-v7.7.0 adds Global Library Discovery & Federated Research across fixed external scholarly and library providers. Results preserve provider identity and access provenance, remain separate from Sustainable Catalyst editorial material, and enter My Library only through an explicit private external-reference save. v7.6.0 Workspace promotion remains available.
+v8.0.0 unifies Library context, federated discovery, evidence evaluation, persistent research state, Research Rooms, synthesis, Workspace promotion, and preservation through an inspectable eight-stage research lifecycle. Readiness is descriptive; every lifecycle stage transition remains an explicit human action.
 
 == Shortcodes ==
 
@@ -38,6 +38,14 @@ v7.7.0 adds Global Library Discovery & Federated Research across fixed external 
 [sc_research_librarian_platform_handoffs]
 
 == Changelog ==
+
+= 8.0.0 =
+* Add the persistent Frame → Discover → Evaluate → Organize → Collaborate → Synthesize → Promote → Preserve research lifecycle.
+* Add deterministic stage-readiness signals, blockers, and next actions without automatic stage advancement.
+* Require authenticated human confirmation for stage transitions and retain explicit transition lineage.
+* Add immutable SHA-256-fingerprinted lifecycle checkpoints and include lifecycle lineage in project backup/import.
+* Preserve existing federated Save to My Library, personal/room provenance, and explicit Workspace import boundaries.
+* Advance ancillary SQLite schema to 18, Connected Research API to 2.0, and public workspace to 3.0; Neon/Postgres knowledge-index schema remains 13.0.
 
 = 7.7.0 =
 * Add fixed-provider federated research discovery for OpenAlex, Crossref, Europe PMC, Open Library, and arXiv.
