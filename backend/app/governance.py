@@ -264,7 +264,7 @@ def build_answer_trace(
         "source": source,
         "provider": provider,
         "model": model,
-        "prompt_version": "research-librarian-answer-v7.3.0",
+        "prompt_version": "research-librarian-answer-v7.4.0",
         "index_version": int(index_version),
         "index_checksum": index_checksum,
         "retrieval_profile": retrieval_profile,
@@ -345,7 +345,7 @@ def public_methodology(policy: dict[str, Any]) -> dict[str, Any]:
     return {
         "schema": METHODOLOGY_SCHEMA,
         "title": "Research Librarian Methodology and Limitations",
-        "version": "7.3.0",
+        "version": "7.4.0",
         "principles": [
             "Retrieval occurs before generation.",
             "Exact titles and verified Sustainable Catalyst records have priority.",

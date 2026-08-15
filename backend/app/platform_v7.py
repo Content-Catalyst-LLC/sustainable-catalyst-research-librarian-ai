@@ -15,7 +15,7 @@ READING_PATH_SCHEMA = "sc-annotated-reading-path/1.0"
 WORKFLOW_SCHEMA = "sc-research-workflow/1.0"
 UNCERTAINTY_SCHEMA = "sc-uncertainty-register/1.0"
 BACKUP_SCHEMA = "sc-connected-research-backup/1.0"
-API_SCHEMA = "sc-connected-research-api/1.2"
+API_SCHEMA = "sc-connected-research-api/1.3"
 
 
 def canonical_json(value: Any) -> str:

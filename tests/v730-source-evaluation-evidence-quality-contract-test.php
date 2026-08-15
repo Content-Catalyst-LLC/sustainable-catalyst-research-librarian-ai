@@ -14,12 +14,12 @@ $css = file_get_contents( $root . '/assets/sc-research-librarian-ai.css' );
 $docs = file_get_contents( $root . '/docs/V730_SOURCE_EVALUATION_EVIDENCE_COMPARISON_RESEARCH_QUALITY_SIGNALS.md' );
 $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_source_evaluation_manifest_v7.3.0.json' ), true );
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 7.3.0' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '7.3.0';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.3.0"' ),
-    'module_version' => false !== strpos( $module, "const VERSION = '7.3.0';" ),
-    'api_12' => false !== strpos( $platform, 'sc-connected-research-api/1.2' ),
-    'workspace_22' => false !== strpos( $module, 'sc-research-librarian-public-workspace/2.2' ),
+    'version_header' => false !== strpos( $main, 'Version: 7.4.0' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '7.4.0';" ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.4.0"' ),
+    'module_version' => false !== strpos( $module, "const VERSION = '7.4.0';" ),
+    'api_12' => false !== strpos( $platform, 'sc-connected-research-api/1.3' ),
+    'workspace_22' => false !== strpos( $module, 'sc-research-librarian-public-workspace/2.3' ),
     'quality_schema_constant' => false !== strpos( $module, 'sc-research-quality-signals/1.0' ),
     'source_evaluation_schema' => false !== strpos( $quality, 'sc-source-evaluation/1.0' ),
     'comparison_schema' => false !== strpos( $quality, 'sc-evidence-comparison/1.0' ),
@@ -79,7 +79,7 @@ $checks = array(
     'manifest_v720_compatibility' => is_array( $manifest ) && true === ( $manifest['compatibility']['v7_2_library_object_model_preserved'] ?? false ),
     'docs_no_truth_score' => false !== strpos( $docs, 'does **not** assign a truth score' ),
     'docs_no_db_migration' => false !== strpos( $docs, 'No Postgres or SQLite schema migration is required' ),
-    'sqlite_schema_preserved' => false !== strpos( $store, 'SCHEMA_VERSION = 13' ),
+    'sqlite_schema_preserved' => false !== strpos( $store, 'SCHEMA_VERSION = 14' ),
 );
 $failed = array_keys( array_filter( $checks, static function ( $value ) { return ! $value; } ) );
 echo json_encode( array( 'version' => '7.3.0', 'checks' => $checks, 'passed' => count( $checks ) - count( $failed ), 'failed' => count( $failed ), 'failures' => $failed ), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . PHP_EOL;

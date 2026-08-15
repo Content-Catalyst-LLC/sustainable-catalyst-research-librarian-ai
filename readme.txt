@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 7.3.0
+Stable tag: 7.4.0
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
@@ -12,7 +12,7 @@ A connected, site-scoped research intelligence platform for Sustainable Catalyst
 
 Research Librarian AI retrieves Sustainable Catalyst publications and documents through exact-title priority, section-aware BM25 ranking, optional Gemini embeddings, calibrated reciprocal-rank fusion, and citation-verified synthesis. WordPress remains the canonical publishing and recovery source, while FastAPI stores the production knowledge index durably in Neon Postgres with pgvector.
 
-v7.3.0 adds descriptive source evaluation, evidence comparison, and structural evidence-gap detection to the Library-native research context model. It exposes the basis for source-quality judgments without assigning truth or credibility scores, while retaining all v7.2.0 context boundaries and v7.1.2 Neon timeout-safe activation behavior.
+v7.4.0 adds persistent, inspectable research state to the Library-native context model: research activity history, per-object reading/review/rejection state, contradiction flags, and an open-question register. This workflow memory is explicitly separated from factual evidence and preserves all v7.3.0 evidence-quality, v7.2.0 context, and v7.1.2 Neon timeout-safe activation behavior.
 
 == Shortcodes ==
 
@@ -38,6 +38,16 @@ v7.3.0 adds descriptive source evaluation, evidence comparison, and structural e
 [sc_research_librarian_platform_handoffs]
 
 == Changelog ==
+
+= 7.4.0 =
+* Add a durable research activity ledger for saved-context searches and explicit workflow actions.
+* Add per-object unread, reading, reviewed, and rejected state plus contradiction flags and resolution.
+* Add an explicit open-question register with open, resolved, deferred, and dismissed states.
+* Add authenticated Research state workspace controls and source-level reading/review actions.
+* Keep research state inspectable and editable while explicitly preventing it from becoming factual evidence.
+* Keep rejected objects in provenance while deprioritizing them from context-priority retrieval unless revisited.
+* Include research activity, object state, and open questions in project backup/import.
+* Advance ancillary SQLite to schema 14 and connected API/workspace contracts to 1.3/2.3; no Neon/Postgres knowledge-index migration is required.
 
 = 7.3.0 =
 * Add descriptive source profiles covering source type, evidence role, publisher/institution, publication date, methodology, citations, access, provenance, and limitations.

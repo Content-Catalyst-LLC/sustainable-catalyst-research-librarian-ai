@@ -109,7 +109,7 @@ class Settings:
     postgres_activation_checksum_batch_limit: int = _int("SC_RL_POSTGRES_ACTIVATION_CHECKSUM_BATCH_LIMIT", 250, 25, 2000)
     postgres_generation_retention: int = _int("SC_RL_POSTGRES_GENERATION_RETENTION", 1, 1, 20)
     neon_free_storage_warning_mb: int = _int("SC_RL_NEON_FREE_STORAGE_WARNING_MB", 400, 100, 500)
-    release_version: str = os.getenv("SC_RL_RELEASE_VERSION", "7.3.0")
+    release_version: str = os.getenv("SC_RL_RELEASE_VERSION", "7.4.0")
     handoff_source_limit: int = _int("SC_RL_HANDOFF_SOURCE_LIMIT", 8, 1, 25)
     handoff_ttl_seconds: int = _int("SC_RL_HANDOFF_TTL_SECONDS", 1800, 300, 86400)
     handoff_retry_limit: int = _int("SC_RL_HANDOFF_RETRY_LIMIT", 5, 1, 20)

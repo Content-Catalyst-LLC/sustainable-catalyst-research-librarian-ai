@@ -36,7 +36,7 @@ from .models import (
     QualityEvaluationRequest,
     ReleaseGateRequest,
     RetentionRunRequest,
-    ResearchProjectRequest, ResearchInvestigationRequest, ProjectEntityRequest, LibraryObjectRequest, ResearchContextRequest, SourceEvaluationRequest, EvidenceComparisonRequest, EvidenceGapRequest, WorkflowTemplateRequest, ContradictionRequest, UncertaintyRegisterRequest, PlatformBackupImportRequest,
+    ResearchProjectRequest, ResearchInvestigationRequest, ProjectEntityRequest, LibraryObjectRequest, ResearchContextRequest, SourceEvaluationRequest, EvidenceComparisonRequest, EvidenceGapRequest, ResearchActivityRequest, ResearchObjectStateRequest, ResearchOpenQuestionRequest, WorkflowTemplateRequest, ContradictionRequest, UncertaintyRegisterRequest, PlatformBackupImportRequest,
     ArtifactReturnRequest,
     RetrievalCalibrationUpdate,
     RetrievalRequest,
@@ -88,6 +88,17 @@ from .evidence_quality import (
     compare_sources,
     evidence_gaps,
     quality_summary,
+)
+from .research_state import (
+    RESEARCH_ACTIVITY_SCHEMA,
+    RESEARCH_OBJECT_STATE_SCHEMA,
+    OPEN_QUESTION_SCHEMA,
+    RESEARCH_STATE_SUMMARY_SCHEMA,
+    normalize_activity,
+    normalize_object_state,
+    normalize_open_question,
+    summarize_research_state,
+    prompt_research_state,
 )
 
 
@@ -183,7 +194,7 @@ def _follow_up_prompts(mode: str, best: RetrievedSource | None, related: list[Re
 
 def _workspace_summary(mode: str, matches: list[RetrievedSource], related: list[RetrievedSource], ai_used: bool, gate: dict[str, Any]) -> dict[str, Any]:
     return {
-        "schema": "sc-research-librarian-public-workspace/2.2",
+        "schema": "sc-research-librarian-public-workspace/2.3",
         "mode": mode,
         "mode_label": _RESEARCH_MODES.get(mode, _RESEARCH_MODES["auto"])["label"],
         "verified_sources": len(matches),
@@ -1185,9 +1196,73 @@ def _persist_quality_report(project_id: str, entity_type: str, title: str, paylo
         "payload": snapshot,
     })
 
+def _research_state_scope(owner_ref: str = "", project_id: str = "", context_id: str = "") -> tuple[str, str, str]:
+    owner = str(owner_ref or "")[:220]
+    project = str(project_id or "")[:220]
+    context = str(context_id or "")[:220]
+    if context:
+        saved = store.research_context(context)
+        if saved:
+            owner = owner or str(saved.get("owner_ref") or "")[:220]
+            project = project or str(saved.get("project_id") or "")[:220]
+    if project and not owner:
+        saved_project = store.research_project(project)
+        if saved_project:
+            owner = str(saved_project.get("owner_ref") or "")[:220]
+    return owner, project, context
+
+
+def _research_state_summary(owner_ref: str = "", project_id: str = "", context_id: str = "") -> dict[str, Any]:
+    owner, project, context = _research_state_scope(owner_ref, project_id, context_id)
+    activities = store.research_activities(1000, owner, project, context)
+    object_states = store.research_object_states(1000, owner, project, context)
+    enriched_states = []
+    tracked_object_ids: set[str] = set()
+    for state in object_states:
+        item = dict(state)
+        object_id = str(item.get("object_id") or "")
+        if object_id:
+            tracked_object_ids.add(object_id)
+        library_object = store.library_object(object_id) if object_id else None
+        if library_object:
+            item["object_title"] = str(library_object.get("title") or "")[:500]
+            item["object_type"] = str(library_object.get("object_type") or "")[:80]
+            item["source_scope"] = str(library_object.get("source_scope") or "")[:80]
+        enriched_states.append(item)
+    # A context object with no explicit ledger row is visibly unread rather than disappearing
+    # from the review queue. This is a derived display state; it is not persisted until the
+    # researcher takes an explicit reading/review action.
+    if context:
+        try:
+            resolution = resolve_saved_research_context(context)
+            for library_object in list(resolution.get("objects") or [])[:200]:
+                object_id = str(library_object.get("object_id") or "")
+                if not object_id or object_id in tracked_object_ids:
+                    continue
+                enriched_states.append({
+                    "schema": RESEARCH_OBJECT_STATE_SCHEMA,
+                    "state_id": "",
+                    "owner_ref": owner,
+                    "project_id": project,
+                    "context_id": context,
+                    "object_id": object_id,
+                    "object_title": str(library_object.get("title") or "")[:500],
+                    "object_type": str(library_object.get("object_type") or "")[:80],
+                    "source_scope": str(library_object.get("source_scope") or "")[:80],
+                    "reading_state": "unread",
+                    "contradiction_state": "none",
+                    "derived_unread": True,
+                    "governance": {"derived_display_state": True, "not_evidence": True},
+                })
+        except HTTPException:
+            pass
+    questions = store.research_open_questions(1000, owner, project, context)
+    return summarize_research_state(activities, enriched_states, questions, owner_ref=owner, project_id=project, context_id=context)
+
+
 @app.get("/v1/platform/api", dependencies=[Depends(require_key)])
 def connected_api_manifest() -> dict[str, Any]:
-    return {"schema": API_SCHEMA, "version": __version__, "stability": "stable-v7", "resources": ["projects", "investigations", "entities", "library-objects", "research-contexts", "source-evaluations", "evidence-comparisons", "evidence-gaps", "workflows", "contradictions", "uncertainties", "backups", "handoffs", "artifacts"], "object_model": object_model_manifest(), "evidence_quality": {"source_evaluation_schema": SOURCE_EVALUATION_SCHEMA, "comparison_schema": EVIDENCE_COMPARISON_SCHEMA, "gap_schema": EVIDENCE_GAP_SCHEMA, "quality_signals_schema": QUALITY_SIGNALS_SCHEMA, "truth_score": False}, "generation_boundary": adapter_status()}
+    return {"schema": API_SCHEMA, "version": __version__, "stability": "stable-v7", "resources": ["projects", "investigations", "entities", "library-objects", "research-contexts", "source-evaluations", "evidence-comparisons", "evidence-gaps", "research-state", "research-activity", "object-review-state", "open-questions", "workflows", "contradictions", "uncertainties", "backups", "handoffs", "artifacts"], "object_model": object_model_manifest(), "evidence_quality": {"source_evaluation_schema": SOURCE_EVALUATION_SCHEMA, "comparison_schema": EVIDENCE_COMPARISON_SCHEMA, "gap_schema": EVIDENCE_GAP_SCHEMA, "quality_signals_schema": QUALITY_SIGNALS_SCHEMA, "truth_score": False}, "research_state": {"summary_schema": RESEARCH_STATE_SUMMARY_SCHEMA, "activity_schema": RESEARCH_ACTIVITY_SCHEMA, "object_state_schema": RESEARCH_OBJECT_STATE_SCHEMA, "open_question_schema": OPEN_QUESTION_SCHEMA, "workflow_memory_only": True, "not_evidence": True}, "generation_boundary": adapter_status()}
 
 @app.get("/v1/platform/summary", dependencies=[Depends(require_key)])
 def connected_platform_summary() -> dict[str, Any]:
@@ -1349,6 +1424,72 @@ def find_research_evidence_gaps(payload: EvidenceGapRequest) -> dict[str, Any]:
         report["project_entity"] = _persist_quality_report(payload.project_id, "evidence-gap-report", "Evidence gap report", report)
     return report
 
+@app.get("/v1/research/state/summary", dependencies=[Depends(require_key)])
+def research_state_summary(owner_ref: str = "", project_id: str = "", context_id: str = "") -> dict[str, Any]:
+    return _research_state_summary(owner_ref, project_id, context_id)
+
+
+@app.get("/v1/research/activity", dependencies=[Depends(require_key)])
+def list_research_activity(limit: int = 200, owner_ref: str = "", project_id: str = "", context_id: str = "", event_type: str = "") -> dict[str, Any]:
+    owner, project, context = _research_state_scope(owner_ref, project_id, context_id)
+    return {"schema": "sc-research-activity-list/1.0", "activities": store.research_activities(limit, owner, project, context, event_type)}
+
+
+@app.post("/v1/research/activity", dependencies=[Depends(require_key)])
+def save_research_activity(payload: ResearchActivityRequest) -> dict[str, Any]:
+    owner, project, context = _research_state_scope(payload.owner_ref, payload.project_id, payload.context_id)
+    try:
+        event = normalize_activity({**payload.model_dump(), "owner_ref": owner, "project_id": project, "context_id": context})
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return store.save_research_activity(event)
+
+
+@app.get("/v1/research/object-states", dependencies=[Depends(require_key)])
+def list_research_object_states(limit: int = 500, owner_ref: str = "", project_id: str = "", context_id: str = "", reading_state: str = "") -> dict[str, Any]:
+    owner, project, context = _research_state_scope(owner_ref, project_id, context_id)
+    return {"schema": "sc-research-object-state-list/1.0", "states": store.research_object_states(limit, owner, project, context, reading_state)}
+
+
+@app.post("/v1/research/object-states", dependencies=[Depends(require_key)])
+def save_research_object_state(payload: ResearchObjectStateRequest) -> dict[str, Any]:
+    owner, project, context = _research_state_scope(payload.owner_ref, payload.project_id, payload.context_id)
+    existing = store.research_object_state(owner, payload.object_id, project, context)
+    try:
+        state = normalize_object_state({**payload.model_dump(), "owner_ref": owner, "project_id": project, "context_id": context}, existing)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    stored = store.save_research_object_state(state)
+    event_type = "review" if state["reading_state"] == "reviewed" else ("reject" if state["reading_state"] == "rejected" else ("read" if state["reading_state"] == "reading" else "open"))
+    store.save_research_activity(normalize_activity({"owner_ref": owner, "project_id": project, "context_id": context, "object_id": state["object_id"], "event_type": event_type, "metadata": {"reading_state": state["reading_state"], "contradiction_state": state["contradiction_state"]}}))
+    if state["contradiction_state"] == "flagged":
+        store.save_research_activity(normalize_activity({"owner_ref": owner, "project_id": project, "context_id": context, "object_id": state["object_id"], "event_type": "contradiction-flagged"}))
+    elif existing and str(existing.get("contradiction_state") or "") == "flagged" and state["contradiction_state"] == "resolved":
+        store.save_research_activity(normalize_activity({"owner_ref": owner, "project_id": project, "context_id": context, "object_id": state["object_id"], "event_type": "contradiction-resolved"}))
+    return stored
+
+
+@app.get("/v1/research/questions", dependencies=[Depends(require_key)])
+def list_research_questions(limit: int = 200, owner_ref: str = "", project_id: str = "", context_id: str = "", status: str = "") -> dict[str, Any]:
+    owner, project, context = _research_state_scope(owner_ref, project_id, context_id)
+    return {"schema": "sc-research-open-question-list/1.0", "questions": store.research_open_questions(limit, owner, project, context, status)}
+
+
+@app.post("/v1/research/questions", dependencies=[Depends(require_key)])
+def save_research_question(payload: ResearchOpenQuestionRequest) -> dict[str, Any]:
+    owner, project, context = _research_state_scope(payload.owner_ref, payload.project_id, payload.context_id)
+    existing = store.research_open_question(payload.question_id) if payload.question_id else None
+    try:
+        question = normalize_open_question({**payload.model_dump(), "owner_ref": owner, "project_id": project, "context_id": context}, existing)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    stored = store.save_research_open_question(question)
+    prior_status = str((existing or {}).get("status") or "")
+    event_type = "question-opened" if question["status"] == "open" and prior_status != "open" else ("question-resolved" if question["status"] == "resolved" and prior_status != "resolved" else ("question-deferred" if question["status"] == "deferred" and prior_status != "deferred" else "note"))
+    store.save_research_activity(normalize_activity({"owner_ref": owner, "project_id": project, "context_id": context, "event_type": event_type, "note": question["question"], "metadata": {"question_id": question["question_id"], "status": question["status"]}}))
+    return stored
+
+
 @app.get("/v1/projects", dependencies=[Depends(require_key)])
 def list_projects(limit: int = 100, owner_ref: str = "") -> dict[str, Any]:
     return {"schema":"sc-research-project-list/1.0","projects":store.research_projects(limit, owner_ref),"summary":store.connected_platform_summary()}
@@ -1419,7 +1560,7 @@ def import_platform_backup(payload: PlatformBackupImportRequest) -> dict[str, An
     verification=verify_backup(payload.envelope)
     if not verification["ok"]: raise HTTPException(status_code=422,detail="Backup checksum validation failed.")
     body=payload.envelope.get("payload") or {}; project=body.get("project") or {}
-    result={"ok":True,"dry_run":payload.dry_run,"verification":verification,"counts":{"investigations":len(body.get("investigations") or []),"entities":len(body.get("entities") or []),"library_objects":len(body.get("library_objects") or [])}}
+    result={"ok":True,"dry_run":payload.dry_run,"verification":verification,"counts":{"investigations":len(body.get("investigations") or []),"entities":len(body.get("entities") or []),"library_objects":len(body.get("library_objects") or []),"research_activity":len(body.get("research_activity") or []),"object_states":len(body.get("object_states") or []),"open_questions":len(body.get("open_questions") or [])}}
     if not payload.dry_run:
         saved=normalize_project(project,store.research_project(str(project.get("project_id") or "")))
         store.save_research_project(saved)
@@ -1428,6 +1569,14 @@ def import_platform_backup(payload: PlatformBackupImportRequest) -> dict[str, An
                 store.save_library_object(normalize_library_object(item, store.library_object(str(item.get("object_id") or ""))))
         for item in body.get("investigations") or []: store.save_research_investigation(normalize_investigation(item,saved["project_id"],item))
         for item in body.get("entities") or []: store.save_project_entity({**item,"project_id":saved["project_id"]})
+        for item in body.get("research_activity") or []:
+            if isinstance(item, dict): store.save_research_activity(normalize_activity({**item,"owner_ref":saved.get("owner_ref", ""),"project_id":saved["project_id"]}))
+        for item in body.get("object_states") or []:
+            if isinstance(item, dict):
+                existing_state=store.research_object_state(str(saved.get("owner_ref") or ""),str(item.get("object_id") or ""),saved["project_id"],str(item.get("context_id") or ""))
+                store.save_research_object_state(normalize_object_state({**item,"owner_ref":saved.get("owner_ref", ""),"project_id":saved["project_id"]},existing_state))
+        for item in body.get("open_questions") or []:
+            if isinstance(item, dict): store.save_research_open_question(normalize_open_question({**item,"owner_ref":saved.get("owner_ref", ""),"project_id":saved["project_id"]},store.research_open_question(str(item.get("question_id") or ""))))
         result["project_id"]=saved["project_id"]
     return result
 
@@ -1463,16 +1612,35 @@ async def ask(payload: AskRequest) -> AskResponse:
     session_id = _session_id(payload.session_id)
     research_mode = _resolve_research_mode(payload.question, payload.research_mode)
     inline_context = sanitize_inline_context(payload.research_context)
+    state_summary: dict[str, Any] = {}
+    state_prompt: dict[str, Any] = {}
+    if inline_context.get("context_id"):
+        saved_context = store.research_context(str(inline_context.get("context_id") or ""))
+        if saved_context and str(saved_context.get("owner_ref") or ""):
+            state_summary = _research_state_summary(
+                str(saved_context.get("owner_ref") or ""),
+                str(saved_context.get("project_id") or inline_context.get("project_id") or ""),
+                str(saved_context.get("context_id") or inline_context.get("context_id") or ""),
+            )
+            state_prompt = prompt_research_state(state_summary)
+    rejected_object_ids = set(state_prompt.get("rejected_object_ids") or [])
+    retrieval_context = dict(inline_context) if inline_context else {}
+    if retrieval_context and rejected_object_ids:
+        retrieval_context["objects"] = [
+            item for item in list(inline_context.get("objects") or [])
+            if isinstance(item, dict) and str(item.get("object_id") or "") not in rejected_object_ids
+        ]
     records = store.records()
     calibration = store.retrieval_config()
     context_source_ids = {
         str(item.get("source_record_id") or "")
-        for item in inline_context.get("objects", [])
+        for item in retrieval_context.get("objects", [])
         if isinstance(item, dict) and str(item.get("source_record_id") or "")
     }
     retrieval_limit = min(30, max(settings.source_limit, settings.source_limit * 3)) if context_source_ids else settings.source_limit
     matches, retrieval_diagnostics = await _hybrid_retrieve(payload.question, retrieval_limit, calibration)
-    matches, context_retrieval = _prioritize_context_matches(matches, inline_context, settings.source_limit)
+    matches, context_retrieval = _prioritize_context_matches(matches, retrieval_context, settings.source_limit)
+    context_retrieval["rejected_context_objects_deprioritized"] = len(rejected_object_ids)
     retrieval_diagnostics["research_context_retrieval"] = context_retrieval
     gate = evidence_gate(matches, retrieval_diagnostics, calibration)
     best = matches[0] if matches else None
@@ -1505,6 +1673,8 @@ async def ask(payload: AskRequest) -> AskResponse:
         route_hint["workspace_instruction"] = _RESEARCH_MODES[research_mode]["instruction"]
         if inline_context:
             route_hint["research_context"] = inline_context
+        if state_prompt:
+            route_hint["research_state"] = state_prompt
         answer = await generate_answer(payload.question, matches, related, history, route_hint, calibration)
         citation_verification = verify_citations(answer, matches, related, calibration)
         if not citation_verification.get("ok"):
@@ -1556,6 +1726,26 @@ async def ask(payload: AskRequest) -> AskResponse:
         retrieval_profile=str(summary.get("retrieval_profile", "")),
     )
     store.save_answer_trace(trace)
+    if state_prompt:
+        store.save_research_activity(normalize_activity({
+            "owner_ref": str(state_summary.get("owner_ref") or ""),
+            "project_id": str(state_summary.get("project_id") or ""),
+            "context_id": str(state_summary.get("context_id") or ""),
+            "event_type": "search",
+            "query": payload.question,
+            "metadata": {
+                "research_mode": research_mode,
+                "answer_trace_id": trace["trace_id"],
+                "source_record_ids": [item.id for item in matches][:25],
+                "citation_verification_ok": bool(citation_verification.get("ok")),
+            },
+        }))
+        state_summary = _research_state_summary(
+            str(state_summary.get("owner_ref") or ""),
+            str(state_summary.get("project_id") or ""),
+            str(state_summary.get("context_id") or ""),
+        )
+        state_prompt = prompt_research_state(state_summary)
     provenance = {
         "schema": "sc-research-provenance/1.1",
         "index_version": int(store.summary().get("index_version", 0)),
@@ -1577,6 +1767,17 @@ async def ask(payload: AskRequest) -> AskResponse:
             "object_count": len(inline_context.get("objects", [])),
         }
         retrieval_diagnostics["research_context"] = provenance["research_context"]
+    if state_prompt:
+        provenance["research_state"] = {
+            "schema": state_prompt.get("schema", ""),
+            "fingerprint": state_prompt.get("fingerprint", ""),
+            "recent_search_count": len(state_prompt.get("recent_searches", [])),
+            "open_question_count": len(state_prompt.get("open_questions", [])),
+            "rejected_object_count": len(state_prompt.get("rejected_object_ids", [])),
+            "workflow_memory_only": True,
+            "not_evidence": True,
+        }
+        retrieval_diagnostics["research_state"] = provenance["research_state"]
 
     workspace = _workspace_summary(research_mode, matches, related, ai_used, gate)
     if inline_context:
@@ -1585,6 +1786,14 @@ async def ask(payload: AskRequest) -> AskResponse:
             "title": inline_context.get("title", "Research context"),
             "scopes": inline_context.get("scopes", []),
             "object_count": len(inline_context.get("objects", [])),
+        }
+    if state_summary:
+        workspace["research_state"] = {
+            "activities": int((state_summary.get("counts") or {}).get("activities", 0)),
+            "open_questions": len(state_summary.get("open_questions", [])),
+            "review_queue": len(state_summary.get("review_queue", [])),
+            "rejected_objects": len(state_summary.get("rejected_objects", [])),
+            "flagged_contradictions": len(state_summary.get("flagged_contradictions", [])),
         }
 
     return AskResponse(
@@ -1610,6 +1819,7 @@ async def ask(payload: AskRequest) -> AskResponse:
         follow_up_prompts=_follow_up_prompts(research_mode, best, related),
         workspace=workspace,
         research_context=inline_context,
+        research_state=state_prompt,
         session_turns=len(_sessions[session_id]) // 2,
         capabilities=capabilities,
         typed_handoffs=typed_handoffs,

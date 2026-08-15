@@ -20,7 +20,7 @@ from .models import KnowledgeChunk, KnowledgeRecord, utc_now
 from .governance import DEFAULT_GOVERNANCE_POLICY, sanitize_governance_policy
 
 
-SCHEMA_VERSION = 13
+SCHEMA_VERSION = 14
 INDEX_SCHEMA = "sc-research-librarian-knowledge-index/13.0"
 SNAPSHOT_SCHEMA = "sc-research-librarian-runtime-snapshot/4.0"
 
@@ -409,6 +409,46 @@ class KnowledgeStore:
                     payload_json TEXT NOT NULL
                 );
                 CREATE INDEX IF NOT EXISTS idx_research_contexts_owner ON research_contexts(owner_ref, active, updated_utc DESC);
+                CREATE TABLE IF NOT EXISTS research_activity_events (
+                    event_id TEXT PRIMARY KEY,
+                    owner_ref TEXT NOT NULL DEFAULT '',
+                    project_id TEXT NOT NULL DEFAULT '',
+                    context_id TEXT NOT NULL DEFAULT '',
+                    object_id TEXT NOT NULL DEFAULT '',
+                    event_type TEXT NOT NULL,
+                    created_utc TEXT NOT NULL,
+                    fingerprint TEXT NOT NULL,
+                    payload_json TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_research_activity_scope ON research_activity_events(owner_ref, project_id, context_id, created_utc DESC);
+                CREATE INDEX IF NOT EXISTS idx_research_activity_object ON research_activity_events(owner_ref, object_id, created_utc DESC);
+                CREATE TABLE IF NOT EXISTS research_object_states (
+                    state_id TEXT PRIMARY KEY,
+                    owner_ref TEXT NOT NULL DEFAULT '',
+                    project_id TEXT NOT NULL DEFAULT '',
+                    context_id TEXT NOT NULL DEFAULT '',
+                    object_id TEXT NOT NULL,
+                    reading_state TEXT NOT NULL DEFAULT 'unread',
+                    contradiction_state TEXT NOT NULL DEFAULT 'none',
+                    updated_utc TEXT NOT NULL,
+                    fingerprint TEXT NOT NULL,
+                    payload_json TEXT NOT NULL,
+                    UNIQUE(owner_ref, project_id, context_id, object_id)
+                );
+                CREATE INDEX IF NOT EXISTS idx_research_object_state_scope ON research_object_states(owner_ref, project_id, context_id, reading_state, updated_utc DESC);
+                CREATE INDEX IF NOT EXISTS idx_research_object_state_object ON research_object_states(owner_ref, object_id, updated_utc DESC);
+                CREATE TABLE IF NOT EXISTS research_open_questions (
+                    question_id TEXT PRIMARY KEY,
+                    owner_ref TEXT NOT NULL DEFAULT '',
+                    project_id TEXT NOT NULL DEFAULT '',
+                    context_id TEXT NOT NULL DEFAULT '',
+                    status TEXT NOT NULL DEFAULT 'open',
+                    created_utc TEXT NOT NULL,
+                    updated_utc TEXT NOT NULL,
+                    fingerprint TEXT NOT NULL,
+                    payload_json TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_research_questions_scope ON research_open_questions(owner_ref, project_id, context_id, status, updated_utc DESC);
                 CREATE TABLE IF NOT EXISTS connected_platform_backups (
                     backup_id TEXT PRIMARY KEY,
                     created_utc TEXT NOT NULL,
@@ -2390,7 +2430,8 @@ class KnowledgeStore:
             object_id=str((item.get("payload") or {}).get("library_object_id") or "")
             obj=self.library_object(object_id) if object_id else None
             if obj: library_objects.append(obj)
-        return {"project":project,"investigations":self.research_investigations(project_id,500),"entities":self.project_entities(project_id,"",1000),"library_objects":library_objects,"handoffs":handoffs,"artifacts":artifacts}
+        owner_ref=str(project.get("owner_ref") or "")
+        return {"project":project,"investigations":self.research_investigations(project_id,500),"entities":self.project_entities(project_id,"",1000),"library_objects":library_objects,"research_activity":self.research_activities(1000,owner_ref,project_id),"object_states":self.research_object_states(1000,owner_ref,project_id),"open_questions":self.research_open_questions(1000,owner_ref,project_id),"handoffs":handoffs,"artifacts":artifacts}
 
     def save_library_object(self, library_object: dict[str, Any]) -> dict[str, Any]:
         with self._lock, self._connection() as connection:
@@ -2468,6 +2509,87 @@ class KnowledgeStore:
             row=connection.execute("SELECT payload_json FROM research_contexts WHERE owner_ref=? AND active=1 ORDER BY updated_utc DESC LIMIT 1",(owner_ref,)).fetchone()
             return json.loads(str(row["payload_json"])) if row else None
 
+    def save_research_activity(self, event: dict[str, Any]) -> dict[str, Any]:
+        with self._lock, self._connection() as connection:
+            connection.execute(
+                "INSERT OR REPLACE INTO research_activity_events(event_id,owner_ref,project_id,context_id,object_id,event_type,created_utc,fingerprint,payload_json) VALUES(?,?,?,?,?,?,?,?,?)",
+                (
+                    str(event.get("event_id") or ""), str(event.get("owner_ref") or ""), str(event.get("project_id") or ""),
+                    str(event.get("context_id") or ""), str(event.get("object_id") or ""), str(event.get("event_type") or "note"),
+                    str(event.get("created_utc") or utc_now()), str(event.get("fingerprint") or ""), _canonical_json(event),
+                ),
+            )
+        return event
+
+    def research_activities(self, limit: int = 200, owner_ref: str = "", project_id: str = "", context_id: str = "", event_type: str = "") -> list[dict[str, Any]]:
+        clauses=[]; values=[]
+        for column, value in (("owner_ref", owner_ref), ("project_id", project_id), ("context_id", context_id), ("event_type", event_type)):
+            if value: clauses.append(f"{column}=?"); values.append(value)
+        where=(" WHERE "+" AND ".join(clauses)) if clauses else ""
+        values.append(max(1,min(1000,int(limit))))
+        with self._lock, self._connection() as connection:
+            rows=connection.execute(f"SELECT payload_json FROM research_activity_events{where} ORDER BY created_utc DESC LIMIT ?",tuple(values))
+            return [json.loads(str(row["payload_json"])) for row in rows]
+
+    def research_object_state(self, owner_ref: str, object_id: str, project_id: str = "", context_id: str = "") -> dict[str, Any] | None:
+        with self._lock, self._connection() as connection:
+            row=connection.execute(
+                "SELECT payload_json FROM research_object_states WHERE owner_ref=? AND project_id=? AND context_id=? AND object_id=? LIMIT 1",
+                (owner_ref, project_id, context_id, object_id),
+            ).fetchone()
+            return json.loads(str(row["payload_json"])) if row else None
+
+    def save_research_object_state(self, state: dict[str, Any]) -> dict[str, Any]:
+        with self._lock, self._connection() as connection:
+            connection.execute(
+                "INSERT INTO research_object_states(state_id,owner_ref,project_id,context_id,object_id,reading_state,contradiction_state,updated_utc,fingerprint,payload_json) VALUES(?,?,?,?,?,?,?,?,?,?) "
+                "ON CONFLICT(owner_ref,project_id,context_id,object_id) DO UPDATE SET state_id=excluded.state_id,reading_state=excluded.reading_state,contradiction_state=excluded.contradiction_state,updated_utc=excluded.updated_utc,fingerprint=excluded.fingerprint,payload_json=excluded.payload_json",
+                (
+                    str(state.get("state_id") or ""), str(state.get("owner_ref") or ""), str(state.get("project_id") or ""),
+                    str(state.get("context_id") or ""), str(state.get("object_id") or ""), str(state.get("reading_state") or "unread"),
+                    str(state.get("contradiction_state") or "none"), str(state.get("updated_utc") or utc_now()),
+                    str(state.get("fingerprint") or ""), _canonical_json(state),
+                ),
+            )
+        return state
+
+    def research_object_states(self, limit: int = 500, owner_ref: str = "", project_id: str = "", context_id: str = "", reading_state: str = "") -> list[dict[str, Any]]:
+        clauses=[]; values=[]
+        for column, value in (("owner_ref", owner_ref), ("project_id", project_id), ("context_id", context_id), ("reading_state", reading_state)):
+            if value: clauses.append(f"{column}=?"); values.append(value)
+        where=(" WHERE "+" AND ".join(clauses)) if clauses else ""
+        values.append(max(1,min(1000,int(limit))))
+        with self._lock, self._connection() as connection:
+            rows=connection.execute(f"SELECT payload_json FROM research_object_states{where} ORDER BY updated_utc DESC LIMIT ?",tuple(values))
+            return [json.loads(str(row["payload_json"])) for row in rows]
+
+    def research_open_question(self, question_id: str) -> dict[str, Any] | None:
+        with self._lock, self._connection() as connection:
+            row=connection.execute("SELECT payload_json FROM research_open_questions WHERE question_id=?",(question_id,)).fetchone()
+            return json.loads(str(row["payload_json"])) if row else None
+
+    def save_research_open_question(self, question: dict[str, Any]) -> dict[str, Any]:
+        with self._lock, self._connection() as connection:
+            connection.execute(
+                "INSERT OR REPLACE INTO research_open_questions(question_id,owner_ref,project_id,context_id,status,created_utc,updated_utc,fingerprint,payload_json) VALUES(?,?,?,?,?,?,?,?,?)",
+                (
+                    str(question.get("question_id") or ""), str(question.get("owner_ref") or ""), str(question.get("project_id") or ""),
+                    str(question.get("context_id") or ""), str(question.get("status") or "open"), str(question.get("created_utc") or utc_now()),
+                    str(question.get("updated_utc") or utc_now()), str(question.get("fingerprint") or ""), _canonical_json(question),
+                ),
+            )
+        return question
+
+    def research_open_questions(self, limit: int = 200, owner_ref: str = "", project_id: str = "", context_id: str = "", status: str = "") -> list[dict[str, Any]]:
+        clauses=[]; values=[]
+        for column, value in (("owner_ref", owner_ref), ("project_id", project_id), ("context_id", context_id), ("status", status)):
+            if value: clauses.append(f"{column}=?"); values.append(value)
+        where=(" WHERE "+" AND ".join(clauses)) if clauses else ""
+        values.append(max(1,min(1000,int(limit))))
+        with self._lock, self._connection() as connection:
+            rows=connection.execute(f"SELECT payload_json FROM research_open_questions{where} ORDER BY updated_utc DESC LIMIT ?",tuple(values))
+            return [json.loads(str(row["payload_json"])) for row in rows]
+
     def save_connected_backup(self, envelope: dict[str, Any], state: str = "created") -> dict[str, Any]:
         backup_id=str(envelope.get("backup_id") or "backup-"+uuid.uuid4().hex); clean={**envelope,"backup_id":backup_id}
         with self._lock, self._connection() as connection:
@@ -2481,8 +2603,8 @@ class KnowledgeStore:
 
     def connected_platform_summary(self) -> dict[str, Any]:
         with self._lock, self._connection() as connection:
-            counts={name:int(connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]) for name,table in {"projects":"research_projects","investigations":"research_investigations","entities":"research_project_entities","library_objects":"research_library_objects","research_contexts":"research_contexts","backups":"connected_platform_backups"}.items()}
-        return {"schema":"sc-connected-research-platform-summary/1.2","version":"7.3.0","counts":counts,"workspace_schema":"sc-research-librarian-public-workspace/2.2","api_schema":"sc-connected-research-api/1.2","object_model_schema":"sc-research-library-object-model/1.0","context_schema":"sc-research-context/1.0"}
+            counts={name:int(connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]) for name,table in {"projects":"research_projects","investigations":"research_investigations","entities":"research_project_entities","library_objects":"research_library_objects","research_contexts":"research_contexts","research_activity":"research_activity_events","object_states":"research_object_states","open_questions":"research_open_questions","backups":"connected_platform_backups"}.items()}
+        return {"schema":"sc-connected-research-platform-summary/1.3","version":"7.4.0","counts":counts,"workspace_schema":"sc-research-librarian-public-workspace/2.3","api_schema":"sc-connected-research-api/1.3","object_model_schema":"sc-research-library-object-model/1.0","context_schema":"sc-research-context/1.0","research_state_schema":"sc-research-state-summary/1.0"}
 
 
 def create_store() -> Any:

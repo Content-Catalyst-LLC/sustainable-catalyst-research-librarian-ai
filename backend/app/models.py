@@ -229,6 +229,7 @@ class AskResponse(BaseModel):
     follow_up_prompts: list[str] = Field(default_factory=list)
     workspace: dict[str, Any] = Field(default_factory=dict)
     research_context: dict[str, Any] = Field(default_factory=dict)
+    research_state: dict[str, Any] = Field(default_factory=dict)
     session_turns: int = 0
     capabilities: list[dict[str, Any]] = Field(default_factory=list)
     typed_handoffs: list[dict[str, Any]] = Field(default_factory=list)
@@ -465,6 +466,40 @@ class EvidenceGapRequest(BaseModel):
     project_id: str = Field(default="", max_length=220)
     question: str = Field(default="", max_length=3000)
     persist: bool = False
+
+
+class ResearchActivityRequest(BaseModel):
+    event_id: str = Field(default="", max_length=220)
+    owner_ref: str = Field(default="", max_length=220)
+    project_id: str = Field(default="", max_length=220)
+    context_id: str = Field(default="", max_length=220)
+    object_id: str = Field(default="", max_length=220)
+    event_type: str = Field(default="note", max_length=80)
+    query: str = Field(default="", max_length=3000)
+    note: str = Field(default="", max_length=4000)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class ResearchObjectStateRequest(BaseModel):
+    state_id: str = Field(default="", max_length=220)
+    owner_ref: str = Field(default="", max_length=220)
+    project_id: str = Field(default="", max_length=220)
+    context_id: str = Field(default="", max_length=220)
+    object_id: str = Field(min_length=1, max_length=220)
+    reading_state: str = Field(default="", max_length=40)
+    contradiction_state: str = Field(default="", max_length=40)
+    note: str = Field(default="", max_length=4000)
+
+
+class ResearchOpenQuestionRequest(BaseModel):
+    question_id: str = Field(default="", max_length=220)
+    owner_ref: str = Field(default="", max_length=220)
+    project_id: str = Field(default="", max_length=220)
+    context_id: str = Field(default="", max_length=220)
+    question: str = Field(min_length=1, max_length=3000)
+    status: str = Field(default="open", max_length=40)
+    linked_object_ids: list[str] = Field(default_factory=list, max_length=100)
+    resolution: str = Field(default="", max_length=6000)
 
 class WorkflowTemplateRequest(BaseModel):
     project_id: str = Field(default="", max_length=220)

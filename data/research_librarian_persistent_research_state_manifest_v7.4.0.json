@@ -1,0 +1,71 @@
+{
+  "schema": "sc-research-librarian-persistent-research-state-manifest/1.0",
+  "version": "7.4.0",
+  "title": "Persistent Research State, Reading History & Open Questions",
+  "workspace_schema": "sc-research-librarian-public-workspace/2.3",
+  "api_schema": "sc-connected-research-api/1.3",
+  "research_state_schemas": {
+    "activity": "sc-research-activity-event/1.0",
+    "object_state": "sc-research-object-state/1.0",
+    "open_question": "sc-research-open-question/1.0",
+    "summary": "sc-research-state-summary/1.0",
+    "prompt": "sc-research-state-prompt/1.0"
+  },
+  "capabilities": [
+    "durable-research-activity-ledger",
+    "saved-context-search-history",
+    "per-object-reading-state",
+    "derived-unread-state-for-untracked-context-objects",
+    "per-object-review-state",
+    "explicit-rejected-object-state",
+    "contradiction-flag-state",
+    "open-question-register",
+    "question-resolution-and-deferral",
+    "bounded-research-state-prompt-context",
+    "rejected-context-object-deprioritization",
+    "project-backup-and-restore-of-research-state",
+    "authenticated-workspace-research-state-controls"
+  ],
+  "governance": {
+    "workflow_memory_only": true,
+    "not_evidence": true,
+    "open_questions_not_facts": true,
+    "prior_searches_not_citable_evidence": true,
+    "rejected_objects_not_deleted": true,
+    "rejected_objects_not_preferred_by_context_priority": true,
+    "contradiction_flag_is_not_falsehood_determination": true,
+    "resolved_questions_not_silently_reopened": true,
+    "state_is_inspectable": true,
+    "state_is_editable": true
+  },
+  "privacy_boundaries": {
+    "wordpress_owner_authorization_required": true,
+    "context_access_verified": true,
+    "project_access_verified": true,
+    "library_object_access_verified": true,
+    "existing_question_owner_verified_before_update": true,
+    "editorial_object_state_does_not_grant_editorial_write_access": true
+  },
+  "storage": {
+    "ancillary_sqlite_schema_version": 14,
+    "knowledge_index_schema": "sc-research-librarian-knowledge-index/13.0",
+    "new_postgres_migration_required": false,
+    "production_knowledge_index": "Neon Postgres with pgvector",
+    "ancillary_workspace_store": "SQLite schema 14",
+    "tables": [
+      "research_activity_events",
+      "research_object_states",
+      "research_open_questions"
+    ],
+    "project_backup_includes_research_state": true
+  },
+  "compatibility": {
+    "v7_3_source_evaluation_preserved": true,
+    "v7_3_no_truth_score_governance_preserved": true,
+    "v7_2_library_object_model_preserved": true,
+    "v7_2_context_resolution_preserved": true,
+    "v7_1_2_neon_durability_preserved": true,
+    "verified_retrieval_and_citation_contract_preserved": true,
+    "public_questions_without_saved_context_unchanged": true
+  }
+}

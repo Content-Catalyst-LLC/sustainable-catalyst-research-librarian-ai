@@ -20,9 +20,16 @@
   const qualityRun = root.querySelector('[data-sc-rl-v730-quality-run]');
   const qualityPanel = root.querySelector('[data-sc-rl-v730-quality-panel]');
   const qualityContent = root.querySelector('[data-sc-rl-v730-quality-content]');
+  const stateRun = root.querySelector('[data-sc-rl-v740-state-run]');
+  const statePanel = root.querySelector('[data-sc-rl-v740-state-panel]');
+  const stateContent = root.querySelector('[data-sc-rl-v740-state-content]');
+  const questionForm = root.querySelector('[data-sc-rl-v740-question-form]');
+  const questionCancel = root.querySelector('[data-sc-rl-v740-question-cancel]');
+  const questionStatus = root.querySelector('[data-sc-rl-v740-question-status]');
   const headers = { 'Content-Type': 'application/json', 'X-WP-Nonce': cfg.nonce };
   let projects = [];
   let contexts = [];
+  let stateQuestions = [];
 
   const escapeHTML = value => String(value || '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
   const titleCase = value => String(value || '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -50,6 +57,8 @@
     if (contextDetail) contextDetail.textContent = detail || (contextId ? 'This context will be carried into authenticated Research Librarian questions.' : 'Public editorial collection only.');
     if (contextSelect) contextSelect.value = contextId;
     if (qualityPanel) qualityPanel.hidden = true;
+    if (statePanel) statePanel.hidden = true;
+    if (questionForm) questionForm.hidden = true;
     window.dispatchEvent(new CustomEvent('sc-rl-context-changed', { detail: { contextId, label: contextName } }));
   }
 
@@ -106,8 +115,80 @@
     const levelText = Object.entries(corpus.evidence_levels || {}).map(([key,value]) => `${value} ${titleCase(key)}`).join(' · ') || 'Not classified';
     const methodText = Object.entries(corpus.methodology_states || {}).map(([key,value]) => `${value} ${titleCase(key)}`).join(' · ') || 'Not documented';
     const gapMarkup = gaps.length ? `<div class="sc-rl-v730-gap-list">${gaps.slice(0,8).map(g => `<article data-severity="${escapeHTML(g.severity)}"><span>${escapeHTML(g.severity)}</span><strong>${escapeHTML(titleCase(g.category))}</strong><p>${escapeHTML(g.statement)}</p><small>${escapeHTML(g.suggested_action)}</small></article>`).join('')}</div>` : '<div class="sc-rl-v730-no-gaps"><strong>No structural gaps detected by this metadata check.</strong><p>This does not prove the source set is complete or correct; human review is still required.</p></div>';
-    const sourceMarkup = sources.length ? `<div class="sc-rl-v730-source-grid">${sources.slice(0,8).map(source => `<article><span>${escapeHTML(titleCase(source.evidence_level || 'unknown'))}</span><strong>${escapeHTML(source.title)}</strong><dl><div><dt>Type</dt><dd>${escapeHTML(source.source_type || 'Unknown')}</dd></div><div><dt>Publisher</dt><dd>${escapeHTML(source.publisher || source.institution || 'Not provided')}</dd></div><div><dt>Date</dt><dd>${escapeHTML(source.publication_date || 'Not provided')}</dd></div><div><dt>Methods</dt><dd>${escapeHTML(titleCase(source.methodology?.state || 'unknown'))}</dd></div><div><dt>Citation</dt><dd>${source.citation?.available ? 'Available' : 'Not provided'}</dd></div><div><dt>Access</dt><dd>${escapeHTML(titleCase(source.access_state || 'unknown'))}</dd></div></dl>${Array.isArray(source.limitations) && source.limitations.length ? `<p><b>Limitations:</b> ${escapeHTML(source.limitations.slice(0,2).join(' · '))}</p>` : '<p><b>Limitations:</b> Not documented.</p>'}</article>`).join('')}</div>` : '<p>No source objects were resolved for this context.</p>';
+    const sourceMarkup = sources.length ? `<div class="sc-rl-v730-source-grid">${sources.slice(0,8).map(source => `<article data-object-id="${escapeHTML(source.object_id || '')}"><span>${escapeHTML(titleCase(source.evidence_level || 'unknown'))}</span><strong>${escapeHTML(source.title)}</strong><dl><div><dt>Type</dt><dd>${escapeHTML(source.source_type || 'Unknown')}</dd></div><div><dt>Publisher</dt><dd>${escapeHTML(source.publisher || source.institution || 'Not provided')}</dd></div><div><dt>Date</dt><dd>${escapeHTML(source.publication_date || 'Not provided')}</dd></div><div><dt>Methods</dt><dd>${escapeHTML(titleCase(source.methodology?.state || 'unknown'))}</dd></div><div><dt>Citation</dt><dd>${source.citation?.available ? 'Available' : 'Not provided'}</dd></div><div><dt>Access</dt><dd>${escapeHTML(titleCase(source.access_state || 'unknown'))}</dd></div></dl>${Array.isArray(source.limitations) && source.limitations.length ? `<p><b>Limitations:</b> ${escapeHTML(source.limitations.slice(0,2).join(' · '))}</p>` : '<p><b>Limitations:</b> Not documented.</p>'}${source.object_id ? `<div class="sc-rl-v740-source-actions" aria-label="Research state actions"><button type="button" data-sc-rl-v740-reading="reading">Reading</button><button type="button" data-sc-rl-v740-reading="reviewed">Reviewed</button><button type="button" data-sc-rl-v740-reading="rejected">Reject</button><button type="button" data-sc-rl-v740-contradiction="flagged">Flag contradiction</button></div>` : ''}</article>`).join('')}</div>` : '<p>No source objects were resolved for this context.</p>';
     qualityContent.innerHTML = `<div class="sc-rl-v730-quality-summary"><article><span>${Number(body.source_count || 0)}</span><strong>Sources</strong></article><article><span>${Number(corpus.independent_provider_count || 0)}</span><strong>Distinct providers</strong></article><article><span>${Number(summary.gap_count || 0)}</span><strong>Structural gaps</strong></article></div><div class="sc-rl-v730-quality-meta"><p><strong>Evidence levels:</strong> ${escapeHTML(levelText)}</p><p><strong>Methodology:</strong> ${escapeHTML(methodText)}</p></div><h4>Evidence gaps</h4>${gapMarkup}<h4>Source profiles</h4>${sourceMarkup}<p class="sc-rl-v730-governance-note"><strong>Interpretation boundary:</strong> These signals describe metadata completeness, provenance, methods visibility, access, citation state, and source mix. They are not a truth score, credibility score, or independent verification.</p>`;
+  }
+
+  function activeContext() {
+    const id = contextSelect ? String(contextSelect.value || '') : '';
+    return contexts.find(context => String(context.context_id || '') === id) || null;
+  }
+
+  function stateItemTitle(item) {
+    return String(item?.object_title || item?.title || item?.object_id || 'Library object');
+  }
+
+  function renderState(body) {
+    if (!statePanel || !stateContent) return;
+    statePanel.hidden = false;
+    const counts = body && body.counts ? body.counts : {};
+    const reading = counts.reading_states || {};
+    const contradiction = counts.contradiction_states || {};
+    const questions = counts.question_states || {};
+    const searches = Array.isArray(body?.recent_searches) ? body.recent_searches : [];
+    const reviewQueue = Array.isArray(body?.review_queue) ? body.review_queue : [];
+    const rejected = Array.isArray(body?.rejected_objects) ? body.rejected_objects : [];
+    const flagged = Array.isArray(body?.flagged_contradictions) ? body.flagged_contradictions : [];
+    stateQuestions = Array.isArray(body?.open_questions) ? body.open_questions : [];
+
+    const listMarkup = (items, empty, renderer) => items.length
+      ? `<div class="sc-rl-v740-state-list">${items.slice(0,12).map(renderer).join('')}</div>`
+      : `<p class="sc-rl-v740-state-empty">${escapeHTML(empty)}</p>`;
+    const searchMarkup = listMarkup(searches, 'No saved-context searches have been recorded yet.', item => `<article><strong>${escapeHTML(item.query || 'Research search')}</strong><small>${escapeHTML(item.created_utc || '')}</small></article>`);
+    const queueMarkup = listMarkup(reviewQueue, 'Nothing is waiting for review.', item => `<article><strong>${escapeHTML(stateItemTitle(item))}</strong><span>${escapeHTML(titleCase(item.reading_state || 'unread'))}</span></article>`);
+    const rejectedMarkup = listMarkup(rejected, 'No objects are currently rejected.', item => `<article><strong>${escapeHTML(stateItemTitle(item))}</strong><span>Rejected</span></article>`);
+    const contradictionMarkup = listMarkup(flagged, 'No contradiction flags are open.', item => `<article><strong>${escapeHTML(stateItemTitle(item))}</strong><span>Needs review</span><button type="button" data-sc-rl-v740-state-object="${escapeHTML(item.object_id || '')}" data-sc-rl-v740-contradiction="resolved">Resolve flag</button></article>`);
+    const questionMarkup = listMarkup(stateQuestions, 'No open research questions.', item => `<article data-question-id="${escapeHTML(item.question_id || '')}"><strong>${escapeHTML(item.question || 'Open question')}</strong><div class="sc-rl-v740-state-actions"><button type="button" data-sc-rl-v740-question-status="resolved">Resolve</button><button type="button" data-sc-rl-v740-question-status="deferred">Defer</button></div></article>`);
+
+    stateContent.innerHTML = `<div class="sc-rl-v740-state-summary"><article><span>${Number(counts.activities || 0)}</span><strong>Activity events</strong></article><article><span>${Number(questions.open || stateQuestions.length || 0)}</span><strong>Open questions</strong></article><article><span>${Number((reading.unread || 0) + (reading.reading || 0))}</span><strong>Review queue</strong></article><article><span>${Number(reading.rejected || 0)}</span><strong>Rejected</strong></article><article><span>${Number(contradiction.flagged || 0)}</span><strong>Contradictions</strong></article></div><div class="sc-rl-v740-state-grid"><section><h4>Recent searches</h4>${searchMarkup}</section><section><h4>Review queue</h4>${queueMarkup}</section><section><h4>Open questions</h4><button type="button" class="sc-rl-v740-question-new" data-sc-rl-v740-question-new>Add question</button>${questionMarkup}</section><section><h4>Rejected objects</h4>${rejectedMarkup}</section><section><h4>Contradiction flags</h4>${contradictionMarkup}</section></div><p class="sc-rl-v740-governance-note"><strong>Research-state boundary:</strong> This is inspectable workflow memory, not evidence. Rejected objects remain in provenance, and open questions are not treated as facts or assumptions.</p>`;
+  }
+
+  async function loadResearchState() {
+    if (!statePanel || !stateContent) return;
+    const context = activeContext();
+    statePanel.hidden = false;
+    if (!context || !context.context_id) {
+      stateContent.innerHTML = '<div class="sc-rl-v740-state-empty"><strong>Select a saved context first.</strong><p>Research state is owner-scoped and is only persisted for an authenticated Library, project, room, or saved research context.</p></div>';
+      return;
+    }
+    stateContent.innerHTML = '<p>Loading persistent research state…</p>';
+    if (stateRun) stateRun.disabled = true;
+    try {
+      const body = await request(`state?context_id=${encodeURIComponent(context.context_id)}`);
+      renderState(body);
+    } catch (e) {
+      stateContent.innerHTML = `<div class="sc-rl-v7-error"><strong>Research state unavailable</strong><p>${escapeHTML(e.message)}</p></div>`;
+    } finally {
+      if (stateRun) stateRun.disabled = false;
+    }
+  }
+
+  async function saveObjectState(objectId, patch) {
+    const context = activeContext();
+    if (!context || !context.context_id || !objectId) throw new Error('Select a saved context and a Library object first.');
+    return request('state/object', {
+      method: 'POST',
+      body: JSON.stringify({ context_id: context.context_id, project_id: context.project_id || '', object_id: objectId, ...patch })
+    });
+  }
+
+  async function saveQuestion(question) {
+    const context = activeContext();
+    if (!context || !context.context_id) throw new Error('Select a saved context before changing its question register.');
+    return request('state/questions', {
+      method: 'POST',
+      body: JSON.stringify({ context_id: context.context_id, project_id: context.project_id || '', ...question })
+    });
   }
 
   async function evaluateActiveContext() {
@@ -201,7 +282,10 @@
         const objectCount = Array.isArray(body.library_objects) ? body.library_objects.length : 0;
         const investigationCount = Array.isArray(body.investigations) ? body.investigations.length : 0;
         const entityCount = Array.isArray(body.entities) ? body.entities.length : 0;
-        detail.innerHTML = `<strong>Project context</strong><dl><div><dt>Investigations</dt><dd>${investigationCount}</dd></div><div><dt>Library objects</dt><dd>${objectCount}</dd></div><div><dt>Project entities</dt><dd>${entityCount}</dd></div></dl><p>Library references remain linked to their original source scope rather than copied into a generic evidence bucket.</p>`;
+        const activityCount = Array.isArray(body.research_activity) ? body.research_activity.length : 0;
+        const questionCount = Array.isArray(body.open_questions) ? body.open_questions.filter(item => String(item.status || 'open') === 'open').length : 0;
+        const reviewCount = Array.isArray(body.object_states) ? body.object_states.filter(item => ['unread','reading'].includes(String(item.reading_state || 'unread'))).length : 0;
+        detail.innerHTML = `<strong>Project context</strong><dl><div><dt>Investigations</dt><dd>${investigationCount}</dd></div><div><dt>Library objects</dt><dd>${objectCount}</dd></div><div><dt>Project entities</dt><dd>${entityCount}</dd></div><div><dt>Research activity</dt><dd>${activityCount}</dd></div><div><dt>Open questions</dt><dd>${questionCount}</dd></div><div><dt>Review queue</dt><dd>${reviewCount}</dd></div></dl><p>Library references and research state retain their original scope and remain distinct from verified evidence.</p>`;
         detail.hidden = false;
       } catch(e) { detail.textContent=e.message; detail.hidden=false; }
     }
@@ -226,6 +310,72 @@
   });
 
   qualityRun?.addEventListener('click', evaluateActiveContext);
+  stateRun?.addEventListener('click', loadResearchState);
+
+  qualityContent?.addEventListener('click', async event => {
+    const card = event.target.closest('[data-object-id]');
+    if (!card) return;
+    const objectId = String(card.dataset.objectId || '');
+    const readingButton = event.target.closest('[data-sc-rl-v740-reading]');
+    const contradictionButton = event.target.closest('[data-sc-rl-v740-contradiction]');
+    if (!readingButton && !contradictionButton) return;
+    event.target.disabled = true;
+    try {
+      if (readingButton) await saveObjectState(objectId, { reading_state: readingButton.dataset.scRlV740Reading || '' });
+      if (contradictionButton) await saveObjectState(objectId, { contradiction_state: contradictionButton.dataset.scRlV740Contradiction || '' });
+      await loadResearchState();
+    } catch (e) {
+      window.alert(e.message);
+    } finally {
+      event.target.disabled = false;
+    }
+  });
+
+  stateContent?.addEventListener('click', async event => {
+    if (event.target.closest('[data-sc-rl-v740-question-new]')) {
+      if (questionForm) questionForm.hidden = false;
+      const field = questionForm?.querySelector('textarea[name="question"], input[name="question"]');
+      field?.focus();
+      return;
+    }
+    const contradictionButton = event.target.closest('[data-sc-rl-v740-contradiction]');
+    if (contradictionButton) {
+      const objectId = String(contradictionButton.closest('[data-sc-rl-v740-state-object]')?.dataset.scRlV740StateObject || '');
+      contradictionButton.disabled = true;
+      try { await saveObjectState(objectId, { contradiction_state: contradictionButton.dataset.scRlV740Contradiction || 'resolved' }); await loadResearchState(); }
+      catch (e) { window.alert(e.message); }
+      finally { contradictionButton.disabled = false; }
+      return;
+    }
+    const statusButton = event.target.closest('[data-sc-rl-v740-question-status]');
+    if (!statusButton) return;
+    const item = statusButton.closest('[data-question-id]');
+    const questionId = String(item?.dataset.questionId || '');
+    const existing = stateQuestions.find(question => String(question.question_id || '') === questionId);
+    if (!existing) return;
+    statusButton.disabled = true;
+    try {
+      await saveQuestion({ question_id: questionId, question: existing.question, status: statusButton.dataset.scRlV740QuestionStatus || 'open', linked_object_ids: existing.linked_object_ids || [], resolution: existing.resolution || '' });
+      await loadResearchState();
+    } catch (e) { window.alert(e.message); }
+    finally { statusButton.disabled = false; }
+  });
+
+  questionForm?.addEventListener('submit', async event => {
+    event.preventDefault();
+    const data = new FormData(questionForm);
+    const question = String(data.get('question') || '').trim();
+    if (!question) { if (questionStatus) questionStatus.textContent = 'Enter a research question.'; return; }
+    if (questionStatus) questionStatus.textContent = 'Saving question…';
+    try {
+      await saveQuestion({ question, status: 'open', linked_object_ids: [] });
+      questionForm.reset();
+      questionForm.hidden = true;
+      if (questionStatus) questionStatus.textContent = '';
+      await loadResearchState();
+    } catch (e) { if (questionStatus) questionStatus.textContent = e.message; }
+  });
+  questionCancel?.addEventListener('click', () => { if (questionForm) questionForm.hidden = true; if (questionStatus) questionStatus.textContent = ''; });
 
   contextNew?.addEventListener('click', () => { if (contextForm) contextForm.hidden = false; });
   contextCancel?.addEventListener('click', () => { if (contextForm) contextForm.hidden = true; });

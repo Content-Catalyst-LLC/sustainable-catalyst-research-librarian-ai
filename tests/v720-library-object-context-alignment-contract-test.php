@@ -1,5 +1,5 @@
 <?php
-/** Static release contract for Research Librarian AI v7.3.0 Library object/context alignment. */
+/** Static release contract for Research Librarian AI v7.4.0 Library object/context alignment. */
 $root = dirname( __DIR__ );
 $main = file_get_contents( $root . '/sustainable-catalyst-research-librarian-ai.php' );
 $module = file_get_contents( $root . '/includes/class-sc-rl-v700-connected-platform.php' );
@@ -15,11 +15,11 @@ $docs = file_get_contents( $root . '/docs/V720_LIBRARY_OBJECT_MODEL_RESEARCH_CON
 $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_library_context_manifest_v7.2.0.json' ), true );
 
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 7.3.0' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '7.3.0';" ),
-    'module_version' => false !== strpos( $module, "const VERSION = '7.3.0';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.3.0"' ),
-    'sqlite_schema_13' => false !== strpos( $store, 'SCHEMA_VERSION = 13' ),
+    'version_header' => false !== strpos( $main, 'Version: 7.4.0' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '7.4.0';" ),
+    'module_version' => false !== strpos( $module, "const VERSION = '7.4.0';" ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.4.0"' ),
+    'sqlite_schema_13' => false !== strpos( $store, 'SCHEMA_VERSION = 14' ),
     'index_schema_13' => false !== strpos( $store, 'sc-research-librarian-knowledge-index/13.0' ),
     'library_table' => false !== strpos( $store, 'CREATE TABLE IF NOT EXISTS research_library_objects' ),
     'context_table' => false !== strpos( $store, 'CREATE TABLE IF NOT EXISTS research_contexts' ),
@@ -41,8 +41,8 @@ $checks = array(
     'project_link_endpoint' => false !== strpos( $backend, '/v1/library/objects/{object_id}/projects/{project_id}' ),
     'contexts_endpoint' => false !== strpos( $backend, '@app.post("/v1/research/contexts"' ),
     'context_resolve_endpoint' => false !== strpos( $backend, '/v1/research/contexts/{context_id}/resolve' ),
-    'api_schema_11' => false !== strpos( $backend, 'sc-connected-research-api/1.2' ) || false !== strpos( file_get_contents( $root . '/backend/app/platform_v7.py' ), 'sc-connected-research-api/1.2' ),
-    'workspace_schema_21' => false !== strpos( $backend, 'sc-research-librarian-public-workspace/2.2' ),
+    'api_schema_11' => false !== strpos( $backend, 'sc-connected-research-api/1.3' ) || false !== strpos( file_get_contents( $root . '/backend/app/platform_v7.py' ), 'sc-connected-research-api/1.3' ),
+    'workspace_schema_21' => false !== strpos( $backend, 'sc-research-librarian-public-workspace/2.3' ),
     'context_retrieval_priority' => false !== strpos( $backend, 'def _prioritize_context_matches' ) && false !== strpos( $backend, 'research_context_retrieval' ),
     'ask_wordpress_context_id' => false !== strpos( $main, 'research_context_id' ) && false !== strpos( $main, 'resolve_context_for_current_user' ),
     'wordpress_owner_boundary' => false !== strpos( $module, 'authorized_library_object' ) && false !== strpos( $module, 'authorized_context' ) && false !== strpos( $module, "'wp-user-' . get_current_user_id()" ),
@@ -62,5 +62,5 @@ $checks = array(
     'docs_storage_boundary' => false !== strpos( $docs, 'No Postgres migration is required' ),
 );
 $failed = array_keys( array_filter( $checks, static function ( $value ) { return ! $value; } ) );
-echo json_encode( array( 'version' => '7.3.0', 'checks' => $checks, 'passed' => count( $checks ) - count( $failed ), 'failed' => count( $failed ), 'failures' => $failed ), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . PHP_EOL;
+echo json_encode( array( 'version' => '7.4.0', 'checks' => $checks, 'passed' => count( $checks ) - count( $failed ), 'failed' => count( $failed ), 'failures' => $failed ), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . PHP_EOL;
 exit( $failed ? 1 : 0 );

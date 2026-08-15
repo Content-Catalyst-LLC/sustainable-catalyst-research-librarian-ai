@@ -1,5 +1,18 @@
 # Changelog
 
+## 7.4.0 — Persistent Research State, Reading History & Open Questions
+
+- Adds a durable, inspectable research-state ledger for searches and explicit workflow actions.
+- Adds per-Library-object reading/review state: unread, reading, reviewed, and rejected.
+- Adds contradiction flags with explicit resolution state.
+- Adds an open-question register with open, resolved, deferred, and dismissed states.
+- Adds an authenticated **Research state** workspace view and source-level Reading / Reviewed / Reject / Flag contradiction actions.
+- Carries a bounded workflow-memory summary into saved-context Librarian questions while prohibiting prior searches or open questions from becoming evidence.
+- Keeps rejected objects in provenance while removing them from context-priority retrieval unless deliberately revisited.
+- Includes activity, object state, and open questions in project backup/import.
+- Advances the ancillary SQLite workspace schema to 14 and connected API/workspace contracts to 1.3/2.3; the Neon knowledge-index schema remains 13.0 and requires no Postgres migration.
+- Preserves the complete v7.3.0 evidence-quality, v7.2.0 Library-context, and v7.1.2 Neon durability lines.
+
 ## 7.3.0 — Source Evaluation, Evidence Comparison & Research Quality Signals
 
 - Adds descriptive source profiles for source type, primary/secondary/tertiary role metadata, publisher/institution, publication date, methodology, citations, access state, provenance, and known limitations.
