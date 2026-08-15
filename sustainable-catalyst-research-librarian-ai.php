@@ -3,7 +3,7 @@
  * Plugin Name: Sustainable Catalyst Research Librarian AI
  * Plugin URI: https://sustainablecatalyst.com/platform/research-librarian/
  * Description: Site-scoped research intelligence for Sustainable Catalyst with verified retrieval, typed handoffs, answer traceability, source governance, quality evaluation, release gates, and deterministic fallback.
- * Version: 7.1.2
+ * Version: 7.2.0
  * Author: Content Catalyst LLC / Tariq Ahmad
  * Author URI: https://sustainablecatalyst.com/
  * License: MIT
@@ -251,7 +251,7 @@ if ( ! function_exists( 'sc_rl6_render_legacy_class_notice' ) ) {
             return;
         }
         $status = sc_rl6_legacy_class_status();
-        echo '<div class="notice notice-warning"><p><strong>Research Librarian AI v7.1.2 compatibility mode:</strong> A legacy Research Librarian class was already loaded before the current plugin. The collision-safe v6 bootstrap is active, so settings and shortcodes remain available.</p>';
+        echo '<div class="notice notice-warning"><p><strong>Research Librarian AI v7.2.0 compatibility mode:</strong> A legacy Research Librarian class was already loaded before the current plugin. The collision-safe v6 bootstrap is active, so settings and shortcodes remain available.</p>';
         if ( ! empty( $status['file'] ) ) {
             echo '<p>Legacy class file: <code>' . esc_html( $status['file'] ) . '</code>';
             if ( ! empty( $status['version'] ) ) {
@@ -259,7 +259,7 @@ if ( ! function_exists( 'sc_rl6_render_legacy_class_notice' ) ) {
             }
             echo '</p>';
         }
-        echo '<p>Remove the legacy duplicate, network plugin, or must-use copy after confirming the active v7.1.2 plugin is working.</p></div>';
+        echo '<p>Remove the legacy duplicate, network plugin, or must-use copy after confirming the active v7.2.0 plugin is working.</p></div>';
     }
 }
 add_action( 'admin_notices', 'sc_rl6_render_legacy_class_notice' );
@@ -274,7 +274,7 @@ final class SC_RL6_Core {
     const MAINTENANCE_HOOK = 'sc_rl_ai_index_maintenance_event';
     const AI_STATUS_OPTION = 'sc_rl_ai_live_provider_status';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const VERSION        = '7.1.2';
+    const VERSION        = '7.2.0';
     const RATE_LIMIT_REGISTRY_OPTION = 'sc_rl_ai_rate_limit_registry';
 
     private static $instance = null;
@@ -801,12 +801,17 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
 
         ob_start();
         ?>
-        <section id="<?php echo esc_attr( $root_id ); ?>" class="sc-rl-ai sc-rl-ai--workspace<?php echo $compact ? ' sc-rl-ai--compact' : ''; ?>" aria-labelledby="<?php echo esc_attr( $root_id ); ?>-title" data-workspace-version="2.0" data-endpoint="<?php echo esc_url( $endpoint ); ?>" data-routes-endpoint="<?php echo esc_url( $routes_endpoint ); ?>" data-note-endpoint="<?php echo esc_url( $note_endpoint ); ?>" data-handoff-endpoint="<?php echo esc_url( $handoff_endpoint ); ?>" data-platform-capabilities-endpoint="<?php echo esc_url( $platform_capabilities_endpoint ); ?>" data-platform-compatibility-endpoint="<?php echo esc_url( $platform_compatibility_endpoint ); ?>" data-platform-handoff-endpoint="<?php echo esc_url( $platform_handoff_endpoint ); ?>" data-platform-handoff-validate-endpoint="<?php echo esc_url( $platform_handoff_validate_endpoint ); ?>" data-platform-handoff-retry-endpoint="<?php echo esc_url( $platform_handoff_retry_endpoint ); ?>" data-platform-handoff-token-endpoint="<?php echo esc_url( $platform_handoff_token_endpoint ); ?>" data-platform-handoff-receipt-endpoint="<?php echo esc_url( $platform_handoff_receipt_endpoint ); ?>" data-artifact-return-endpoint="<?php echo esc_url( $artifact_return_endpoint ); ?>" data-deep-link-endpoint="<?php echo esc_url( $deep_link_endpoint ); ?>" data-session-endpoint="<?php echo esc_url( $session_endpoint ); ?>" data-feedback-endpoint="<?php echo esc_url( $feedback_endpoint ); ?>" data-feedback-bridge-endpoint="<?php echo esc_url( $feedback_bridge_endpoint ); ?>" data-ux-endpoint="<?php echo esc_url( $ux_endpoint ); ?>" data-ai-status-endpoint="<?php echo esc_url( $ai_status_endpoint ); ?>" data-suggest-endpoint="<?php echo esc_url( $suggest_endpoint ); ?>" data-nonce-endpoint="<?php echo esc_url( $nonce_endpoint ); ?>" data-nonce="<?php echo esc_attr( $nonce ); ?>">
+        <section id="<?php echo esc_attr( $root_id ); ?>" class="sc-rl-ai sc-rl-ai--workspace<?php echo $compact ? ' sc-rl-ai--compact' : ''; ?>" aria-labelledby="<?php echo esc_attr( $root_id ); ?>-title" data-workspace-version="2.1" data-authenticated="<?php echo is_user_logged_in() ? '1' : '0'; ?>" data-endpoint="<?php echo esc_url( $endpoint ); ?>" data-routes-endpoint="<?php echo esc_url( $routes_endpoint ); ?>" data-note-endpoint="<?php echo esc_url( $note_endpoint ); ?>" data-handoff-endpoint="<?php echo esc_url( $handoff_endpoint ); ?>" data-platform-capabilities-endpoint="<?php echo esc_url( $platform_capabilities_endpoint ); ?>" data-platform-compatibility-endpoint="<?php echo esc_url( $platform_compatibility_endpoint ); ?>" data-platform-handoff-endpoint="<?php echo esc_url( $platform_handoff_endpoint ); ?>" data-platform-handoff-validate-endpoint="<?php echo esc_url( $platform_handoff_validate_endpoint ); ?>" data-platform-handoff-retry-endpoint="<?php echo esc_url( $platform_handoff_retry_endpoint ); ?>" data-platform-handoff-token-endpoint="<?php echo esc_url( $platform_handoff_token_endpoint ); ?>" data-platform-handoff-receipt-endpoint="<?php echo esc_url( $platform_handoff_receipt_endpoint ); ?>" data-artifact-return-endpoint="<?php echo esc_url( $artifact_return_endpoint ); ?>" data-deep-link-endpoint="<?php echo esc_url( $deep_link_endpoint ); ?>" data-session-endpoint="<?php echo esc_url( $session_endpoint ); ?>" data-feedback-endpoint="<?php echo esc_url( $feedback_endpoint ); ?>" data-feedback-bridge-endpoint="<?php echo esc_url( $feedback_bridge_endpoint ); ?>" data-ux-endpoint="<?php echo esc_url( $ux_endpoint ); ?>" data-ai-status-endpoint="<?php echo esc_url( $ai_status_endpoint ); ?>" data-suggest-endpoint="<?php echo esc_url( $suggest_endpoint ); ?>" data-nonce-endpoint="<?php echo esc_url( $nonce_endpoint ); ?>" data-nonce="<?php echo esc_attr( $nonce ); ?>">
             <div class="sc-rl-ai__shell">
                 <div class="sc-rl-ai__card sc-rl-ai__ask-card">
                     <p class="sc-rl-ai__eyebrow">Research guidance workspace</p>
                     <h2 class="sc-rl-ai__title" id="<?php echo esc_attr( $root_id ); ?>-title"><?php echo esc_html( $atts['title'] ); ?></h2>
                     <p class="sc-rl-ai__intro">Choose the kind of help you need, then describe the question in your own words. Research Librarian searches Sustainable Catalyst records first and keeps sources, paths, and next actions visible.</p>
+
+                    <div class="sc-rl-ai__research-context" data-sc-rl-research-context>
+                        <div><span>Research context</span><strong data-sc-rl-context-name>Sustainable Catalyst Collection</strong><small data-sc-rl-context-boundary><?php echo is_user_logged_in() ? 'Public editorial collection. A saved private context can be selected from Research Projects & Context.' : 'Public editorial collection. Sign in to use private Library, project, or Research Room context.'; ?></small></div>
+                        <?php if ( is_user_logged_in() ) : ?><button type="button" data-sc-rl-context-clear hidden>Use public collection</button><?php endif; ?>
+                    </div>
 
                     <fieldset class="sc-rl-ai__mode-picker" data-sc-rl-mode-picker>
                         <legend>What do you need to do?</legend>
@@ -1813,6 +1818,14 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
         }
 
         $python_error = null;
+        $research_context = array();
+        $research_context_id = isset( $params['research_context_id'] ) ? sanitize_key( wp_unslash( $params['research_context_id'] ) ) : '';
+        if ( $research_context_id && is_user_logged_in() && class_exists( 'SC_RL6_V700_Connected_Platform' ) ) {
+            $resolved_context = SC_RL6_V700_Connected_Platform::resolve_context_for_current_user( $research_context_id );
+            if ( ! is_wp_error( $resolved_context ) && is_array( $resolved_context ) && is_array( $resolved_context['prompt_context'] ?? null ) ) {
+                $research_context = $resolved_context['prompt_context'];
+            }
+        }
         if ( class_exists( 'SC_RL6_V621_Endpoint_Reliability' ) && SC_RL6_V621_Endpoint_Reliability::enabled() ) {
             $session_id = isset( $params['session_id'] ) ? sanitize_key( wp_unslash( $params['session_id'] ) ) : '';
             $backend_answer = SC_RL6_V621_Endpoint_Reliability::ask(
@@ -1820,7 +1833,8 @@ Boundaries: educational routing only. Do not provide legal, financial, investmen
                 $route,
                 array( 'version' => self::VERSION, 'local_index_records' => isset( $grounding['sources'] ) && is_array( $grounding['sources'] ) ? count( $grounding['sources'] ) : 0 ),
                 $session_id,
-                $research_mode
+                $research_mode,
+                $research_context
             );
             if ( ! is_wp_error( $backend_answer ) ) {
                 $normalized = SC_RL6_V621_Endpoint_Reliability::normalize_ask_response( $backend_answer, $question, $route, $grounding );

@@ -120,3 +120,13 @@ Future work should be maintenance-led: destination intake adoption, project coll
 ## v7.1.0 — Neon Postgres Durable Index — Complete
 
 Persistent Neon Postgres generations, pgvector embeddings, idempotent batch replay, verified active-generation switching, and free-tier storage diagnostics.
+## v7.2.0 — Library Object Model & Research Context Alignment — Complete
+
+- Typed Library objects for sources, publications, recommendations, saved searches, watchlists, queues, bundles, rooms, pathways, and Workspace references
+- Explicit Sustainable Catalyst Collection, My Library, Current Project, and Current Research Room scopes
+- Provenance-preserving project links and portable Library-object backup
+- Authenticated saved-context selection in WordPress
+- Context-aware priority for verified indexed records
+- Untrusted-metadata generation boundary and preserved human publication control
+- Additive SQLite schema 13, API 1.1, and workspace 2.1
+

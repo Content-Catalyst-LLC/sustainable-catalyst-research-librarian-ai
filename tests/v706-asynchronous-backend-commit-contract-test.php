@@ -10,9 +10,9 @@ $docs = file_get_contents( $root . '/docs/V706_ASYNCHRONOUS_BACKEND_COMMIT_AMBIG
 $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_v706_async_backend_commit_manifest.json' ), true );
 
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 7.1.2' ),
-    'durable_version' => false !== strpos( $module, "const VERSION = '7.1.2';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.1.2"' ),
+    'version_header' => false !== strpos( $main, 'Version: 7.2.0' ),
+    'durable_version' => false !== strpos( $module, "const VERSION = '7.2.0';" ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.2.0"' ),
     'defer_commit_contract' => false !== strpos( $models, 'defer_commit: bool = False' ),
     'sync_passes_defer_commit' => false !== strpos( $backend, 'defer_commit=payload.defer_commit' ),
     'commit_endpoint' => false !== strpos( $backend, '/v1/knowledge/sync/jobs/{job_id}/commit' ),

@@ -118,6 +118,9 @@ $required_rest = array(
     'sc-research-librarian-ai/v1/platform/handoff/validate',
     'sc-research-librarian-ai/v1/platform/artifact/return',
     'sc-research-librarian-ai/v1/platform/handoffs/export',
+    'sc-research-librarian-ai/v1/platform/v7/object-model',
+    'sc-research-librarian-ai/v1/platform/v7/library/objects',
+    'sc-research-librarian-ai/v1/platform/v7/contexts',
 );
 $missing_rest = array_values( array_filter( $required_rest, function( $route ){ return empty( $GLOBALS['sc_rl_test_rest'][ $route ] ); } ) );
 
@@ -139,7 +142,7 @@ $result = array(
 
 echo json_encode( $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . PHP_EOL;
 
-$passed = '7.1.2' === $result['version']
+$passed = '7.2.0' === $result['version']
     && $result['core_loaded']
     && $result['legacy_class_detected']
     && empty( $result['missing_shortcodes'] )

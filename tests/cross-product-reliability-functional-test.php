@@ -47,7 +47,7 @@ $result = array(
     'unknown_version_unverified' => 'unverified' === ( $unknown_version['state'] ?? '' ) && ! empty( $unknown_version['compatible'] ),
 );
 echo json_encode( $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . PHP_EOL;
-$passed = '7.1.2' === $result['version']
+$passed = '7.2.0' === $result['version']
     && 'sc-research-handoff-delivery/1.0' === $result['delivery_schema']
     && $result['token_present']
     && $result['token_future']

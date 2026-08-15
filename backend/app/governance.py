@@ -264,7 +264,7 @@ def build_answer_trace(
         "source": source,
         "provider": provider,
         "model": model,
-        "prompt_version": "research-librarian-answer-v7.1.2",
+        "prompt_version": "research-librarian-answer-v7.2.0",
         "index_version": int(index_version),
         "index_checksum": index_checksum,
         "retrieval_profile": retrieval_profile,
@@ -345,13 +345,14 @@ def public_methodology(policy: dict[str, Any]) -> dict[str, Any]:
     return {
         "schema": METHODOLOGY_SCHEMA,
         "title": "Research Librarian Methodology and Limitations",
-        "version": "7.1.2",
+        "version": "7.2.0",
         "principles": [
             "Retrieval occurs before generation.",
             "Exact titles and verified Sustainable Catalyst records have priority.",
             "Generated answers must cite supplied evidence identifiers.",
             "Deterministic evidence remains available when AI is unavailable or fails verification.",
             "Typed platform handoffs preserve evidence and require explicit user action.",
+            "Library, project, and Research Room context is scoping metadata and does not become verified evidence or editorial endorsement by association.",
             "Ranking, source exclusions, release overrides, and publication remain under human control.",
         ],
         "evaluation": [

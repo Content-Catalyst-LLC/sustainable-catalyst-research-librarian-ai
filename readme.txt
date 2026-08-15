@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 7.1.2
+Stable tag: 7.2.0
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
@@ -12,7 +12,7 @@ A connected, site-scoped research intelligence platform for Sustainable Catalyst
 
 Research Librarian AI retrieves Sustainable Catalyst publications and documents through exact-title priority, section-aware BM25 ranking, optional Gemini embeddings, calibrated reciprocal-rank fusion, and citation-verified synthesis. WordPress remains the canonical publishing and recovery source, while FastAPI stores the production knowledge index durably in Neon Postgres with pgvector.
 
-v7.1.2 makes Neon chunk activation timeout-safe. It checkpoints every record, uses small adaptive batches, bulk-writes chunks, and reconciles WordPress transport timeouts against durable Neon state before retrying.
+v7.2.0 aligns Research Librarian with the expanded Knowledge Library. It adds typed Library objects, saved research contexts, owner-resolved WordPress context selection, provenance-preserving project links, and context-aware retrieval priority while retaining all v7.1.2 Neon timeout-safe activation behavior.
 
 == Shortcodes ==
 
@@ -38,6 +38,14 @@ v7.1.2 makes Neon chunk activation timeout-safe. It checkpoints every record, us
 [sc_research_librarian_platform_handoffs]
 
 == Changelog ==
+
+= 7.2.0 =
+* Add Library-native object types for sources, publications, recommendations, saved searches, watchlists, research queues, source bundles, Research Rooms, pathways, and Workspace references.
+* Add saved research contexts for Sustainable Catalyst Collection, My Library, Current Project, and Current Research Room.
+* Resolve private context server-side for the authenticated WordPress owner before forwarding bounded metadata to FastAPI.
+* Prioritize verified indexed records referenced by the selected context without treating private metadata as evidence.
+* Preserve editorial, personal, project, and Research Room provenance boundaries.
+* Include linked Library objects in project backup and advance the ancillary SQLite schema to 13.
 
 = 7.1.2 =
 * Process five Neon source records per chunk step by default.

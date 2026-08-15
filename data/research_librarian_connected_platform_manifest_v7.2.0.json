@@ -1,0 +1,47 @@
+{
+  "schema": "sc-connected-research-platform-manifest/1.1",
+  "version": "7.2.0",
+  "sqlite_schema": 13,
+  "workspace_schema": "sc-research-librarian-public-workspace/2.1",
+  "api_schema": "sc-connected-research-api/1.1",
+  "contracts": [
+    "sc-research-project/1.0",
+    "sc-research-investigation/1.0",
+    "sc-research-library-object-model/1.0",
+    "sc-research-library-object/1.0",
+    "sc-research-context/1.0",
+    "sc-research-context-resolution/1.0",
+    "sc-evidence-collection/1.0",
+    "sc-annotated-reading-path/1.0",
+    "sc-research-workflow/1.0",
+    "sc-uncertainty-register/1.0",
+    "sc-connected-research-backup/1.0",
+    "sc-generation-adapter/1.0"
+  ],
+  "capabilities": [
+    "persistent-projects",
+    "multi-step-investigations",
+    "library-native-object-model",
+    "saved-research-contexts",
+    "context-aware-retrieval-priority",
+    "project-library-object-links",
+    "source-scope-provenance",
+    "personal-editorial-separation",
+    "evidence-collections",
+    "annotated-reading-paths",
+    "contradiction-reports",
+    "uncertainty-registers",
+    "reusable-workflows",
+    "artifact-history",
+    "portable-backups",
+    "stable-api",
+    "provider-independent-generation-boundary",
+    "human-publication-control"
+  ],
+  "shortcodes": [
+    "sc_connected_research_workspace",
+    "sc_research_projects_summary",
+    "sc_connected_research_platform_status"
+  ],
+  "paid_infrastructure_required": false
+}

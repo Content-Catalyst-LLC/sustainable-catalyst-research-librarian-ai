@@ -36,7 +36,7 @@ from .models import (
     QualityEvaluationRequest,
     ReleaseGateRequest,
     RetentionRunRequest,
-    ResearchProjectRequest, ResearchInvestigationRequest, ProjectEntityRequest, WorkflowTemplateRequest, ContradictionRequest, UncertaintyRegisterRequest, PlatformBackupImportRequest,
+    ResearchProjectRequest, ResearchInvestigationRequest, ProjectEntityRequest, LibraryObjectRequest, ResearchContextRequest, WorkflowTemplateRequest, ContradictionRequest, UncertaintyRegisterRequest, PlatformBackupImportRequest,
     ArtifactReturnRequest,
     RetrievalCalibrationUpdate,
     RetrievalRequest,
@@ -71,6 +71,14 @@ from .retrieval import confidence, evidence_from_matches, related_titles, retrie
 from .governance import build_answer_trace, evaluate_release_gate, public_methodology, sanitize_governance_policy, source_governance
 from .store import store
 from .platform_v7 import API_SCHEMA, BACKUP_SCHEMA, backup_envelope, contradiction_report, normalize_investigation, normalize_project, uncertainty_register, verify_backup, workflow_template
+from .library_context import (
+    LIBRARY_OBJECT_MODEL_SCHEMA,
+    object_model_manifest,
+    normalize_library_object,
+    normalize_research_context,
+    resolve_research_context,
+    sanitize_inline_context,
+)
 
 
 app = FastAPI(
@@ -121,6 +129,27 @@ def _resolve_research_mode(question: str, requested: str = "auto") -> str:
     return "subject"
 
 
+def _prioritize_context_matches(matches: list[RetrievedSource], context: dict[str, Any], limit: int) -> tuple[list[RetrievedSource], dict[str, Any]]:
+    source_ids = []
+    for item in context.get("objects", []) if isinstance(context, dict) else []:
+        if not isinstance(item, dict):
+            continue
+        record_id = str(item.get("source_record_id") or "")
+        if record_id and record_id not in source_ids:
+            source_ids.append(record_id)
+    source_set = set(source_ids)
+    if not source_set:
+        return matches[:limit], {"enabled": bool(context), "source_record_ids": 0, "prioritized_matches": 0}
+    prioritized = [item for item in matches if item.id in source_set]
+    remaining = [item for item in matches if item.id not in source_set]
+    return (prioritized + remaining)[:limit], {
+        "enabled": True,
+        "source_record_ids": len(source_ids),
+        "prioritized_matches": len(prioritized),
+        "candidate_matches": len(matches),
+    }
+
+
 def _follow_up_prompts(mode: str, best: RetrievedSource | None, related: list[RetrievedSource]) -> list[str]:
     title = best.title if best else "this subject"
     prompts: list[str] = []
@@ -144,7 +173,7 @@ def _follow_up_prompts(mode: str, best: RetrievedSource | None, related: list[Re
 
 def _workspace_summary(mode: str, matches: list[RetrievedSource], related: list[RetrievedSource], ai_used: bool, gate: dict[str, Any]) -> dict[str, Any]:
     return {
-        "schema": "sc-research-librarian-public-workspace/2.0",
+        "schema": "sc-research-librarian-public-workspace/2.1",
         "mode": mode,
         "mode_label": _RESEARCH_MODES.get(mode, _RESEARCH_MODES["auto"])["label"],
         "verified_sources": len(matches),
@@ -1107,11 +1136,113 @@ def governance_export() -> dict[str, Any]:
 
 @app.get("/v1/platform/api", dependencies=[Depends(require_key)])
 def connected_api_manifest() -> dict[str, Any]:
-    return {"schema": API_SCHEMA, "version": __version__, "stability": "stable-v7", "resources": ["projects", "investigations", "entities", "workflows", "contradictions", "uncertainties", "backups", "handoffs", "artifacts"], "generation_boundary": adapter_status()}
+    return {"schema": API_SCHEMA, "version": __version__, "stability": "stable-v7", "resources": ["projects", "investigations", "entities", "library-objects", "research-contexts", "workflows", "contradictions", "uncertainties", "backups", "handoffs", "artifacts"], "object_model": object_model_manifest(), "generation_boundary": adapter_status()}
 
 @app.get("/v1/platform/summary", dependencies=[Depends(require_key)])
 def connected_platform_summary() -> dict[str, Any]:
     return store.connected_platform_summary()
+
+
+@app.get("/v1/library/object-model", dependencies=[Depends(require_key)])
+def library_object_model() -> dict[str, Any]:
+    return {"ok": True, "version": __version__, **object_model_manifest()}
+
+
+@app.get("/v1/library/objects", dependencies=[Depends(require_key)])
+def list_library_objects(limit: int = 200, owner_ref: str = "", object_type: str = "", source_scope: str = "") -> dict[str, Any]:
+    return {
+        "schema": "sc-research-library-object-list/1.0",
+        "objects": store.library_objects(limit, owner_ref, object_type, source_scope),
+        "object_model_schema": LIBRARY_OBJECT_MODEL_SCHEMA,
+    }
+
+
+@app.post("/v1/library/objects", dependencies=[Depends(require_key)])
+def save_library_object(payload: LibraryObjectRequest) -> dict[str, Any]:
+    existing = store.library_object(payload.object_id) if payload.object_id else None
+    try:
+        clean = normalize_library_object(payload.model_dump(), existing)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return store.save_library_object(clean)
+
+
+@app.get("/v1/library/objects/{object_id}", dependencies=[Depends(require_key)])
+def get_library_object(object_id: str) -> dict[str, Any]:
+    item = store.library_object(object_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Unknown Library object.")
+    return item
+
+
+@app.post("/v1/library/objects/{object_id}/projects/{project_id}", dependencies=[Depends(require_key)])
+def link_library_object_to_project(object_id: str, project_id: str) -> dict[str, Any]:
+    item = store.library_object(object_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Unknown Library object.")
+    if not store.research_project(project_id):
+        raise HTTPException(status_code=404, detail="Unknown research project.")
+    relationship = store.save_project_entity({
+        "project_id": project_id,
+        "entity_type": "library-object-ref",
+        "title": str(item.get("title") or "Library object"),
+        "payload": {
+            "library_object_id": object_id,
+            "object_type": str(item.get("object_type") or "source"),
+            "source_scope": str(item.get("source_scope") or "my-library"),
+            "object_fingerprint": str(item.get("fingerprint") or ""),
+        },
+    })
+    return {"ok": True, "version": __version__, "library_object": item, "project_link": relationship}
+
+
+@app.get("/v1/projects/{project_id}/library-objects", dependencies=[Depends(require_key)])
+def project_library_objects(project_id: str) -> dict[str, Any]:
+    try:
+        bundle = store.project_bundle(project_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"schema": "sc-project-library-object-list/1.0", "project_id": project_id, "objects": bundle.get("library_objects", [])}
+
+
+@app.get("/v1/research/contexts", dependencies=[Depends(require_key)])
+def list_research_contexts(limit: int = 100, owner_ref: str = "") -> dict[str, Any]:
+    return {
+        "schema": "sc-research-context-list/1.0",
+        "contexts": store.research_contexts(limit, owner_ref),
+        "active": store.active_research_context(owner_ref) if owner_ref else None,
+    }
+
+
+@app.post("/v1/research/contexts", dependencies=[Depends(require_key)])
+def save_research_context(payload: ResearchContextRequest) -> dict[str, Any]:
+    existing = store.research_context(payload.context_id) if payload.context_id else None
+    try:
+        context = normalize_research_context(payload.model_dump(), existing)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return store.save_research_context(context)
+
+
+@app.get("/v1/research/contexts/{context_id}", dependencies=[Depends(require_key)])
+def get_research_context(context_id: str) -> dict[str, Any]:
+    context = store.research_context(context_id)
+    if not context:
+        raise HTTPException(status_code=404, detail="Unknown research context.")
+    return context
+
+
+@app.get("/v1/research/contexts/{context_id}/resolve", dependencies=[Depends(require_key)])
+def resolve_saved_research_context(context_id: str) -> dict[str, Any]:
+    context = store.research_context(context_id)
+    if not context:
+        raise HTTPException(status_code=404, detail="Unknown research context.")
+    owner_ref = str(context.get("owner_ref") or "")
+    library_objects = store.library_objects(1000, owner_ref) if owner_ref else store.library_objects(1000)
+    project_id = str(context.get("project_id") or "")
+    project = store.research_project(project_id) if project_id else None
+    project_entities = store.project_entities(project_id, "", 1000) if project_id and project else []
+    return resolve_research_context(context, library_objects, project_entities, project)
 
 @app.get("/v1/projects", dependencies=[Depends(require_key)])
 def list_projects(limit: int = 100, owner_ref: str = "") -> dict[str, Any]:
@@ -1183,10 +1314,13 @@ def import_platform_backup(payload: PlatformBackupImportRequest) -> dict[str, An
     verification=verify_backup(payload.envelope)
     if not verification["ok"]: raise HTTPException(status_code=422,detail="Backup checksum validation failed.")
     body=payload.envelope.get("payload") or {}; project=body.get("project") or {}
-    result={"ok":True,"dry_run":payload.dry_run,"verification":verification,"counts":{"investigations":len(body.get("investigations") or []),"entities":len(body.get("entities") or [])}}
+    result={"ok":True,"dry_run":payload.dry_run,"verification":verification,"counts":{"investigations":len(body.get("investigations") or []),"entities":len(body.get("entities") or []),"library_objects":len(body.get("library_objects") or [])}}
     if not payload.dry_run:
         saved=normalize_project(project,store.research_project(str(project.get("project_id") or "")))
         store.save_research_project(saved)
+        for item in body.get("library_objects") or []:
+            if isinstance(item, dict):
+                store.save_library_object(normalize_library_object(item, store.library_object(str(item.get("object_id") or ""))))
         for item in body.get("investigations") or []: store.save_research_investigation(normalize_investigation(item,saved["project_id"],item))
         for item in body.get("entities") or []: store.save_project_entity({**item,"project_id":saved["project_id"]})
         result["project_id"]=saved["project_id"]
@@ -1223,9 +1357,18 @@ async def ask(payload: AskRequest) -> AskResponse:
     _prune_sessions()
     session_id = _session_id(payload.session_id)
     research_mode = _resolve_research_mode(payload.question, payload.research_mode)
+    inline_context = sanitize_inline_context(payload.research_context)
     records = store.records()
     calibration = store.retrieval_config()
-    matches, retrieval_diagnostics = await _hybrid_retrieve(payload.question, settings.source_limit, calibration)
+    context_source_ids = {
+        str(item.get("source_record_id") or "")
+        for item in inline_context.get("objects", [])
+        if isinstance(item, dict) and str(item.get("source_record_id") or "")
+    }
+    retrieval_limit = min(30, max(settings.source_limit, settings.source_limit * 3)) if context_source_ids else settings.source_limit
+    matches, retrieval_diagnostics = await _hybrid_retrieve(payload.question, retrieval_limit, calibration)
+    matches, context_retrieval = _prioritize_context_matches(matches, inline_context, settings.source_limit)
+    retrieval_diagnostics["research_context_retrieval"] = context_retrieval
     gate = evidence_gate(matches, retrieval_diagnostics, calibration)
     best = matches[0] if matches else None
     related = related_titles(best, records, settings.related_limit, calibration)
@@ -1255,6 +1398,8 @@ async def ask(payload: AskRequest) -> AskResponse:
         route_hint["research_mode"] = research_mode
         route_hint["research_mode_label"] = _RESEARCH_MODES[research_mode]["label"]
         route_hint["workspace_instruction"] = _RESEARCH_MODES[research_mode]["instruction"]
+        if inline_context:
+            route_hint["research_context"] = inline_context
         answer = await generate_answer(payload.question, matches, related, history, route_hint, calibration)
         citation_verification = verify_citations(answer, matches, related, calibration)
         if not citation_verification.get("ok"):
@@ -1319,6 +1464,23 @@ async def ask(payload: AskRequest) -> AskResponse:
         "governance_policy_profile": policy.get("profile", ""),
         "chain": ["question", "hybrid_retrieval", "governance_evaluation", "verified_answer", "typed_handoff_preview"],
     }
+    if inline_context:
+        provenance["research_context"] = {
+            "context_id": inline_context.get("context_id", ""),
+            "fingerprint": inline_context.get("fingerprint", ""),
+            "scopes": inline_context.get("scopes", []),
+            "object_count": len(inline_context.get("objects", [])),
+        }
+        retrieval_diagnostics["research_context"] = provenance["research_context"]
+
+    workspace = _workspace_summary(research_mode, matches, related, ai_used, gate)
+    if inline_context:
+        workspace["research_context"] = {
+            "context_id": inline_context.get("context_id", ""),
+            "title": inline_context.get("title", "Research context"),
+            "scopes": inline_context.get("scopes", []),
+            "object_count": len(inline_context.get("objects", [])),
+        }
 
     return AskResponse(
         answer=answer,
@@ -1341,7 +1503,8 @@ async def ask(payload: AskRequest) -> AskResponse:
         evidence_gate=gate,
         research_mode=research_mode,
         follow_up_prompts=_follow_up_prompts(research_mode, best, related),
-        workspace=_workspace_summary(research_mode, matches, related, ai_used, gate),
+        workspace=workspace,
+        research_context=inline_context,
         session_turns=len(_sessions[session_id]) // 2,
         capabilities=capabilities,
         typed_handoffs=typed_handoffs,

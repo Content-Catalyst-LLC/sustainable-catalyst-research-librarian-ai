@@ -1,5 +1,16 @@
 # Changelog
 
+## 7.2.0 — Library Object Model & Research Context Alignment
+
+- Adds a Library-native object model for sources, publications, recommendations, saved searches, watchlists, research queue items, source bundles, Research Rooms, pathways, and Workspace references.
+- Adds saved contexts spanning Sustainable Catalyst Collection, My Library, Current Project, and Current Research Room while preserving source-scope provenance.
+- Adds authenticated WordPress context selection with server-side owner resolution and a 50-object generation boundary.
+- Prioritizes verified indexed records referenced by the active context without converting private metadata into evidence.
+- Marks route/context metadata as untrusted in the generation prompt and preserves the verified-source citation contract.
+- Links Library objects to projects through compatibility entities and carries linked objects in portable project backups.
+- Advances the ancillary SQLite store to schema 13 and connected API/workspace contracts to 1.1/2.1.
+- Preserves the full v7.1.2 Neon/Postgres durability and timeout-safe chunk activation line.
+
 ## 7.1.2 — Timeout-Safe Chunk Processing
 
 - Reduces Neon chunk activation to five records per request by default.

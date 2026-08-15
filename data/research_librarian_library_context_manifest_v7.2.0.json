@@ -1,0 +1,71 @@
+{
+  "schema": "sc-research-librarian-library-context-manifest/1.0",
+  "version": "7.2.0",
+  "title": "Library Object Model & Research Context Alignment",
+  "sqlite_schema": 13,
+  "knowledge_index_schema": "sc-research-librarian-knowledge-index/13.0",
+  "workspace_schema": "sc-research-librarian-public-workspace/2.1",
+  "api_schema": "sc-connected-research-api/1.1",
+  "object_model": {
+    "schema": "sc-research-library-object-model/1.0",
+    "object_schema": "sc-research-library-object/1.0",
+    "context_schema": "sc-research-context/1.0",
+    "resolution_schema": "sc-research-context-resolution/1.0",
+    "object_types": [
+      "source",
+      "publication",
+      "recommendation",
+      "saved-search",
+      "watchlist",
+      "research-queue-item",
+      "source-bundle",
+      "research-room",
+      "pathway",
+      "workspace-notebook",
+      "workspace-evidence"
+    ],
+    "context_scopes": [
+      "sustainable-catalyst-collection",
+      "my-library",
+      "current-project",
+      "current-research-room"
+    ]
+  },
+  "capabilities": [
+    "library-object-normalization",
+    "source-scope-provenance",
+    "project-library-object-linking",
+    "bounded-research-contexts",
+    "active-context-selection",
+    "context-aware-retrieval-priority",
+    "context-aware-generation-routing",
+    "personal-editorial-boundary-preservation",
+    "context-aware-project-backup",
+    "wordpress-context-selector"
+  ],
+  "privacy_boundaries": {
+    "editorial_collection_is_distinct": true,
+    "personal_library_is_private_by_default": true,
+    "personal_recommendations_are_not_editorial_endorsement": true,
+    "research_room_membership_is_not_editorial_approval": true,
+    "wordpress_enforces_end_user_ownership": true
+  },
+  "generation_safety": {
+    "context_metadata_is_untrusted": true,
+    "context_metadata_is_not_verified_evidence": true,
+    "verified_source_citation_contract_remains_authoritative": true,
+    "context_object_limit": 50
+  },
+  "storage": {
+    "production_knowledge_index": "Neon Postgres with pgvector",
+    "library_context_ancillary_store": "SQLite schema 13",
+    "paid_additional_infrastructure_required": false
+  },
+  "compatibility": {
+    "v7_projects_preserved": true,
+    "v7_handoffs_preserved": true,
+    "v7_1_2_neon_durability_preserved": true,
+    "public_questions_without_selected_context_unchanged": true,
+    "human_publication_review_preserved": true
+  }
+}

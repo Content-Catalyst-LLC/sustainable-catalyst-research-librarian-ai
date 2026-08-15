@@ -442,6 +442,10 @@
     var feedbackTypeRow = root.querySelector('[data-sc-rl-feedback-type-row]');
     var feedbackRatingRow = root.querySelector('[data-sc-rl-feedback-rating-row]');
     var feedbackExpectedRow = root.querySelector('[data-sc-rl-feedback-expected-row]');
+    var contextName = root.querySelector('[data-sc-rl-context-name]');
+    var contextBoundary = root.querySelector('[data-sc-rl-context-boundary]');
+    var contextClear = root.querySelector('[data-sc-rl-context-clear]');
+    var authenticated = root.getAttribute('data-authenticated') === '1';
     var latest = null;
     var currentAskController = null;
     var currentAskKey = '';
@@ -455,6 +459,14 @@
     var suggestionTimer = null;
     var currentMode = 'auto';
     try { currentMode = window.localStorage.getItem('sc_rl_ai_research_mode') || 'auto'; } catch (e) { currentMode = 'auto'; }
+    var researchContextId = '';
+    var researchContextLabel = 'Sustainable Catalyst Collection';
+    if (authenticated) {
+      try {
+        researchContextId = window.localStorage.getItem('sc_rl_research_context_v720') || '';
+        researchContextLabel = window.localStorage.getItem('sc_rl_research_context_label_v720') || 'Sustainable Catalyst Collection';
+      } catch (e) { researchContextId = ''; }
+    }
     var modeCopy = {
       auto: ['Auto-detect', 'What are you trying to understand, find, compare, analyze, or prepare?'],
       title: ['Find a title', 'Enter an exact or partial Sustainable Catalyst title.'],
@@ -471,6 +483,29 @@
       announcer.setAttribute('aria-live', assertive ? 'assertive' : 'polite');
       announcer.textContent = '';
       window.setTimeout(function () { announcer.textContent = String(text); }, 20);
+    }
+
+    function renderResearchContext() {
+      if (contextName) contextName.textContent = researchContextId ? researchContextLabel : 'Sustainable Catalyst Collection';
+      if (contextBoundary) contextBoundary.textContent = researchContextId
+        ? 'Authenticated context. Editorial, personal, project, and Research Room source identities remain distinct.'
+        : (authenticated ? 'Public editorial collection. Select a private context from Research Projects & Context when needed.' : 'Public editorial collection. Sign in to use private Library, project, or Research Room context.');
+      if (contextClear) contextClear.hidden = !researchContextId;
+    }
+
+    function setResearchContext(id, label) {
+      researchContextId = authenticated ? String(id || '') : '';
+      researchContextLabel = String(label || 'Sustainable Catalyst Collection');
+      try {
+        if (researchContextId) {
+          window.localStorage.setItem('sc_rl_research_context_v720', researchContextId);
+          window.localStorage.setItem('sc_rl_research_context_label_v720', researchContextLabel);
+        } else {
+          window.localStorage.removeItem('sc_rl_research_context_v720');
+          window.localStorage.removeItem('sc_rl_research_context_label_v720');
+        }
+      } catch (e) {}
+      renderResearchContext();
     }
 
     function setStatus(text, state) {
@@ -673,7 +708,7 @@
         return { label: 'Invalid endpoint response', intro: 'WordPress returned a response that the Research Librarian could not read.', detail: 'Check caching, security, or REST-response modification plugins.' };
       }
       if (statusCode === 404) {
-        return { label: 'WordPress route unavailable', intro: 'The Research Librarian REST route was not found.', detail: 'Resave WordPress permalinks and confirm that the active v7.1.2 plugin registered its routes.' };
+        return { label: 'WordPress route unavailable', intro: 'The Research Librarian REST route was not found.', detail: 'Resave WordPress permalinks and confirm that the active v7.2.0 plugin registered its routes.' };
       }
       if (statusCode >= 500) {
         return { label: 'WordPress endpoint error', intro: 'WordPress reached the Research Librarian route but returned a server error.', detail: 'The Python provider status is separate from this WordPress failure.' };
@@ -714,7 +749,7 @@
         return;
       }
 
-      var askKey = currentMode + '|' + clean.toLowerCase();
+      var askKey = currentMode + '|' + researchContextId + '|' + clean.toLowerCase();
       if (currentAskController && currentAskKey === askKey) {
         setStatus('Already researching this question…', 'loading');
         return;
@@ -736,7 +771,7 @@
       var requestOptions = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: clean, research_mode: currentMode, hp: honeypot ? honeypot.value : '', session_id: sessionId })
+        body: JSON.stringify({ question: clean, research_mode: currentMode, hp: honeypot ? honeypot.value : '', session_id: sessionId, research_context_id: researchContextId })
       };
       if (currentAskController) requestOptions.signal = currentAskController.signal;
 
@@ -746,6 +781,9 @@
           latest = data;
           setProgress(true, 72, 'Preparing the direct response');
           if (data.session_id) { sessionId = String(data.session_id); try { window.localStorage.setItem('sc_rl_ai_session_id', sessionId); } catch (e) {} }
+          if (data.research_context && data.research_context.context_id) {
+            setResearchContext(data.research_context.context_id, data.research_context.title || researchContextLabel);
+          }
           if (data.ai_status) renderHealth(data.ai_status);
           if (data.ai_used) {
             setStatus('Grounded AI answer', 'ready');
@@ -1353,6 +1391,26 @@
       });
     });
     setMode(currentMode, true);
+    renderResearchContext();
+
+    if (contextClear) {
+      contextClear.addEventListener('click', function () {
+        setResearchContext('', 'Sustainable Catalyst Collection');
+        announce('Research Librarian returned to the Sustainable Catalyst public editorial collection.', false);
+      });
+    }
+    window.addEventListener('sc-rl-context-changed', function (event) {
+      var detail = event && event.detail ? event.detail : {};
+      setResearchContext(detail.contextId || '', detail.label || 'Sustainable Catalyst Collection');
+    });
+    window.addEventListener('storage', function (event) {
+      if (event.key !== 'sc_rl_research_context_v720' && event.key !== 'sc_rl_research_context_label_v720') return;
+      try {
+        researchContextId = window.localStorage.getItem('sc_rl_research_context_v720') || '';
+        researchContextLabel = window.localStorage.getItem('sc_rl_research_context_label_v720') || 'Sustainable Catalyst Collection';
+      } catch (e) { researchContextId = ''; }
+      renderResearchContext();
+    });
 
     if (resetSession) {
       resetSession.addEventListener('click', function () {

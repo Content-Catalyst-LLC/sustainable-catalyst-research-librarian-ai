@@ -20,8 +20,8 @@ from .models import KnowledgeChunk, KnowledgeRecord, utc_now
 from .governance import DEFAULT_GOVERNANCE_POLICY, sanitize_governance_policy
 
 
-SCHEMA_VERSION = 12
-INDEX_SCHEMA = "sc-research-librarian-knowledge-index/12.0"
+SCHEMA_VERSION = 13
+INDEX_SCHEMA = "sc-research-librarian-knowledge-index/13.0"
 SNAPSHOT_SCHEMA = "sc-research-librarian-runtime-snapshot/4.0"
 
 
@@ -381,6 +381,34 @@ class KnowledgeStore:
                     FOREIGN KEY(project_id) REFERENCES research_projects(project_id) ON DELETE CASCADE
                 );
                 CREATE INDEX IF NOT EXISTS idx_research_events_project ON research_project_events(project_id, created_utc DESC);
+                CREATE TABLE IF NOT EXISTS research_library_objects (
+                    object_id TEXT PRIMARY KEY,
+                    owner_ref TEXT NOT NULL DEFAULT '',
+                    object_type TEXT NOT NULL,
+                    source_scope TEXT NOT NULL DEFAULT 'my-library',
+                    visibility TEXT NOT NULL DEFAULT 'private',
+                    status TEXT NOT NULL DEFAULT 'saved',
+                    title TEXT NOT NULL DEFAULT '',
+                    created_utc TEXT NOT NULL,
+                    updated_utc TEXT NOT NULL,
+                    fingerprint TEXT NOT NULL,
+                    payload_json TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_library_objects_owner ON research_library_objects(owner_ref, updated_utc DESC);
+                CREATE INDEX IF NOT EXISTS idx_library_objects_type ON research_library_objects(owner_ref, object_type, source_scope, updated_utc DESC);
+                CREATE TABLE IF NOT EXISTS research_contexts (
+                    context_id TEXT PRIMARY KEY,
+                    owner_ref TEXT NOT NULL DEFAULT '',
+                    title TEXT NOT NULL DEFAULT '',
+                    project_id TEXT NOT NULL DEFAULT '',
+                    room_id TEXT NOT NULL DEFAULT '',
+                    active INTEGER NOT NULL DEFAULT 1,
+                    created_utc TEXT NOT NULL,
+                    updated_utc TEXT NOT NULL,
+                    fingerprint TEXT NOT NULL,
+                    payload_json TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_research_contexts_owner ON research_contexts(owner_ref, active, updated_utc DESC);
                 CREATE TABLE IF NOT EXISTS connected_platform_backups (
                     backup_id TEXT PRIMARY KEY,
                     created_utc TEXT NOT NULL,
@@ -2356,7 +2384,89 @@ class KnowledgeStore:
         handoffs=[x for x in self.platform_handoffs(1000) if str(x.get("payload",{}).get("project_id") or x.get("project_id") or "")==project_id]
         handoff_ids={str(x.get("handoff_id") or "") for x in handoffs}
         artifacts=[x for x in self.artifact_returns(1000) if str(x.get("handoff_id") or "") in handoff_ids]
-        return {"project":project,"investigations":self.research_investigations(project_id,500),"entities":self.project_entities(project_id,"",1000),"handoffs":handoffs,"artifacts":artifacts}
+        library_refs=[item for item in self.project_entities(project_id,"library-object-ref",1000)]
+        library_objects=[]
+        for item in library_refs:
+            object_id=str((item.get("payload") or {}).get("library_object_id") or "")
+            obj=self.library_object(object_id) if object_id else None
+            if obj: library_objects.append(obj)
+        return {"project":project,"investigations":self.research_investigations(project_id,500),"entities":self.project_entities(project_id,"",1000),"library_objects":library_objects,"handoffs":handoffs,"artifacts":artifacts}
+
+    def save_library_object(self, library_object: dict[str, Any]) -> dict[str, Any]:
+        with self._lock, self._connection() as connection:
+            connection.execute(
+                "INSERT OR REPLACE INTO research_library_objects(object_id,owner_ref,object_type,source_scope,visibility,status,title,created_utc,updated_utc,fingerprint,payload_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                (
+                    str(library_object.get("object_id") or ""),
+                    str(library_object.get("owner_ref") or ""),
+                    str(library_object.get("object_type") or "source"),
+                    str(library_object.get("source_scope") or "my-library"),
+                    str(library_object.get("visibility") or "private"),
+                    str(library_object.get("status") or "saved"),
+                    str(library_object.get("title") or ""),
+                    str(library_object.get("created_utc") or utc_now()),
+                    str(library_object.get("updated_utc") or utc_now()),
+                    str(library_object.get("fingerprint") or ""),
+                    _canonical_json(library_object),
+                ),
+            )
+        return library_object
+
+    def library_object(self, object_id: str) -> dict[str, Any] | None:
+        with self._lock, self._connection() as connection:
+            row=connection.execute("SELECT payload_json FROM research_library_objects WHERE object_id=?",(object_id,)).fetchone()
+            return json.loads(str(row["payload_json"])) if row else None
+
+    def library_objects(self, limit: int = 200, owner_ref: str = "", object_type: str = "", source_scope: str = "") -> list[dict[str, Any]]:
+        clauses=[]; values=[]
+        if owner_ref: clauses.append("owner_ref=?"); values.append(owner_ref)
+        if object_type: clauses.append("object_type=?"); values.append(object_type)
+        if source_scope: clauses.append("source_scope=?"); values.append(source_scope)
+        where=(" WHERE "+" AND ".join(clauses)) if clauses else ""
+        values.append(max(1,min(1000,int(limit))))
+        with self._lock, self._connection() as connection:
+            rows=connection.execute(f"SELECT payload_json FROM research_library_objects{where} ORDER BY updated_utc DESC LIMIT ?",tuple(values))
+            return [json.loads(str(row["payload_json"])) for row in rows]
+
+    def save_research_context(self, context: dict[str, Any]) -> dict[str, Any]:
+        owner_ref=str(context.get("owner_ref") or "")
+        active=1 if bool(context.get("active",True)) else 0
+        context_id=str(context.get("context_id") or "")
+        with self._lock, self._connection() as connection:
+            if owner_ref and active:
+                rows=connection.execute("SELECT context_id,payload_json FROM research_contexts WHERE owner_ref=? AND active=1 AND context_id<>?",(owner_ref,context_id)).fetchall()
+                for row in rows:
+                    prior=json.loads(str(row["payload_json"]))
+                    prior["active"]=False
+                    prior["updated_utc"]=utc_now()
+                    prior["fingerprint"]=hashlib.sha256(_canonical_json({key:value for key,value in prior.items() if key!="fingerprint"}).encode()).hexdigest()
+                    connection.execute("UPDATE research_contexts SET active=0,updated_utc=?,fingerprint=?,payload_json=? WHERE context_id=?",(prior["updated_utc"],prior["fingerprint"],_canonical_json(prior),str(row["context_id"])))
+            connection.execute(
+                "INSERT OR REPLACE INTO research_contexts(context_id,owner_ref,title,project_id,room_id,active,created_utc,updated_utc,fingerprint,payload_json) VALUES(?,?,?,?,?,?,?,?,?,?)",
+                (
+                    context_id,owner_ref,str(context.get("title") or ""),str(context.get("project_id") or ""),str(context.get("room_id") or ""),active,
+                    str(context.get("created_utc") or utc_now()),str(context.get("updated_utc") or utc_now()),str(context.get("fingerprint") or ""),_canonical_json(context),
+                ),
+            )
+        return context
+
+    def research_context(self, context_id: str) -> dict[str, Any] | None:
+        with self._lock, self._connection() as connection:
+            row=connection.execute("SELECT payload_json FROM research_contexts WHERE context_id=?",(context_id,)).fetchone()
+            return json.loads(str(row["payload_json"])) if row else None
+
+    def research_contexts(self, limit: int = 100, owner_ref: str = "") -> list[dict[str, Any]]:
+        with self._lock, self._connection() as connection:
+            if owner_ref:
+                rows=connection.execute("SELECT payload_json FROM research_contexts WHERE owner_ref=? ORDER BY active DESC, updated_utc DESC LIMIT ?",(owner_ref,max(1,min(500,int(limit)))))
+            else:
+                rows=connection.execute("SELECT payload_json FROM research_contexts ORDER BY active DESC, updated_utc DESC LIMIT ?",(max(1,min(500,int(limit))),))
+            return [json.loads(str(row["payload_json"])) for row in rows]
+
+    def active_research_context(self, owner_ref: str) -> dict[str, Any] | None:
+        with self._lock, self._connection() as connection:
+            row=connection.execute("SELECT payload_json FROM research_contexts WHERE owner_ref=? AND active=1 ORDER BY updated_utc DESC LIMIT 1",(owner_ref,)).fetchone()
+            return json.loads(str(row["payload_json"])) if row else None
 
     def save_connected_backup(self, envelope: dict[str, Any], state: str = "created") -> dict[str, Any]:
         backup_id=str(envelope.get("backup_id") or "backup-"+uuid.uuid4().hex); clean={**envelope,"backup_id":backup_id}
@@ -2371,8 +2481,8 @@ class KnowledgeStore:
 
     def connected_platform_summary(self) -> dict[str, Any]:
         with self._lock, self._connection() as connection:
-            counts={name:int(connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]) for name,table in {"projects":"research_projects","investigations":"research_investigations","entities":"research_project_entities","backups":"connected_platform_backups"}.items()}
-        return {"schema":"sc-connected-research-platform-summary/1.0","version":"7.1.2","counts":counts,"workspace_schema":"sc-research-librarian-public-workspace/2.0","api_schema":"sc-connected-research-api/1.0"}
+            counts={name:int(connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]) for name,table in {"projects":"research_projects","investigations":"research_investigations","entities":"research_project_entities","library_objects":"research_library_objects","research_contexts":"research_contexts","backups":"connected_platform_backups"}.items()}
+        return {"schema":"sc-connected-research-platform-summary/1.1","version":"7.2.0","counts":counts,"workspace_schema":"sc-research-librarian-public-workspace/2.1","api_schema":"sc-connected-research-api/1.1","object_model_schema":"sc-research-library-object-model/1.0","context_schema":"sc-research-context/1.0"}
 
 
 def create_store() -> Any:

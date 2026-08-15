@@ -202,6 +202,7 @@ class AskRequest(BaseModel):
     page_url: str = Field(default="", max_length=1600)
     route_hint: dict[str, Any] = Field(default_factory=dict)
     wordpress_status: dict[str, Any] = Field(default_factory=dict)
+    research_context: dict[str, Any] = Field(default_factory=dict)
 
 
 class AskResponse(BaseModel):
@@ -227,6 +228,7 @@ class AskResponse(BaseModel):
     research_mode: str = "auto"
     follow_up_prompts: list[str] = Field(default_factory=list)
     workspace: dict[str, Any] = Field(default_factory=dict)
+    research_context: dict[str, Any] = Field(default_factory=dict)
     session_turns: int = 0
     capabilities: list[dict[str, Any]] = Field(default_factory=list)
     typed_handoffs: list[dict[str, Any]] = Field(default_factory=list)
@@ -411,6 +413,33 @@ class ProjectEntityRequest(BaseModel):
     entity_type: str = Field(min_length=1, max_length=80)
     title: str = Field(default="", max_length=240)
     payload: dict[str, Any] = Field(default_factory=dict)
+
+
+class LibraryObjectRequest(BaseModel):
+    object_id: str = Field(default="", max_length=220)
+    object_type: str = Field(default="source", max_length=80)
+    title: str = Field(default="", max_length=500)
+    description: str = Field(default="", max_length=8000)
+    owner_ref: str = Field(default="", max_length=220)
+    source_scope: str = Field(default="", max_length=80)
+    visibility: str = Field(default="private", max_length=40)
+    status: str = Field(default="saved", max_length=60)
+    tags: list[str] = Field(default_factory=list, max_length=50)
+    relationships: dict[str, Any] = Field(default_factory=dict)
+    provenance: dict[str, Any] = Field(default_factory=dict)
+    payload: dict[str, Any] = Field(default_factory=dict)
+
+
+class ResearchContextRequest(BaseModel):
+    context_id: str = Field(default="", max_length=220)
+    title: str = Field(default="", max_length=240)
+    owner_ref: str = Field(default="", max_length=220)
+    scopes: list[str] = Field(default_factory=list, max_length=4)
+    project_id: str = Field(default="", max_length=220)
+    room_id: str = Field(default="", max_length=220)
+    selected_object_ids: list[str] = Field(default_factory=list, max_length=200)
+    filters: dict[str, Any] = Field(default_factory=dict)
+    active: bool = True
 
 class WorkflowTemplateRequest(BaseModel):
     project_id: str = Field(default="", max_length=220)
