@@ -11,9 +11,9 @@ $docs = file_get_contents( $root . '/docs/V705_TRANSACTION_RECONCILIATION_PUBLIC
 $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_v705_transaction_reconciliation_public_interface_manifest.json' ), true );
 
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 7.2.0' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '7.2.0';" ),
-    'durable_version' => false !== strpos( $module, "const VERSION = '7.2.0';" ),
+    'version_header' => false !== strpos( $main, 'Version: 7.3.0' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '7.3.0';" ),
+    'durable_version' => false !== strpos( $module, "const VERSION = '7.3.0';" ),
     'backend_status_endpoint' => false !== strpos( $backend, '/v1/knowledge/sync/jobs/{job_id}' ),
     'backend_reset_endpoint' => false !== strpos( $backend, '@app.delete("/v1/knowledge/sync/jobs/{job_id}"' ),
     'store_status_method' => false !== strpos( $store, 'def sync_job_status' ),
@@ -29,7 +29,7 @@ $checks = array(
     'visible_mode_grid' => false !== strpos( $css, 'grid-template-columns: repeat(4, minmax(0, 1fr)) !important;' ),
     'light_form_surface' => false !== strpos( $css, 'background: #fff !important;' ) && false !== strpos( $css, 'color-scheme: light !important;' ),
     'visitor_safe_offline_copy' => false !== strpos( $js, "offline: 'Verified fallback available'" ),
-    'current_route_copy' => false !== strpos( $js, 'active v7.2.0 plugin' ),
+    'current_route_copy' => false !== strpos( $js, 'active v7.3.0 plugin' ),
     'release_documentation' => false !== strpos( $docs, 'Repair and Resume Commit' ) && false !== strpos( $docs, 'one readable vertical workflow' ),
     'release_manifest' => is_array( $manifest ) && '7.0.6' === ( $manifest['version'] ?? '' ) && true === ( $manifest['transaction_recovery']['durable_wordpress_replay'] ?? false ),
 );

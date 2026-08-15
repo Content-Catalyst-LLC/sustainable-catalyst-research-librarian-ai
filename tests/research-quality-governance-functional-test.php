@@ -26,7 +26,7 @@ $result = array(
     'limitations' => count( $methodology['limitations'] ?? array() ),
 );
 echo json_encode( $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . PHP_EOL;
-$passed = '7.2.0' === $result['version']
+$passed = '7.3.0' === $result['version']
     && 'sc-research-governance-policy/1.0' === $result['policy_schema']
     && 'public-trust-v7.1.2' === $result['profile']
     && ! $result['query_text_stored']

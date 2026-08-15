@@ -441,6 +441,31 @@ class ResearchContextRequest(BaseModel):
     filters: dict[str, Any] = Field(default_factory=dict)
     active: bool = True
 
+
+
+class SourceEvaluationRequest(BaseModel):
+    object_ids: list[str] = Field(default_factory=list, max_length=200)
+    objects: list[dict[str, Any]] = Field(default_factory=list, max_length=200)
+    project_id: str = Field(default="", max_length=220)
+    question: str = Field(default="", max_length=3000)
+    persist: bool = False
+
+
+class EvidenceComparisonRequest(BaseModel):
+    object_ids: list[str] = Field(default_factory=list, max_length=100)
+    objects: list[dict[str, Any]] = Field(default_factory=list, max_length=100)
+    project_id: str = Field(default="", max_length=220)
+    question: str = Field(default="", max_length=3000)
+    persist: bool = False
+
+
+class EvidenceGapRequest(BaseModel):
+    object_ids: list[str] = Field(default_factory=list, max_length=200)
+    objects: list[dict[str, Any]] = Field(default_factory=list, max_length=200)
+    project_id: str = Field(default="", max_length=220)
+    question: str = Field(default="", max_length=3000)
+    persist: bool = False
+
 class WorkflowTemplateRequest(BaseModel):
     project_id: str = Field(default="", max_length=220)
     investigation_id: str = Field(default="", max_length=220)

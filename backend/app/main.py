@@ -36,7 +36,7 @@ from .models import (
     QualityEvaluationRequest,
     ReleaseGateRequest,
     RetentionRunRequest,
-    ResearchProjectRequest, ResearchInvestigationRequest, ProjectEntityRequest, LibraryObjectRequest, ResearchContextRequest, WorkflowTemplateRequest, ContradictionRequest, UncertaintyRegisterRequest, PlatformBackupImportRequest,
+    ResearchProjectRequest, ResearchInvestigationRequest, ProjectEntityRequest, LibraryObjectRequest, ResearchContextRequest, SourceEvaluationRequest, EvidenceComparisonRequest, EvidenceGapRequest, WorkflowTemplateRequest, ContradictionRequest, UncertaintyRegisterRequest, PlatformBackupImportRequest,
     ArtifactReturnRequest,
     RetrievalCalibrationUpdate,
     RetrievalRequest,
@@ -78,6 +78,16 @@ from .library_context import (
     normalize_research_context,
     resolve_research_context,
     sanitize_inline_context,
+)
+from .evidence_quality import (
+    SOURCE_EVALUATION_SCHEMA,
+    EVIDENCE_COMPARISON_SCHEMA,
+    EVIDENCE_GAP_SCHEMA,
+    QUALITY_SIGNALS_SCHEMA,
+    evaluate_source,
+    compare_sources,
+    evidence_gaps,
+    quality_summary,
 )
 
 
@@ -173,7 +183,7 @@ def _follow_up_prompts(mode: str, best: RetrievedSource | None, related: list[Re
 
 def _workspace_summary(mode: str, matches: list[RetrievedSource], related: list[RetrievedSource], ai_used: bool, gate: dict[str, Any]) -> dict[str, Any]:
     return {
-        "schema": "sc-research-librarian-public-workspace/2.1",
+        "schema": "sc-research-librarian-public-workspace/2.2",
         "mode": mode,
         "mode_label": _RESEARCH_MODES.get(mode, _RESEARCH_MODES["auto"])["label"],
         "verified_sources": len(matches),
@@ -1134,9 +1144,50 @@ def governance_export() -> dict[str, Any]:
     }
 
 
+
+def _resolve_quality_objects(object_ids: list[str], inline_objects: list[dict[str, Any]], limit: int = 200) -> list[dict[str, Any]]:
+    """Resolve persisted Library objects plus bounded inline objects for quality analysis."""
+    objects: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for object_id in object_ids[:limit]:
+        clean_id = str(object_id or "").strip()[:220]
+        if not clean_id or clean_id in seen:
+            continue
+        item = store.library_object(clean_id)
+        if item:
+            objects.append(item)
+            seen.add(clean_id)
+    for item in inline_objects[:limit]:
+        if not isinstance(item, dict):
+            continue
+        clean = normalize_library_object(item, item) if item.get("object_id") else normalize_library_object(item)
+        object_id = str(clean.get("object_id") or "")
+        if object_id in seen:
+            continue
+        objects.append(clean)
+        seen.add(object_id)
+        if len(objects) >= limit:
+            break
+    return objects[:limit]
+
+
+def _persist_quality_report(project_id: str, entity_type: str, title: str, payload: dict[str, Any]) -> dict[str, Any] | None:
+    clean_project_id = str(project_id or "").strip()[:220]
+    if not clean_project_id:
+        return None
+    if not store.research_project(clean_project_id):
+        raise HTTPException(status_code=404, detail="Unknown research project.")
+    snapshot = json.loads(json.dumps(payload, ensure_ascii=False, default=str))
+    return store.save_project_entity({
+        "project_id": clean_project_id,
+        "entity_type": entity_type,
+        "title": title,
+        "payload": snapshot,
+    })
+
 @app.get("/v1/platform/api", dependencies=[Depends(require_key)])
 def connected_api_manifest() -> dict[str, Any]:
-    return {"schema": API_SCHEMA, "version": __version__, "stability": "stable-v7", "resources": ["projects", "investigations", "entities", "library-objects", "research-contexts", "workflows", "contradictions", "uncertainties", "backups", "handoffs", "artifacts"], "object_model": object_model_manifest(), "generation_boundary": adapter_status()}
+    return {"schema": API_SCHEMA, "version": __version__, "stability": "stable-v7", "resources": ["projects", "investigations", "entities", "library-objects", "research-contexts", "source-evaluations", "evidence-comparisons", "evidence-gaps", "workflows", "contradictions", "uncertainties", "backups", "handoffs", "artifacts"], "object_model": object_model_manifest(), "evidence_quality": {"source_evaluation_schema": SOURCE_EVALUATION_SCHEMA, "comparison_schema": EVIDENCE_COMPARISON_SCHEMA, "gap_schema": EVIDENCE_GAP_SCHEMA, "quality_signals_schema": QUALITY_SIGNALS_SCHEMA, "truth_score": False}, "generation_boundary": adapter_status()}
 
 @app.get("/v1/platform/summary", dependencies=[Depends(require_key)])
 def connected_platform_summary() -> dict[str, Any]:
@@ -1243,6 +1294,60 @@ def resolve_saved_research_context(context_id: str) -> dict[str, Any]:
     project = store.research_project(project_id) if project_id else None
     project_entities = store.project_entities(project_id, "", 1000) if project_id and project else []
     return resolve_research_context(context, library_objects, project_entities, project)
+
+
+@app.get("/v1/research/contexts/{context_id}/evidence-quality", dependencies=[Depends(require_key)])
+def research_context_evidence_quality(context_id: str) -> dict[str, Any]:
+    resolution = resolve_saved_research_context(context_id)
+    sources = list(resolution.get("objects") or [])[:200]
+    summary = quality_summary(sources)
+    comparison = compare_sources(sources)
+    gaps = evidence_gaps(sources)
+    return {
+        "schema": QUALITY_SIGNALS_SCHEMA,
+        "version": __version__,
+        "context": resolution.get("context", {}),
+        "source_count": len(sources),
+        "summary": summary,
+        "comparison": comparison,
+        "gaps": gaps,
+    }
+
+
+@app.post("/v1/research/sources/evaluate", dependencies=[Depends(require_key)])
+def evaluate_research_sources(payload: SourceEvaluationRequest) -> dict[str, Any]:
+    sources = _resolve_quality_objects(payload.object_ids, payload.objects, 200)
+    evaluations = [evaluate_source(item) for item in sources]
+    report = {
+        "schema": "sc-source-evaluation-set/1.0",
+        "version": __version__,
+        "question": payload.question,
+        "source_count": len(evaluations),
+        "evaluations": evaluations,
+        "summary": quality_summary(sources, payload.question),
+        "governance": {"descriptive_only": True, "truth_score": False, "human_judgment_required": True},
+    }
+    if payload.persist and payload.project_id:
+        report["project_entity"] = _persist_quality_report(payload.project_id, "source-evaluation-set", "Source evaluation set", report)
+    return report
+
+
+@app.post("/v1/research/evidence/compare", dependencies=[Depends(require_key)])
+def compare_research_evidence(payload: EvidenceComparisonRequest) -> dict[str, Any]:
+    sources = _resolve_quality_objects(payload.object_ids, payload.objects, 100)
+    report = compare_sources(sources, payload.question)
+    if payload.persist and payload.project_id:
+        report["project_entity"] = _persist_quality_report(payload.project_id, "evidence-comparison", "Evidence comparison", report)
+    return report
+
+
+@app.post("/v1/research/evidence/gaps", dependencies=[Depends(require_key)])
+def find_research_evidence_gaps(payload: EvidenceGapRequest) -> dict[str, Any]:
+    sources = _resolve_quality_objects(payload.object_ids, payload.objects, 200)
+    report = evidence_gaps(sources, payload.question)
+    if payload.persist and payload.project_id:
+        report["project_entity"] = _persist_quality_report(payload.project_id, "evidence-gap-report", "Evidence gap report", report)
+    return report
 
 @app.get("/v1/projects", dependencies=[Depends(require_key)])
 def list_projects(limit: int = 100, owner_ref: str = "") -> dict[str, Any]:

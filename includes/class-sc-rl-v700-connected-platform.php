@@ -1,20 +1,21 @@
 <?php
 /**
- * Research Librarian AI v7.2.0 — Connected Research Intelligence Platform.
+ * Research Librarian AI v7.3.0 — Connected Research Intelligence Platform.
  *
- * v7.2.0 adds Library object identity and bounded research-context resolution
- * while retaining the v7 project, investigation, backup, and handoff contracts.
+ * v7.3.0 adds descriptive source evaluation, evidence comparison, and evidence-gap signals
+ * on top of the v7.2 Library object/context contracts without introducing truth scores.
  */
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 final class SC_RL6_V700_Connected_Platform {
-    const VERSION = '7.2.0';
+    const VERSION = '7.3.0';
     const OPTION_NAME = 'sc_rl_v700_platform_options';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const API_SCHEMA = 'sc-connected-research-api/1.1';
-    const WORKSPACE_SCHEMA = 'sc-research-librarian-public-workspace/2.1';
+    const API_SCHEMA = 'sc-connected-research-api/1.2';
+    const WORKSPACE_SCHEMA = 'sc-research-librarian-public-workspace/2.2';
     const OBJECT_MODEL_SCHEMA = 'sc-research-library-object-model/1.0';
     const CONTEXT_SCHEMA = 'sc-research-context/1.0';
+    const QUALITY_SCHEMA = 'sc-research-quality-signals/1.0';
 
     public static function init() {
         add_action( 'rest_api_init', array( __CLASS__, 'register_rest_routes' ), 140 );
@@ -41,6 +42,9 @@ final class SC_RL6_V700_Connected_Platform {
             'personal_library_separation' => '1',
             'source_scope_provenance' => '1',
             'human_publication_review' => '1',
+            'source_evaluation' => '1',
+            'evidence_comparison' => '1',
+            'evidence_gap_detection' => '1',
             'api_public_status' => '1',
             'default_visibility' => 'private',
         );
@@ -130,6 +134,10 @@ final class SC_RL6_V700_Connected_Platform {
         ) );
         register_rest_route( self::REST_NAMESPACE, '/platform/v7/contexts/(?P<context_id>[A-Za-z0-9._-]+)', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'rest_context' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ) );
         register_rest_route( self::REST_NAMESPACE, '/platform/v7/contexts/(?P<context_id>[A-Za-z0-9._-]+)/resolve', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'rest_resolve_context' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ) );
+        register_rest_route( self::REST_NAMESPACE, '/platform/v7/contexts/(?P<context_id>[A-Za-z0-9._-]+)/evidence-quality', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'rest_context_quality' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ) );
+        register_rest_route( self::REST_NAMESPACE, '/platform/v7/evidence/evaluate', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'rest_source_evaluate' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ) );
+        register_rest_route( self::REST_NAMESPACE, '/platform/v7/evidence/compare', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'rest_evidence_compare' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ) );
+        register_rest_route( self::REST_NAMESPACE, '/platform/v7/evidence/gaps', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'rest_evidence_gaps' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ) );
         register_rest_route( self::REST_NAMESPACE, '/platform/v7/workflows', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'rest_workflow' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ) );
         register_rest_route( self::REST_NAMESPACE, '/platform/v7/contradictions', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'rest_contradictions' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ) );
         register_rest_route( self::REST_NAMESPACE, '/platform/v7/uncertainties', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'rest_uncertainties' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ) );
@@ -163,6 +171,15 @@ final class SC_RL6_V700_Connected_Platform {
         if ( is_wp_error( $item ) ) { return $item; }
         if ( current_user_can( 'manage_options' ) || (string) ( $item['owner_ref'] ?? '' ) === self::owner_ref() ) { return $item; }
         return new WP_Error( 'sc_rl_v720_library_object_forbidden', 'You do not have access to this Library object.', array( 'status' => 403 ) );
+    }
+
+    private static function authorized_object_ids( $object_ids ) {
+        $clean = self::sanitize_list( is_array( $object_ids ) ? $object_ids : array(), 200 );
+        foreach ( $clean as $object_id ) {
+            $item = self::authorized_library_object( $object_id );
+            if ( is_wp_error( $item ) ) { return $item; }
+        }
+        return $clean;
     }
 
     private static function authorized_context( $context_id ) {
@@ -203,8 +220,11 @@ final class SC_RL6_V700_Connected_Platform {
     public static function rest_save_library_object( WP_REST_Request $request ) {
         $p=self::checked_json($request); if(is_wp_error($p)){return $p;}
         if(!empty($p['object_id'])){$existing=self::authorized_library_object($p['object_id']);if(is_wp_error($existing)){return $existing;}}
+        $requested_scope=sanitize_key($p['source_scope']??'my-library');
+        $member_scopes=array('my-library','current-project','current-research-room','external-reference');
+        $source_scope=current_user_can('manage_options')?$requested_scope:(in_array($requested_scope,$member_scopes,true)?$requested_scope:'my-library');
         $payload=array(
-            'object_id'=>sanitize_text_field($p['object_id']??''),'object_type'=>sanitize_key($p['object_type']??'source'),'title'=>sanitize_text_field($p['title']??''),'description'=>sanitize_textarea_field($p['description']??''),'owner_ref'=>self::owner_ref(),'source_scope'=>sanitize_key($p['source_scope']??'my-library'),'visibility'=>sanitize_key($p['visibility']??'private'),'status'=>sanitize_key($p['status']??'saved'),'tags'=>self::sanitize_list($p['tags']??array(),50),'relationships'=>self::sanitize_tree($p['relationships']??array()),'provenance'=>self::sanitize_tree($p['provenance']??array()),'payload'=>self::sanitize_tree($p['payload']??array()),
+            'object_id'=>sanitize_text_field($p['object_id']??''),'object_type'=>sanitize_key($p['object_type']??'source'),'title'=>sanitize_text_field($p['title']??''),'description'=>sanitize_textarea_field($p['description']??''),'owner_ref'=>self::owner_ref(),'source_scope'=>$source_scope,'visibility'=>sanitize_key($p['visibility']??'private'),'status'=>sanitize_key($p['status']??'saved'),'tags'=>self::sanitize_list($p['tags']??array(),50),'relationships'=>self::sanitize_tree($p['relationships']??array()),'provenance'=>self::sanitize_tree($p['provenance']??array()),'payload'=>self::sanitize_tree($p['payload']??array()),
         );
         return self::respond(self::backend_request('/v1/library/objects','POST',$payload));
     }
@@ -219,6 +239,23 @@ final class SC_RL6_V700_Connected_Platform {
     public static function rest_contexts() { return self::respond(self::backend_request('/v1/research/contexts?limit=100&owner_ref='.rawurlencode(self::owner_ref()),'GET')); }
     public static function rest_context( WP_REST_Request $request ) { return self::respond(self::authorized_context($request['context_id'])); }
     public static function rest_resolve_context( WP_REST_Request $request ) { return self::respond(self::resolve_context_for_current_user($request['context_id'])); }
+
+    public static function rest_context_quality( WP_REST_Request $request ) {
+        $context=self::authorized_context($request['context_id']); if(is_wp_error($context)){return $context;}
+        return self::respond(self::backend_request('/v1/research/contexts/'.rawurlencode(sanitize_text_field($request['context_id'])).'/evidence-quality','GET'));
+    }
+
+    private static function evidence_payload( WP_REST_Request $request ) {
+        $p=self::checked_json($request); if(is_wp_error($p)){return $p;}
+        $ids=self::authorized_object_ids($p['object_ids']??array()); if(is_wp_error($ids)){return $ids;}
+        $project_id=sanitize_text_field($p['project_id']??''); $persist=!empty($p['persist']);
+        if($project_id){$project=self::authorized_project($project_id,$persist);if(is_wp_error($project)){return $project;}}
+        return array('object_ids'=>$ids,'project_id'=>$project_id,'question'=>sanitize_textarea_field($p['question']??''),'persist'=>$persist);
+    }
+
+    public static function rest_source_evaluate( WP_REST_Request $request ) { $payload=self::evidence_payload($request); if(is_wp_error($payload)){return $payload;} return self::respond(self::backend_request('/v1/research/sources/evaluate','POST',$payload)); }
+    public static function rest_evidence_compare( WP_REST_Request $request ) { $payload=self::evidence_payload($request); if(is_wp_error($payload)){return $payload;} return self::respond(self::backend_request('/v1/research/evidence/compare','POST',$payload)); }
+    public static function rest_evidence_gaps( WP_REST_Request $request ) { $payload=self::evidence_payload($request); if(is_wp_error($payload)){return $payload;} return self::respond(self::backend_request('/v1/research/evidence/gaps','POST',$payload)); }
 
     public static function rest_save_context( WP_REST_Request $request ) {
         $p=self::checked_json($request); if(is_wp_error($p)){return $p;}
@@ -244,22 +281,22 @@ final class SC_RL6_V700_Connected_Platform {
             update_option(self::OPTION_NAME,$clean,false); echo '<div class="notice notice-success"><p>Connected Research Platform settings saved.</p></div>';
         }
         $o=self::options(); $status=self::backend_request('/v1/platform/summary','GET'); $api=self::backend_request('/v1/platform/api','GET'); ?>
-        <div class="wrap"><h1>Connected Research Intelligence Platform</h1><p>v7.2.0 aligns Research Librarian with the Knowledge Library object model. Personal Library material, Sustainable Catalyst editorial material, project evidence, and Research Room context retain separate provenance while participating in one research workflow.</p>
+        <div class="wrap"><h1>Connected Research Intelligence Platform</h1><p>v7.3.0 adds source evaluation, evidence comparison, and evidence-gap signals to the Library-native context model. The system exposes the basis for research-quality judgments without assigning an automatic credibility or truth score.</p>
         <div class="card"><h2>Platform state</h2><p><strong>Backend:</strong> <?php echo is_wp_error($status)?esc_html($status->get_error_message()):'Connected'; ?></p><p><strong>Stable API:</strong> <?php echo is_wp_error($api)?'Unavailable':esc_html($api['schema']??self::API_SCHEMA); ?></p><p><strong>Object model:</strong> <?php echo esc_html(self::OBJECT_MODEL_SCHEMA); ?></p><?php if(!is_wp_error($status)&&!empty($status['counts'])):?><ul><?php foreach($status['counts'] as $key=>$value):?><li><strong><?php echo esc_html(ucwords(str_replace('_',' ',$key))); ?>:</strong> <?php echo esc_html(absint($value)); ?></li><?php endforeach;?></ul><?php endif;?></div>
-        <form method="post"><?php wp_nonce_field('sc_rl_v700_save');?><table class="form-table"><tbody><tr><th>Workspace mode</th><td><select name="workspace_mode"><?php foreach(array('public'=>'Public','editorial'=>'Editorial','institutional'=>'Institutional') as $value=>$label):?><option value="<?php echo esc_attr($value);?>" <?php selected($o['workspace_mode'],$value);?>><?php echo esc_html($label);?></option><?php endforeach;?></select></td></tr><tr><th>Default visibility</th><td><select name="default_visibility"><?php foreach(array('private'=>'Private','shared'=>'Shared','public'=>'Public') as $value=>$label):?><option value="<?php echo esc_attr($value);?>" <?php selected($o['default_visibility'],$value);?>><?php echo esc_html($label);?></option><?php endforeach;?></select></td></tr><tr><th>Capabilities</th><td><?php foreach(array('persistent_projects'=>'Persistent projects','portable_backups'=>'Portable backup and recovery','contradiction_analysis'=>'Contradiction tracking','uncertainty_registers'=>'Uncertainty registers','workflow_templates'=>'Reusable workflow templates','library_object_model'=>'Library object model','contextual_research'=>'Context-aware research','personal_library_separation'=>'Personal/editorial collection separation','source_scope_provenance'=>'Source-scope provenance','human_publication_review'=>'Human publication review','api_public_status'=>'Public platform status') as $key=>$label):?><label style="display:block;margin:0 0 8px"><input type="checkbox" name="<?php echo esc_attr($key);?>" <?php checked($o[$key],'1');?>> <?php echo esc_html($label);?></label><?php endforeach;?></td></tr></tbody></table><?php submit_button('Save Platform Settings','primary','sc_rl_v700_save');?></form>
+        <form method="post"><?php wp_nonce_field('sc_rl_v700_save');?><table class="form-table"><tbody><tr><th>Workspace mode</th><td><select name="workspace_mode"><?php foreach(array('public'=>'Public','editorial'=>'Editorial','institutional'=>'Institutional') as $value=>$label):?><option value="<?php echo esc_attr($value);?>" <?php selected($o['workspace_mode'],$value);?>><?php echo esc_html($label);?></option><?php endforeach;?></select></td></tr><tr><th>Default visibility</th><td><select name="default_visibility"><?php foreach(array('private'=>'Private','shared'=>'Shared','public'=>'Public') as $value=>$label):?><option value="<?php echo esc_attr($value);?>" <?php selected($o['default_visibility'],$value);?>><?php echo esc_html($label);?></option><?php endforeach;?></select></td></tr><tr><th>Capabilities</th><td><?php foreach(array('persistent_projects'=>'Persistent projects','portable_backups'=>'Portable backup and recovery','contradiction_analysis'=>'Contradiction tracking','uncertainty_registers'=>'Uncertainty registers','workflow_templates'=>'Reusable workflow templates','library_object_model'=>'Library object model','contextual_research'=>'Context-aware research','personal_library_separation'=>'Personal/editorial collection separation','source_scope_provenance'=>'Source-scope provenance','human_publication_review'=>'Human publication review','source_evaluation'=>'Descriptive source evaluation','evidence_comparison'=>'Evidence comparison','evidence_gap_detection'=>'Evidence-gap detection','api_public_status'=>'Public platform status') as $key=>$label):?><label style="display:block;margin:0 0 8px"><input type="checkbox" name="<?php echo esc_attr($key);?>" <?php checked($o[$key],'1');?>> <?php echo esc_html($label);?></label><?php endforeach;?></td></tr></tbody></table><?php submit_button('Save Platform Settings','primary','sc_rl_v700_save');?></form>
         <p><code>[sc_connected_research_workspace]</code> renders the authenticated project and research-context workspace. <code>[sc_research_projects_summary]</code> and <code>[sc_connected_research_platform_status]</code> render compact summaries.</p></div><?php
     }
 
     private static function enqueue_workspace_assets() {
         wp_enqueue_style( 'sc-research-librarian-ai' );
         wp_enqueue_script( 'sc-rl-v700-connected-platform', plugins_url( '../assets/sc-research-platform-v7.js', __FILE__ ), array(), self::VERSION, true );
-        wp_localize_script( 'sc-rl-v700-connected-platform', 'SCRLPlatformV7', array( 'root' => esc_url_raw( rest_url( self::REST_NAMESPACE . '/platform/v7/' ) ), 'nonce' => wp_create_nonce( 'wp_rest' ), 'authenticated' => is_user_logged_in(), 'workspaceMode' => self::options()['workspace_mode'], 'objectModelSchema' => self::OBJECT_MODEL_SCHEMA, 'contextSchema' => self::CONTEXT_SCHEMA ) );
+        wp_localize_script( 'sc-rl-v700-connected-platform', 'SCRLPlatformV7', array( 'root' => esc_url_raw( rest_url( self::REST_NAMESPACE . '/platform/v7/' ) ), 'nonce' => wp_create_nonce( 'wp_rest' ), 'authenticated' => is_user_logged_in(), 'workspaceMode' => self::options()['workspace_mode'], 'objectModelSchema' => self::OBJECT_MODEL_SCHEMA, 'contextSchema' => self::CONTEXT_SCHEMA, 'qualitySchema' => self::QUALITY_SCHEMA ) );
     }
 
     public static function render_workspace() {
         self::enqueue_workspace_assets(); ob_start(); ?>
         <section class="sc-rl-v7-platform sc-rl-v7-platform--context" data-sc-rl-v7-workspace>
-          <header><p class="sc-rl-product__eyebrow">Connected Research Intelligence Platform</p><h2>Research Projects &amp; Context</h2><p>Move between Sustainable Catalyst's editorial collection, your private Library, active projects, and Research Rooms without collapsing their provenance or visibility boundaries.</p></header>
+          <header><p class="sc-rl-product__eyebrow">Connected Research Intelligence Platform</p><h2>Research Projects, Context &amp; Evidence Quality</h2><p>Move between Sustainable Catalyst's editorial collection, your private Library, active projects, and Research Rooms while comparing source metadata, methodology, provenance, limitations, and structural evidence gaps without collapsing provenance or assigning truth scores.</p></header>
           <div class="sc-rl-v720-context-model" aria-label="Research context model">
             <article><span>Editorial</span><strong>Sustainable Catalyst Collection</strong><p>Public knowledge and official editorial recommendations.</p></article>
             <article><span>Private</span><strong>My Library</strong><p>Your saved sources, recommendations, searches, watchlists, and queue.</p></article>
@@ -271,6 +308,7 @@ final class SC_RL6_V700_Connected_Platform {
             <div><span>Active Librarian context</span><strong data-sc-rl-v720-context-label>Loading…</strong><small data-sc-rl-v720-context-detail>Checking your saved research context.</small></div>
             <label>Context<select data-sc-rl-v720-context-select aria-label="Active Research Librarian context"><option value="">Sustainable Catalyst Collection</option></select></label>
             <button type="button" data-sc-rl-v720-context-new>New context</button>
+            <button type="button" data-sc-rl-v730-quality-run>Evaluate context</button>
           </div>
           <form class="sc-rl-v720-context-form" data-sc-rl-v720-context-form hidden>
             <label>Context name<input name="title" maxlength="240" value="My Library research"></label>
@@ -278,10 +316,14 @@ final class SC_RL6_V700_Connected_Platform {
             <label>Project<select name="project_id" data-sc-rl-v720-context-project><option value="">No project</option></select></label>
             <button type="submit">Save context</button><button type="button" data-sc-rl-v720-context-cancel>Cancel</button><p role="status" aria-live="polite" data-sc-rl-v720-context-status></p>
           </form>
+          <section class="sc-rl-v730-quality-panel" data-sc-rl-v730-quality-panel hidden aria-live="polite">
+            <header><p class="sc-rl-product__eyebrow">Evidence Quality Signals</p><h3>Context evidence review</h3><p>Descriptive source metadata and structural gaps only. No automatic credibility or truth score is assigned.</p></header>
+            <div data-sc-rl-v730-quality-content><p>Select an authenticated context and run an evaluation.</p></div>
+          </section>
           <div class="sc-rl-v7-layout"><aside class="sc-rl-v7-create"><h3>New project</h3><form data-sc-rl-v7-project-form><label>Project title<input name="title" required maxlength="240"></label><label>Research objective<textarea name="objective" rows="5" maxlength="4000"></textarea></label><button type="submit">Create project</button><p role="status" aria-live="polite" data-sc-rl-v7-form-status></p></form><div class="sc-rl-v720-library-summary" data-sc-rl-v720-library-summary><strong>Library objects</strong><p>Loading your Library object model…</p></div></aside><div><div class="sc-rl-v7-toolbar"><h3>Your projects</h3><button type="button" data-sc-rl-v7-refresh>Refresh</button></div><div data-sc-rl-v7-projects role="region" aria-live="polite"><p>Loading research projects…</p></div></div></div><?php endif;?>
         </section><?php return ob_get_clean();
     }
 
     public static function render_summary() { $status=self::backend_request('/v1/platform/summary','GET'); $counts=is_wp_error($status)?array('projects'=>0,'investigations'=>0,'entities'=>0,'library_objects'=>0,'research_contexts'=>0,'backups'=>0):($status['counts']??array()); ob_start();?><section class="sc-rl-v7-summary"><p class="sc-rl-product__eyebrow">Connected Research Platform</p><h2>Research Workspace Summary</h2><div class="sc-rl-product__grid"><?php foreach($counts as $key=>$value):?><article><span><?php echo esc_html(absint($value));?></span><strong><?php echo esc_html(ucwords(str_replace('_',' ',$key)));?></strong></article><?php endforeach;?></div></section><?php return ob_get_clean(); }
-    public static function render_status() { $status=self::backend_request('/v1/platform/summary','GET'); $connected=!is_wp_error($status); ob_start();?><section class="sc-rl-governance sc-rl-governance--status"><p class="sc-rl-product__eyebrow">Platform Status</p><h2>Connected Research Intelligence</h2><div class="sc-rl-product__grid"><article><span><?php echo $connected?'Connected':'Fallback';?></span><strong>Platform state</strong><p><?php echo $connected?'Persistent project and Library-context services are available.':'The public Librarian remains available; private research context requires the backend.';?></p></article><article><span>v7.2.0</span><strong>Stable API</strong><p><?php echo esc_html(self::API_SCHEMA);?></p></article><article><span>Separated</span><strong>Context boundaries</strong><p>Editorial, personal, project, and Research Room material retain distinct provenance.</p></article></div></section><?php return ob_get_clean(); }
+    public static function render_status() { $status=self::backend_request('/v1/platform/summary','GET'); $connected=!is_wp_error($status); ob_start();?><section class="sc-rl-governance sc-rl-governance--status"><p class="sc-rl-product__eyebrow">Platform Status</p><h2>Connected Research Intelligence</h2><div class="sc-rl-product__grid"><article><span><?php echo $connected?'Connected':'Fallback';?></span><strong>Platform state</strong><p><?php echo $connected?'Persistent project, Library-context, and evidence-quality services are available.':'The public Librarian remains available; private research context requires the backend.';?></p></article><article><span>v7.3.0</span><strong>Stable API</strong><p><?php echo esc_html(self::API_SCHEMA);?></p></article><article><span>No score</span><strong>Evidence quality</strong><p>Source evaluation is descriptive and basis-visible; human judgment remains required.</p></article></div></section><?php return ob_get_clean(); }
 }

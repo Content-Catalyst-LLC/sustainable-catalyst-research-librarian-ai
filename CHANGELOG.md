@@ -1,5 +1,16 @@
 # Changelog
 
+## 7.3.0 — Source Evaluation, Evidence Comparison & Research Quality Signals
+
+- Adds descriptive source profiles for source type, primary/secondary/tertiary role metadata, publisher/institution, publication date, methodology, citations, access state, provenance, and known limitations.
+- Adds side-by-side evidence comparison and corpus-level source-mix/provider-diversity summaries.
+- Adds deterministic structural evidence-gap detection for missing source diversity, primary evidence, methods visibility, dates, citation metadata, limitations, and comparison contrast.
+- Adds an authenticated **Evaluate context** action to the Connected Research Workspace.
+- Carries bounded quality signals through resolved research contexts while explicitly keeping them separate from verified evidence.
+- Forbids synthetic truth/credibility scores, automatic winners, and automatic source rejection; human judgment remains required.
+- Persists optional evaluation/comparison/gap reports as existing project entities, requiring no database migration.
+- Advances connected API/workspace contracts to 1.2/2.2 and preserves the complete v7.2.0 Library-context and v7.1.2 Neon durability lines.
+
 ## 7.2.0 — Library Object Model & Research Context Alignment
 
 - Adds a Library-native object model for sources, publications, recommendations, saved searches, watchlists, research queue items, source bundles, Research Rooms, pathways, and Workspace references.
@@ -363,6 +374,17 @@
 
 # Changelog
 
+## 7.3.0 — Source Evaluation, Evidence Comparison & Research Quality Signals
+
+- Adds descriptive source profiles for source type, primary/secondary/tertiary role metadata, publisher/institution, publication date, methodology, citations, access state, provenance, and known limitations.
+- Adds side-by-side evidence comparison and corpus-level source-mix/provider-diversity summaries.
+- Adds deterministic structural evidence-gap detection for missing source diversity, primary evidence, methods visibility, dates, citation metadata, limitations, and comparison contrast.
+- Adds an authenticated **Evaluate context** action to the Connected Research Workspace.
+- Carries bounded quality signals through resolved research contexts while explicitly keeping them separate from verified evidence.
+- Forbids synthetic truth/credibility scores, automatic winners, and automatic source rejection; human judgment remains required.
+- Persists optional evaluation/comparison/gap reports as existing project entities, requiring no database migration.
+- Advances connected API/workspace contracts to 1.2/2.2 and preserves the complete v7.2.0 Library-context and v7.1.2 Neon durability lines.
+
 ## v5.3.3 — Pre-v5.4 Integration Bridge
 
 - Added Feature Suggestions v3 contextual feedback compatibility without a hard plugin dependency.
@@ -427,6 +449,17 @@
 
 # Changelog
 
+## 7.3.0 — Source Evaluation, Evidence Comparison & Research Quality Signals
+
+- Adds descriptive source profiles for source type, primary/secondary/tertiary role metadata, publisher/institution, publication date, methodology, citations, access state, provenance, and known limitations.
+- Adds side-by-side evidence comparison and corpus-level source-mix/provider-diversity summaries.
+- Adds deterministic structural evidence-gap detection for missing source diversity, primary evidence, methods visibility, dates, citation metadata, limitations, and comparison contrast.
+- Adds an authenticated **Evaluate context** action to the Connected Research Workspace.
+- Carries bounded quality signals through resolved research contexts while explicitly keeping them separate from verified evidence.
+- Forbids synthetic truth/credibility scores, automatic winners, and automatic source rejection; human judgment remains required.
+- Persists optional evaluation/comparison/gap reports as existing project entities, requiring no database migration.
+- Advances connected API/workspace contracts to 1.2/2.2 and preserves the complete v7.2.0 Library-context and v7.1.2 Neon durability lines.
+
 ## v5.1.0 — Live Public Experience QA, Prompt Library, and UX Calibration
 
 - Added live public experience QA status.
@@ -459,6 +492,17 @@
 
 # Changelog
 
+## 7.3.0 — Source Evaluation, Evidence Comparison & Research Quality Signals
+
+- Adds descriptive source profiles for source type, primary/secondary/tertiary role metadata, publisher/institution, publication date, methodology, citations, access state, provenance, and known limitations.
+- Adds side-by-side evidence comparison and corpus-level source-mix/provider-diversity summaries.
+- Adds deterministic structural evidence-gap detection for missing source diversity, primary evidence, methods visibility, dates, citation metadata, limitations, and comparison contrast.
+- Adds an authenticated **Evaluate context** action to the Connected Research Workspace.
+- Carries bounded quality signals through resolved research contexts while explicitly keeping them separate from verified evidence.
+- Forbids synthetic truth/credibility scores, automatic winners, and automatic source rejection; human judgment remains required.
+- Persists optional evaluation/comparison/gap reports as existing project entities, requiring no database migration.
+- Advances connected API/workspace contracts to 1.2/2.2 and preserves the complete v7.2.0 Library-context and v7.1.2 Neon durability lines.
+
 ## v4.9.0 — Public Documentation Page Generator
 
 - Added public-safe documentation generator.
@@ -489,6 +533,17 @@
 - Added path builder UI while keeping the public assistant answer layout intact.
 
 # Changelog
+
+## 7.3.0 — Source Evaluation, Evidence Comparison & Research Quality Signals
+
+- Adds descriptive source profiles for source type, primary/secondary/tertiary role metadata, publisher/institution, publication date, methodology, citations, access state, provenance, and known limitations.
+- Adds side-by-side evidence comparison and corpus-level source-mix/provider-diversity summaries.
+- Adds deterministic structural evidence-gap detection for missing source diversity, primary evidence, methods visibility, dates, citation metadata, limitations, and comparison contrast.
+- Adds an authenticated **Evaluate context** action to the Connected Research Workspace.
+- Carries bounded quality signals through resolved research contexts while explicitly keeping them separate from verified evidence.
+- Forbids synthetic truth/credibility scores, automatic winners, and automatic source rejection; human judgment remains required.
+- Persists optional evaluation/comparison/gap reports as existing project entities, requiring no database migration.
+- Advances connected API/workspace contracts to 1.2/2.2 and preserves the complete v7.2.0 Library-context and v7.1.2 Neon durability lines.
 
 ## v4.7.1 — Guided Research Paths and Multi-Step Route Builder
 
@@ -572,6 +627,17 @@
 
 # Changelog
 
+## 7.3.0 — Source Evaluation, Evidence Comparison & Research Quality Signals
+
+- Adds descriptive source profiles for source type, primary/secondary/tertiary role metadata, publisher/institution, publication date, methodology, citations, access state, provenance, and known limitations.
+- Adds side-by-side evidence comparison and corpus-level source-mix/provider-diversity summaries.
+- Adds deterministic structural evidence-gap detection for missing source diversity, primary evidence, methods visibility, dates, citation metadata, limitations, and comparison contrast.
+- Adds an authenticated **Evaluate context** action to the Connected Research Workspace.
+- Carries bounded quality signals through resolved research contexts while explicitly keeping them separate from verified evidence.
+- Forbids synthetic truth/credibility scores, automatic winners, and automatic source rejection; human judgment remains required.
+- Persists optional evaluation/comparison/gap reports as existing project entities, requiring no database migration.
+- Advances connected API/workspace contracts to 1.2/2.2 and preserves the complete v7.2.0 Library-context and v7.1.2 Neon durability lines.
+
 ## 3.9.0 — Scheduled Index Maintenance, Sitemap Sync, and Health Alerts
 
 - Added scheduled knowledge-index maintenance.
@@ -583,6 +649,17 @@
 - Added health/alert configuration for index maintenance.
 
 # Changelog
+
+## 7.3.0 — Source Evaluation, Evidence Comparison & Research Quality Signals
+
+- Adds descriptive source profiles for source type, primary/secondary/tertiary role metadata, publisher/institution, publication date, methodology, citations, access state, provenance, and known limitations.
+- Adds side-by-side evidence comparison and corpus-level source-mix/provider-diversity summaries.
+- Adds deterministic structural evidence-gap detection for missing source diversity, primary evidence, methods visibility, dates, citation metadata, limitations, and comparison contrast.
+- Adds an authenticated **Evaluate context** action to the Connected Research Workspace.
+- Carries bounded quality signals through resolved research contexts while explicitly keeping them separate from verified evidence.
+- Forbids synthetic truth/credibility scores, automatic winners, and automatic source rejection; human judgment remains required.
+- Persists optional evaluation/comparison/gap reports as existing project entities, requiring no database migration.
+- Advances connected API/workspace contracts to 1.2/2.2 and preserves the complete v7.2.0 Library-context and v7.1.2 Neon durability lines.
 
 ## v3.8.0 — Governance, Privacy Controls, and Retention Policies
 
@@ -641,6 +718,17 @@
 - Preserved v3.3.3 Gemini key-persistence and embedding queue behavior.
 
 # Changelog
+
+## 7.3.0 — Source Evaluation, Evidence Comparison & Research Quality Signals
+
+- Adds descriptive source profiles for source type, primary/secondary/tertiary role metadata, publisher/institution, publication date, methodology, citations, access state, provenance, and known limitations.
+- Adds side-by-side evidence comparison and corpus-level source-mix/provider-diversity summaries.
+- Adds deterministic structural evidence-gap detection for missing source diversity, primary evidence, methods visibility, dates, citation metadata, limitations, and comparison contrast.
+- Adds an authenticated **Evaluate context** action to the Connected Research Workspace.
+- Carries bounded quality signals through resolved research contexts while explicitly keeping them separate from verified evidence.
+- Forbids synthetic truth/credibility scores, automatic winners, and automatic source rejection; human judgment remains required.
+- Persists optional evaluation/comparison/gap reports as existing project entities, requiring no database migration.
+- Advances connected API/workspace contracts to 1.2/2.2 and preserves the complete v7.2.0 Library-context and v7.1.2 Neon durability lines.
 
 ## 3.7.0 — Feedback, Correction Queue, and Knowledge Gap Triage
 

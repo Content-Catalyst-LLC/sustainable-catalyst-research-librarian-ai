@@ -15,6 +15,7 @@ from typing import Any
 import uuid
 
 from .models import utc_now
+from .evidence_quality import compact_source_quality
 
 LIBRARY_OBJECT_MODEL_SCHEMA = "sc-research-library-object-model/1.0"
 LIBRARY_OBJECT_SCHEMA = "sc-research-library-object/1.0"
@@ -285,6 +286,7 @@ def resolve_research_context(
             "status": str(item.get("status") or ""),
             "source_record_id": record_id,
             "canonical_url": canonical_url,
+            "quality_signals": compact_source_quality(item),
         })
         if record_id and record_id not in record_ids:
             record_ids.append(record_id)
@@ -310,7 +312,7 @@ def resolve_research_context(
             "project_id": str(context.get("project_id") or ""),
             "room_id": str(context.get("room_id") or ""),
             "objects": prompt_objects,
-            "boundary_note": "Keep Sustainable Catalyst editorial material, private personal Library material, project material, and Research Room material visibly distinct. Personal saves and recommendations are not editorial endorsement.",
+            "boundary_note": "Keep Sustainable Catalyst editorial material, private personal Library material, project material, and Research Room material visibly distinct. Personal saves and recommendations are not editorial endorsement. Source quality signals are descriptive metadata, not truth scores or independent verification.",
         },
         "retrieval_hints": {
             "source_record_ids": record_ids[:100],
@@ -339,6 +341,7 @@ def sanitize_inline_context(value: Any) -> dict[str, Any]:
         source_scope = str(item.get("source_scope") or "external-reference")[:80]
         if source_scope not in SOURCE_SCOPES:
             source_scope = "external-reference"
+        quality = item.get("quality_signals") if isinstance(item.get("quality_signals"), dict) else {}
         objects.append({
             "object_id": str(item.get("object_id") or "")[:220],
             "object_type": object_type,
@@ -347,6 +350,19 @@ def sanitize_inline_context(value: Any) -> dict[str, Any]:
             "status": str(item.get("status") or "")[:60],
             "source_record_id": str(item.get("source_record_id") or "")[:220],
             "canonical_url": str(item.get("canonical_url") or "")[:1600],
+            "quality_signals": {
+                "source_type": str(quality.get("source_type") or "")[:100],
+                "evidence_level": str(quality.get("evidence_level") or "unknown")[:40],
+                "publisher": str(quality.get("publisher") or "")[:240],
+                "institution": str(quality.get("institution") or "")[:240],
+                "publication_date": str(quality.get("publication_date") or "")[:80],
+                "methodology_state": str(quality.get("methodology_state") or "unknown")[:40],
+                "citation_available": bool(quality.get("citation_available", False)),
+                "access_state": str(quality.get("access_state") or "unknown")[:40],
+                "limitations_count": max(0, min(100, int(quality.get("limitations_count") or 0))),
+                "metadata_state": str(quality.get("metadata_state") or "")[:80],
+                "quality_note": "Descriptive source metadata only; not a truth or credibility score.",
+            },
         })
     clean = {
         "schema": "sc-research-context-prompt/1.0",
@@ -356,7 +372,7 @@ def sanitize_inline_context(value: Any) -> dict[str, Any]:
         "project_id": str(prompt.get("project_id") or "")[:220],
         "room_id": str(prompt.get("room_id") or "")[:220],
         "objects": objects,
-        "boundary_note": "Keep Sustainable Catalyst editorial material, private personal Library material, project material, and Research Room material visibly distinct. Personal saves and recommendations are not editorial endorsement.",
+        "boundary_note": "Keep Sustainable Catalyst editorial material, private personal Library material, project material, and Research Room material visibly distinct. Personal saves and recommendations are not editorial endorsement. Source quality signals are descriptive metadata, not truth scores or independent verification.",
     }
     clean["fingerprint"] = fingerprint(clean)
     return clean

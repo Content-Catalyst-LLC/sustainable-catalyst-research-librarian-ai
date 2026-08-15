@@ -1,0 +1,62 @@
+{
+  "schema": "sc-research-librarian-source-evaluation-manifest/1.0",
+  "version": "7.3.0",
+  "title": "Source Evaluation, Evidence Comparison & Research Quality Signals",
+  "sqlite_schema": 13,
+  "knowledge_index_schema": "sc-research-librarian-knowledge-index/13.0",
+  "workspace_schema": "sc-research-librarian-public-workspace/2.2",
+  "api_schema": "sc-connected-research-api/1.2",
+  "quality_schemas": {
+    "source_evaluation": "sc-source-evaluation/1.0",
+    "evidence_comparison": "sc-evidence-comparison/1.0",
+    "evidence_gap_report": "sc-evidence-gap-report/1.0",
+    "quality_signals": "sc-research-quality-signals/1.0"
+  },
+  "capabilities": [
+    "descriptive-source-profiles",
+    "primary-secondary-source-role-metadata",
+    "publisher-institution-visibility",
+    "publication-date-visibility",
+    "methodology-visibility",
+    "citation-metadata-visibility",
+    "access-state-visibility",
+    "provenance-preservation",
+    "known-limitations-visibility",
+    "side-by-side-evidence-comparison",
+    "provider-diversity-signals",
+    "structural-evidence-gap-detection",
+    "context-wide-evidence-quality-review",
+    "project-persisted-quality-reports",
+    "bounded-quality-signals-in-research-context"
+  ],
+  "governance": {
+    "truth_score": false,
+    "credibility_score": false,
+    "automatic_winner": false,
+    "automatic_source_rejection": false,
+    "metadata_is_independent_verification": false,
+    "human_judgment_required": true,
+    "absence_of_gap_is_proof": false
+  },
+  "privacy_boundaries": {
+    "wordpress_owner_authorization_required": true,
+    "private_library_scope_preserved": true,
+    "project_scope_preserved": true,
+    "research_room_scope_preserved": true,
+    "editorial_and_personal_material_remain_distinct": true,
+    "editorial_scope_write_requires_admin": true
+  },
+  "storage": {
+    "new_database_migration_required": false,
+    "quality_reports_persist_as_existing_project_entities": true,
+    "production_knowledge_index": "Neon Postgres with pgvector",
+    "ancillary_workspace_store": "SQLite schema 13"
+  },
+  "compatibility": {
+    "v7_2_library_object_model_preserved": true,
+    "v7_2_context_resolution_preserved": true,
+    "v7_1_2_neon_durability_preserved": true,
+    "verified_retrieval_and_citation_contract_preserved": true,
+    "public_questions_without_private_context_unchanged": true
+  }
+}

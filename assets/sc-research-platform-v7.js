@@ -17,6 +17,9 @@
   const contextCancel = root.querySelector('[data-sc-rl-v720-context-cancel]');
   const contextStatus = root.querySelector('[data-sc-rl-v720-context-status]');
   const contextProject = root.querySelector('[data-sc-rl-v720-context-project]');
+  const qualityRun = root.querySelector('[data-sc-rl-v730-quality-run]');
+  const qualityPanel = root.querySelector('[data-sc-rl-v730-quality-panel]');
+  const qualityContent = root.querySelector('[data-sc-rl-v730-quality-content]');
   const headers = { 'Content-Type': 'application/json', 'X-WP-Nonce': cfg.nonce };
   let projects = [];
   let contexts = [];
@@ -46,6 +49,7 @@
     if (contextLabel) contextLabel.textContent = contextName;
     if (contextDetail) contextDetail.textContent = detail || (contextId ? 'This context will be carried into authenticated Research Librarian questions.' : 'Public editorial collection only.');
     if (contextSelect) contextSelect.value = contextId;
+    if (qualityPanel) qualityPanel.hidden = true;
     window.dispatchEvent(new CustomEvent('sc-rl-context-changed', { detail: { contextId, label: contextName } }));
   }
 
@@ -87,6 +91,42 @@
       setActiveContext(selected.context_id, selected.title, scopes);
     } else {
       setActiveContext('', 'Sustainable Catalyst Collection', 'Public editorial collection only.');
+    }
+  }
+
+  function renderQuality(body) {
+    if (!qualityPanel || !qualityContent) return;
+    qualityPanel.hidden = false;
+    const summary = body && body.summary ? body.summary : {};
+    const corpus = summary.corpus || {};
+    const gapsBody = body && body.gaps ? body.gaps : {};
+    const comparison = body && body.comparison ? body.comparison : {};
+    const sources = Array.isArray(comparison.sources) ? comparison.sources : [];
+    const gaps = Array.isArray(gapsBody.gaps) ? gapsBody.gaps : [];
+    const levelText = Object.entries(corpus.evidence_levels || {}).map(([key,value]) => `${value} ${titleCase(key)}`).join(' · ') || 'Not classified';
+    const methodText = Object.entries(corpus.methodology_states || {}).map(([key,value]) => `${value} ${titleCase(key)}`).join(' · ') || 'Not documented';
+    const gapMarkup = gaps.length ? `<div class="sc-rl-v730-gap-list">${gaps.slice(0,8).map(g => `<article data-severity="${escapeHTML(g.severity)}"><span>${escapeHTML(g.severity)}</span><strong>${escapeHTML(titleCase(g.category))}</strong><p>${escapeHTML(g.statement)}</p><small>${escapeHTML(g.suggested_action)}</small></article>`).join('')}</div>` : '<div class="sc-rl-v730-no-gaps"><strong>No structural gaps detected by this metadata check.</strong><p>This does not prove the source set is complete or correct; human review is still required.</p></div>';
+    const sourceMarkup = sources.length ? `<div class="sc-rl-v730-source-grid">${sources.slice(0,8).map(source => `<article><span>${escapeHTML(titleCase(source.evidence_level || 'unknown'))}</span><strong>${escapeHTML(source.title)}</strong><dl><div><dt>Type</dt><dd>${escapeHTML(source.source_type || 'Unknown')}</dd></div><div><dt>Publisher</dt><dd>${escapeHTML(source.publisher || source.institution || 'Not provided')}</dd></div><div><dt>Date</dt><dd>${escapeHTML(source.publication_date || 'Not provided')}</dd></div><div><dt>Methods</dt><dd>${escapeHTML(titleCase(source.methodology?.state || 'unknown'))}</dd></div><div><dt>Citation</dt><dd>${source.citation?.available ? 'Available' : 'Not provided'}</dd></div><div><dt>Access</dt><dd>${escapeHTML(titleCase(source.access_state || 'unknown'))}</dd></div></dl>${Array.isArray(source.limitations) && source.limitations.length ? `<p><b>Limitations:</b> ${escapeHTML(source.limitations.slice(0,2).join(' · '))}</p>` : '<p><b>Limitations:</b> Not documented.</p>'}</article>`).join('')}</div>` : '<p>No source objects were resolved for this context.</p>';
+    qualityContent.innerHTML = `<div class="sc-rl-v730-quality-summary"><article><span>${Number(body.source_count || 0)}</span><strong>Sources</strong></article><article><span>${Number(corpus.independent_provider_count || 0)}</span><strong>Distinct providers</strong></article><article><span>${Number(summary.gap_count || 0)}</span><strong>Structural gaps</strong></article></div><div class="sc-rl-v730-quality-meta"><p><strong>Evidence levels:</strong> ${escapeHTML(levelText)}</p><p><strong>Methodology:</strong> ${escapeHTML(methodText)}</p></div><h4>Evidence gaps</h4>${gapMarkup}<h4>Source profiles</h4>${sourceMarkup}<p class="sc-rl-v730-governance-note"><strong>Interpretation boundary:</strong> These signals describe metadata completeness, provenance, methods visibility, access, citation state, and source mix. They are not a truth score, credibility score, or independent verification.</p>`;
+  }
+
+  async function evaluateActiveContext() {
+    if (!qualityPanel || !qualityContent) return;
+    const id = contextSelect ? String(contextSelect.value || '') : '';
+    qualityPanel.hidden = false;
+    if (!id) {
+      qualityContent.innerHTML = '<div class="sc-rl-v730-no-gaps"><strong>Select a saved context first.</strong><p>Create or select My Library, Current Project, Current Research Room, or an authenticated editorial context before running a source evaluation.</p></div>';
+      return;
+    }
+    qualityContent.innerHTML = '<p>Evaluating source metadata and evidence structure…</p>';
+    if (qualityRun) qualityRun.disabled = true;
+    try {
+      const body = await request(`contexts/${encodeURIComponent(id)}/evidence-quality`);
+      renderQuality(body);
+    } catch (e) {
+      qualityContent.innerHTML = `<div class="sc-rl-v7-error"><strong>Evidence review unavailable</strong><p>${escapeHTML(e.message)}</p></div>`;
+    } finally {
+      if (qualityRun) qualityRun.disabled = false;
     }
   }
 
@@ -184,6 +224,8 @@
       setActiveContext(updated.context_id, updated.title, (updated.scopes || []).map(titleCase).join(' · '));
     } catch (e) { if (contextDetail) contextDetail.textContent = e.message; }
   });
+
+  qualityRun?.addEventListener('click', evaluateActiveContext);
 
   contextNew?.addEventListener('click', () => { if (contextForm) contextForm.hidden = false; });
   contextCancel?.addEventListener('click', () => { if (contextForm) contextForm.hidden = true; });
