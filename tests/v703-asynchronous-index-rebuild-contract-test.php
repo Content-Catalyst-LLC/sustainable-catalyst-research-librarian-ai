@@ -4,8 +4,8 @@ $main = file_get_contents( $root . '/sustainable-catalyst-research-librarian-ai.
 $module = file_get_contents( $root . '/includes/class-sc-rl-v630-durable-index.php' );
 $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_v703_async_index_recovery_manifest.json' ), true );
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 7.4.0' ),
-    'version_constant' => false !== strpos( $module, "const VERSION = '7.4.0';" ),
+    'version_header' => false !== strpos( $main, 'Version: 7.5.0' ),
+    'version_constant' => false !== strpos( $module, "const VERSION = '7.5.0';" ),
     'background_hook' => false !== strpos( $module, "const BUILD_HOOK = 'sc_rl_v703_index_build_event'" ) && false !== strpos( $module, "run_index_build_job" ),
     'persistent_state' => false !== strpos( $module, "sc_rl_v703_index_build_state" ) && false !== strpos( $module, "sc-rl-async-index-build/7.1.2" ),
     'bounded_start' => false !== strpos( $module, 'start_index_build' ) && false !== strpos( $module, 'The browser can be closed while background batches continue.' ),

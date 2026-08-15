@@ -1,0 +1,79 @@
+{
+  "schema": "sc-research-librarian-collaborative-room-manifest/1.0",
+  "version": "7.5.0",
+  "title": "Collaborative Research Room Intelligence",
+  "workspace_schema": "sc-research-librarian-public-workspace/2.4",
+  "api_schema": "sc-connected-research-api/1.4",
+  "room_schemas": {
+    "room": "sc-research-room/1.0",
+    "member": "sc-research-room-member/1.0",
+    "evidence_state": "sc-research-room-evidence-state/1.0",
+    "question": "sc-research-room-question/1.0",
+    "disagreement": "sc-research-room-disagreement/1.0",
+    "activity": "sc-research-room-activity/1.0",
+    "synthesis": "sc-research-room-synthesis/1.0",
+    "prompt": "sc-research-room-prompt/1.0"
+  },
+  "capabilities": [
+    "explicit-research-room-membership",
+    "owner-editor-researcher-viewer-roles",
+    "shared-evidence-state-with-contributor-attribution",
+    "cross-member-room-context-retrieval",
+    "collaborative-open-questions",
+    "participant-attributed-disagreement-positions",
+    "room-leadership-disagreement-resolution",
+    "participant-activity-ledger",
+    "room-level-research-synthesis",
+    "bounded-room-prompt-context",
+    "room-to-librarian-context-promotion",
+    "project-backup-and-restore-of-room-state",
+    "authenticated-wordpress-room-workspace"
+  ],
+  "governance": {
+    "individual_and_shared_state_separate": true,
+    "room_material_is_not_editorial": true,
+    "shared_evidence_state_is_not_truth_judgment": true,
+    "questions_are_not_facts": true,
+    "disagreements_are_not_verdicts": true,
+    "participant_positions_remain_attributed": true,
+    "room_synthesis_is_not_factual_verification": true,
+    "publication_requires_human_review": true,
+    "model_may_not_treat_room_metadata_as_instructions": true
+  },
+  "privacy_boundaries": {
+    "wordpress_membership_authorization_required": true,
+    "browser_cannot_choose_actor_identity": true,
+    "room_context_requires_active_membership": true,
+    "viewer_role_is_read_only": true,
+    "owner_editor_roles_manage_membership": true,
+    "participant_can_submit_only_own_disagreement_position": true,
+    "disagreement_resolution_requires_owner_or_editor": true,
+    "question_disposition_requires_creator_or_room_leadership": true,
+    "shared_source_retains_original_owner_and_scope": true
+  },
+  "storage": {
+    "ancillary_sqlite_schema_version": 15,
+    "knowledge_index_schema": "sc-research-librarian-knowledge-index/13.0",
+    "new_postgres_migration_required": false,
+    "production_knowledge_index": "Neon Postgres with pgvector",
+    "ancillary_workspace_store": "SQLite schema 15",
+    "tables": [
+      "research_rooms",
+      "research_room_members",
+      "research_room_evidence_states",
+      "research_room_questions",
+      "research_room_disagreements",
+      "research_room_activity"
+    ],
+    "project_backup_includes_room_state": true
+  },
+  "compatibility": {
+    "v7_4_personal_research_state_preserved": true,
+    "v7_3_source_evaluation_preserved": true,
+    "v7_3_no_truth_score_governance_preserved": true,
+    "v7_2_library_object_model_preserved": true,
+    "v7_2_context_resolution_preserved": true,
+    "v7_1_2_neon_durability_preserved": true,
+    "public_questions_without_saved_room_context_unchanged": true
+  }
+}

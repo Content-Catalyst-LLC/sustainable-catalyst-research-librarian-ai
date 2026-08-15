@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 7.4.0
+Stable tag: 7.5.0
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
@@ -12,7 +12,7 @@ A connected, site-scoped research intelligence platform for Sustainable Catalyst
 
 Research Librarian AI retrieves Sustainable Catalyst publications and documents through exact-title priority, section-aware BM25 ranking, optional Gemini embeddings, calibrated reciprocal-rank fusion, and citation-verified synthesis. WordPress remains the canonical publishing and recovery source, while FastAPI stores the production knowledge index durably in Neon Postgres with pgvector.
 
-v7.4.0 adds persistent, inspectable research state to the Library-native context model: research activity history, per-object reading/review/rejection state, contradiction flags, and an open-question register. This workflow memory is explicitly separated from factual evidence and preserves all v7.3.0 evidence-quality, v7.2.0 context, and v7.1.2 Neon timeout-safe activation behavior.
+v7.5.0 turns Research Rooms into durable, membership-authorized collaboration objects with explicit roles, shared evidence state, collaborative questions, participant-attributed disagreements, activity history, and bounded room synthesis. Shared room state remains separate from personal v7.4.0 research state, and room metadata is never treated as verified evidence or model instructions.
 
 == Shortcodes ==
 
@@ -38,6 +38,16 @@ v7.4.0 adds persistent, inspectable research state to the Library-native context
 [sc_research_librarian_platform_handoffs]
 
 == Changelog ==
+
+= 7.5.0 =
+* Add durable Research Rooms with Owner, Editor, Researcher, and Viewer membership roles.
+* Add shared evidence state that preserves original Library ownership, source scope, and provenance.
+* Add collaborative questions, participant-attributed disagreement positions, and participant activity history.
+* Add bounded room synthesis and room-to-Librarian-context promotion without treating collaboration metadata as evidence.
+* Resolve actor identity server-side through WordPress and require active room membership for room-scoped context.
+* Keep v7.4 personal reading/review/rejection state separate from shared room state.
+* Include project-linked room state in portable backup/import.
+* Advance ancillary SQLite to schema 15 and connected API/workspace contracts to 1.4/2.4; the Neon knowledge index remains schema 13.0 with no Postgres migration.
 
 = 7.4.0 =
 * Add a durable research activity ledger for saved-context searches and explicit workflow actions.

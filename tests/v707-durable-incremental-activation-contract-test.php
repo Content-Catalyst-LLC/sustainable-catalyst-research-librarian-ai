@@ -10,11 +10,11 @@ $docs = file_get_contents( $root . '/docs/V707_DURABLE_INCREMENTAL_INDEX_ACTIVAT
 $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_v707_durable_incremental_activation_manifest.json' ), true );
 
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 7.4.0' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '7.4.0';" ),
-    'durable_version' => false !== strpos( $module, "const VERSION = '7.4.0';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.4.0"' ),
-    'schema_eleven' => false !== strpos( $store, 'SCHEMA_VERSION = 14' ),
+    'version_header' => false !== strpos( $main, 'Version: 7.5.0' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '7.5.0';" ),
+    'durable_version' => false !== strpos( $module, "const VERSION = '7.5.0';" ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.5.0"' ),
+    'schema_eleven' => false !== strpos( $store, 'SCHEMA_VERSION = 15' ),
     'index_schema_eleven' => false !== strpos( $store, 'sc-research-librarian-knowledge-index/13.0' ),
     'no_background_tasks' => false === strpos( $backend, 'BackgroundTasks' ) && false === strpos( $backend, 'background_tasks.add_task' ),
     'commit_step_endpoint' => false !== strpos( $backend, '/v1/knowledge/sync/jobs/{job_id}/commit/step' ),

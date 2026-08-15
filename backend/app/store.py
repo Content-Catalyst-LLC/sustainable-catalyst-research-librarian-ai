@@ -20,7 +20,7 @@ from .models import KnowledgeChunk, KnowledgeRecord, utc_now
 from .governance import DEFAULT_GOVERNANCE_POLICY, sanitize_governance_policy
 
 
-SCHEMA_VERSION = 14
+SCHEMA_VERSION = 15
 INDEX_SCHEMA = "sc-research-librarian-knowledge-index/13.0"
 SNAPSHOT_SCHEMA = "sc-research-librarian-runtime-snapshot/4.0"
 
@@ -449,6 +449,76 @@ class KnowledgeStore:
                     payload_json TEXT NOT NULL
                 );
                 CREATE INDEX IF NOT EXISTS idx_research_questions_scope ON research_open_questions(owner_ref, project_id, context_id, status, updated_utc DESC);
+                CREATE TABLE IF NOT EXISTS research_rooms (
+                    room_id TEXT PRIMARY KEY,
+                    owner_ref TEXT NOT NULL DEFAULT '',
+                    project_id TEXT NOT NULL DEFAULT '',
+                    status TEXT NOT NULL DEFAULT 'active',
+                    title TEXT NOT NULL DEFAULT '',
+                    created_utc TEXT NOT NULL,
+                    updated_utc TEXT NOT NULL,
+                    fingerprint TEXT NOT NULL,
+                    payload_json TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_research_rooms_owner ON research_rooms(owner_ref, status, updated_utc DESC);
+                CREATE TABLE IF NOT EXISTS research_room_members (
+                    membership_id TEXT PRIMARY KEY,
+                    room_id TEXT NOT NULL,
+                    member_ref TEXT NOT NULL,
+                    role TEXT NOT NULL DEFAULT 'researcher',
+                    status TEXT NOT NULL DEFAULT 'active',
+                    updated_utc TEXT NOT NULL,
+                    fingerprint TEXT NOT NULL,
+                    payload_json TEXT NOT NULL,
+                    UNIQUE(room_id, member_ref)
+                );
+                CREATE INDEX IF NOT EXISTS idx_room_members_member ON research_room_members(member_ref, status, updated_utc DESC);
+                CREATE INDEX IF NOT EXISTS idx_room_members_room ON research_room_members(room_id, status, role, updated_utc DESC);
+                CREATE TABLE IF NOT EXISTS research_room_evidence_states (
+                    state_id TEXT PRIMARY KEY,
+                    room_id TEXT NOT NULL,
+                    object_id TEXT NOT NULL,
+                    state TEXT NOT NULL DEFAULT 'proposed',
+                    contributed_by_ref TEXT NOT NULL DEFAULT '',
+                    updated_utc TEXT NOT NULL,
+                    fingerprint TEXT NOT NULL,
+                    payload_json TEXT NOT NULL,
+                    UNIQUE(room_id, object_id)
+                );
+                CREATE INDEX IF NOT EXISTS idx_room_evidence_room ON research_room_evidence_states(room_id, state, updated_utc DESC);
+                CREATE TABLE IF NOT EXISTS research_room_questions (
+                    question_id TEXT PRIMARY KEY,
+                    room_id TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'open',
+                    created_by_ref TEXT NOT NULL DEFAULT '',
+                    created_utc TEXT NOT NULL,
+                    updated_utc TEXT NOT NULL,
+                    fingerprint TEXT NOT NULL,
+                    payload_json TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_room_questions_room ON research_room_questions(room_id, status, updated_utc DESC);
+                CREATE TABLE IF NOT EXISTS research_room_disagreements (
+                    disagreement_id TEXT PRIMARY KEY,
+                    room_id TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'open',
+                    created_by_ref TEXT NOT NULL DEFAULT '',
+                    created_utc TEXT NOT NULL,
+                    updated_utc TEXT NOT NULL,
+                    fingerprint TEXT NOT NULL,
+                    payload_json TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_room_disagreements_room ON research_room_disagreements(room_id, status, updated_utc DESC);
+                CREATE TABLE IF NOT EXISTS research_room_activity (
+                    event_id TEXT PRIMARY KEY,
+                    room_id TEXT NOT NULL,
+                    actor_ref TEXT NOT NULL DEFAULT '',
+                    event_type TEXT NOT NULL DEFAULT 'note',
+                    created_utc TEXT NOT NULL,
+                    fingerprint TEXT NOT NULL,
+                    payload_json TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_room_activity_room ON research_room_activity(room_id, created_utc DESC);
+                CREATE INDEX IF NOT EXISTS idx_room_activity_actor ON research_room_activity(actor_ref, created_utc DESC);
                 CREATE TABLE IF NOT EXISTS connected_platform_backups (
                     backup_id TEXT PRIMARY KEY,
                     created_utc TEXT NOT NULL,
@@ -2431,7 +2501,25 @@ class KnowledgeStore:
             obj=self.library_object(object_id) if object_id else None
             if obj: library_objects.append(obj)
         owner_ref=str(project.get("owner_ref") or "")
-        return {"project":project,"investigations":self.research_investigations(project_id,500),"entities":self.project_entities(project_id,"",1000),"library_objects":library_objects,"research_activity":self.research_activities(1000,owner_ref,project_id),"object_states":self.research_object_states(1000,owner_ref,project_id),"open_questions":self.research_open_questions(1000,owner_ref,project_id),"handoffs":handoffs,"artifacts":artifacts}
+        rooms=[room for room in self.research_rooms(1000) if str(room.get("project_id") or "")==project_id]
+        room_bundles=[]
+        known_objects={str(item.get("object_id") or "") for item in library_objects}
+        for room in rooms:
+            room_id=str(room.get("room_id") or "")
+            room_objects=self.library_objects_for_room(room_id,1000)
+            for obj in room_objects:
+                object_id=str(obj.get("object_id") or "")
+                if object_id and object_id not in known_objects:
+                    known_objects.add(object_id); library_objects.append(obj)
+            room_bundles.append({
+                "room":room,
+                "members":self.room_members(room_id,500),
+                "evidence_states":self.room_evidence_states(room_id,1000),
+                "questions":self.room_questions(room_id,500),
+                "disagreements":self.room_disagreements(room_id,500),
+                "activity":self.room_activities(room_id,1000),
+            })
+        return {"project":project,"investigations":self.research_investigations(project_id,500),"entities":self.project_entities(project_id,"",1000),"library_objects":library_objects,"research_activity":self.research_activities(1000,owner_ref,project_id),"object_states":self.research_object_states(1000,owner_ref,project_id),"open_questions":self.research_open_questions(1000,owner_ref,project_id),"research_rooms":room_bundles,"handoffs":handoffs,"artifacts":artifacts}
 
     def save_library_object(self, library_object: dict[str, Any]) -> dict[str, Any]:
         with self._lock, self._connection() as connection:
@@ -2590,6 +2678,155 @@ class KnowledgeStore:
             rows=connection.execute(f"SELECT payload_json FROM research_open_questions{where} ORDER BY updated_utc DESC LIMIT ?",tuple(values))
             return [json.loads(str(row["payload_json"])) for row in rows]
 
+    def library_objects_for_room(self, room_id: str, limit: int = 1000) -> list[dict[str, Any]]:
+        room_id=str(room_id or "")
+        if not room_id:
+            return []
+        with self._lock, self._connection() as connection:
+            rows=connection.execute("SELECT payload_json FROM research_library_objects ORDER BY updated_utc DESC LIMIT ?",(max(1,min(5000,int(limit))),))
+            objects=[]
+            for row in rows:
+                try:
+                    item=json.loads(str(row["payload_json"]))
+                except Exception:
+                    continue
+                relationships=item.get("relationships") if isinstance(item.get("relationships"),dict) else {}
+                if room_id in set(relationships.get("room_ids") or []):
+                    objects.append(item)
+            return objects[:max(1,min(1000,int(limit)))]
+
+    def save_research_room(self, room: dict[str, Any]) -> dict[str, Any]:
+        with self._lock, self._connection() as connection:
+            connection.execute(
+                "INSERT OR REPLACE INTO research_rooms(room_id,owner_ref,project_id,status,title,created_utc,updated_utc,fingerprint,payload_json) VALUES(?,?,?,?,?,?,?,?,?)",
+                (str(room.get("room_id") or ""),str(room.get("owner_ref") or ""),str(room.get("project_id") or ""),str(room.get("status") or "active"),str(room.get("title") or ""),str(room.get("created_utc") or utc_now()),str(room.get("updated_utc") or utc_now()),str(room.get("fingerprint") or ""),_canonical_json(room)),
+            )
+        return room
+
+    def research_room(self, room_id: str) -> dict[str, Any] | None:
+        with self._lock, self._connection() as connection:
+            row=connection.execute("SELECT payload_json FROM research_rooms WHERE room_id=?",(room_id,)).fetchone()
+            return json.loads(str(row["payload_json"])) if row else None
+
+    def research_rooms(self, limit: int = 100, member_ref: str = "", owner_ref: str = "") -> list[dict[str, Any]]:
+        maximum=max(1,min(500,int(limit)))
+        with self._lock, self._connection() as connection:
+            if member_ref:
+                rows=connection.execute(
+                    "SELECT r.payload_json FROM research_rooms r JOIN research_room_members m ON m.room_id=r.room_id WHERE m.member_ref=? AND m.status='active' ORDER BY r.updated_utc DESC LIMIT ?",
+                    (member_ref,maximum),
+                )
+            elif owner_ref:
+                rows=connection.execute("SELECT payload_json FROM research_rooms WHERE owner_ref=? ORDER BY updated_utc DESC LIMIT ?",(owner_ref,maximum))
+            else:
+                rows=connection.execute("SELECT payload_json FROM research_rooms ORDER BY updated_utc DESC LIMIT ?",(maximum,))
+            return [json.loads(str(row["payload_json"])) for row in rows]
+
+    def save_room_member(self, member: dict[str, Any]) -> dict[str, Any]:
+        with self._lock, self._connection() as connection:
+            connection.execute(
+                "INSERT INTO research_room_members(membership_id,room_id,member_ref,role,status,updated_utc,fingerprint,payload_json) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(room_id,member_ref) DO UPDATE SET membership_id=excluded.membership_id,role=excluded.role,status=excluded.status,updated_utc=excluded.updated_utc,fingerprint=excluded.fingerprint,payload_json=excluded.payload_json",
+                (str(member.get("membership_id") or ""),str(member.get("room_id") or ""),str(member.get("member_ref") or ""),str(member.get("role") or "researcher"),str(member.get("status") or "active"),str(member.get("updated_utc") or utc_now()),str(member.get("fingerprint") or ""),_canonical_json(member)),
+            )
+        return member
+
+    def room_member(self, room_id: str, member_ref: str) -> dict[str, Any] | None:
+        with self._lock, self._connection() as connection:
+            row=connection.execute("SELECT payload_json FROM research_room_members WHERE room_id=? AND member_ref=? LIMIT 1",(room_id,member_ref)).fetchone()
+            return json.loads(str(row["payload_json"])) if row else None
+
+    def room_members(self, room_id: str, limit: int = 200, status: str = "") -> list[dict[str, Any]]:
+        maximum=max(1,min(500,int(limit)))
+        with self._lock, self._connection() as connection:
+            if status:
+                rows=connection.execute("SELECT payload_json FROM research_room_members WHERE room_id=? AND status=? ORDER BY updated_utc DESC LIMIT ?",(room_id,status,maximum))
+            else:
+                rows=connection.execute("SELECT payload_json FROM research_room_members WHERE room_id=? ORDER BY updated_utc DESC LIMIT ?",(room_id,maximum))
+            return [json.loads(str(row["payload_json"])) for row in rows]
+
+    def save_room_evidence_state(self, state: dict[str, Any]) -> dict[str, Any]:
+        with self._lock, self._connection() as connection:
+            connection.execute(
+                "INSERT INTO research_room_evidence_states(state_id,room_id,object_id,state,contributed_by_ref,updated_utc,fingerprint,payload_json) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(room_id,object_id) DO UPDATE SET state_id=excluded.state_id,state=excluded.state,contributed_by_ref=excluded.contributed_by_ref,updated_utc=excluded.updated_utc,fingerprint=excluded.fingerprint,payload_json=excluded.payload_json",
+                (str(state.get("state_id") or ""),str(state.get("room_id") or ""),str(state.get("object_id") or ""),str(state.get("state") or "proposed"),str(state.get("contributed_by_ref") or ""),str(state.get("updated_utc") or utc_now()),str(state.get("fingerprint") or ""),_canonical_json(state)),
+            )
+        return state
+
+    def room_evidence_state(self, room_id: str, object_id: str) -> dict[str, Any] | None:
+        with self._lock, self._connection() as connection:
+            row=connection.execute("SELECT payload_json FROM research_room_evidence_states WHERE room_id=? AND object_id=? LIMIT 1",(room_id,object_id)).fetchone()
+            return json.loads(str(row["payload_json"])) if row else None
+
+    def room_evidence_states(self, room_id: str, limit: int = 500, state: str = "") -> list[dict[str, Any]]:
+        maximum=max(1,min(1000,int(limit)))
+        with self._lock, self._connection() as connection:
+            if state:
+                rows=connection.execute("SELECT payload_json FROM research_room_evidence_states WHERE room_id=? AND state=? ORDER BY updated_utc DESC LIMIT ?",(room_id,state,maximum))
+            else:
+                rows=connection.execute("SELECT payload_json FROM research_room_evidence_states WHERE room_id=? ORDER BY updated_utc DESC LIMIT ?",(room_id,maximum))
+            return [json.loads(str(row["payload_json"])) for row in rows]
+
+    def save_room_question(self, question: dict[str, Any]) -> dict[str, Any]:
+        with self._lock, self._connection() as connection:
+            connection.execute(
+                "INSERT OR REPLACE INTO research_room_questions(question_id,room_id,status,created_by_ref,created_utc,updated_utc,fingerprint,payload_json) VALUES(?,?,?,?,?,?,?,?)",
+                (str(question.get("question_id") or ""),str(question.get("room_id") or ""),str(question.get("status") or "open"),str(question.get("created_by_ref") or ""),str(question.get("created_utc") or utc_now()),str(question.get("updated_utc") or utc_now()),str(question.get("fingerprint") or ""),_canonical_json(question)),
+            )
+        return question
+
+    def room_question(self, question_id: str) -> dict[str, Any] | None:
+        with self._lock, self._connection() as connection:
+            row=connection.execute("SELECT payload_json FROM research_room_questions WHERE question_id=?",(question_id,)).fetchone()
+            return json.loads(str(row["payload_json"])) if row else None
+
+    def room_questions(self, room_id: str, limit: int = 200, status: str = "") -> list[dict[str, Any]]:
+        maximum=max(1,min(500,int(limit)))
+        with self._lock, self._connection() as connection:
+            if status:
+                rows=connection.execute("SELECT payload_json FROM research_room_questions WHERE room_id=? AND status=? ORDER BY updated_utc DESC LIMIT ?",(room_id,status,maximum))
+            else:
+                rows=connection.execute("SELECT payload_json FROM research_room_questions WHERE room_id=? ORDER BY updated_utc DESC LIMIT ?",(room_id,maximum))
+            return [json.loads(str(row["payload_json"])) for row in rows]
+
+    def save_room_disagreement(self, disagreement: dict[str, Any]) -> dict[str, Any]:
+        with self._lock, self._connection() as connection:
+            connection.execute(
+                "INSERT OR REPLACE INTO research_room_disagreements(disagreement_id,room_id,status,created_by_ref,created_utc,updated_utc,fingerprint,payload_json) VALUES(?,?,?,?,?,?,?,?)",
+                (str(disagreement.get("disagreement_id") or ""),str(disagreement.get("room_id") or ""),str(disagreement.get("status") or "open"),str(disagreement.get("created_by_ref") or ""),str(disagreement.get("created_utc") or utc_now()),str(disagreement.get("updated_utc") or utc_now()),str(disagreement.get("fingerprint") or ""),_canonical_json(disagreement)),
+            )
+        return disagreement
+
+    def room_disagreement(self, disagreement_id: str) -> dict[str, Any] | None:
+        with self._lock, self._connection() as connection:
+            row=connection.execute("SELECT payload_json FROM research_room_disagreements WHERE disagreement_id=?",(disagreement_id,)).fetchone()
+            return json.loads(str(row["payload_json"])) if row else None
+
+    def room_disagreements(self, room_id: str, limit: int = 200, status: str = "") -> list[dict[str, Any]]:
+        maximum=max(1,min(500,int(limit)))
+        with self._lock, self._connection() as connection:
+            if status:
+                rows=connection.execute("SELECT payload_json FROM research_room_disagreements WHERE room_id=? AND status=? ORDER BY updated_utc DESC LIMIT ?",(room_id,status,maximum))
+            else:
+                rows=connection.execute("SELECT payload_json FROM research_room_disagreements WHERE room_id=? ORDER BY updated_utc DESC LIMIT ?",(room_id,maximum))
+            return [json.loads(str(row["payload_json"])) for row in rows]
+
+    def save_room_activity(self, event: dict[str, Any]) -> dict[str, Any]:
+        with self._lock, self._connection() as connection:
+            connection.execute(
+                "INSERT OR REPLACE INTO research_room_activity(event_id,room_id,actor_ref,event_type,created_utc,fingerprint,payload_json) VALUES(?,?,?,?,?,?,?)",
+                (str(event.get("event_id") or ""),str(event.get("room_id") or ""),str(event.get("actor_ref") or ""),str(event.get("event_type") or "note"),str(event.get("created_utc") or utc_now()),str(event.get("fingerprint") or ""),_canonical_json(event)),
+            )
+        return event
+
+    def room_activities(self, room_id: str, limit: int = 500, actor_ref: str = "", event_type: str = "") -> list[dict[str, Any]]:
+        clauses=["room_id=?"]; values=[room_id]
+        if actor_ref: clauses.append("actor_ref=?"); values.append(actor_ref)
+        if event_type: clauses.append("event_type=?"); values.append(event_type)
+        values.append(max(1,min(1000,int(limit))))
+        with self._lock, self._connection() as connection:
+            rows=connection.execute(f"SELECT payload_json FROM research_room_activity WHERE {' AND '.join(clauses)} ORDER BY created_utc DESC LIMIT ?",tuple(values))
+            return [json.loads(str(row["payload_json"])) for row in rows]
+
     def save_connected_backup(self, envelope: dict[str, Any], state: str = "created") -> dict[str, Any]:
         backup_id=str(envelope.get("backup_id") or "backup-"+uuid.uuid4().hex); clean={**envelope,"backup_id":backup_id}
         with self._lock, self._connection() as connection:
@@ -2603,8 +2840,8 @@ class KnowledgeStore:
 
     def connected_platform_summary(self) -> dict[str, Any]:
         with self._lock, self._connection() as connection:
-            counts={name:int(connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]) for name,table in {"projects":"research_projects","investigations":"research_investigations","entities":"research_project_entities","library_objects":"research_library_objects","research_contexts":"research_contexts","research_activity":"research_activity_events","object_states":"research_object_states","open_questions":"research_open_questions","backups":"connected_platform_backups"}.items()}
-        return {"schema":"sc-connected-research-platform-summary/1.3","version":"7.4.0","counts":counts,"workspace_schema":"sc-research-librarian-public-workspace/2.3","api_schema":"sc-connected-research-api/1.3","object_model_schema":"sc-research-library-object-model/1.0","context_schema":"sc-research-context/1.0","research_state_schema":"sc-research-state-summary/1.0"}
+            counts={name:int(connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]) for name,table in {"projects":"research_projects","investigations":"research_investigations","entities":"research_project_entities","library_objects":"research_library_objects","research_contexts":"research_contexts","research_activity":"research_activity_events","object_states":"research_object_states","open_questions":"research_open_questions","research_rooms":"research_rooms","room_members":"research_room_members","room_evidence":"research_room_evidence_states","room_questions":"research_room_questions","room_disagreements":"research_room_disagreements","room_activity":"research_room_activity","backups":"connected_platform_backups"}.items()}
+        return {"schema":"sc-connected-research-platform-summary/1.4","version":"7.5.0","counts":counts,"workspace_schema":"sc-research-librarian-public-workspace/2.4","api_schema":"sc-connected-research-api/1.4","object_model_schema":"sc-research-library-object-model/1.0","context_schema":"sc-research-context/1.0","research_state_schema":"sc-research-state-summary/1.0","room_schema":"sc-research-room/1.0","room_synthesis_schema":"sc-research-room-synthesis/1.0"}
 
 
 def create_store() -> Any:

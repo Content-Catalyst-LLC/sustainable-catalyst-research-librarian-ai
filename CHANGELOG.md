@@ -1,5 +1,18 @@
 # Changelog
 
+## 7.5.0 — Collaborative Research Room Intelligence
+
+- Turns Research Rooms into durable collaboration objects with explicit Owner, Editor, Researcher, and Viewer membership roles.
+- Adds shared room evidence state while preserving each Library object's original owner, source scope, object type, and provenance.
+- Adds collaborative questions whose disposition remains attributable to the creator or room leadership.
+- Adds participant-attributed disagreement positions; participants may revise only their own position and only owners/editors may resolve a disagreement.
+- Adds an attributable participant activity ledger and bounded room-level synthesis.
+- Allows room-scoped context resolution to retrieve sources intentionally shared by other active room members without reclassifying them as editorial or jointly authored.
+- Adds an authenticated WordPress Research Rooms workspace with server-side actor identity, membership authorization, evidence sharing, questions, disagreements, activity, synthesis, and room-context promotion.
+- Preserves v7.4 personal research state as a separate ledger and keeps room workflow metadata outside verified evidence and model instructions.
+- Includes project-linked collaborative room state in portable backup/import.
+- Advances ancillary SQLite to schema 15 and connected API/workspace contracts to 1.4/2.4; the Neon/Postgres knowledge-index schema remains 13.0 and requires no migration.
+
 ## 7.4.0 — Persistent Research State, Reading History & Open Questions
 
 - Adds a durable, inspectable research-state ledger for searches and explicit workflow actions.

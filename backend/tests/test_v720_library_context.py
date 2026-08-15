@@ -23,7 +23,7 @@ def test_library_object_model_declares_library_native_types_and_boundaries() -> 
     response = client.get("/v1/library/object-model", headers=HEADERS)
     assert response.status_code == 200, response.text
     body = response.json()
-    assert body["version"] == "7.4.0"
+    assert body["version"] == "7.5.0"
     assert body["schema"] == "sc-research-library-object-model/1.0"
     required = {
         "source",
@@ -117,6 +117,11 @@ def test_context_resolution_separates_personal_project_room_and_editorial_scopes
             "provenance": {"source_record_id": "post:project-context"},
         },
     ).json()
+    research_room = client.post(
+        "/v1/research/rooms",
+        headers=HEADERS,
+        json={"title": f"Room {suffix}", "objective": "v7.2 compatibility room", "owner_ref": owner},
+    ).json()
     room = client.post(
         "/v1/library/objects",
         headers=HEADERS,
@@ -125,7 +130,7 @@ def test_context_resolution_separates_personal_project_room_and_editorial_scopes
             "title": "Room evidence",
             "owner_ref": owner,
             "source_scope": "current-research-room",
-            "relationships": {"room_ids": [f"room-{suffix}"]},
+            "relationships": {"room_ids": [research_room["room_id"]]},
         },
     ).json()
 
@@ -137,7 +142,7 @@ def test_context_resolution_separates_personal_project_room_and_editorial_scopes
             "owner_ref": owner,
             "scopes": ["my-library", "current-project", "current-research-room"],
             "project_id": project["project_id"],
-            "room_id": f"room-{suffix}",
+            "room_id": research_room["room_id"],
             "active": True,
         },
     )
@@ -203,7 +208,7 @@ def test_inline_context_is_bounded_and_ask_echoes_authorized_context_metadata() 
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["research_context"]["context_id"] == "context-v720-test"
-    assert body["workspace"]["schema"] == "sc-research-librarian-public-workspace/2.3"
+    assert body["workspace"]["schema"] == "sc-research-librarian-public-workspace/2.4"
     assert body["workspace"]["research_context"]["object_count"] == 50
     assert body["provenance"]["research_context"]["object_count"] == 50
     assert body["retrieval_diagnostics"]["research_context_retrieval"]["enabled"] is True

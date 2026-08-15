@@ -15,12 +15,12 @@ $docs = file_get_contents( $root . '/docs/V740_PERSISTENT_RESEARCH_STATE_READING
 $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_persistent_research_state_manifest_v7.4.0.json' ), true );
 $quality_manifest = json_decode( file_get_contents( $root . '/data/research_librarian_source_evaluation_manifest_v7.3.0.json' ), true );
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 7.4.0' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '7.4.0';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.4.0"' ),
-    'module_version' => false !== strpos( $module, "const VERSION = '7.4.0';" ),
-    'api_13' => false !== strpos( $platform, 'sc-connected-research-api/1.3' ),
-    'workspace_23' => false !== strpos( $module, 'sc-research-librarian-public-workspace/2.3' ),
+    'version_header' => false !== strpos( $main, 'Version: 7.5.0' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '7.5.0';" ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.5.0"' ),
+    'module_version' => false !== strpos( $module, "const VERSION = '7.5.0';" ),
+    'api_13' => false !== strpos( $platform, 'sc-connected-research-api/1.4' ),
+    'workspace_23' => false !== strpos( $module, 'sc-research-librarian-public-workspace/2.4' ),
     'state_schema_constant' => false !== strpos( $module, 'sc-research-state-summary/1.0' ),
     'activity_schema' => false !== strpos( $state, 'sc-research-activity-event/1.0' ),
     'object_state_schema' => false !== strpos( $state, 'sc-research-object-state/1.0' ),
@@ -41,7 +41,7 @@ $checks = array(
     'object_request_model' => false !== strpos( $models, 'class ResearchObjectStateRequest' ),
     'question_request_model' => false !== strpos( $models, 'class ResearchOpenQuestionRequest' ),
     'ask_response_state' => false !== strpos( $models, 'research_state: dict[str, Any]' ),
-    'sqlite_schema_14' => false !== strpos( $store, 'SCHEMA_VERSION = 14' ),
+    'sqlite_schema_14' => false !== strpos( $store, 'SCHEMA_VERSION = 15' ),
     'knowledge_index_schema_13' => false !== strpos( $store, 'sc-research-librarian-knowledge-index/13.0' ),
     'activity_table' => false !== strpos( $store, 'research_activity_events' ),
     'object_state_table' => false !== strpos( $store, 'research_object_states' ),

@@ -36,7 +36,7 @@ from .models import (
     QualityEvaluationRequest,
     ReleaseGateRequest,
     RetentionRunRequest,
-    ResearchProjectRequest, ResearchInvestigationRequest, ProjectEntityRequest, LibraryObjectRequest, ResearchContextRequest, SourceEvaluationRequest, EvidenceComparisonRequest, EvidenceGapRequest, ResearchActivityRequest, ResearchObjectStateRequest, ResearchOpenQuestionRequest, WorkflowTemplateRequest, ContradictionRequest, UncertaintyRegisterRequest, PlatformBackupImportRequest,
+    ResearchProjectRequest, ResearchInvestigationRequest, ProjectEntityRequest, LibraryObjectRequest, ResearchContextRequest, ResearchRoomRequest, ResearchRoomMemberRequest, ResearchRoomEvidenceStateRequest, ResearchRoomQuestionRequest, ResearchRoomDisagreementRequest, ResearchRoomActivityRequest, SourceEvaluationRequest, EvidenceComparisonRequest, EvidenceGapRequest, ResearchActivityRequest, ResearchObjectStateRequest, ResearchOpenQuestionRequest, WorkflowTemplateRequest, ContradictionRequest, UncertaintyRegisterRequest, PlatformBackupImportRequest,
     ArtifactReturnRequest,
     RetrievalCalibrationUpdate,
     RetrievalRequest,
@@ -99,6 +99,24 @@ from .research_state import (
     normalize_open_question,
     summarize_research_state,
     prompt_research_state,
+)
+from .collaboration import (
+    ROOM_SCHEMA,
+    ROOM_MEMBER_SCHEMA,
+    ROOM_EVIDENCE_STATE_SCHEMA,
+    ROOM_QUESTION_SCHEMA,
+    ROOM_DISAGREEMENT_SCHEMA,
+    ROOM_ACTIVITY_SCHEMA,
+    ROOM_SYNTHESIS_SCHEMA,
+    ROOM_PROMPT_SCHEMA,
+    normalize_room,
+    normalize_member,
+    normalize_room_evidence_state,
+    normalize_room_question,
+    normalize_room_disagreement,
+    normalize_room_activity,
+    build_room_synthesis,
+    prompt_room_synthesis,
 )
 
 
@@ -194,7 +212,7 @@ def _follow_up_prompts(mode: str, best: RetrievedSource | None, related: list[Re
 
 def _workspace_summary(mode: str, matches: list[RetrievedSource], related: list[RetrievedSource], ai_used: bool, gate: dict[str, Any]) -> dict[str, Any]:
     return {
-        "schema": "sc-research-librarian-public-workspace/2.3",
+        "schema": "sc-research-librarian-public-workspace/2.4",
         "mode": mode,
         "mode_label": _RESEARCH_MODES.get(mode, _RESEARCH_MODES["auto"])["label"],
         "verified_sources": len(matches),
@@ -1262,7 +1280,7 @@ def _research_state_summary(owner_ref: str = "", project_id: str = "", context_i
 
 @app.get("/v1/platform/api", dependencies=[Depends(require_key)])
 def connected_api_manifest() -> dict[str, Any]:
-    return {"schema": API_SCHEMA, "version": __version__, "stability": "stable-v7", "resources": ["projects", "investigations", "entities", "library-objects", "research-contexts", "source-evaluations", "evidence-comparisons", "evidence-gaps", "research-state", "research-activity", "object-review-state", "open-questions", "workflows", "contradictions", "uncertainties", "backups", "handoffs", "artifacts"], "object_model": object_model_manifest(), "evidence_quality": {"source_evaluation_schema": SOURCE_EVALUATION_SCHEMA, "comparison_schema": EVIDENCE_COMPARISON_SCHEMA, "gap_schema": EVIDENCE_GAP_SCHEMA, "quality_signals_schema": QUALITY_SIGNALS_SCHEMA, "truth_score": False}, "research_state": {"summary_schema": RESEARCH_STATE_SUMMARY_SCHEMA, "activity_schema": RESEARCH_ACTIVITY_SCHEMA, "object_state_schema": RESEARCH_OBJECT_STATE_SCHEMA, "open_question_schema": OPEN_QUESTION_SCHEMA, "workflow_memory_only": True, "not_evidence": True}, "generation_boundary": adapter_status()}
+    return {"schema": API_SCHEMA, "version": __version__, "stability": "stable-v7", "resources": ["projects", "investigations", "entities", "library-objects", "research-contexts", "research-rooms", "room-members", "room-evidence", "room-questions", "room-disagreements", "room-synthesis", "source-evaluations", "evidence-comparisons", "evidence-gaps", "research-state", "research-activity", "object-review-state", "open-questions", "workflows", "contradictions", "uncertainties", "backups", "handoffs", "artifacts"], "object_model": object_model_manifest(), "evidence_quality": {"source_evaluation_schema": SOURCE_EVALUATION_SCHEMA, "comparison_schema": EVIDENCE_COMPARISON_SCHEMA, "gap_schema": EVIDENCE_GAP_SCHEMA, "quality_signals_schema": QUALITY_SIGNALS_SCHEMA, "truth_score": False}, "research_state": {"summary_schema": RESEARCH_STATE_SUMMARY_SCHEMA, "activity_schema": RESEARCH_ACTIVITY_SCHEMA, "object_state_schema": RESEARCH_OBJECT_STATE_SCHEMA, "open_question_schema": OPEN_QUESTION_SCHEMA, "workflow_memory_only": True, "not_evidence": True}, "research_rooms": {"room_schema": ROOM_SCHEMA, "member_schema": ROOM_MEMBER_SCHEMA, "evidence_state_schema": ROOM_EVIDENCE_STATE_SCHEMA, "question_schema": ROOM_QUESTION_SCHEMA, "disagreement_schema": ROOM_DISAGREEMENT_SCHEMA, "activity_schema": ROOM_ACTIVITY_SCHEMA, "synthesis_schema": ROOM_SYNTHESIS_SCHEMA, "prompt_schema": ROOM_PROMPT_SCHEMA, "participant_attribution": True, "individual_shared_state_separate": True, "not_evidence": True}, "generation_boundary": adapter_status()}
 
 @app.get("/v1/platform/summary", dependencies=[Depends(require_key)])
 def connected_platform_summary() -> dict[str, Any]:
@@ -1331,6 +1349,260 @@ def project_library_objects(project_id: str) -> dict[str, Any]:
     return {"schema": "sc-project-library-object-list/1.0", "project_id": project_id, "objects": bundle.get("library_objects", [])}
 
 
+
+def _require_room_member(room_id: str, member_ref: str, *, write: bool = False, manage: bool = False) -> tuple[dict[str, Any], dict[str, Any]]:
+    room = store.research_room(str(room_id or ""))
+    if not room:
+        raise HTTPException(status_code=404, detail="Unknown Research Room.")
+    member = store.room_member(str(room_id or ""), str(member_ref or ""))
+    if not member or str(member.get("status") or "") != "active":
+        raise HTTPException(status_code=403, detail="Active Research Room membership is required.")
+    role = str(member.get("role") or "viewer")
+    if manage and role not in {"owner", "editor"}:
+        raise HTTPException(status_code=403, detail="Research Room owner or editor role is required.")
+    if write and role not in {"owner", "editor", "researcher"}:
+        raise HTTPException(status_code=403, detail="This Research Room role is read-only.")
+    return room, member
+
+
+def _room_synthesis(room_id: str) -> dict[str, Any]:
+    room = store.research_room(room_id)
+    if not room:
+        raise HTTPException(status_code=404, detail="Unknown Research Room.")
+    return build_room_synthesis(
+        room,
+        store.room_members(room_id, 500),
+        store.room_evidence_states(room_id, 1000),
+        store.room_questions(room_id, 500),
+        store.room_disagreements(room_id, 500),
+        store.room_activities(room_id, 1000),
+        store.library_objects_for_room(room_id, 1000),
+    )
+
+
+@app.get("/v1/research/rooms", dependencies=[Depends(require_key)])
+def list_research_rooms(limit: int = 100, member_ref: str = "", owner_ref: str = "") -> dict[str, Any]:
+    rooms = store.research_rooms(limit, member_ref, owner_ref)
+    return {"schema": "sc-research-room-list/1.0", "rooms": rooms, "count": len(rooms)}
+
+
+@app.post("/v1/research/rooms", dependencies=[Depends(require_key)])
+def save_research_room(payload: ResearchRoomRequest) -> dict[str, Any]:
+    existing = store.research_room(payload.room_id) if payload.room_id else None
+    actor_ref = payload.actor_ref or payload.owner_ref
+    payload_data = payload.model_dump()
+    if existing:
+        _require_room_member(str(existing.get("room_id") or ""), actor_ref, manage=True)
+        # Room ownership is not silently transferable through a generic update.
+        payload_data["owner_ref"] = str(existing.get("owner_ref") or payload.owner_ref)
+    try:
+        room = normalize_room(payload_data, existing)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    stored = store.save_research_room(room)
+    if not existing:
+        member = normalize_member({"room_id": room["room_id"], "member_ref": room["owner_ref"], "role": "owner", "status": "active", "added_by_ref": room["owner_ref"]})
+        store.save_room_member(member)
+        store.save_room_activity(normalize_room_activity({"room_id": room["room_id"], "actor_ref": room["owner_ref"], "event_type": "room-created", "metadata": {"room_fingerprint": room["fingerprint"]}}))
+    else:
+        store.save_room_activity(normalize_room_activity({"room_id": room["room_id"], "actor_ref": actor_ref, "event_type": "room-updated", "metadata": {"room_fingerprint": room["fingerprint"]}}))
+    return stored
+
+
+@app.get("/v1/research/rooms/{room_id}", dependencies=[Depends(require_key)])
+def get_research_room(room_id: str, member_ref: str = "") -> dict[str, Any]:
+    room = store.research_room(room_id)
+    if not room:
+        raise HTTPException(status_code=404, detail="Unknown Research Room.")
+    if member_ref:
+        _require_room_member(room_id, member_ref)
+    return {"schema": "sc-research-room-bundle/1.0", "room": room, "members": store.room_members(room_id, 500), "synthesis": _room_synthesis(room_id)}
+
+
+@app.get("/v1/research/rooms/{room_id}/members", dependencies=[Depends(require_key)])
+def list_room_members(room_id: str, member_ref: str = "") -> dict[str, Any]:
+    if member_ref:
+        _require_room_member(room_id, member_ref)
+    elif not store.research_room(room_id):
+        raise HTTPException(status_code=404, detail="Unknown Research Room.")
+    return {"schema": "sc-research-room-member-list/1.0", "room_id": room_id, "members": store.room_members(room_id, 500)}
+
+
+@app.post("/v1/research/rooms/{room_id}/members", dependencies=[Depends(require_key)])
+def save_room_member(room_id: str, payload: ResearchRoomMemberRequest) -> dict[str, Any]:
+    room, actor = _require_room_member(room_id, payload.added_by_ref, manage=True)
+    if payload.room_id != room_id:
+        raise HTTPException(status_code=422, detail="Research Room path and payload room_id must match.")
+    existing = store.room_member(room_id, payload.member_ref)
+    requested_role = str(payload.role or "researcher").lower()
+    if requested_role == "owner" and str(actor.get("role") or "") != "owner":
+        raise HTTPException(status_code=403, detail="Only the Research Room owner can assign the owner role.")
+    try:
+        member = normalize_member(payload.model_dump(), existing)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    stored = store.save_room_member(member)
+    event_type = "member-added" if not existing else ("member-removed" if member["status"] == "removed" else "member-role-changed")
+    store.save_room_activity(normalize_room_activity({"room_id": room_id, "actor_ref": payload.added_by_ref, "event_type": event_type, "metadata": {"member_ref": member["member_ref"], "role": member["role"], "status": member["status"]}}))
+    return stored
+
+
+@app.get("/v1/research/rooms/{room_id}/evidence", dependencies=[Depends(require_key)])
+def list_room_evidence(room_id: str, member_ref: str = "", state: str = "") -> dict[str, Any]:
+    if member_ref:
+        _require_room_member(room_id, member_ref)
+    states = store.room_evidence_states(room_id, 1000, state)
+    objects = {str(item.get("object_id") or ""): item for item in store.library_objects_for_room(room_id, 1000)}
+    rows = []
+    for shared in states:
+        row = dict(shared)
+        obj = objects.get(str(row.get("object_id") or ""))
+        if obj:
+            row["library_object"] = obj
+        rows.append(row)
+    return {"schema": "sc-research-room-evidence-list/1.0", "room_id": room_id, "evidence": rows}
+
+
+@app.post("/v1/research/rooms/{room_id}/evidence", dependencies=[Depends(require_key)])
+def save_room_evidence(room_id: str, payload: ResearchRoomEvidenceStateRequest) -> dict[str, Any]:
+    _require_room_member(room_id, payload.contributed_by_ref, write=True)
+    if payload.room_id != room_id:
+        raise HTTPException(status_code=422, detail="Research Room path and payload room_id must match.")
+    item = store.library_object(payload.object_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Unknown Library object.")
+    relationships = dict(item.get("relationships") or {})
+    room_ids = list(relationships.get("room_ids") or [])
+    if room_id not in room_ids:
+        room_ids.append(room_id)
+    relationships["room_ids"] = room_ids[:100]
+    item = normalize_library_object({**item, "relationships": relationships}, item)
+    store.save_library_object(item)
+    existing = store.room_evidence_state(room_id, payload.object_id)
+    try:
+        shared = normalize_room_evidence_state(payload.model_dump(), existing)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    stored = store.save_room_evidence_state(shared)
+    event_type = "evidence-added" if not existing else "evidence-state-changed"
+    store.save_room_activity(normalize_room_activity({"room_id": room_id, "actor_ref": payload.contributed_by_ref, "event_type": event_type, "object_id": payload.object_id, "metadata": {"state": stored["state"], "source_scope": item.get("source_scope", "")}}))
+    return {"schema": ROOM_EVIDENCE_STATE_SCHEMA, "evidence_state": stored, "library_object": item}
+
+
+@app.get("/v1/research/rooms/{room_id}/questions", dependencies=[Depends(require_key)])
+def list_room_questions(room_id: str, member_ref: str = "", status: str = "") -> dict[str, Any]:
+    if member_ref:
+        _require_room_member(room_id, member_ref)
+    return {"schema": "sc-research-room-question-list/1.0", "room_id": room_id, "questions": store.room_questions(room_id, 500, status)}
+
+
+@app.post("/v1/research/rooms/{room_id}/questions", dependencies=[Depends(require_key)])
+def save_room_question(room_id: str, payload: ResearchRoomQuestionRequest) -> dict[str, Any]:
+    actor_ref = payload.resolved_by_ref or payload.created_by_ref
+    actor = _require_room_member(room_id, actor_ref, write=True)
+    if payload.room_id != room_id:
+        raise HTTPException(status_code=422, detail="Research Room path and payload room_id must match.")
+    existing = store.room_question(payload.question_id) if payload.question_id else None
+    if existing and str(existing.get("room_id") or "") != room_id:
+        raise HTTPException(status_code=404, detail="Room question does not belong to this Research Room.")
+    requested_status = str(payload.status or (existing or {}).get("status") or "open").lower()
+    prior_status = str((existing or {}).get("status") or "")
+    if existing and requested_status != prior_status and requested_status in {"resolved", "deferred", "dismissed"}:
+        creator_ref = str(existing.get("created_by_ref") or "")
+        if actor_ref != creator_ref and str(actor.get("role") or "") not in {"owner", "editor"}:
+            raise HTTPException(status_code=403, detail="Only the question creator or a Research Room owner/editor can change the question disposition.")
+    question_payload = payload.model_dump()
+    if existing:
+        question_payload["created_by_ref"] = str(existing.get("created_by_ref") or payload.created_by_ref)
+    try:
+        question = normalize_room_question(question_payload, existing)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    stored = store.save_room_question(question)
+    prior = str((existing or {}).get("status") or "")
+    event_type = "question-opened" if stored["status"] == "open" and prior != "open" else ("question-resolved" if stored["status"] == "resolved" and prior != "resolved" else ("question-deferred" if stored["status"] == "deferred" and prior != "deferred" else "note"))
+    store.save_room_activity(normalize_room_activity({"room_id": room_id, "actor_ref": actor_ref, "event_type": event_type, "question_id": stored["question_id"], "note": stored["question"][:1000]}))
+    return stored
+
+
+@app.get("/v1/research/rooms/{room_id}/disagreements", dependencies=[Depends(require_key)])
+def list_room_disagreements(room_id: str, member_ref: str = "", status: str = "") -> dict[str, Any]:
+    if member_ref:
+        _require_room_member(room_id, member_ref)
+    return {"schema": "sc-research-room-disagreement-list/1.0", "room_id": room_id, "disagreements": store.room_disagreements(room_id, 500, status)}
+
+
+@app.post("/v1/research/rooms/{room_id}/disagreements", dependencies=[Depends(require_key)])
+def save_room_disagreement(room_id: str, payload: ResearchRoomDisagreementRequest) -> dict[str, Any]:
+    actor_ref = payload.resolved_by_ref or payload.created_by_ref
+    actor = _require_room_member(room_id, actor_ref, write=True)
+    if payload.room_id != room_id:
+        raise HTTPException(status_code=422, detail="Research Room path and payload room_id must match.")
+    existing = store.room_disagreement(payload.disagreement_id) if payload.disagreement_id else None
+    if existing and str(existing.get("room_id") or "") != room_id:
+        raise HTTPException(status_code=404, detail="Disagreement does not belong to this Research Room.")
+    requested_status = str(payload.status or (existing or {}).get("status") or "open").lower()
+    prior_status = str((existing or {}).get("status") or "")
+    if existing and requested_status != prior_status and requested_status == "resolved" and str(actor.get("role") or "") not in {"owner", "editor"}:
+        raise HTTPException(status_code=403, detail="Only a Research Room owner/editor can resolve a disagreement.")
+
+    incoming_positions = []
+    for position in payload.positions:
+        participant_ref = str(position.get("participant_ref") or "")
+        if participant_ref and participant_ref != actor_ref:
+            raise HTTPException(status_code=403, detail="Participants may submit only their own attributed disagreement position.")
+        if participant_ref:
+            incoming_positions.append(dict(position))
+
+    merged_positions = list((existing or {}).get("positions") or [])
+    for position in incoming_positions:
+        participant_ref = str(position.get("participant_ref") or "")
+        merged_positions = [item for item in merged_positions if str(item.get("participant_ref") or "") != participant_ref]
+        merged_positions.append(position)
+
+    payload_data = payload.model_dump()
+    if existing:
+        payload_data["created_by_ref"] = str(existing.get("created_by_ref") or payload.created_by_ref)
+    if existing or incoming_positions:
+        payload_data["positions"] = merged_positions
+    try:
+        disagreement = normalize_room_disagreement(payload_data, existing)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    stored = store.save_room_disagreement(disagreement)
+    prior = str((existing or {}).get("status") or "")
+    event_type = "disagreement-resolved" if stored["status"] == "resolved" and prior != "resolved" else ("disagreement-raised" if not existing else "disagreement-position-added")
+    store.save_room_activity(normalize_room_activity({"room_id": room_id, "actor_ref": actor_ref, "event_type": event_type, "disagreement_id": stored["disagreement_id"], "note": stored["statement"][:1000]}))
+    return stored
+
+
+@app.get("/v1/research/rooms/{room_id}/activity", dependencies=[Depends(require_key)])
+def list_room_activity(room_id: str, member_ref: str = "", limit: int = 500) -> dict[str, Any]:
+    if member_ref:
+        _require_room_member(room_id, member_ref)
+    return {"schema": "sc-research-room-activity-list/1.0", "room_id": room_id, "activities": store.room_activities(room_id, limit)}
+
+
+@app.post("/v1/research/rooms/{room_id}/activity", dependencies=[Depends(require_key)])
+def save_room_activity(room_id: str, payload: ResearchRoomActivityRequest) -> dict[str, Any]:
+    _require_room_member(room_id, payload.actor_ref, write=True)
+    if payload.room_id != room_id:
+        raise HTTPException(status_code=422, detail="Research Room path and payload room_id must match.")
+    try:
+        event = normalize_room_activity(payload.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return store.save_room_activity(event)
+
+
+@app.get("/v1/research/rooms/{room_id}/synthesis", dependencies=[Depends(require_key)])
+def research_room_synthesis(room_id: str, member_ref: str = "") -> dict[str, Any]:
+    if member_ref:
+        _require_room_member(room_id, member_ref)
+    synthesis = _room_synthesis(room_id)
+    return {**synthesis, "prompt_context": prompt_room_synthesis(synthesis)}
+
+
 @app.get("/v1/research/contexts", dependencies=[Depends(require_key)])
 def list_research_contexts(limit: int = 100, owner_ref: str = "") -> dict[str, Any]:
     return {
@@ -1343,6 +1615,8 @@ def list_research_contexts(limit: int = 100, owner_ref: str = "") -> dict[str, A
 @app.post("/v1/research/contexts", dependencies=[Depends(require_key)])
 def save_research_context(payload: ResearchContextRequest) -> dict[str, Any]:
     existing = store.research_context(payload.context_id) if payload.context_id else None
+    if payload.room_id:
+        _require_room_member(payload.room_id, payload.owner_ref)
     try:
         context = normalize_research_context(payload.model_dump(), existing)
     except ValueError as exc:
@@ -1365,10 +1639,23 @@ def resolve_saved_research_context(context_id: str) -> dict[str, Any]:
         raise HTTPException(status_code=404, detail="Unknown research context.")
     owner_ref = str(context.get("owner_ref") or "")
     library_objects = store.library_objects(1000, owner_ref) if owner_ref else store.library_objects(1000)
+    room_id = str(context.get("room_id") or "")
+    if room_id:
+        _require_room_member(room_id, owner_ref)
+        room_objects = store.library_objects_for_room(room_id, 1000)
+        known = {str(item.get("object_id") or "") for item in library_objects}
+        library_objects.extend(item for item in room_objects if str(item.get("object_id") or "") not in known)
     project_id = str(context.get("project_id") or "")
     project = store.research_project(project_id) if project_id else None
     project_entities = store.project_entities(project_id, "", 1000) if project_id and project else []
-    return resolve_research_context(context, library_objects, project_entities, project)
+    resolution = resolve_research_context(context, library_objects, project_entities, project)
+    if room_id:
+        synthesis = _room_synthesis(room_id)
+        room_prompt = prompt_room_synthesis(synthesis)
+        resolution["room_collaboration"] = synthesis
+        resolution["prompt_context"]["room_collaboration"] = room_prompt
+        resolution["fingerprint"] = fingerprint({key: value for key, value in resolution.items() if key not in {"fingerprint", "resolved_utc", "objects"}})
+    return resolution
 
 
 @app.get("/v1/research/contexts/{context_id}/evidence-quality", dependencies=[Depends(require_key)])
@@ -1560,7 +1847,7 @@ def import_platform_backup(payload: PlatformBackupImportRequest) -> dict[str, An
     verification=verify_backup(payload.envelope)
     if not verification["ok"]: raise HTTPException(status_code=422,detail="Backup checksum validation failed.")
     body=payload.envelope.get("payload") or {}; project=body.get("project") or {}
-    result={"ok":True,"dry_run":payload.dry_run,"verification":verification,"counts":{"investigations":len(body.get("investigations") or []),"entities":len(body.get("entities") or []),"library_objects":len(body.get("library_objects") or []),"research_activity":len(body.get("research_activity") or []),"object_states":len(body.get("object_states") or []),"open_questions":len(body.get("open_questions") or [])}}
+    result={"ok":True,"dry_run":payload.dry_run,"verification":verification,"counts":{"investigations":len(body.get("investigations") or []),"entities":len(body.get("entities") or []),"library_objects":len(body.get("library_objects") or []),"research_activity":len(body.get("research_activity") or []),"object_states":len(body.get("object_states") or []),"open_questions":len(body.get("open_questions") or []),"research_rooms":len(body.get("research_rooms") or [])}}
     if not payload.dry_run:
         saved=normalize_project(project,store.research_project(str(project.get("project_id") or "")))
         store.save_research_project(saved)
@@ -1577,6 +1864,29 @@ def import_platform_backup(payload: PlatformBackupImportRequest) -> dict[str, An
                 store.save_research_object_state(normalize_object_state({**item,"owner_ref":saved.get("owner_ref", ""),"project_id":saved["project_id"]},existing_state))
         for item in body.get("open_questions") or []:
             if isinstance(item, dict): store.save_research_open_question(normalize_open_question({**item,"owner_ref":saved.get("owner_ref", ""),"project_id":saved["project_id"]},store.research_open_question(str(item.get("question_id") or ""))))
+        for room_bundle in body.get("research_rooms") or []:
+            if not isinstance(room_bundle, dict):
+                continue
+            room_payload=room_bundle.get("room") if isinstance(room_bundle.get("room"),dict) else {}
+            if not room_payload:
+                continue
+            room=normalize_room({**room_payload,"project_id":saved["project_id"]},store.research_room(str(room_payload.get("room_id") or "")))
+            store.save_research_room(room)
+            for member_payload in room_bundle.get("members") or []:
+                if isinstance(member_payload,dict):
+                    store.save_room_member(normalize_member({**member_payload,"room_id":room["room_id"]},store.room_member(room["room_id"],str(member_payload.get("member_ref") or ""))))
+            for evidence_payload in room_bundle.get("evidence_states") or []:
+                if isinstance(evidence_payload,dict):
+                    store.save_room_evidence_state(normalize_room_evidence_state({**evidence_payload,"room_id":room["room_id"]},store.room_evidence_state(room["room_id"],str(evidence_payload.get("object_id") or ""))))
+            for question_payload in room_bundle.get("questions") or []:
+                if isinstance(question_payload,dict):
+                    store.save_room_question(normalize_room_question({**question_payload,"room_id":room["room_id"]},store.room_question(str(question_payload.get("question_id") or ""))))
+            for disagreement_payload in room_bundle.get("disagreements") or []:
+                if isinstance(disagreement_payload,dict):
+                    store.save_room_disagreement(normalize_room_disagreement({**disagreement_payload,"room_id":room["room_id"]},store.room_disagreement(str(disagreement_payload.get("disagreement_id") or ""))))
+            for activity_payload in room_bundle.get("activity") or []:
+                if isinstance(activity_payload,dict):
+                    store.save_room_activity(normalize_room_activity({**activity_payload,"room_id":room["room_id"]}))
         result["project_id"]=saved["project_id"]
     return result
 
@@ -1614,6 +1924,8 @@ async def ask(payload: AskRequest) -> AskResponse:
     inline_context = sanitize_inline_context(payload.research_context)
     state_summary: dict[str, Any] = {}
     state_prompt: dict[str, Any] = {}
+    saved_context: dict[str, Any] | None = None
+    room_prompt: dict[str, Any] = inline_context.get("room_collaboration") if isinstance(inline_context.get("room_collaboration"), dict) else {}
     if inline_context.get("context_id"):
         saved_context = store.research_context(str(inline_context.get("context_id") or ""))
         if saved_context and str(saved_context.get("owner_ref") or ""):
@@ -1746,6 +2058,23 @@ async def ask(payload: AskRequest) -> AskResponse:
             str(state_summary.get("context_id") or ""),
         )
         state_prompt = prompt_research_state(state_summary)
+    if saved_context and str(saved_context.get("room_id") or "") and str(saved_context.get("owner_ref") or ""):
+        room_id = str(saved_context.get("room_id") or "")
+        actor_ref = str(saved_context.get("owner_ref") or "")
+        member = store.room_member(room_id, actor_ref)
+        if member and str(member.get("status") or "") == "active":
+            store.save_room_activity(normalize_room_activity({
+                "room_id": room_id,
+                "actor_ref": actor_ref,
+                "event_type": "search",
+                "note": payload.question[:1000],
+                "metadata": {
+                    "research_mode": research_mode,
+                    "answer_trace_id": trace["trace_id"],
+                    "source_record_ids": [item.id for item in matches][:25],
+                    "citation_verification_ok": bool(citation_verification.get("ok")),
+                },
+            }))
     provenance = {
         "schema": "sc-research-provenance/1.1",
         "index_version": int(store.summary().get("index_version", 0)),
@@ -1767,6 +2096,18 @@ async def ask(payload: AskRequest) -> AskResponse:
             "object_count": len(inline_context.get("objects", [])),
         }
         retrieval_diagnostics["research_context"] = provenance["research_context"]
+    if room_prompt:
+        provenance["room_collaboration"] = {
+            "schema": room_prompt.get("schema", ""),
+            "room_id": room_prompt.get("room_id", ""),
+            "fingerprint": room_prompt.get("fingerprint", ""),
+            "shared_evidence_count": len(room_prompt.get("shared_evidence", [])),
+            "open_question_count": len(room_prompt.get("open_questions", [])),
+            "open_disagreement_count": len(room_prompt.get("open_disagreements", [])),
+            "participant_attribution": True,
+            "not_evidence": True,
+        }
+        retrieval_diagnostics["room_collaboration"] = provenance["room_collaboration"]
     if state_prompt:
         provenance["research_state"] = {
             "schema": state_prompt.get("schema", ""),
@@ -1786,6 +2127,15 @@ async def ask(payload: AskRequest) -> AskResponse:
             "title": inline_context.get("title", "Research context"),
             "scopes": inline_context.get("scopes", []),
             "object_count": len(inline_context.get("objects", [])),
+        }
+    if room_prompt:
+        workspace["room_collaboration"] = {
+            "room_id": room_prompt.get("room_id", ""),
+            "title": room_prompt.get("title", "Research Room"),
+            "shared_evidence": len(room_prompt.get("shared_evidence", [])),
+            "open_questions": len(room_prompt.get("open_questions", [])),
+            "open_disagreements": len(room_prompt.get("open_disagreements", [])),
+            "participant_attribution": True,
         }
     if state_summary:
         workspace["research_state"] = {

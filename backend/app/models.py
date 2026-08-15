@@ -444,6 +444,71 @@ class ResearchContextRequest(BaseModel):
 
 
 
+class ResearchRoomRequest(BaseModel):
+    room_id: str = Field(default="", max_length=220)
+    title: str = Field(default="Research Room", max_length=240)
+    objective: str = Field(default="", max_length=5000)
+    owner_ref: str = Field(min_length=1, max_length=220)
+    actor_ref: str = Field(default="", max_length=220)
+    project_id: str = Field(default="", max_length=220)
+    status: str = Field(default="active", max_length=40)
+    tags: list[str] = Field(default_factory=list, max_length=40)
+
+
+class ResearchRoomMemberRequest(BaseModel):
+    membership_id: str = Field(default="", max_length=220)
+    room_id: str = Field(min_length=1, max_length=220)
+    member_ref: str = Field(min_length=1, max_length=220)
+    display_name: str = Field(default="", max_length=240)
+    role: str = Field(default="researcher", max_length=40)
+    status: str = Field(default="active", max_length=40)
+    added_by_ref: str = Field(default="", max_length=220)
+
+
+class ResearchRoomEvidenceStateRequest(BaseModel):
+    state_id: str = Field(default="", max_length=220)
+    room_id: str = Field(min_length=1, max_length=220)
+    object_id: str = Field(min_length=1, max_length=220)
+    state: str = Field(default="proposed", max_length=40)
+    note: str = Field(default="", max_length=4000)
+    contributed_by_ref: str = Field(default="", max_length=220)
+
+
+class ResearchRoomQuestionRequest(BaseModel):
+    question_id: str = Field(default="", max_length=220)
+    room_id: str = Field(min_length=1, max_length=220)
+    question: str = Field(min_length=1, max_length=3000)
+    status: str = Field(default="open", max_length=40)
+    linked_object_ids: list[str] = Field(default_factory=list, max_length=100)
+    created_by_ref: str = Field(default="", max_length=220)
+    resolution: str = Field(default="", max_length=6000)
+    resolved_by_ref: str = Field(default="", max_length=220)
+
+
+class ResearchRoomDisagreementRequest(BaseModel):
+    disagreement_id: str = Field(default="", max_length=220)
+    room_id: str = Field(min_length=1, max_length=220)
+    statement: str = Field(min_length=1, max_length=4000)
+    status: str = Field(default="open", max_length=40)
+    linked_object_ids: list[str] = Field(default_factory=list, max_length=100)
+    created_by_ref: str = Field(default="", max_length=220)
+    positions: list[dict[str, Any]] = Field(default_factory=list, max_length=50)
+    resolution: str = Field(default="", max_length=6000)
+    resolved_by_ref: str = Field(default="", max_length=220)
+
+
+class ResearchRoomActivityRequest(BaseModel):
+    event_id: str = Field(default="", max_length=220)
+    room_id: str = Field(min_length=1, max_length=220)
+    actor_ref: str = Field(min_length=1, max_length=220)
+    event_type: str = Field(default="note", max_length=80)
+    object_id: str = Field(default="", max_length=220)
+    question_id: str = Field(default="", max_length=220)
+    disagreement_id: str = Field(default="", max_length=220)
+    note: str = Field(default="", max_length=3000)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
 class SourceEvaluationRequest(BaseModel):
     object_ids: list[str] = Field(default_factory=list, max_length=200)
     objects: list[dict[str, Any]] = Field(default_factory=list, max_length=200)

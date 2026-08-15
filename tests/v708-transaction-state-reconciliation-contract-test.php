@@ -9,10 +9,10 @@ $config = file_get_contents( $root . '/backend/app/config.py' );
 $docs = file_get_contents( $root . '/docs/V708_TRANSACTION_STATE_RECONCILIATION_DURABLE_RECOVERY.md' );
 $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_v708_transaction_state_reconciliation_manifest.json' ), true );
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 7.4.0' ),
-    'durable_version' => false !== strpos( $module, "const VERSION = '7.4.0';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.4.0"' ),
-    'schema_twelve' => false !== strpos( $store, 'SCHEMA_VERSION = 14' ),
+    'version_header' => false !== strpos( $main, 'Version: 7.5.0' ),
+    'durable_version' => false !== strpos( $module, "const VERSION = '7.5.0';" ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "7.5.0"' ),
+    'schema_twelve' => false !== strpos( $store, 'SCHEMA_VERSION = 15' ),
     'reconcile_endpoint' => false !== strpos( $backend, '/v1/knowledge/sync/jobs/{job_id}/reconcile' ),
     'reconcile_model' => false !== strpos( file_get_contents( $root . '/backend/app/models.py' ), 'class SyncReconcileRequest' ),
     'backend_classifier' => false !== strpos( $store, 'def reconcile_sync_job' ) && false !== strpos( $store, 'empty-shell' ) && false !== strpos( $store, 'batch-count-mismatch' ),

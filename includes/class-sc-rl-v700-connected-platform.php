@@ -1,22 +1,24 @@
 <?php
 /**
- * Research Librarian AI v7.4.0 — Connected Research Intelligence Platform.
+ * Research Librarian AI v7.5.0 — Connected Research Intelligence Platform.
  *
- * v7.4.0 adds persistent research state, reading/review history, and an open-question
- * register on top of the v7.3 evidence-quality and v7.2 Library-context contracts.
+ * v7.5.0 adds collaborative Research Rooms with explicit membership, shared evidence
+ * state, attributable questions/disagreements, participant activity, and room synthesis.
  */
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 final class SC_RL6_V700_Connected_Platform {
-    const VERSION = '7.4.0';
+    const VERSION = '7.5.0';
     const OPTION_NAME = 'sc_rl_v700_platform_options';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const API_SCHEMA = 'sc-connected-research-api/1.3';
-    const WORKSPACE_SCHEMA = 'sc-research-librarian-public-workspace/2.3';
+    const API_SCHEMA = 'sc-connected-research-api/1.4';
+    const WORKSPACE_SCHEMA = 'sc-research-librarian-public-workspace/2.4';
     const OBJECT_MODEL_SCHEMA = 'sc-research-library-object-model/1.0';
     const CONTEXT_SCHEMA = 'sc-research-context/1.0';
     const QUALITY_SCHEMA = 'sc-research-quality-signals/1.0';
     const STATE_SCHEMA = 'sc-research-state-summary/1.0';
+    const ROOM_SCHEMA = 'sc-research-room/1.0';
+    const ROOM_SYNTHESIS_SCHEMA = 'sc-research-room-synthesis/1.0';
 
     public static function init() {
         add_action( 'rest_api_init', array( __CLASS__, 'register_rest_routes' ), 140 );
@@ -49,6 +51,13 @@ final class SC_RL6_V700_Connected_Platform {
             'persistent_research_state' => '1',
             'reading_review_history' => '1',
             'open_question_register' => '1',
+            'research_rooms' => '1',
+            'room_membership_roles' => '1',
+            'shared_evidence_state' => '1',
+            'collaborative_questions' => '1',
+            'room_disagreements' => '1',
+            'participant_activity' => '1',
+            'room_synthesis' => '1',
             'api_public_status' => '1',
             'default_visibility' => 'private',
         );
@@ -149,6 +158,29 @@ final class SC_RL6_V700_Connected_Platform {
             array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'rest_state_questions' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ),
             array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'rest_state_question_save' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ),
         ) );
+        register_rest_route( self::REST_NAMESPACE, '/platform/v7/rooms', array(
+            array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'rest_rooms' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ),
+            array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'rest_save_room' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ),
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/platform/v7/rooms/(?P<room_id>[A-Za-z0-9._-]+)', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'rest_room' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ) );
+        register_rest_route( self::REST_NAMESPACE, '/platform/v7/rooms/(?P<room_id>[A-Za-z0-9._-]+)/members', array(
+            array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'rest_room_members' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ),
+            array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'rest_room_member_save' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ),
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/platform/v7/rooms/(?P<room_id>[A-Za-z0-9._-]+)/evidence', array(
+            array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'rest_room_evidence' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ),
+            array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'rest_room_evidence_save' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ),
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/platform/v7/rooms/(?P<room_id>[A-Za-z0-9._-]+)/questions', array(
+            array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'rest_room_questions' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ),
+            array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'rest_room_question_save' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ),
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/platform/v7/rooms/(?P<room_id>[A-Za-z0-9._-]+)/disagreements', array(
+            array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'rest_room_disagreements' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ),
+            array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'rest_room_disagreement_save' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ),
+        ) );
+        register_rest_route( self::REST_NAMESPACE, '/platform/v7/rooms/(?P<room_id>[A-Za-z0-9._-]+)/activity', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'rest_room_activity' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ) );
+        register_rest_route( self::REST_NAMESPACE, '/platform/v7/rooms/(?P<room_id>[A-Za-z0-9._-]+)/synthesis', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'rest_room_synthesis' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ) );
         register_rest_route( self::REST_NAMESPACE, '/platform/v7/workflows', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'rest_workflow' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ) );
         register_rest_route( self::REST_NAMESPACE, '/platform/v7/contradictions', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'rest_contradictions' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ) );
         register_rest_route( self::REST_NAMESPACE, '/platform/v7/uncertainties', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'rest_uncertainties' ), 'permission_callback' => array( __CLASS__, 'can_research' ) ) );
@@ -199,6 +231,34 @@ final class SC_RL6_V700_Connected_Platform {
         if ( is_wp_error( $context ) ) { return $context; }
         if ( current_user_can( 'manage_options' ) || (string) ( $context['owner_ref'] ?? '' ) === self::owner_ref() ) { return $context; }
         return new WP_Error( 'sc_rl_v720_context_forbidden', 'You do not have access to this research context.', array( 'status' => 403 ) );
+    }
+
+    private static function authorized_room( $room_id, $write = false, $manage = false ) {
+        $room_id = sanitize_text_field( $room_id );
+        if ( ! $room_id ) { return new WP_Error( 'sc_rl_v750_room_required', 'A Research Room is required.', array( 'status' => 422 ) ); }
+        $bundle = self::backend_request( '/v1/research/rooms/' . rawurlencode( $room_id ) . '?member_ref=' . rawurlencode( self::owner_ref() ), 'GET' );
+        if ( is_wp_error( $bundle ) ) { return $bundle; }
+        $member = array();
+        foreach ( is_array( $bundle['members'] ?? null ) ? $bundle['members'] : array() as $candidate ) {
+            if ( self::owner_ref() === (string) ( $candidate['member_ref'] ?? '' ) && 'active' === (string) ( $candidate['status'] ?? 'active' ) ) { $member = $candidate; break; }
+        }
+        if ( ! $member ) { return new WP_Error( 'sc_rl_v750_room_forbidden', 'You are not an active member of this Research Room.', array( 'status' => 403 ) ); }
+        $role = (string) ( $member['role'] ?? 'viewer' );
+        if ( $manage && ! in_array( $role, array( 'owner', 'editor' ), true ) ) { return new WP_Error( 'sc_rl_v750_room_manage_forbidden', 'Only Research Room owners and editors can manage this room.', array( 'status' => 403 ) ); }
+        if ( $write && ! in_array( $role, array( 'owner', 'editor', 'researcher' ), true ) ) { return new WP_Error( 'sc_rl_v750_room_write_forbidden', 'Your Research Room role is read-only.', array( 'status' => 403 ) ); }
+        $bundle['current_member'] = $member;
+        return $bundle;
+    }
+
+    private static function resolve_room_member_identity( $identity ) {
+        $identity = trim( sanitize_text_field( $identity ) );
+        if ( ! $identity ) { return new WP_Error( 'sc_rl_v750_member_required', 'Enter a WordPress username, email address, or user ID.', array( 'status' => 422 ) ); }
+        $user = null;
+        if ( ctype_digit( $identity ) ) { $user = get_user_by( 'id', absint( $identity ) ); }
+        if ( ! $user && is_email( $identity ) ) { $user = get_user_by( 'email', $identity ); }
+        if ( ! $user ) { $user = get_user_by( 'login', sanitize_user( $identity ) ); }
+        if ( ! $user ) { return new WP_Error( 'sc_rl_v750_member_unknown', 'That WordPress account could not be found.', array( 'status' => 404 ) ); }
+        return array( 'member_ref' => 'wp-user-' . absint( $user->ID ), 'display_name' => sanitize_text_field( $user->display_name ?: $user->user_login ) );
     }
 
     public static function resolve_context_for_current_user( $context_id ) {
@@ -354,11 +414,104 @@ final class SC_RL6_V700_Connected_Platform {
         ) ) );
     }
 
+    public static function rest_rooms() {
+        return self::respond( self::backend_request( '/v1/research/rooms?limit=100&member_ref=' . rawurlencode( self::owner_ref() ), 'GET' ) );
+    }
+
+    public static function rest_save_room( WP_REST_Request $request ) {
+        $p = self::checked_json( $request ); if ( is_wp_error( $p ) ) { return $p; }
+        $room_id = sanitize_text_field( $p['room_id'] ?? '' );
+        $existing = null;
+        if ( $room_id ) { $existing = self::authorized_room( $room_id, true, true ); if ( is_wp_error( $existing ) ) { return $existing; } }
+        $project_id = sanitize_text_field( $p['project_id'] ?? '' );
+        if ( $project_id ) { $project = self::authorized_project( $project_id, false ); if ( is_wp_error( $project ) ) { return $project; } }
+        $owner_ref = $room_id && is_array( $existing['room'] ?? null ) ? sanitize_text_field( $existing['room']['owner_ref'] ?? self::owner_ref() ) : self::owner_ref();
+        return self::respond( self::backend_request( '/v1/research/rooms', 'POST', array(
+            'room_id' => $room_id, 'title' => sanitize_text_field( $p['title'] ?? 'Research Room' ), 'objective' => sanitize_textarea_field( $p['objective'] ?? '' ),
+            'owner_ref' => $owner_ref, 'actor_ref' => self::owner_ref(), 'project_id' => $project_id, 'status' => sanitize_key( $p['status'] ?? 'active' ), 'tags' => self::sanitize_list( $p['tags'] ?? array(), 40 ),
+        ) ) );
+    }
+
+    public static function rest_room( WP_REST_Request $request ) { return self::respond( self::authorized_room( $request['room_id'], false, false ) ); }
+
+    public static function rest_room_members( WP_REST_Request $request ) {
+        $access = self::authorized_room( $request['room_id'], false, false ); if ( is_wp_error( $access ) ) { return $access; }
+        return self::respond( self::backend_request( '/v1/research/rooms/' . rawurlencode( sanitize_text_field( $request['room_id'] ) ) . '/members?member_ref=' . rawurlencode( self::owner_ref() ), 'GET' ) );
+    }
+
+    public static function rest_room_member_save( WP_REST_Request $request ) {
+        $p = self::checked_json( $request ); if ( is_wp_error( $p ) ) { return $p; }
+        $room_id = sanitize_text_field( $request['room_id'] );
+        $access = self::authorized_room( $room_id, true, true ); if ( is_wp_error( $access ) ) { return $access; }
+        $identity = self::resolve_room_member_identity( $p['member_identity'] ?? '' ); if ( is_wp_error( $identity ) ) { return $identity; }
+        $role = sanitize_key( $p['role'] ?? 'researcher' ); if ( ! in_array( $role, array( 'owner', 'editor', 'researcher', 'viewer' ), true ) ) { $role = 'researcher'; }
+        $member_status = sanitize_key( $p['status'] ?? 'active' ); if ( ! in_array( $member_status, array( 'active', 'invited', 'removed' ), true ) ) { $member_status = 'active'; }
+        return self::respond( self::backend_request( '/v1/research/rooms/' . rawurlencode( $room_id ) . '/members', 'POST', array(
+            'room_id' => $room_id, 'member_ref' => $identity['member_ref'], 'display_name' => $identity['display_name'], 'role' => $role, 'status' => $member_status, 'added_by_ref' => self::owner_ref(),
+        ) ) );
+    }
+
+    public static function rest_room_evidence( WP_REST_Request $request ) {
+        $room_id = sanitize_text_field( $request['room_id'] ); $access = self::authorized_room( $room_id, false, false ); if ( is_wp_error( $access ) ) { return $access; }
+        return self::respond( self::backend_request( '/v1/research/rooms/' . rawurlencode( $room_id ) . '/evidence?member_ref=' . rawurlencode( self::owner_ref() ), 'GET' ) );
+    }
+
+    public static function rest_room_evidence_save( WP_REST_Request $request ) {
+        $p = self::checked_json( $request ); if ( is_wp_error( $p ) ) { return $p; }
+        $room_id = sanitize_text_field( $request['room_id'] ); $access = self::authorized_room( $room_id, true, false ); if ( is_wp_error( $access ) ) { return $access; }
+        $object_id = sanitize_text_field( $p['object_id'] ?? '' ); $object = self::authorized_library_object( $object_id ); if ( is_wp_error( $object ) ) { return $object; }
+        $state = sanitize_key( $p['state'] ?? 'proposed' ); if ( ! in_array( $state, array( 'proposed', 'included', 'disputed', 'removed' ), true ) ) { $state = 'proposed'; }
+        return self::respond( self::backend_request( '/v1/research/rooms/' . rawurlencode( $room_id ) . '/evidence', 'POST', array(
+            'room_id' => $room_id, 'object_id' => $object_id, 'state' => $state, 'note' => sanitize_textarea_field( $p['note'] ?? '' ), 'contributed_by_ref' => self::owner_ref(),
+        ) ) );
+    }
+
+    public static function rest_room_questions( WP_REST_Request $request ) {
+        $room_id = sanitize_text_field( $request['room_id'] ); $access = self::authorized_room( $room_id, false, false ); if ( is_wp_error( $access ) ) { return $access; }
+        return self::respond( self::backend_request( '/v1/research/rooms/' . rawurlencode( $room_id ) . '/questions?member_ref=' . rawurlencode( self::owner_ref() ), 'GET' ) );
+    }
+
+    public static function rest_room_question_save( WP_REST_Request $request ) {
+        $p = self::checked_json( $request ); if ( is_wp_error( $p ) ) { return $p; }
+        $room_id = sanitize_text_field( $request['room_id'] ); $access = self::authorized_room( $room_id, true, false ); if ( is_wp_error( $access ) ) { return $access; }
+        $status = sanitize_key( $p['status'] ?? 'open' ); if ( ! in_array( $status, array( 'open', 'resolved', 'deferred', 'dismissed' ), true ) ) { $status = 'open'; }
+        $payload = array( 'question_id' => sanitize_text_field( $p['question_id'] ?? '' ), 'room_id' => $room_id, 'question' => sanitize_textarea_field( $p['question'] ?? '' ), 'status' => $status, 'linked_object_ids' => self::sanitize_list( $p['linked_object_ids'] ?? array(), 100 ), 'created_by_ref' => self::owner_ref(), 'resolution' => sanitize_textarea_field( $p['resolution'] ?? '' ) );
+        if ( ! empty( $p['question_id'] ) && 'open' !== $status ) { $payload['resolved_by_ref'] = self::owner_ref(); }
+        return self::respond( self::backend_request( '/v1/research/rooms/' . rawurlencode( $room_id ) . '/questions', 'POST', $payload ) );
+    }
+
+    public static function rest_room_disagreements( WP_REST_Request $request ) {
+        $room_id = sanitize_text_field( $request['room_id'] ); $access = self::authorized_room( $room_id, false, false ); if ( is_wp_error( $access ) ) { return $access; }
+        return self::respond( self::backend_request( '/v1/research/rooms/' . rawurlencode( $room_id ) . '/disagreements?member_ref=' . rawurlencode( self::owner_ref() ), 'GET' ) );
+    }
+
+    public static function rest_room_disagreement_save( WP_REST_Request $request ) {
+        $p = self::checked_json( $request ); if ( is_wp_error( $p ) ) { return $p; }
+        $room_id = sanitize_text_field( $request['room_id'] ); $access = self::authorized_room( $room_id, true, false ); if ( is_wp_error( $access ) ) { return $access; }
+        $status = sanitize_key( $p['status'] ?? 'open' ); if ( ! in_array( $status, array( 'open', 'resolved', 'deferred', 'dismissed' ), true ) ) { $status = 'open'; }
+        $position = sanitize_textarea_field( $p['position'] ?? '' );
+        $positions = $position ? array( array( 'participant_ref' => self::owner_ref(), 'position' => $position, 'note' => sanitize_textarea_field( $p['position_note'] ?? '' ) ) ) : array();
+        $payload = array( 'disagreement_id' => sanitize_text_field( $p['disagreement_id'] ?? '' ), 'room_id' => $room_id, 'statement' => sanitize_textarea_field( $p['statement'] ?? '' ), 'status' => $status, 'linked_object_ids' => self::sanitize_list( $p['linked_object_ids'] ?? array(), 100 ), 'created_by_ref' => self::owner_ref(), 'positions' => $positions, 'resolution' => sanitize_textarea_field( $p['resolution'] ?? '' ) );
+        if ( ! empty( $p['disagreement_id'] ) && 'resolved' === $status ) { $payload['resolved_by_ref'] = self::owner_ref(); }
+        return self::respond( self::backend_request( '/v1/research/rooms/' . rawurlencode( $room_id ) . '/disagreements', 'POST', $payload ) );
+    }
+
+    public static function rest_room_activity( WP_REST_Request $request ) {
+        $room_id = sanitize_text_field( $request['room_id'] ); $access = self::authorized_room( $room_id, false, false ); if ( is_wp_error( $access ) ) { return $access; }
+        return self::respond( self::backend_request( '/v1/research/rooms/' . rawurlencode( $room_id ) . '/activity?member_ref=' . rawurlencode( self::owner_ref() ) . '&limit=200', 'GET' ) );
+    }
+
+    public static function rest_room_synthesis( WP_REST_Request $request ) {
+        $room_id = sanitize_text_field( $request['room_id'] ); $access = self::authorized_room( $room_id, false, false ); if ( is_wp_error( $access ) ) { return $access; }
+        return self::respond( self::backend_request( '/v1/research/rooms/' . rawurlencode( $room_id ) . '/synthesis?member_ref=' . rawurlencode( self::owner_ref() ), 'GET' ) );
+    }
+
     public static function rest_save_context( WP_REST_Request $request ) {
         $p=self::checked_json($request); if(is_wp_error($p)){return $p;}
         if(!empty($p['context_id'])){$existing=self::authorized_context($p['context_id']);if(is_wp_error($existing)){return $existing;}}
         $project_id=sanitize_text_field($p['project_id']??''); if($project_id){$project=self::authorized_project($project_id,false);if(is_wp_error($project)){return $project;}}
-        $payload=array('context_id'=>sanitize_text_field($p['context_id']??''),'title'=>sanitize_text_field($p['title']??'Research context'),'owner_ref'=>self::owner_ref(),'scopes'=>self::sanitize_list($p['scopes']??array(),4),'project_id'=>$project_id,'room_id'=>sanitize_text_field($p['room_id']??''),'selected_object_ids'=>self::sanitize_list($p['selected_object_ids']??array(),200),'filters'=>self::sanitize_tree($p['filters']??array()),'active'=>!isset($p['active'])||!empty($p['active']));
+        $room_id=sanitize_text_field($p['room_id']??''); if($room_id){$room=self::authorized_room($room_id,false,false);if(is_wp_error($room)){return $room;}}
+        $payload=array('context_id'=>sanitize_text_field($p['context_id']??''),'title'=>sanitize_text_field($p['title']??'Research context'),'owner_ref'=>self::owner_ref(),'scopes'=>self::sanitize_list($p['scopes']??array(),4),'project_id'=>$project_id,'room_id'=>$room_id,'selected_object_ids'=>self::sanitize_list($p['selected_object_ids']??array(),200),'filters'=>self::sanitize_tree($p['filters']??array()),'active'=>!isset($p['active'])||!empty($p['active']));
         return self::respond(self::backend_request('/v1/research/contexts','POST',$payload));
     }
 
@@ -378,22 +531,23 @@ final class SC_RL6_V700_Connected_Platform {
             update_option(self::OPTION_NAME,$clean,false); echo '<div class="notice notice-success"><p>Connected Research Platform settings saved.</p></div>';
         }
         $o=self::options(); $status=self::backend_request('/v1/platform/summary','GET'); $api=self::backend_request('/v1/platform/api','GET'); ?>
-        <div class="wrap"><h1>Connected Research Intelligence Platform</h1><p>v7.4.0 adds persistent research state, reading and review history, rejected-source memory, contradiction flags, and an open-question register to the Library-native context model. Research state remains visible workflow memory rather than factual evidence.</p>
+        <div class="wrap"><h1>Connected Research Intelligence Platform</h1><p>v7.5.0 adds collaborative Research Rooms with explicit membership roles, shared evidence state, attributable questions and disagreements, participant activity, and room-level synthesis. Individual state remains separate from shared room state.</p>
         <div class="card"><h2>Platform state</h2><p><strong>Backend:</strong> <?php echo is_wp_error($status)?esc_html($status->get_error_message()):'Connected'; ?></p><p><strong>Stable API:</strong> <?php echo is_wp_error($api)?'Unavailable':esc_html($api['schema']??self::API_SCHEMA); ?></p><p><strong>Object model:</strong> <?php echo esc_html(self::OBJECT_MODEL_SCHEMA); ?></p><?php if(!is_wp_error($status)&&!empty($status['counts'])):?><ul><?php foreach($status['counts'] as $key=>$value):?><li><strong><?php echo esc_html(ucwords(str_replace('_',' ',$key))); ?>:</strong> <?php echo esc_html(absint($value)); ?></li><?php endforeach;?></ul><?php endif;?></div>
-        <form method="post"><?php wp_nonce_field('sc_rl_v700_save');?><table class="form-table"><tbody><tr><th>Workspace mode</th><td><select name="workspace_mode"><?php foreach(array('public'=>'Public','editorial'=>'Editorial','institutional'=>'Institutional') as $value=>$label):?><option value="<?php echo esc_attr($value);?>" <?php selected($o['workspace_mode'],$value);?>><?php echo esc_html($label);?></option><?php endforeach;?></select></td></tr><tr><th>Default visibility</th><td><select name="default_visibility"><?php foreach(array('private'=>'Private','shared'=>'Shared','public'=>'Public') as $value=>$label):?><option value="<?php echo esc_attr($value);?>" <?php selected($o['default_visibility'],$value);?>><?php echo esc_html($label);?></option><?php endforeach;?></select></td></tr><tr><th>Capabilities</th><td><?php foreach(array('persistent_projects'=>'Persistent projects','portable_backups'=>'Portable backup and recovery','contradiction_analysis'=>'Contradiction tracking','uncertainty_registers'=>'Uncertainty registers','workflow_templates'=>'Reusable workflow templates','library_object_model'=>'Library object model','contextual_research'=>'Context-aware research','personal_library_separation'=>'Personal/editorial collection separation','source_scope_provenance'=>'Source-scope provenance','human_publication_review'=>'Human publication review','source_evaluation'=>'Descriptive source evaluation','evidence_comparison'=>'Evidence comparison','evidence_gap_detection'=>'Evidence-gap detection','persistent_research_state'=>'Persistent research state','reading_review_history'=>'Reading and review history','open_question_register'=>'Open-question register','api_public_status'=>'Public platform status') as $key=>$label):?><label style="display:block;margin:0 0 8px"><input type="checkbox" name="<?php echo esc_attr($key);?>" <?php checked($o[$key],'1');?>> <?php echo esc_html($label);?></label><?php endforeach;?></td></tr></tbody></table><?php submit_button('Save Platform Settings','primary','sc_rl_v700_save');?></form>
+        <form method="post"><?php wp_nonce_field('sc_rl_v700_save');?><table class="form-table"><tbody><tr><th>Workspace mode</th><td><select name="workspace_mode"><?php foreach(array('public'=>'Public','editorial'=>'Editorial','institutional'=>'Institutional') as $value=>$label):?><option value="<?php echo esc_attr($value);?>" <?php selected($o['workspace_mode'],$value);?>><?php echo esc_html($label);?></option><?php endforeach;?></select></td></tr><tr><th>Default visibility</th><td><select name="default_visibility"><?php foreach(array('private'=>'Private','shared'=>'Shared','public'=>'Public') as $value=>$label):?><option value="<?php echo esc_attr($value);?>" <?php selected($o['default_visibility'],$value);?>><?php echo esc_html($label);?></option><?php endforeach;?></select></td></tr><tr><th>Capabilities</th><td><?php foreach(array('persistent_projects'=>'Persistent projects','portable_backups'=>'Portable backup and recovery','contradiction_analysis'=>'Contradiction tracking','uncertainty_registers'=>'Uncertainty registers','workflow_templates'=>'Reusable workflow templates','library_object_model'=>'Library object model','contextual_research'=>'Context-aware research','personal_library_separation'=>'Personal/editorial collection separation','source_scope_provenance'=>'Source-scope provenance','human_publication_review'=>'Human publication review','source_evaluation'=>'Descriptive source evaluation','evidence_comparison'=>'Evidence comparison','evidence_gap_detection'=>'Evidence-gap detection','persistent_research_state'=>'Persistent research state','reading_review_history'=>'Reading and review history','open_question_register'=>'Open-question register','research_rooms'=>'Collaborative Research Rooms','room_membership_roles'=>'Room membership roles','shared_evidence_state'=>'Shared evidence state','collaborative_questions'=>'Collaborative room questions','room_disagreements'=>'Attributed disagreements','participant_activity'=>'Participant activity','room_synthesis'=>'Room-level synthesis','api_public_status'=>'Public platform status') as $key=>$label):?><label style="display:block;margin:0 0 8px"><input type="checkbox" name="<?php echo esc_attr($key);?>" <?php checked($o[$key],'1');?>> <?php echo esc_html($label);?></label><?php endforeach;?></td></tr></tbody></table><?php submit_button('Save Platform Settings','primary','sc_rl_v700_save');?></form>
         <p><code>[sc_connected_research_workspace]</code> renders the authenticated project and research-context workspace. <code>[sc_research_projects_summary]</code> and <code>[sc_connected_research_platform_status]</code> render compact summaries.</p></div><?php
     }
 
     private static function enqueue_workspace_assets() {
         wp_enqueue_style( 'sc-research-librarian-ai' );
         wp_enqueue_script( 'sc-rl-v700-connected-platform', plugins_url( '../assets/sc-research-platform-v7.js', __FILE__ ), array(), self::VERSION, true );
-        wp_localize_script( 'sc-rl-v700-connected-platform', 'SCRLPlatformV7', array( 'root' => esc_url_raw( rest_url( self::REST_NAMESPACE . '/platform/v7/' ) ), 'nonce' => wp_create_nonce( 'wp_rest' ), 'authenticated' => is_user_logged_in(), 'workspaceMode' => self::options()['workspace_mode'], 'objectModelSchema' => self::OBJECT_MODEL_SCHEMA, 'contextSchema' => self::CONTEXT_SCHEMA, 'qualitySchema' => self::QUALITY_SCHEMA, 'stateSchema' => self::STATE_SCHEMA ) );
+        wp_enqueue_script( 'sc-rl-v750-research-rooms', plugins_url( '../assets/sc-research-platform-v750-rooms.js', __FILE__ ), array( 'sc-rl-v700-connected-platform' ), self::VERSION, true );
+        wp_localize_script( 'sc-rl-v700-connected-platform', 'SCRLPlatformV7', array( 'root' => esc_url_raw( rest_url( self::REST_NAMESPACE . '/platform/v7/' ) ), 'nonce' => wp_create_nonce( 'wp_rest' ), 'authenticated' => is_user_logged_in(), 'workspaceMode' => self::options()['workspace_mode'], 'objectModelSchema' => self::OBJECT_MODEL_SCHEMA, 'contextSchema' => self::CONTEXT_SCHEMA, 'qualitySchema' => self::QUALITY_SCHEMA, 'stateSchema' => self::STATE_SCHEMA, 'roomSchema' => self::ROOM_SCHEMA, 'roomSynthesisSchema' => self::ROOM_SYNTHESIS_SCHEMA ) );
     }
 
     public static function render_workspace() {
         self::enqueue_workspace_assets(); ob_start(); ?>
         <section class="sc-rl-v7-platform sc-rl-v7-platform--context" data-sc-rl-v7-workspace>
-          <header><p class="sc-rl-product__eyebrow">Connected Research Intelligence Platform</p><h2>Research Projects, Context, Evidence Quality &amp; Research State</h2><p>Move between Sustainable Catalyst's editorial collection, your private Library, active projects, and Research Rooms while preserving what you searched, reviewed, rejected, flagged, and still need to resolve. Research state remains inspectable workflow memory and is never treated as factual evidence.</p></header>
+          <header><p class="sc-rl-product__eyebrow">Connected Research Intelligence Platform</p><h2>Research Projects, Context, Evidence Quality, Research State &amp; Rooms</h2><p>Move between Sustainable Catalyst's editorial collection, your private Library, active projects, and collaborative Research Rooms while preserving personal and shared provenance. Room synthesis keeps participant attribution visible and remains separate from factual evidence and editorial approval.</p></header>
           <div class="sc-rl-v720-context-model" aria-label="Research context model">
             <article><span>Editorial</span><strong>Sustainable Catalyst Collection</strong><p>Public knowledge and official editorial recommendations.</p></article>
             <article><span>Private</span><strong>My Library</strong><p>Your saved sources, recommendations, searches, watchlists, and queue.</p></article>
@@ -407,11 +561,13 @@ final class SC_RL6_V700_Connected_Platform {
             <button type="button" data-sc-rl-v720-context-new>New context</button>
             <button type="button" data-sc-rl-v730-quality-run>Evaluate context</button>
             <button type="button" data-sc-rl-v740-state-run>Research state</button>
+            <button type="button" data-sc-rl-v750-room-run>Research rooms</button>
           </div>
           <form class="sc-rl-v720-context-form" data-sc-rl-v720-context-form hidden>
             <label>Context name<input name="title" maxlength="240" value="My Library research"></label>
             <label>Scope<select name="scope"><option value="my-library">My Library</option><option value="sustainable-catalyst-collection">Sustainable Catalyst Collection</option><option value="current-project">Current Project</option><option value="current-research-room">Current Research Room</option></select></label>
             <label>Project<select name="project_id" data-sc-rl-v720-context-project><option value="">No project</option></select></label>
+            <label>Research Room<select name="room_id" data-sc-rl-v750-context-room><option value="">No Research Room</option></select></label>
             <button type="submit">Save context</button><button type="button" data-sc-rl-v720-context-cancel>Cancel</button><p role="status" aria-live="polite" data-sc-rl-v720-context-status></p>
           </form>
           <section class="sc-rl-v730-quality-panel" data-sc-rl-v730-quality-panel hidden aria-live="polite">
@@ -427,10 +583,22 @@ final class SC_RL6_V700_Connected_Platform {
               <p role="status" aria-live="polite" data-sc-rl-v740-question-status></p>
             </form>
           </section>
+          <section class="sc-rl-v750-room-panel" data-sc-rl-v750-room-panel hidden aria-live="polite">
+            <header><p class="sc-rl-product__eyebrow">Collaborative Research Room Intelligence</p><h3>Shared research with participant attribution</h3><p>Room evidence state, questions, disagreements, and activity are collaborative workflow records. Individual reading history remains personal, and room synthesis is not factual verification or editorial approval.</p></header>
+            <div class="sc-rl-v750-room-toolbar"><label>Research Room<select data-sc-rl-v750-room-select><option value="">Choose a room</option></select></label><button type="button" data-sc-rl-v750-room-refresh>Refresh room</button></div>
+            <div data-sc-rl-v750-room-content><p>Create or select a Research Room to inspect shared research state.</p></div>
+            <div class="sc-rl-v750-room-forms">
+              <form data-sc-rl-v750-room-create><h4>New Research Room</h4><label>Room title<input name="title" maxlength="240" required></label><label>Shared objective<textarea name="objective" rows="3" maxlength="5000"></textarea></label><label>Related project<select name="project_id" data-sc-rl-v750-room-project><option value="">No project</option></select></label><button type="submit">Create room</button><p role="status" data-sc-rl-v750-room-create-status></p></form>
+              <form data-sc-rl-v750-member-form hidden><h4>Add participant</h4><label>WordPress account<input name="member_identity" placeholder="Username, email, or user ID" required></label><label>Role<select name="role"><option value="researcher">Researcher</option><option value="viewer">Viewer</option><option value="editor">Editor</option></select></label><button type="submit">Add participant</button><p role="status" data-sc-rl-v750-member-status></p></form>
+              <form data-sc-rl-v750-evidence-form hidden><h4>Share evidence</h4><label>Library object<select name="object_id" data-sc-rl-v750-room-object required><option value="">Choose a Library object</option></select></label><label>Shared state<select name="state"><option value="proposed">Proposed</option><option value="included">Included</option><option value="disputed">Disputed</option></select></label><label>Note<textarea name="note" rows="2" maxlength="4000"></textarea></label><button type="submit">Share with room</button><p role="status" data-sc-rl-v750-evidence-status></p></form>
+              <form data-sc-rl-v750-room-question-form hidden><h4>Collaborative question</h4><label>Question<textarea name="question" rows="3" maxlength="3000" required></textarea></label><button type="submit">Add room question</button><p role="status" data-sc-rl-v750-room-question-status></p></form>
+              <form data-sc-rl-v750-disagreement-form hidden><h4>Record a disagreement</h4><label>Issue or statement<textarea name="statement" rows="3" maxlength="4000" required></textarea></label><label>Your position<textarea name="position" rows="3" maxlength="3000" required></textarea></label><button type="submit">Add attributed position</button><p role="status" data-sc-rl-v750-disagreement-status></p></form>
+            </div>
+          </section>
           <div class="sc-rl-v7-layout"><aside class="sc-rl-v7-create"><h3>New project</h3><form data-sc-rl-v7-project-form><label>Project title<input name="title" required maxlength="240"></label><label>Research objective<textarea name="objective" rows="5" maxlength="4000"></textarea></label><button type="submit">Create project</button><p role="status" aria-live="polite" data-sc-rl-v7-form-status></p></form><div class="sc-rl-v720-library-summary" data-sc-rl-v720-library-summary><strong>Library objects</strong><p>Loading your Library object model…</p></div></aside><div><div class="sc-rl-v7-toolbar"><h3>Your projects</h3><button type="button" data-sc-rl-v7-refresh>Refresh</button></div><div data-sc-rl-v7-projects role="region" aria-live="polite"><p>Loading research projects…</p></div></div></div><?php endif;?>
         </section><?php return ob_get_clean();
     }
 
     public static function render_summary() { $status=self::backend_request('/v1/platform/summary','GET'); $counts=is_wp_error($status)?array('projects'=>0,'investigations'=>0,'entities'=>0,'library_objects'=>0,'research_contexts'=>0,'backups'=>0):($status['counts']??array()); ob_start();?><section class="sc-rl-v7-summary"><p class="sc-rl-product__eyebrow">Connected Research Platform</p><h2>Research Workspace Summary</h2><div class="sc-rl-product__grid"><?php foreach($counts as $key=>$value):?><article><span><?php echo esc_html(absint($value));?></span><strong><?php echo esc_html(ucwords(str_replace('_',' ',$key)));?></strong></article><?php endforeach;?></div></section><?php return ob_get_clean(); }
-    public static function render_status() { $status=self::backend_request('/v1/platform/summary','GET'); $connected=!is_wp_error($status); ob_start();?><section class="sc-rl-governance sc-rl-governance--status"><p class="sc-rl-product__eyebrow">Platform Status</p><h2>Connected Research Intelligence</h2><div class="sc-rl-product__grid"><article><span><?php echo $connected?'Connected':'Fallback';?></span><strong>Platform state</strong><p><?php echo $connected?'Persistent project, Library-context, and evidence-quality services are available.':'The public Librarian remains available; private research context requires the backend.';?></p></article><article><span>v7.4.0</span><strong>Stable API</strong><p><?php echo esc_html(self::API_SCHEMA);?></p></article><article><span>Persistent</span><strong>Research state</strong><p>Search, reading, rejection, contradiction, and open-question state stays inspectable and separate from evidence.</p></article></div></section><?php return ob_get_clean(); }
+    public static function render_status() { $status=self::backend_request('/v1/platform/summary','GET'); $connected=!is_wp_error($status); ob_start();?><section class="sc-rl-governance sc-rl-governance--status"><p class="sc-rl-product__eyebrow">Platform Status</p><h2>Connected Research Intelligence</h2><div class="sc-rl-product__grid"><article><span><?php echo $connected?'Connected':'Fallback';?></span><strong>Platform state</strong><p><?php echo $connected?'Persistent project, Library-context, evidence-quality, research-state, and collaborative room services are available.':'The public Librarian remains available; private research context requires the backend.';?></p></article><article><span>v7.5.0</span><strong>Stable API</strong><p><?php echo esc_html(self::API_SCHEMA);?></p></article><article><span>Collaborative</span><strong>Research Rooms</strong><p>Shared evidence, questions, disagreements, and synthesis preserve participant attribution and remain separate from personal research state.</p></article></div></section><?php return ob_get_clean(); }
 }

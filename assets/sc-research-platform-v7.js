@@ -17,6 +17,7 @@
   const contextCancel = root.querySelector('[data-sc-rl-v720-context-cancel]');
   const contextStatus = root.querySelector('[data-sc-rl-v720-context-status]');
   const contextProject = root.querySelector('[data-sc-rl-v720-context-project]');
+  const contextRoom = root.querySelector('[data-sc-rl-v750-context-room]');
   const qualityRun = root.querySelector('[data-sc-rl-v730-quality-run]');
   const qualityPanel = root.querySelector('[data-sc-rl-v730-quality-panel]');
   const qualityContent = root.querySelector('[data-sc-rl-v730-quality-content]');
@@ -72,6 +73,12 @@
       return;
     }
     list.innerHTML = `<div class="sc-rl-v7-project-grid">${projects.map(p => `<article class="sc-rl-v7-project-card" data-project-id="${escapeHTML(p.project_id)}"><span>${escapeHTML(p.status)}</span><h4>${escapeHTML(p.title)}</h4><p>${escapeHTML(p.objective || 'No objective recorded yet.')}</p><div class="sc-rl-v720-project-actions"><button type="button" data-context>Use as context</button><button type="button" data-open>Open project</button><button type="button" data-backup>Export backup</button></div><div hidden data-project-detail class="sc-rl-v720-project-detail"></div></article>`).join('')}</div>`;
+  }
+
+  function renderRoomContextOptions(items) {
+    if (!contextRoom) return;
+    const rows = Array.isArray(items) ? items : [];
+    contextRoom.innerHTML = '<option value="">No Research Room</option>' + rows.map(room => `<option value="${escapeHTML(room.room_id)}">${escapeHTML(room.title || 'Research Room')}</option>`).join('');
   }
 
   function renderLibrary(objects) {
@@ -214,14 +221,16 @@
   async function loadAll() {
     if (list) list.setAttribute('aria-busy', 'true');
     try {
-      const [projectBody, libraryBody, contextBody] = await Promise.all([
+      const [projectBody, libraryBody, contextBody, roomBody] = await Promise.all([
         request('projects'),
         request('library/objects?limit=500'),
-        request('contexts')
+        request('contexts'),
+        request('rooms')
       ]);
       renderProjects(projectBody.projects || []);
       renderLibrary(libraryBody.objects || []);
       renderContexts(contextBody || {});
+      renderRoomContextOptions(roomBody.rooms || []);
     } catch (e) {
       if (list) list.innerHTML = `<div class="sc-rl-v7-error"><strong>Research workspace unavailable</strong><p>${escapeHTML(e.message)}</p></div>`;
       if (librarySummary) librarySummary.innerHTML = `<strong>Library object status unavailable</strong><p>${escapeHTML(e.message)}</p>`;
@@ -384,10 +393,12 @@
     const data = new FormData(contextForm);
     const scope = String(data.get('scope') || 'my-library');
     const projectId = scope === 'current-project' ? String(data.get('project_id') || '') : '';
+    const roomId = scope === 'current-research-room' ? String(data.get('room_id') || '') : '';
     if (scope === 'current-project' && !projectId) { contextStatus.textContent = 'Choose a project for Current Project context.'; return; }
+    if (scope === 'current-research-room' && !roomId) { contextStatus.textContent = 'Choose a Research Room for Current Research Room context.'; return; }
     contextStatus.textContent = 'Saving context…';
     try {
-      const body = await request('contexts', { method:'POST', body:JSON.stringify({ title:data.get('title'), scopes:[scope], project_id:projectId, active:true }) });
+      const body = await request('contexts', { method:'POST', body:JSON.stringify({ title:data.get('title'), scopes:[scope], project_id:projectId, room_id:roomId, active:true }) });
       contextStatus.textContent = 'Context saved.';
       contextForm.hidden = true;
       await loadContextsOnly(body.context_id);
