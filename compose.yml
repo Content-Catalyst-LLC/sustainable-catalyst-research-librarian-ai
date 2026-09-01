@@ -1,0 +1,20 @@
+services:
+  research-librarian:
+    image: sustainable-catalyst-research-librarian:8.0.0
+    container_name: sc-research-librarian
+    restart: unless-stopped
+    env_file:
+      - .env.contabo
+    ports:
+      - "127.0.0.1:8093:8093"
+    volumes:
+      - research_librarian_data:/var/data
+    networks:
+      - sc-internal
+
+volumes:
+  research_librarian_data:
+
+networks:
+  sc-internal:
+    external: true
