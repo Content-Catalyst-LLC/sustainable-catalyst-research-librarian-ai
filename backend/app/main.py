@@ -274,25 +274,14 @@ _SERVICE_STARTED_MONOTONIC = time.monotonic()
 _SERVICE_STARTED_UTC = utc_now()
 
 
-def require_key(
-    x_sc_rl_key: str = Header(default=""),
-    x_sc_service_token: str = Header(default=""),
-) -> None:
+def require_key(x_sc_rl_key: str = Header(default="")) -> None:
     if not settings.api_key:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="SC_RL_BACKEND_API_KEY is not configured on the backend.",
         )
-
-    supplied_key = x_sc_rl_key or x_sc_service_token
-    if not supplied_key or not hmac.compare_digest(
-        hashlib.sha256(supplied_key.encode()).digest(),
-        hashlib.sha256(settings.api_key.encode()).digest(),
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid backend integration key.",
-        )
+    if not x_sc_rl_key or not hmac.compare_digest(hashlib.sha256(x_sc_rl_key.encode()).digest(), hashlib.sha256(settings.api_key.encode()).digest()):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid backend integration key.")
 
 
 def _idempotency_payload_hash(payload: dict[str, Any]) -> str:
@@ -2645,3 +2634,8 @@ async def ask(payload: AskRequest) -> AskResponse:
         provenance=provenance,
         status=_status().model_dump(),
     )
+
+
+# Energy Systems Intelligence v1.2.0 target-side runtime consumer.
+from .energy_runtime_consumer import router as energy_runtime_consumer_router
+app.include_router(energy_runtime_consumer_router)

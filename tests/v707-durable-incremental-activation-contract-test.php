@@ -10,10 +10,10 @@ $docs = file_get_contents( $root . '/docs/V707_DURABLE_INCREMENTAL_INDEX_ACTIVAT
 $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_v707_durable_incremental_activation_manifest.json' ), true );
 
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 8.0.0' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '8.0.0';" ),
+    'version_header' => false !== strpos( $main, 'Version: 8.1.0' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '8.1.0';" ),
     'durable_version' => false !== strpos( $module, "const VERSION = '8.0.0';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "8.0.0"' ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "8.1.0"' ),
     'schema_eleven' => false !== strpos( $store, 'SCHEMA_VERSION = 18' ),
     'index_schema_eleven' => false !== strpos( $store, 'sc-research-librarian-knowledge-index/13.0' ),
     'no_background_tasks' => false === strpos( $backend, 'BackgroundTasks' ) && false === strpos( $backend, 'background_tasks.add_task' ),

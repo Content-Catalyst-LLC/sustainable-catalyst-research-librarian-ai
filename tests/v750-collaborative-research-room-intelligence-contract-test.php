@@ -18,9 +18,9 @@ $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_co
 $v740 = json_decode( file_get_contents( $root . '/data/research_librarian_persistent_research_state_manifest_v7.4.0.json' ), true );
 
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 8.0.0' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '8.0.0';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "8.0.0"' ),
+    'version_header' => false !== strpos( $main, 'Version: 8.1.0' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '8.1.0';" ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "8.1.0"' ),
     'module_version' => false !== strpos( $module, "const VERSION = '8.0.0';" ),
     'api_14' => false !== strpos( $platform, 'sc-connected-research-api/2.0' ),
     'workspace_24' => false !== strpos( $module, 'sc-research-librarian-public-workspace/3.0' ),

@@ -109,7 +109,7 @@ class Settings:
     postgres_activation_checksum_batch_limit: int = _int("SC_RL_POSTGRES_ACTIVATION_CHECKSUM_BATCH_LIMIT", 250, 25, 2000)
     postgres_generation_retention: int = _int("SC_RL_POSTGRES_GENERATION_RETENTION", 1, 1, 20)
     neon_free_storage_warning_mb: int = _int("SC_RL_NEON_FREE_STORAGE_WARNING_MB", 400, 100, 500)
-    release_version: str = os.getenv("SC_RL_RELEASE_VERSION", "8.0.0")
+    release_version: str = os.getenv("SC_RL_RELEASE_VERSION", "8.1.0")
     federated_discovery_enabled: bool = _bool("SC_RL_FEDERATED_DISCOVERY_ENABLED", True)
     federated_timeout_seconds: int = _int("SC_RL_FEDERATED_TIMEOUT_SECONDS", 12, 5, 60)
     federated_provider_result_limit: int = _int("SC_RL_FEDERATED_PROVIDER_RESULT_LIMIT", 10, 1, 50)
