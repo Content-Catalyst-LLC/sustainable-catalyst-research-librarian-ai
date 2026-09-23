@@ -1,6 +1,15 @@
-# Sustainable Catalyst Research Librarian AI v8.0.0
+# Sustainable Catalyst Research Librarian AI v8.2.0
 
-A site-scoped connected research intelligence platform with Library-native research objects, persistent individual research state, collaborative Research Rooms, descriptive evidence-quality signals, federated global discovery, governed Workspace artifact promotion, and a first-class inspectable research lifecycle. See `docs/V800_UNIFIED_RESEARCH_INTELLIGENCE_LIFECYCLE.md`.
+Research Librarian AI is the Python-backed acquisition, document-intelligence, indexing, retrieval, collaboration, and research-orchestration layer for Sustainable Catalyst. v8.2.0 makes Platform Core v3.3.0+ a first-class governed reasoning dependency instead of treating Core as a generic handoff destination.
+
+### v8.2.0 architecture
+
+- **Research Librarian Python:** source acquisition, normalization, parsing, chunking, embeddings, indexing, retrieval, federation, document intelligence, research workflow state, and Core orchestration.
+- **Platform Core:** governed research objects, evidence/provenance, lineage, claims/findings/arguments/conclusions, reproducibility, statistical reasoning objects, visual reasoning, and cross-product exchange.
+- **Specialist runtimes:** Workspace, Workbench, Research Lab, Analytics R, and other runtimes perform computation; Core records governed results rather than becoming an arbitrary execution engine.
+- **WordPress:** presentation, access, configuration, and user interaction.
+
+v8.2.0 adds the typed `PlatformCoreClient`, `/v1/core/*` service boundary, durable Core bindings, deterministic IDs, compatibility checks, retries, and fail-closed write authentication. Ancillary SQLite advances to schema 19; the Postgres/pgvector knowledge index does not require a migration.
 
 ## v8.0.0 highlights
 
@@ -28,14 +37,14 @@ WordPress remains the canonical publishing, administration, identity, and recove
 
 ## Backend resources
 
-`/v1/projects`, `/v1/investigations`, `/v1/projects/entities`, `/v1/library/object-model`, `/v1/library/objects`, `/v1/research/contexts`, `/v1/research/contexts/{context_id}/evidence-quality`, `/v1/research/sources/evaluate`, `/v1/research/evidence/compare`, `/v1/research/evidence/gaps`, `/v1/research/state/summary`, `/v1/research/activity`, `/v1/research/object-states`, `/v1/research/questions`, `/v1/research/rooms`, `/v1/research/rooms/{room_id}`, `/v1/research/rooms/{room_id}/members`, `/v1/research/rooms/{room_id}/evidence`, `/v1/research/rooms/{room_id}/questions`, `/v1/research/rooms/{room_id}/disagreements`, `/v1/research/rooms/{room_id}/activity`, `/v1/research/rooms/{room_id}/synthesis`, `/v1/federation/providers`, `/v1/federation/search`, `/v1/federation/searches`, `/v1/federation/searches/{search_id}`, `/v1/federation/searches/{search_id}/results/{result_id}/save`, `/v1/workspace/promotions/catalog`, `/v1/workspace/promotions`, `/v1/workspace/promotions/{promotion_id}`, `/v1/workspace/promotions/{promotion_id}/receipt`, `/v1/research/lifecycle/catalog`, `/v1/research/lifecycles`, `/v1/research/lifecycles/{lifecycle_id}`, `/v1/research/lifecycles/{lifecycle_id}/summary`, `/v1/research/lifecycles/{lifecycle_id}/transition`, `/v1/research/lifecycles/{lifecycle_id}/checkpoint`, `/v1/workflows/template`, `/v1/research/contradictions`, `/v1/research/uncertainties`, `/v1/projects/{project_id}/backup`, `/v1/platform/backups/import`, `/v1/platform/api`, and `/v1/platform/summary`.
+`/v1/core/architecture`, `/v1/core/readiness`, `/v1/core/bindings`, `/v1/core/research-objects/promote`, `/v1/core/research-projects/synchronize`, `/v1/core/exchange/packages`, `/v1/projects`, `/v1/investigations`, `/v1/projects/entities`, `/v1/library/object-model`, `/v1/library/objects`, `/v1/research/contexts`, `/v1/research/contexts/{context_id}/evidence-quality`, `/v1/research/sources/evaluate`, `/v1/research/evidence/compare`, `/v1/research/evidence/gaps`, `/v1/research/state/summary`, `/v1/research/activity`, `/v1/research/object-states`, `/v1/research/questions`, `/v1/research/rooms`, `/v1/research/rooms/{room_id}`, `/v1/research/rooms/{room_id}/members`, `/v1/research/rooms/{room_id}/evidence`, `/v1/research/rooms/{room_id}/questions`, `/v1/research/rooms/{room_id}/disagreements`, `/v1/research/rooms/{room_id}/activity`, `/v1/research/rooms/{room_id}/synthesis`, `/v1/federation/providers`, `/v1/federation/search`, `/v1/federation/searches`, `/v1/federation/searches/{search_id}`, `/v1/federation/searches/{search_id}/results/{result_id}/save`, `/v1/workspace/promotions/catalog`, `/v1/workspace/promotions`, `/v1/workspace/promotions/{promotion_id}`, `/v1/workspace/promotions/{promotion_id}/receipt`, `/v1/research/lifecycle/catalog`, `/v1/research/lifecycles`, `/v1/research/lifecycles/{lifecycle_id}`, `/v1/research/lifecycles/{lifecycle_id}/summary`, `/v1/research/lifecycles/{lifecycle_id}/transition`, `/v1/research/lifecycles/{lifecycle_id}/checkpoint`, `/v1/workflows/template`, `/v1/research/contradictions`, `/v1/research/uncertainties`, `/v1/projects/{project_id}/backup`, `/v1/platform/backups/import`, `/v1/platform/api`, and `/v1/platform/summary`.
 
 ## Runtime
 
 - Python 3.12.12
 - FastAPI
 - Neon-compatible PostgreSQL with pgvector for the production knowledge index
-- SQLite schema 18 for local development and ancillary platform/Library/research-state/collaboration/promotion/lifecycle records
+- SQLite schema 19 for local development and ancillary platform/Library/research-state/collaboration/promotion/lifecycle/Core-binding records
 - Knowledge-index schema remains `sc-research-librarian-knowledge-index/13.0`
 - WordPress 6.0+
 - No Render persistent disk is required for the durable production knowledge index

@@ -16,13 +16,13 @@ $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_fe
 $v760 = json_decode( file_get_contents( $root . '/data/research_librarian_workspace_promotion_manifest_v7.6.0.json' ), true );
 $migrations = glob( $root . '/backend/migrations/*.sql' );
 $checks = array(
-  'version_header' => false !== strpos($main,'Version: 8.1.0'),
-  'version_constant' => false !== strpos($main,"const VERSION        = '8.1.0';"),
-  'backend_version' => false !== strpos(file_get_contents($root.'/backend/app/__init__.py'),'__version__ = "8.1.0"'),
+  'version_header' => false !== strpos($main,'Version: 8.2.0'),
+  'version_constant' => false !== strpos($main,"const VERSION        = '8.2.0';"),
+  'backend_version' => false !== strpos(file_get_contents($root.'/backend/app/__init__.py'),'__version__ = "8.2.0"'),
   'module_version' => false !== strpos($module,"const VERSION = '8.0.0';"),
   'api_16' => false !== strpos($platform,'sc-connected-research-api/2.0'),
   'workspace_26' => false !== strpos($module,'sc-research-librarian-public-workspace/3.0'),
-  'sqlite_schema_17' => false !== strpos($store,'SCHEMA_VERSION = 18'),
+  'sqlite_schema_17' => false !== strpos($store,'SCHEMA_VERSION = 19'),
   'knowledge_index_13' => false !== strpos($store,'sc-research-librarian-knowledge-index/13.0'),
   'no_new_postgres_migration' => 3 === count($migrations),
   'federated_module' => file_exists($root.'/backend/app/federated_discovery.py'),

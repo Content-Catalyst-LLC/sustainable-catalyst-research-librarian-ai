@@ -1,10 +1,17 @@
 services:
   research-librarian:
-    image: sustainable-catalyst-research-librarian:8.0.0
+    image: sustainable-catalyst-research-librarian:8.2.0
     container_name: sc-research-librarian
     restart: unless-stopped
     env_file:
       - .env.contabo
+    environment:
+      PORT: "8093"
+      SC_RL_RELEASE_VERSION: "8.2.0"
+      SC_RL_CORE_ENABLED: "${SC_RL_CORE_ENABLED:-true}"
+      SC_RL_CORE_BASE_URL: "${SC_RL_CORE_BASE_URL:-http://sc-core:8090}"
+      SC_RL_CORE_MINIMUM_VERSION: "${SC_RL_CORE_MINIMUM_VERSION:-3.3.0}"
+      SC_RL_CORE_SUPPORTED_MAJOR: "${SC_RL_CORE_SUPPORTED_MAJOR:-3}"
     ports:
       - "127.0.0.1:8093:8093"
     volumes:

@@ -1,0 +1,49 @@
+RESEARCH LIBRARIAN AI v8.2.0 — TERMINAL COMMANDS
+================================================
+
+A. GITHUB PUSH / TAG FROM MAC
+
+cd ~/Downloads
+rm -rf sc-research-librarian-v8.2.0-release
+unzip -q sustainable-catalyst-research-librarian-ai-v8.2.0-release-bundle.zip -d sc-research-librarian-v8.2.0-release
+cd sc-research-librarian-v8.2.0-release
+chmod +x PUSH_RESEARCH_LIBRARIAN_V820_PY312.sh
+./PUSH_RESEARCH_LIBRARIAN_V820_PY312.sh \
+  "$PWD/sustainable-catalyst-research-librarian-ai-v8.2.0-repository.zip"
+
+B. BACKEND DEPLOYMENT TO CONTABO FROM MAC
+
+cd ~/Downloads/sc-research-librarian-v8.2.0-release
+scp -i ~/.ssh/id_ed25519 \
+  sustainable-catalyst-research-librarian-backend-v8.2.0.zip \
+  deploy/contabo/upgrade_research_librarian_backend_v8_2_0_contabo.sh \
+  catalystadmin@94.72.113.77:/tmp/
+
+ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes catalystadmin@94.72.113.77
+
+chmod +x /tmp/upgrade_research_librarian_backend_v8_2_0_contabo.sh
+/tmp/upgrade_research_librarian_backend_v8_2_0_contabo.sh \
+  /tmp/sustainable-catalyst-research-librarian-backend-v8.2.0.zip
+
+C. MANUAL POST-DEPLOY VERIFICATION ON VPS
+
+curl -fsS http://127.0.0.1:8093/health | python3 -m json.tool
+
+docker exec -i sc-research-librarian python - <<'PY'
+import json, os, urllib.request
+key=os.environ['SC_RL_BACKEND_API_KEY']
+req=urllib.request.Request('http://127.0.0.1:8093/v1/core/readiness', headers={'X-SC-RL-Key':key})
+with urllib.request.urlopen(req, timeout=30) as r:
+    data=json.load(r)
+print(json.dumps(data, indent=2))
+assert data['compatible'] is True
+assert data['write_ready'] is True
+assert data['core_health']['version'].startswith('3.')
+PY
+
+D. WORDPRESS
+
+Upload and activate:
+sustainable-catalyst-research-librarian-ai-wordpress-v8.2.0.zip
+
+Backend first; WordPress second.

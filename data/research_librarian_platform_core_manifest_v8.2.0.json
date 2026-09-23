@@ -1,0 +1,38 @@
+{
+  "schema": "sc-research-librarian-platform-core/1.0",
+  "release": "8.2.0",
+  "platform_core": {
+    "minimum_version": "3.3.0",
+    "supported_major": 3,
+    "default_private_url": "http://sc-core:8090",
+    "write_header": "X-SC-API-Key"
+  },
+  "research_librarian_owns": [
+    "source-ingestion",
+    "parsing",
+    "chunking",
+    "indexing",
+    "retrieval",
+    "connectors",
+    "document-intelligence",
+    "core-client-orchestration"
+  ],
+  "platform_core_owns": [
+    "governed-research-objects",
+    "provenance-and-lineage",
+    "claims-findings-arguments",
+    "cross-study-synthesis",
+    "reproducibility-packages",
+    "visual-reasoning",
+    "statistical-reasoning-objects",
+    "cross-product-exchange"
+  ],
+  "boundaries": {
+    "automatic_truth_promotion": false,
+    "automatic_conclusion_promotion": false,
+    "core_arbitrary_code_execution": false,
+    "human_review_preserved": true
+  },
+  "ancillary_sqlite_schema": 19,
+  "postgres_index_schema": 3
+}

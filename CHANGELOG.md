@@ -1,5 +1,14 @@
 # Changelog
 
+## 8.2.0 — Python Service Architecture & Platform Core Client
+
+- Establishes Platform Core v3.3.0+ as a first-class Research Librarian dependency through a typed asynchronous Python client.
+- Adds private `/v1/core/*` integration endpoints for architecture/readiness, bindings, governed research-object promotion, unified research-project synchronization, project bundles, and cross-product exchange packages.
+- Adds deterministic Core entity IDs, local idempotency protection, 409 recovery reads, transient retry/backoff, version compatibility checks, and fail-closed Core write authentication.
+- Adds durable Librarian↔Core binding records in ancillary SQLite schema 19. The production Postgres/pgvector knowledge-index schema remains 3 / `sc-research-librarian-postgres-index/1.2`; no knowledge-index migration is required.
+- Keeps responsibilities explicit: Research Librarian Python owns acquisition/document intelligence/retrieval; Platform Core owns governed research objects, provenance/lineage, reasoning objects, reproducibility, visual/statistical reasoning, and cross-product exchange.
+- Preserves human review boundaries and does not enable automatic truth promotion, autonomous conclusions, or arbitrary research-code execution in Core.
+
 ## 8.0.0 — Unified Research Intelligence & Research Lifecycle Orchestration
 
 - Adds a persistent eight-stage research lifecycle: Frame, Discover, Evaluate, Organize, Collaborate, Synthesize, Promote, and Preserve.

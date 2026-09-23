@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-VERSION="8.1.0"
+VERSION="8.2.0"
 TARGET_KEY="research-librarian"
 PRODUCT="Research Librarian"
-ARCHIVE="${1:-/tmp/sustainable-catalyst-research-librarian-backend-v8.1.0.zip}"
+ARCHIVE="${1:-/tmp/sustainable-catalyst-research-librarian-backend-v8.2.0.zip}"
 ROOT="${SC_TARGET_ROOT:-/opt/sustainable-catalyst/research-librarian}"
 LIVE_BACKEND="$ROOT/backend"
 COMPOSE="${SC_TARGET_COMPOSE:-$ROOT/compose.yml}"
@@ -55,11 +55,11 @@ fi
 # Keep an existing release-version environment setting aligned without touching secrets.
 for envfile in "$ROOT/.env.production" "$ROOT/.env"; do
   if [[ -f "$envfile" ]] && grep -q '^SC_RL_RELEASE_VERSION=' "$envfile"; then
-    cp -a "$envfile" "$BACKUP_ROOT/research-librarian-env-before-v8.1.0-$stamp"
+    cp -a "$envfile" "$BACKUP_ROOT/research-librarian-env-before-v8.2.0-$stamp"
     python3 - "$envfile" <<'PYENV'
 from pathlib import Path
 import sys,re
-p=Path(sys.argv[1]); s=p.read_text(); s=re.sub(r'(?m)^SC_RL_RELEASE_VERSION=.*$', 'SC_RL_RELEASE_VERSION=8.1.0', s); p.write_text(s)
+p=Path(sys.argv[1]); s=p.read_text(); s=re.sub(r'(?m)^SC_RL_RELEASE_VERSION=.*$', 'SC_RL_RELEASE_VERSION=8.2.0', s); p.write_text(s)
 PYENV
   fi
 done
@@ -87,7 +87,7 @@ docker exec -i "$CONTAINER" python - <<'PYVERIFY'
 from app.main import app
 from app.energy_runtime_consumer import framework
 f=framework()
-assert f['consumer_version']=='8.1.0', f
+assert f['consumer_version']=='8.2.0', f
 assert f['target_key']=='research-librarian', f
 assert f['capabilities']['handoff_intake'] is True
 assert f['capabilities']['automatic_execution'] is False
@@ -95,7 +95,7 @@ assert f['capabilities']['persistence'] is False
 paths={getattr(r,'path',None) for r in app.routes}
 assert '/v1/energy-runtime/consumer' in paths
 assert '/v1/energy-runtime/consume' in paths
-print('PASS: Research Librarian v8.1.0 Energy Systems contract intake is active')
+print('PASS: Research Librarian v8.2.0 Energy Systems contract intake is active')
 print('PASS: intake remains ephemeral and performs no automatic target execution')
 PYVERIFY
 

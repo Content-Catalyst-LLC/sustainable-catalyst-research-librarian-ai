@@ -63,7 +63,17 @@ services:
       - key: SC_RL_ACTIVATION_SNAPSHOT_RECORD_LIMIT
         value: "500"
       - key: SC_RL_RELEASE_VERSION
-        value: "8.1.0"
+        value: "8.2.0"
+      - key: SC_RL_CORE_ENABLED
+        value: "false"
+      - key: SC_RL_CORE_BASE_URL
+        sync: false
+      - key: SC_RL_CORE_WRITE_API_KEY
+        sync: false
+      - key: SC_RL_CORE_MINIMUM_VERSION
+        value: "3.3.0"
+      - key: SC_RL_CORE_SUPPORTED_MAJOR
+        value: "3"
       - key: SC_RL_POSTGRES_ACTIVATION_CHUNK_RECORD_BATCH_LIMIT
         value: "5"
       - key: SC_RL_POSTGRES_ACTIVATION_CHUNK_MIN_BATCH_LIMIT

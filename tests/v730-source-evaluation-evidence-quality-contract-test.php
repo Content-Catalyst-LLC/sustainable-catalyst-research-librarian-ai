@@ -14,9 +14,9 @@ $css = file_get_contents( $root . '/assets/sc-research-librarian-ai.css' );
 $docs = file_get_contents( $root . '/docs/V730_SOURCE_EVALUATION_EVIDENCE_COMPARISON_RESEARCH_QUALITY_SIGNALS.md' );
 $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_source_evaluation_manifest_v7.3.0.json' ), true );
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 8.1.0' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '8.1.0';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "8.1.0"' ),
+    'version_header' => false !== strpos( $main, 'Version: 8.2.0' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '8.2.0';" ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "8.2.0"' ),
     'module_version' => false !== strpos( $module, "const VERSION = '8.0.0';" ),
     'api_12' => false !== strpos( $platform, 'sc-connected-research-api/2.0' ),
     'workspace_22' => false !== strpos( $module, 'sc-research-librarian-public-workspace/3.0' ),
@@ -79,7 +79,7 @@ $checks = array(
     'manifest_v720_compatibility' => is_array( $manifest ) && true === ( $manifest['compatibility']['v7_2_library_object_model_preserved'] ?? false ),
     'docs_no_truth_score' => false !== strpos( $docs, 'does **not** assign a truth score' ),
     'docs_no_db_migration' => false !== strpos( $docs, 'No Postgres or SQLite schema migration is required' ),
-    'sqlite_schema_preserved' => false !== strpos( $store, 'SCHEMA_VERSION = 18' ),
+    'sqlite_schema_preserved' => false !== strpos( $store, 'SCHEMA_VERSION = 19' ),
 );
 $failed = array_keys( array_filter( $checks, static function ( $value ) { return ! $value; } ) );
 echo json_encode( array( 'version' => '7.3.0', 'checks' => $checks, 'passed' => count( $checks ) - count( $failed ), 'failed' => count( $failed ), 'failures' => $failed ), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . PHP_EOL;

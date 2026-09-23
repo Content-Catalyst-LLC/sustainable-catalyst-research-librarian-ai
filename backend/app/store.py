@@ -20,7 +20,7 @@ from .models import KnowledgeChunk, KnowledgeRecord, utc_now
 from .governance import DEFAULT_GOVERNANCE_POLICY, sanitize_governance_policy
 
 
-SCHEMA_VERSION = 18
+SCHEMA_VERSION = 19
 INDEX_SCHEMA = "sc-research-librarian-knowledge-index/13.0"
 SNAPSHOT_SCHEMA = "sc-research-librarian-runtime-snapshot/4.0"
 
@@ -600,6 +600,24 @@ class KnowledgeStore:
                     payload_json TEXT NOT NULL
                 );
                 CREATE INDEX IF NOT EXISTS idx_connected_backups_created ON connected_platform_backups(created_utc DESC);
+                CREATE TABLE IF NOT EXISTS platform_core_bindings (
+                    binding_key TEXT PRIMARY KEY,
+                    local_kind TEXT NOT NULL,
+                    local_id TEXT NOT NULL,
+                    core_kind TEXT NOT NULL,
+                    core_id TEXT NOT NULL DEFAULT '',
+                    sync_state TEXT NOT NULL DEFAULT 'pending',
+                    contract_version TEXT NOT NULL DEFAULT 'sc-research-librarian-platform-core/1.0',
+                    payload_hash TEXT NOT NULL,
+                    idempotency_key TEXT NOT NULL DEFAULT '',
+                    created_utc TEXT NOT NULL,
+                    updated_utc TEXT NOT NULL,
+                    last_error TEXT NOT NULL DEFAULT '',
+                    payload_json TEXT NOT NULL DEFAULT '{}'
+                );
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_platform_core_binding_local ON platform_core_bindings(local_kind, local_id);
+                CREATE INDEX IF NOT EXISTS idx_platform_core_binding_core ON platform_core_bindings(core_kind, core_id);
+                CREATE INDEX IF NOT EXISTS idx_platform_core_binding_state ON platform_core_bindings(sync_state, updated_utc DESC);
                 """
             )
             self._ensure_column(connection, "sync_jobs", "rejected_records", "INTEGER NOT NULL DEFAULT 0")
@@ -2183,6 +2201,79 @@ class KnowledgeStore:
                 raise
             return {"ok": True, "snapshot_id": snapshot_id, "integrity": {"ok": True, "checksum": integrity["checksum"]}, "summary": self.summary()}
 
+
+    def save_platform_core_binding(self, payload: dict[str, Any]) -> dict[str, Any]:
+        local_kind = str(payload.get("local_kind") or "").strip()
+        local_id = str(payload.get("local_id") or "").strip()
+        if not local_kind or not local_id:
+            raise ValueError("local_kind and local_id are required")
+        binding_key = str(payload.get("binding_key") or f"{local_kind}:{local_id}")
+        now = str(payload.get("updated_utc") or utc_now())
+        created = str(payload.get("created_utc") or now)
+        encoded = _canonical_json(payload)
+        with self._lock, self._connection() as connection:
+            connection.execute(
+                "INSERT INTO platform_core_bindings(binding_key,local_kind,local_id,core_kind,core_id,sync_state,contract_version,payload_hash,idempotency_key,created_utc,updated_utc,last_error,payload_json) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?) "
+                "ON CONFLICT(binding_key) DO UPDATE SET core_kind=excluded.core_kind,core_id=excluded.core_id,sync_state=excluded.sync_state,contract_version=excluded.contract_version,payload_hash=excluded.payload_hash,idempotency_key=excluded.idempotency_key,updated_utc=excluded.updated_utc,last_error=excluded.last_error,payload_json=excluded.payload_json",
+                (
+                    binding_key, local_kind, local_id, str(payload.get("core_kind") or ""),
+                    str(payload.get("core_id") or ""), str(payload.get("sync_state") or "pending"),
+                    str(payload.get("contract_version") or "sc-research-librarian-platform-core/1.0"),
+                    str(payload.get("payload_hash") or ""), str(payload.get("idempotency_key") or ""),
+                    created, now, str(payload.get("last_error") or ""), encoded,
+                ),
+            )
+        return self.platform_core_binding(local_kind, local_id) or dict(payload)
+
+    def platform_core_binding(self, local_kind: str, local_id: str) -> dict[str, Any] | None:
+        with self._lock, self._connection() as connection:
+            row = connection.execute(
+                "SELECT * FROM platform_core_bindings WHERE local_kind=? AND local_id=?",
+                (str(local_kind), str(local_id)),
+            ).fetchone()
+            if not row:
+                return None
+            data = dict(row)
+            try:
+                payload = json.loads(str(data.pop("payload_json") or "{}"))
+            except json.JSONDecodeError:
+                payload = {}
+            return {**payload, **data}
+
+    def platform_core_bindings(self, limit: int = 100, sync_state: str = "") -> list[dict[str, Any]]:
+        limit = max(1, min(1000, int(limit)))
+        with self._lock, self._connection() as connection:
+            if sync_state:
+                rows = connection.execute(
+                    "SELECT * FROM platform_core_bindings WHERE sync_state=? ORDER BY updated_utc DESC LIMIT ?",
+                    (str(sync_state), limit),
+                ).fetchall()
+            else:
+                rows = connection.execute(
+                    "SELECT * FROM platform_core_bindings ORDER BY updated_utc DESC LIMIT ?",
+                    (limit,),
+                ).fetchall()
+        result=[]
+        for row in rows:
+            data=dict(row)
+            try: payload=json.loads(str(data.pop("payload_json") or "{}"))
+            except json.JSONDecodeError: payload={}
+            result.append({**payload, **data})
+        return result
+
+    def platform_core_integration_summary(self) -> dict[str, Any]:
+        with self._lock, self._connection() as connection:
+            total = int(connection.execute("SELECT COUNT(*) FROM platform_core_bindings").fetchone()[0])
+            rows = connection.execute("SELECT sync_state,COUNT(*) AS total FROM platform_core_bindings GROUP BY sync_state").fetchall()
+            latest = connection.execute(
+                "SELECT local_kind,local_id,core_kind,core_id,sync_state,updated_utc,last_error FROM platform_core_bindings ORDER BY updated_utc DESC LIMIT 1"
+            ).fetchone()
+        return {
+            "binding_count": total,
+            "sync_state_counts": {str(row["sync_state"]): int(row["total"]) for row in rows},
+            "latest_binding": dict(latest) if latest else {},
+        }
 
     def save_platform_handoff(self, payload: dict[str, Any]) -> dict[str, Any]:
         handoff_id = str(payload.get("handoff_id", "")).strip()

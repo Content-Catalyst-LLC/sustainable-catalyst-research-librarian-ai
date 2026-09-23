@@ -109,7 +109,18 @@ class Settings:
     postgres_activation_checksum_batch_limit: int = _int("SC_RL_POSTGRES_ACTIVATION_CHECKSUM_BATCH_LIMIT", 250, 25, 2000)
     postgres_generation_retention: int = _int("SC_RL_POSTGRES_GENERATION_RETENTION", 1, 1, 20)
     neon_free_storage_warning_mb: int = _int("SC_RL_NEON_FREE_STORAGE_WARNING_MB", 400, 100, 500)
-    release_version: str = os.getenv("SC_RL_RELEASE_VERSION", "8.1.0")
+    release_version: str = os.getenv("SC_RL_RELEASE_VERSION", "8.2.0")
+    # Platform Core v8.2 integration. The default URL resolves the Core container
+    # directly on the shared sc-internal Docker network used by the VPS stack.
+    core_enabled: bool = _bool("SC_RL_CORE_ENABLED", True)
+    core_base_url: str = os.getenv("SC_RL_CORE_BASE_URL", "http://sc-core:8090").strip()
+    core_write_api_key: str = os.getenv("SC_RL_CORE_WRITE_API_KEY", "").strip()
+    core_minimum_version: str = os.getenv("SC_RL_CORE_MINIMUM_VERSION", "3.3.0").strip() or "3.3.0"
+    core_supported_major: int = _int("SC_RL_CORE_SUPPORTED_MAJOR", 3, 1, 99)
+    core_timeout_seconds: int = _int("SC_RL_CORE_TIMEOUT_SECONDS", 12, 2, 120)
+    core_retry_limit: int = _int("SC_RL_CORE_RETRY_LIMIT", 2, 0, 8)
+    core_retry_backoff_seconds: float = _float("SC_RL_CORE_RETRY_BACKOFF_SECONDS", 0.35, 0.0, 10.0)
+    core_fail_closed_writes: bool = _bool("SC_RL_CORE_FAIL_CLOSED_WRITES", True)
     federated_discovery_enabled: bool = _bool("SC_RL_FEDERATED_DISCOVERY_ENABLED", True)
     federated_timeout_seconds: int = _int("SC_RL_FEDERATED_TIMEOUT_SECONDS", 12, 5, 60)
     federated_provider_result_limit: int = _int("SC_RL_FEDERATED_PROVIDER_RESULT_LIMIT", 10, 1, 50)

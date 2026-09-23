@@ -160,6 +160,8 @@ from .research_lifecycle import (
 )
 
 
+from .api.core import router as platform_core_router
+
 app = FastAPI(
     title="Sustainable Catalyst Research Librarian AI",
     version=__version__,
@@ -173,6 +175,7 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type", "X-SC-RL-Key"],
 )
+app.include_router(platform_core_router)
 
 _sessions: dict[str, list[dict[str, Any]]] = defaultdict(list)
 

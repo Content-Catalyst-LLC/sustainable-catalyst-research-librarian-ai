@@ -1,4 +1,4 @@
-# Research Librarian 8.1.0 — Energy Systems Target-Side Runtime Consumer
+# Research Librarian 8.2.0 — Energy Systems Target-Side Runtime Consumer
 
 This release activates the target-side consumer for Sustainable Catalyst Energy Systems Intelligence v1.2.0 handoff packets.
 
