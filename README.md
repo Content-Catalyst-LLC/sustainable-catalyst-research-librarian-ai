@@ -1,21 +1,19 @@
-# Sustainable Catalyst Research Librarian AI v8.4.0
+# Sustainable Catalyst Research Librarian AI v8.5.0
 
-Research Librarian AI is the Python-backed acquisition, document-intelligence, indexing, retrieval, collaboration, and research-orchestration layer for Sustainable Catalyst. **v8.4.0 adds an advanced retrieval and reranking engine on top of the v8.2 Platform Core integration and v8.3 durable asynchronous processing runtime.**
+Research Librarian AI is the Python-backed acquisition, document-intelligence, indexing, retrieval, collaboration, and research-orchestration layer for Sustainable Catalyst. **v8.5.0 adds deterministic scholarly/document parsing on top of the v8.4 retrieval engine, v8.3 durable processing runtime, and v8.2 Platform Core integration.**
 
-### v8.4.0 architecture
+### v8.5.0 architecture
 
-- **Deterministic query planning:** decomposes only the user's own query text into bounded original, quoted, comparison, clause, and keyword variants; no generative query rewriting is required.
-- **Advanced hybrid retrieval:** preserves exact-title priority, BM25, optional semantic embeddings, and RRF while adding multi-query rank fusion and a bounded candidate pool.
-- **Transparent reranking:** query coverage, title coverage, phrase alignment, multi-query consensus, and lexical/semantic support are individually exposed in diagnostics.
-- **Research filters:** post type, source, series, record ID, URL prefix, taxonomy, and modified-date filtering occurs before ranking.
-- **Duplicate suppression + diversity:** canonical URL/content-hash/near-duplicate suppression and bounded MMR-style diversity prevent redundant evidence lists.
-- **Research Librarian Python:** owns retrieval relevance and document intelligence. Retrieval scores are not evidence-quality or truth scores.
-- **Platform Core v3.3+:** remains authoritative for governed evidence/research objects, provenance, lineage, findings/claims/arguments, statistical/visual reasoning, reproducibility, and cross-product exchange.
-- **v8.3 async runtime:** remains the durable job plane for ingestion/document processing; v8.4 does not bypass its restart-safe index activation contract.
+- **Document intelligence:** deterministic parsing for text, Markdown, HTML, and PDF (`pypdf`).
+- **Scholarly structure:** sections, page provenance, bibliography entries, citation mentions, figures, tables, equations, and common scholarly identifiers.
+- **Retrieval integration:** parsed sections are written into existing knowledge-record metadata and consumed by section-aware chunking and v8.4 advanced retrieval.
+- **Durable parsing:** large parses can run through the v8.3 Postgres/SQLite durable job runtime.
+- **Governance boundary:** parsing is not a truth/evidence-quality judgment; Platform Core v3.3+ remains authoritative for governed evidence, reasoning, provenance, and lineage.
+- **OCR boundary:** image-only PDFs are reported explicitly; OCR is not silently fabricated.
 
-### New v8.4.0 backend resources
+### New v8.5.0 backend resources
 
-`POST /v1/retrieval/plan`; enhanced backward-compatible `POST /v1/retrieve` and `POST /v1/retrieve/explain`; and an expanded `GET|POST /v1/retrieval/config` advanced tuning block.
+`GET /v1/documents/capabilities`, `POST /v1/documents/parse`, and `POST /v1/documents/parse/async`.
 
 ## v8.0.0 highlights
 

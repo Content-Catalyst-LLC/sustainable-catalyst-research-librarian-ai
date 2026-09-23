@@ -1,3 +1,12 @@
+# 8.5.0 — Document Intelligence & Scholarly Parsing
+
+- Added deterministic Python parsing for text, Markdown, HTML, and PDF sources.
+- Added structural section/page provenance, scholarly identifier extraction, references, citation mentions, tables, figures, and equations.
+- Added authenticated `/v1/documents/capabilities`, `/v1/documents/parse`, and `/v1/documents/parse/async` APIs.
+- Integrated parsed sections into existing knowledge-record metadata and section-aware chunking.
+- Added durable `document-intelligence` job execution while retaining v8.3 queue semantics.
+- Preserved Platform Core v3.3+ as the governed evidence/reasoning/provenance authority.
+
 # Changelog
 
 ## 8.4.0 — Advanced Retrieval & Reranking Engine

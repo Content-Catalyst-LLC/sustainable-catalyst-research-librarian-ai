@@ -29,6 +29,7 @@ JOB_EVENT_SCHEMA = "sc-research-librarian-async-job-event/1.0"
 JOB_RUNTIME_SCHEMA = "sc-research-librarian-async-runtime/1.0"
 JOB_TYPES = {
     "document-process",
+    "document-intelligence",
     "ingestion",
     "embedding",
     "index",

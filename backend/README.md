@@ -1,7 +1,16 @@
-# Research Librarian AI Python Backend v8.4.0
+# Research Librarian AI Python Backend v8.5.0
 
 FastAPI backend for durable Sustainable Catalyst acquisition, indexing, advanced retrieval/reranking, connected research projects, governance, typed handoffs, and first-class Platform Core v3.3.0+ integration.
 
+
+## v8.5 document intelligence and scholarly parsing
+
+- Deterministic text, Markdown, HTML, and PDF structural extraction.
+- Sections/page provenance feed existing section-aware chunks.
+- DOI/arXiv/PMID/ISBN/URL discovery plus bibliography and citation mentions.
+- Figure/table/equation labels and captions are retained as research metadata.
+- Synchronous `/v1/documents/parse` and durable asynchronous `/v1/documents/parse/async`.
+- Parsing does not assign truth/evidence quality; Platform Core governs promoted evidence.
 
 ## v8.4 advanced retrieval and reranking
 

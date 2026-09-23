@@ -154,7 +154,7 @@ def test_project_backup_carries_research_state() -> None:
 
 def test_platform_api_advertises_v740_research_state_contracts() -> None:
     body = client.get("/v1/platform/api", headers=HEADERS).json()
-    assert body["version"] == "8.4.0"
+    assert body["version"] == "8.5.0"
     assert body["schema"] == "sc-connected-research-api/2.0"
     assert "research-state" in body["resources"]
     assert "open-questions" in body["resources"]

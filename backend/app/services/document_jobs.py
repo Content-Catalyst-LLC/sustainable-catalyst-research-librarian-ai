@@ -9,6 +9,7 @@ from ..models import KnowledgeRecord
 from ..config import settings
 from ..provider import embeddings_configured, generate_embedding
 from ..store import store
+from ..document_intelligence import knowledge_metadata, parse_document
 
 Progress = Callable[[str, int], None]
 
@@ -20,14 +21,43 @@ def _text(value: Any) -> str:
 def _record_payload(payload: dict[str, Any]) -> dict[str, Any]:
     source = dict(payload.get("record") or payload.get("document") or payload)
     content = _text(source.get("content") or source.get("text") or source.get("body"))
-    title = _text(source.get("title")) or "Untitled research source"
-    url = _text(source.get("url")) or f"urn:sc:research-source:{hashlib.sha256((title + content).encode()).hexdigest()[:24]}"
+    media_type = _text(source.get("media_type") or source.get("content_type") or "text/plain")
+    filename = _text(source.get("filename"))
+    content_bytes = None
+    if source.get("content_base64"):
+        import base64
+        try:
+            content_bytes = base64.b64decode(str(source.get("content_base64") or ""), validate=True)
+        except Exception as exc:
+            raise ValueError("document content_base64 is invalid") from exc
+        if len(content_bytes) > 20 * 1024 * 1024:
+            raise ValueError("decoded document exceeds the 20 MiB processing limit")
+    title_hint = _text(source.get("title"))
+    provisional = title_hint or filename or "Untitled research source"
+    url = _text(source.get("url")) or f"urn:sc:research-source:{hashlib.sha256((provisional + content).encode()).hexdigest()[:24]}"
+    intelligence = None
+    try:
+        intelligence = parse_document(content=content, content_bytes=content_bytes, media_type=media_type, filename=filename, source_url=url, title_hint=title_hint)
+        parsed_text = "\n\n".join(str(item.get("text") or "") for item in intelligence.get("sections", []))
+        if parsed_text:
+            content = _text(parsed_text)[:60000]
+        title = _text(intelligence.get("title")) or provisional
+    except ValueError:
+        title = provisional
     record_id = _text(source.get("id")) or "doc-" + hashlib.sha256((url + "\n" + content).encode()).hexdigest()[:32]
     source.update({"id": record_id, "title": title, "url": url, "content": content})
+    try:
+        if intelligence is None:
+            intelligence = parse_document(content=content, media_type=media_type, filename=filename, source_url=url, title_hint=title)
+        if intelligence.get("sections"):
+            source["headings"] = [str(item.get("heading") or "") for item in intelligence["sections"] if item.get("heading")][:100]
+        source["metadata"] = {**dict(source.get("metadata") or {}), **knowledge_metadata(intelligence)}
+    except ValueError:
+        source.setdefault("metadata", {})
     source.setdefault("source", _text(payload.get("source")) or "async-document-runtime")
     source.setdefault("post_type", "research-source")
     source.setdefault("metadata", {})
-    source["metadata"] = {**dict(source.get("metadata") or {}), "async_processing": True}
+    source["metadata"] = {**dict(source.get("metadata") or {}), "async_processing": True, "document_intelligence_version": "8.5.0"}
     return KnowledgeRecord.model_validate(source).model_dump()
 
 
@@ -48,7 +78,7 @@ async def process_document_job(claim: JobClaim, progress: Progress) -> dict[str,
         batch_index=1,
         batch_count=1,
         deleted_ids=[],
-        reason="async-document-processing-v8.4.0",
+        reason="async-document-processing-v8.5.0",
         defer_commit=False,
     )
 
@@ -58,9 +88,9 @@ async def process_document_job(claim: JobClaim, progress: Progress) -> dict[str,
     if not result.committed and result.state not in {"completed", "completed-with-rejections"}:
         progress("activate-index", 55)
         try:
-            store.queue_sync_commit(sync_id, "async-document-processing-v8.4.0")
+            store.queue_sync_commit(sync_id, "async-document-processing-v8.5.0")
             for _ in range(200):
-                status = store.advance_sync_commit(sync_id, "async-document-processing-v8.4.0")
+                status = store.advance_sync_commit(sync_id, "async-document-processing-v8.5.0")
                 commit_steps += 1
                 state = str(status.get("state") or "")
                 if state in {"completed", "completed-with-rejections"}:
@@ -119,12 +149,32 @@ async def process_validation_job(claim: JobClaim, progress: Progress) -> dict[st
     }
 
 
+async def process_document_intelligence_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
+    import base64
+    payload = claim.payload
+    progress("extract", 20)
+    content_bytes = base64.b64decode(str(payload.get("content_base64") or "")) if payload.get("content_base64") else None
+    result = parse_document(
+        content=str(payload.get("content") or ""),
+        content_bytes=content_bytes,
+        media_type=str(payload.get("media_type") or "text/plain"),
+        filename=str(payload.get("filename") or ""),
+        source_url=str(payload.get("source_url") or ""),
+        title_hint=str(payload.get("title") or ""),
+    )
+    progress("structure", 70)
+    progress("complete", 95)
+    return {"document": result, "knowledge_metadata": knowledge_metadata(result)}
+
+
 async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
     if claim.job_type in {"document-process", "ingestion"}:
         return await process_document_job(claim, progress)
+    if claim.job_type == "document-intelligence":
+        return await process_document_intelligence_job(claim, progress)
     if claim.job_type == "validation":
         return await process_validation_job(claim, progress)
     raise ValueError(
         f"Job type {claim.job_type!r} is registered for the durable queue but has no v8.3 executor yet; "
-        "use document-process, ingestion, or validation."
+        "use document-process, document-intelligence, ingestion, or validation."
     )

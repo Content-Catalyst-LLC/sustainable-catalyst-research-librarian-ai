@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 8.4.0
+Stable tag: 8.5.0
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
@@ -14,7 +14,7 @@ Research Librarian AI retrieves Sustainable Catalyst publications and documents 
 
 v8.0.0 unifies Library context, federated discovery, evidence evaluation, persistent research state, Research Rooms, synthesis, Workspace promotion, and preservation through an inspectable eight-stage research lifecycle. Readiness is descriptive; every lifecycle stage transition remains an explicit human action.
 
-v8.4.0 adds an advanced Python retrieval and reranking engine with deterministic query decomposition, multi-query fusion, metadata/date/taxonomy filters, transparent reranking, duplicate suppression, diversity selection, and explainable diagnostics. Platform Core remains the governed evidence/reasoning authority.
+v8.5.0 adds deterministic Python document intelligence and scholarly parsing for text, Markdown, HTML, and PDF sources, extracting sections, page provenance, references, citation mentions, identifiers, tables, figures, and equations. Parsed structure feeds section-aware retrieval while Platform Core remains the governed evidence/reasoning authority.
 
 == Shortcodes ==
 
@@ -40,6 +40,13 @@ v8.4.0 adds an advanced Python retrieval and reranking engine with deterministic
 [sc_research_librarian_platform_handoffs]
 
 == Changelog ==
+
+= 8.5.0 =
+* Added deterministic document intelligence and scholarly parsing.
+* Added PDF, HTML, Markdown, and text structural extraction.
+* Added references, citation mentions, scholarly identifiers, figures, tables, equations, and page provenance.
+* Added synchronous and durable asynchronous document parsing APIs.
+* Preserved Platform Core as the governed evidence and reasoning authority.
 
 = 8.4.0 =
 * Add deterministic multi-query planning using only user-supplied query text.

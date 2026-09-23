@@ -1,0 +1,10 @@
+{
+  "schema": "sc-research-librarian-document-intelligence-manifest/1.0",
+  "release": "8.5.0",
+  "title": "Document Intelligence & Scholarly Parsing",
+  "formats": ["text/plain", "text/markdown", "text/html", "application/pdf"],
+  "extracts": ["sections", "page provenance", "references", "citation mentions", "DOI", "arXiv", "PMID", "ISBN", "URLs", "tables", "figures", "equations"],
+  "runtime": {"deterministic": true, "llm_required": false, "pdf_engine": "pypdf", "ocr": false},
+  "integration": {"section_aware_chunking": true, "durable_async_jobs": true, "advanced_retrieval": true, "platform_core_minimum": "3.3.0"},
+  "governance": {"extraction_is_evidence_judgment": false, "platform_core_governs_promoted_evidence": true}
+}

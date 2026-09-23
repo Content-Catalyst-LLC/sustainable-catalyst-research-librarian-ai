@@ -1,0 +1,31 @@
+{
+  "schema": "sc-research-librarian-release-manifest/1.0",
+  "release": "8.5.0",
+  "title": "Document Intelligence & Scholarly Parsing",
+  "repository": "Content-Catalyst-LLC/sustainable-catalyst-research-librarian-ai",
+  "python": "3.12+",
+  "platform_core_minimum": "3.3.0",
+  "vps_runtime_root": "/opt/sustainable-catalyst/research-librarian-ai",
+  "artifacts": [
+    "sustainable-catalyst-research-librarian-ai-v8.5.0-repository.zip",
+    "sustainable-catalyst-research-librarian-backend-v8.5.0.zip",
+    "sustainable-catalyst-research-librarian-ai-wordpress-v8.5.0.zip",
+    "sustainable-catalyst-research-librarian-ai-v8.5.0-release-bundle.zip"
+  ],
+  "capabilities": [
+    "deterministic document structure extraction",
+    "PDF text/metadata extraction",
+    "HTML/Markdown parsing",
+    "scholarly identifiers",
+    "references and citation mentions",
+    "tables figures equations",
+    "section-aware retrieval metadata",
+    "durable async parsing",
+    "Platform Core v3.3+ integration"
+  ],
+  "governance": {
+    "parser_assigns_truth_or_evidence_quality": false,
+    "platform_core_remains_governed_evidence_authority": true,
+    "ocr_is_automatic": false
+  }
+}
