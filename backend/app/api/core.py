@@ -13,6 +13,10 @@ from ..contracts.evidence_bridge import (
     CorePassageEvidencePromotionRequest,
     CoreSourceSnapshotPromotionRequest,
 )
+from ..contracts.research_sync import (
+    CoreProjectSynchronizationPlanRequest,
+    CoreProjectSynchronizationRequest,
+)
 from ..contracts.platform_core import (
     CORE_INTEGRATION_SCHEMA,
     CoreExchangePackageRequest,
@@ -23,6 +27,11 @@ from ..services.core_evidence_bridge import (
     evidence_bridge_capabilities,
     promote_passage_evidence,
     promote_source_snapshot,
+)
+from ..services.core_research_sync import (
+    build_project_sync_plan,
+    capabilities as research_sync_capabilities,
+    synchronize_project_research_objects,
 )
 from ..services.platform_core_integration import (
     CoreBindingConflict,
@@ -78,6 +87,7 @@ def architecture() -> dict[str, Any]:
             "core-client-orchestration",
             "canonical-source-identity",
             "evidence-promotion-orchestration",
+            "project-state-synchronization-orchestration",
         ],
         "platform_core_owns": [
             "governed-research-objects",
@@ -89,6 +99,9 @@ def architecture() -> dict[str, Any]:
             "visual-reasoning",
             "statistical-reasoning-objects",
             "cross-product-exchange",
+            "immutable-project-state-versions",
+            "versioned-cross-product-object-bindings",
+            "declared-project-lineage",
         ],
         "automatic_truth_promotion": False,
         "core_executes_arbitrary_research_code": False,
@@ -173,5 +186,26 @@ async def evidence_source_snapshot_promote(payload: CoreSourceSnapshotPromotionR
 async def evidence_passage_promote(payload: CorePassageEvidencePromotionRequest) -> dict[str, Any]:
     try:
         return await promote_passage_evidence(payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+
+@router.get("/research-sync/capabilities", dependencies=[Depends(require_backend_key)])
+def research_sync_capability_report() -> dict[str, Any]:
+    return research_sync_capabilities()
+
+
+@router.post("/research-sync/plan", dependencies=[Depends(require_backend_key)])
+def research_sync_plan(payload: CoreProjectSynchronizationPlanRequest) -> dict[str, Any]:
+    try:
+        return {"schema": research_sync_capabilities()["schema"], "plan": build_project_sync_plan(payload)}
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+
+@router.post("/research-sync/synchronize", dependencies=[Depends(require_backend_key)])
+async def research_sync_synchronize(payload: CoreProjectSynchronizationRequest) -> dict[str, Any]:
+    try:
+        return await synchronize_project_research_objects(payload)
     except Exception as exc:
         raise _translate(exc) from exc

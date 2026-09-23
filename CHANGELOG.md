@@ -1,3 +1,10 @@
+# 8.8.0 — Core Research Object Synchronization
+
+- Added project-level synchronization to Platform Core v3.3+ project-state/versioning contracts.
+- Added deterministic synchronization plans for Librarian projects, contexts, Research Rooms, sources, project entities, open questions, and lifecycles.
+- Added immutable changed-state versions, frozen versions, snapshots, declared dependency lineage, and idempotent unchanged replay.
+- Preserved governance boundaries: synchronization does not determine truth, create claims, publish, advance workflow, or execute research code.
+
 # 8.7.0 — Core Evidence Bridge
 
 - Added typed source-snapshot and passage-evidence promotion into Platform Core v3.3+ evidence-ledger contracts.

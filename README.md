@@ -1,6 +1,20 @@
-# Sustainable Catalyst Research Librarian AI v8.7.0
+# Sustainable Catalyst Research Librarian AI v8.8.0
 
-Research Librarian AI is the Python-backed acquisition, document-intelligence, source-identity, indexing, retrieval, collaboration, and research-orchestration layer for Sustainable Catalyst. **v8.7.0 adds the Core Evidence Bridge on top of v8.6 source identity, allowing canonical Librarian sources and passage-level evidence candidates to become governed Platform Core source snapshots and evidence records with durable cross-system bindings.**
+Research Librarian AI is the Python-backed acquisition, document-intelligence, source-identity, indexing, retrieval, collaboration, and research-orchestration layer for Sustainable Catalyst. **v8.8.0 adds Core Research Object Synchronization on top of the v8.7 Evidence Bridge, binding Librarian projects, contexts, rooms, sources, questions, lifecycles, and project entities into immutable Platform Core project-state versions with explicit declared lineage.**
+
+
+### v8.8.0 architecture
+
+- **Unified project binding:** every synchronized Librarian project is anchored to its governed Platform Core unified research project identity.
+- **Immutable Core project-state versions:** changed Librarian project state creates a new Core project-state version; unchanged state replays idempotently.
+- **Cross-product bindings:** Research contexts, Research Rooms, Library sources, open questions, lifecycles, and project entities become declared Core project-state bindings.
+- **Declared lineage:** dependency edges explicitly relate synchronized objects to the project without inferring causal or evidentiary meaning.
+- **Governance boundary:** synchronization does not determine truth, publish research, create claims, advance workflow, or execute research code.
+- **Core authority:** Platform Core v3.3+ owns immutable project-state versions, cross-product bindings, lineage, and reproducibility state; the Librarian owns source/document/retrieval intelligence and synchronization orchestration.
+
+### New v8.8.0 backend resources
+
+`GET /v1/core/research-sync/capabilities`, `POST /v1/core/research-sync/plan`, and `POST /v1/core/research-sync/synchronize`.
 
 ### v8.7.0 architecture
 

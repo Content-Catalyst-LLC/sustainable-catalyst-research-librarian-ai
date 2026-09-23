@@ -221,3 +221,27 @@ class PlatformCoreClient:
 
     async def unified_visual_workspace_bundle(self, workspace_id: str) -> dict[str, Any]:
         return await self._request("GET", f"/v1/visual-runtime/unified/workspaces/{workspace_id}/bundle")
+
+    async def project_state_readiness(self) -> dict[str, Any]:
+        return await self._request("GET", "/v1/research/project-state/readiness")
+
+    async def create_project_state(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return await self._request("POST", "/v1/research/project-state/states", payload={"data": payload}, write=True)
+
+    async def create_project_state_version(self, state_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        return await self._request("POST", f"/v1/research/project-state/states/{state_id}/versions", payload={"data": payload}, write=True)
+
+    async def add_project_state_binding(self, state_id: str, version: int, payload: dict[str, Any]) -> dict[str, Any]:
+        return await self._request("POST", f"/v1/research/project-state/states/{state_id}/versions/{version}/bindings", payload={"data": payload}, write=True)
+
+    async def add_project_state_dependency(self, state_id: str, version: int, payload: dict[str, Any]) -> dict[str, Any]:
+        return await self._request("POST", f"/v1/research/project-state/states/{state_id}/versions/{version}/dependencies", payload={"data": payload}, write=True)
+
+    async def freeze_project_state_version(self, state_id: str, version: int, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        return await self._request("POST", f"/v1/research/project-state/states/{state_id}/versions/{version}/freeze", payload={"data": payload or {}}, write=True)
+
+    async def project_state_bundle(self, state_id: str) -> dict[str, Any]:
+        return await self._request("GET", f"/v1/research/project-state/states/{state_id}/bundle")
+
+    async def snapshot_project_state(self, state_id: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        return await self._request("POST", f"/v1/research/project-state/states/{state_id}/snapshots", payload={"data": payload or {}}, write=True)

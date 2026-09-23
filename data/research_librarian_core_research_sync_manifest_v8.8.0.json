@@ -1,0 +1,33 @@
+{
+  "schema": "sc-research-librarian-core-research-sync/1.0",
+  "release": "8.8.0",
+  "platform_core_minimum": "3.3.0",
+  "platform_core_contract": "sc.research.project-state-versioning-reproducibility.v1",
+  "capabilities": {
+    "unified_project_binding": true,
+    "immutable_project_state_versions": true,
+    "research_context_bindings": true,
+    "research_room_bindings": true,
+    "source_bindings": true,
+    "project_entity_bindings": true,
+    "open_question_bindings": true,
+    "lifecycle_bindings": true,
+    "declared_dependency_edges": true,
+    "idempotent_unchanged_sync": true,
+    "frozen_version_support": true,
+    "project_state_snapshot_support": true
+  },
+  "governance": {
+    "state_is_declared_not_inferred": true,
+    "automatic_truth_promotion": false,
+    "automatic_claim_creation": false,
+    "automatic_workflow_advancement": false,
+    "automatic_publication": false,
+    "core_executes_research_code": false
+  },
+  "routes": [
+    "GET /v1/core/research-sync/capabilities",
+    "POST /v1/core/research-sync/plan",
+    "POST /v1/core/research-sync/synchronize"
+  ]
+}

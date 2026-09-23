@@ -1,0 +1,32 @@
+{
+  "schema": "sc-research-librarian-release-manifest/1.0",
+  "release": "8.8.0",
+  "title": "Core Research Object Synchronization",
+  "repository": "Content-Catalyst-LLC/sustainable-catalyst-research-librarian-ai",
+  "python": "3.12+",
+  "platform_core_minimum": "3.3.0",
+  "vps_runtime_root": "/opt/sustainable-catalyst/research-librarian-ai",
+  "artifacts": [
+    "sustainable-catalyst-research-librarian-ai-v8.8.0-repository.zip",
+    "sustainable-catalyst-research-librarian-backend-v8.8.0.zip",
+    "sustainable-catalyst-research-librarian-ai-wordpress-v8.8.0.zip",
+    "sustainable-catalyst-research-librarian-ai-v8.8.0-release-bundle.zip"
+  ],
+  "capabilities": [
+    "unified Librarian-Core project binding",
+    "immutable Platform Core project-state versions",
+    "research context and Research Room bindings",
+    "source and project entity bindings",
+    "open-question and lifecycle bindings",
+    "declared dependency lineage",
+    "idempotent unchanged synchronization",
+    "frozen project-state versions and snapshots"
+  ],
+  "governance": {
+    "automatic_truth_judgment": false,
+    "automatic_claim_creation": false,
+    "automatic_workflow_advancement": false,
+    "automatic_publication": false,
+    "platform_core_is_governed_project_state_authority": true
+  }
+}
