@@ -10,6 +10,7 @@ from ..config import settings
 from ..provider import embeddings_configured, generate_embedding
 from ..store import store
 from ..document_intelligence import knowledge_metadata, parse_document
+from ..source_identity import get_source_graph_store
 
 Progress = Callable[[str, int], None]
 
@@ -52,12 +53,33 @@ def _record_payload(payload: dict[str, Any]) -> dict[str, Any]:
         if intelligence.get("sections"):
             source["headings"] = [str(item.get("heading") or "") for item in intelligence["sections"] if item.get("heading")][:100]
         source["metadata"] = {**dict(source.get("metadata") or {}), **knowledge_metadata(intelligence)}
+        source_meta = dict(source.get("metadata") or {})
+        identity = get_source_graph_store().resolve({
+            "parsed_document": intelligence,
+            "title": title,
+            "authors": source.get("authors") or intelligence.get("authors") or [],
+            "institutions": source.get("institutions") or source_meta.get("institutions") or [],
+            "publication_year": source.get("publication_year") or source.get("year") or source_meta.get("publication_year") or source_meta.get("year"),
+            "identifiers": source.get("identifiers") or {},
+            "source_url": url,
+            "filename": filename,
+            "media_type": media_type,
+            "content_fingerprint": intelligence.get("fingerprint", ""),
+            "version_label": source.get("version_label") or source_meta.get("version_label") or "",
+            "metadata": {"library_record_id": record_id},
+        })
+        source["metadata"]["source_identity"] = {
+            "schema": identity.get("schema", ""),
+            "canonical_source_id": identity.get("canonical_source_id", ""),
+            "resolution": identity.get("resolution", ""),
+            "citation_edges": int((identity.get("citations") or {}).get("created", 0)),
+        }
     except ValueError:
         source.setdefault("metadata", {})
     source.setdefault("source", _text(payload.get("source")) or "async-document-runtime")
     source.setdefault("post_type", "research-source")
     source.setdefault("metadata", {})
-    source["metadata"] = {**dict(source.get("metadata") or {}), "async_processing": True, "document_intelligence_version": "8.5.0"}
+    source["metadata"] = {**dict(source.get("metadata") or {}), "async_processing": True, "document_intelligence_version": "8.5.0", "source_identity_version": "8.6.0"}
     return KnowledgeRecord.model_validate(source).model_dump()
 
 
@@ -78,7 +100,7 @@ async def process_document_job(claim: JobClaim, progress: Progress) -> dict[str,
         batch_index=1,
         batch_count=1,
         deleted_ids=[],
-        reason="async-document-processing-v8.5.0",
+        reason="async-document-processing-v8.6.0",
         defer_commit=False,
     )
 
@@ -88,9 +110,9 @@ async def process_document_job(claim: JobClaim, progress: Progress) -> dict[str,
     if not result.committed and result.state not in {"completed", "completed-with-rejections"}:
         progress("activate-index", 55)
         try:
-            store.queue_sync_commit(sync_id, "async-document-processing-v8.5.0")
+            store.queue_sync_commit(sync_id, "async-document-processing-v8.6.0")
             for _ in range(200):
-                status = store.advance_sync_commit(sync_id, "async-document-processing-v8.5.0")
+                status = store.advance_sync_commit(sync_id, "async-document-processing-v8.6.0")
                 commit_steps += 1
                 state = str(status.get("state") or "")
                 if state in {"completed", "completed-with-rejections"}:
@@ -167,6 +189,15 @@ async def process_document_intelligence_job(claim: JobClaim, progress: Progress)
     return {"document": result, "knowledge_metadata": knowledge_metadata(result)}
 
 
+async def process_source_identity_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
+    progress("normalize-identity", 20)
+    payload = dict(claim.payload or {})
+    progress("resolve-canonical-source", 55)
+    result = get_source_graph_store().resolve(payload, register_citations=bool(payload.get("register_citations", True)))
+    progress("citation-graph", 90)
+    return result
+
+
 async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
     if claim.job_type in {"document-process", "ingestion"}:
         return await process_document_job(claim, progress)
@@ -174,7 +205,9 @@ async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
         return await process_document_intelligence_job(claim, progress)
     if claim.job_type == "validation":
         return await process_validation_job(claim, progress)
+    if claim.job_type == "source-identity":
+        return await process_source_identity_job(claim, progress)
     raise ValueError(
         f"Job type {claim.job_type!r} is registered for the durable queue but has no v8.3 executor yet; "
-        "use document-process, document-intelligence, ingestion, or validation."
+        "use document-process, document-intelligence, source-identity, ingestion, or validation."
     )

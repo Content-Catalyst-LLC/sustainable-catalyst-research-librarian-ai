@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 8.5.0
+Stable tag: 8.6.0
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
@@ -14,7 +14,7 @@ Research Librarian AI retrieves Sustainable Catalyst publications and documents 
 
 v8.0.0 unifies Library context, federated discovery, evidence evaluation, persistent research state, Research Rooms, synthesis, Workspace promotion, and preservation through an inspectable eight-stage research lifecycle. Readiness is descriptive; every lifecycle stage transition remains an explicit human action.
 
-v8.5.0 adds deterministic Python document intelligence and scholarly parsing for text, Markdown, HTML, and PDF sources, extracting sections, page provenance, references, citation mentions, identifiers, tables, figures, and equations. Parsed structure feeds section-aware retrieval while Platform Core remains the governed evidence/reasoning authority.
+v8.6.0 adds durable canonical source identity, duplicate resolution, alternate source instances, author/institution links, and an incoming/outgoing citation graph. DOI, arXiv, PMID, ISBN, and canonical URLs resolve first; bibliographic fingerprints provide a deterministic fallback. Platform Core remains the governed evidence/reasoning authority.
 
 == Shortcodes ==
 
@@ -40,6 +40,14 @@ v8.5.0 adds deterministic Python document intelligence and scholarly parsing for
 [sc_research_librarian_platform_handoffs]
 
 == Changelog ==
+
+= 8.6.0 =
+* Add durable Postgres canonical source identity with SQLite local/test fallback.
+* Normalize DOI, arXiv, PMID, ISBN, and canonical URLs before bibliographic fallback matching.
+* Add alternate source instances, author/institution links, and fail-closed identifier conflict handling.
+* Add persistent citation edges, cited-work stubs, and later stub hydration.
+* Integrate canonical identity into v8.5 document ingestion before durable indexing.
+* Add authenticated source identity and citation graph APIs while preserving Platform Core governance.
 
 = 8.5.0 =
 * Added deterministic document intelligence and scholarly parsing.

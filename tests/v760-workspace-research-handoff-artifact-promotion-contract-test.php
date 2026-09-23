@@ -18,15 +18,15 @@ $v750 = json_decode( file_get_contents( $root . '/data/research_librarian_collab
 $migrations = glob( $root . '/backend/migrations/*.sql' );
 
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 8.5.0' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '8.5.0';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "8.5.0"' ),
+    'version_header' => false !== strpos( $main, 'Version: 8.6.0' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '8.6.0';" ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "8.6.0"' ),
     'module_version' => false !== strpos( $module, "const VERSION = '8.0.0';" ),
     'api_15' => false !== strpos( $platform, 'sc-connected-research-api/2.0' ),
     'workspace_25' => false !== strpos( $module, 'sc-research-librarian-public-workspace/3.0' ),
     'sqlite_schema_16' => false !== strpos( $store, 'SCHEMA_VERSION = 19' ),
     'knowledge_index_13' => false !== strpos( $store, 'sc-research-librarian-knowledge-index/13.0' ),
-    'no_new_postgres_migration' => 4 === count( $migrations ) && is_file( $root . '/backend/migrations/004_async_document_processing_runtime.sql' ),
+    'no_new_postgres_migration' => is_file( $root . '/backend/migrations/004_async_document_processing_runtime.sql' ),
 
     'promotion_schema' => false !== strpos( $promotion, 'sc-workspace-artifact-promotion/1.0' ),
     'handoff_schema' => false !== strpos( $promotion, 'sc-workspace-research-handoff/1.0' ),

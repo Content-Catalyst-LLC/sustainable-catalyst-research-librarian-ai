@@ -35,6 +35,7 @@ JOB_TYPES = {
     "index",
     "validation",
     "connector-run",
+    "source-identity",
 }
 TERMINAL_STATES = {"succeeded", "failed", "cancelled"}
 ACTIVE_STATES = {"queued", "retry_wait", "running"}

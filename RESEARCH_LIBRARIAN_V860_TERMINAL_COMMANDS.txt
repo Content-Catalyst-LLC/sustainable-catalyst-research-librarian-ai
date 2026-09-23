@@ -1,0 +1,24 @@
+# 1. GitHub push/tag
+cd ~/Downloads
+rm -rf sc-research-librarian-v8.6.0-release
+unzip -q sustainable-catalyst-research-librarian-ai-v8.6.0-release-bundle.zip -d sc-research-librarian-v8.6.0-release
+cd sc-research-librarian-v8.6.0-release
+chmod +x PUSH_RESEARCH_LIBRARIAN_V860_PY312.sh
+./PUSH_RESEARCH_LIBRARIAN_V860_PY312.sh "$PWD/sustainable-catalyst-research-librarian-ai-v8.6.0-repository.zip"
+
+# 2. Copy backend + deployer to Contabo
+cd ~/Downloads/sc-research-librarian-v8.6.0-release
+scp -i ~/.ssh/id_ed25519 \
+  sustainable-catalyst-research-librarian-backend-v8.6.0.zip \
+  deploy/contabo/upgrade_research_librarian_backend_v8_6_0_contabo.sh \
+  catalystadmin@94.72.113.77:/tmp/
+
+ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes catalystadmin@94.72.113.77
+
+# 3. Run on Contabo
+chmod +x /tmp/upgrade_research_librarian_backend_v8_6_0_contabo.sh
+/tmp/upgrade_research_librarian_backend_v8_6_0_contabo.sh \
+  /tmp/sustainable-catalyst-research-librarian-backend-v8.6.0.zip
+
+# 4. Optional health verification
+curl -fsS http://127.0.0.1:8093/health | python3 -m json.tool

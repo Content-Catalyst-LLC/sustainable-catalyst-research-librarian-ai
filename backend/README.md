@@ -1,4 +1,4 @@
-# Research Librarian AI Python Backend v8.5.0
+# Research Librarian AI Python Backend v8.6.0
 
 FastAPI backend for durable Sustainable Catalyst acquisition, indexing, advanced retrieval/reranking, connected research projects, governance, typed handoffs, and first-class Platform Core v3.3.0+ integration.
 

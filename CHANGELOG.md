@@ -1,3 +1,15 @@
+# 8.6.0 — Source Identity, Deduplication & Citation Graph
+
+- Added durable canonical scholarly source identity in Postgres with SQLite local/test fallback.
+- Added DOI, arXiv, PMID, ISBN, and canonical-URL normalization with deterministic identity priority.
+- Added bibliographic fallback deduplication using normalized title, publication year, and first author.
+- Added alternate source instances/versions plus author and institution links.
+- Added persistent incoming/outgoing citation edges and citation stubs that hydrate when cited works are later ingested.
+- Added fail-closed detection when stable identifiers map to multiple canonical sources.
+- Integrated v8.5 document intelligence with canonical identity before normal durable indexing.
+- Added authenticated `/v1/sources/*` APIs and durable `source-identity` job execution.
+- Preserved Platform Core v3.3+ as the governed evidence/reasoning/provenance authority.
+
 # 8.5.0 — Document Intelligence & Scholarly Parsing
 
 - Added deterministic Python parsing for text, Markdown, HTML, and PDF sources.

@@ -1,0 +1,12 @@
+{
+  "schema": "sc-research-librarian-source-identity-manifest/1.0",
+  "release": "8.6.0",
+  "title": "Source Identity, Deduplication & Citation Graph",
+  "identity_priority": ["doi", "arxiv", "pmid", "isbn", "url"],
+  "fallback_identity": "normalized-title + publication-year + first-author fingerprint",
+  "objects": ["canonical-source", "source-instance", "source-identifier", "author-link", "institution-link", "citation-edge", "resolution-event"],
+  "storage": {"production": "postgres", "local_test": "sqlite", "durable": true},
+  "citation_graph": {"identifier_stubs": true, "later_hydration": true, "incoming_edges": true, "outgoing_edges": true},
+  "integration": {"document_intelligence": "8.5.0", "advanced_retrieval": "8.4.0", "async_jobs": "8.3.0", "platform_core_minimum": "3.3.0"},
+  "governance": {"identity_resolution_is_evidence_judgment": false, "platform_core_governs_promoted_evidence": true, "identifier_conflicts_fail_closed": true}
+}

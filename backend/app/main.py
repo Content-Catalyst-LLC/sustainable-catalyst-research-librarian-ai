@@ -165,6 +165,7 @@ from .research_lifecycle import (
 from .api.core import router as platform_core_router
 from .api.jobs import router as async_jobs_router, register_authenticated_routes as register_async_job_routes
 from .api.documents import router as documents_router, register_authenticated_routes as register_document_routes
+from .api.sources import router as sources_router, register_authenticated_routes as register_source_routes
 from .workers.document_worker import worker as document_worker
 
 
@@ -309,6 +310,8 @@ register_async_job_routes(require_key)
 app.include_router(async_jobs_router)
 register_document_routes(require_key)
 app.include_router(documents_router)
+register_source_routes(require_key)
+app.include_router(sources_router)
 
 
 def _idempotency_payload_hash(payload: dict[str, Any]) -> str:
