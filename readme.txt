@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 8.6.0
+Stable tag: 8.7.0
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
@@ -14,7 +14,7 @@ Research Librarian AI retrieves Sustainable Catalyst publications and documents 
 
 v8.0.0 unifies Library context, federated discovery, evidence evaluation, persistent research state, Research Rooms, synthesis, Workspace promotion, and preservation through an inspectable eight-stage research lifecycle. Readiness is descriptive; every lifecycle stage transition remains an explicit human action.
 
-v8.6.0 adds durable canonical source identity, duplicate resolution, alternate source instances, author/institution links, and an incoming/outgoing citation graph. DOI, arXiv, PMID, ISBN, and canonical URLs resolve first; bibliographic fingerprints provide a deterministic fallback. Platform Core remains the governed evidence/reasoning authority.
+v8.7.0 adds the Core Evidence Bridge. Hydrated canonical Librarian sources can be promoted to governed Platform Core source snapshots, and selected passages can be promoted to Core evidence records with durable cross-system bindings. Promotions default to neutral/unreviewed with no inferred confidence; Platform Core remains the governed evidence/reasoning authority.
 
 == Shortcodes ==
 
@@ -40,6 +40,13 @@ v8.6.0 adds durable canonical source identity, duplicate resolution, alternate s
 [sc_research_librarian_platform_handoffs]
 
 == Changelog ==
+
+= 8.7.0 =
+* Add the Core Evidence Bridge for canonical-source snapshot and passage-evidence promotion.
+* Add immutable Librarian↔Core bindings with deterministic Core IDs and idempotency metadata.
+* Reject citation-only stubs and require a synchronized Core snapshot before passage promotion.
+* Default promoted passages to neutral, unreviewed, and no inferred confidence.
+* Preserve Platform Core as the governed evidence, review, claim, reasoning, lineage, and reproducibility authority.
 
 = 8.6.0 =
 * Add durable Postgres canonical source identity with SQLite local/test fallback.

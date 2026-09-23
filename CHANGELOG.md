@@ -1,3 +1,12 @@
+# 8.7.0 — Core Evidence Bridge
+
+- Added typed source-snapshot and passage-evidence promotion into Platform Core v3.3+ evidence-ledger contracts.
+- Added deterministic Core IDs, idempotency keys, immutable Librarian↔Core bindings, and conflict recovery.
+- Added hydrated-source requirement: citation-only stubs cannot be promoted as governed snapshots.
+- Added snapshot-before-evidence enforcement so every promoted passage is anchored to a synchronized Core source snapshot.
+- Defaulted passage evidence to neutral/unreviewed with no inferred confidence or automatic claim creation.
+- Preserved v8.6 source identity, v8.5 document intelligence, v8.4 retrieval, and v8.3 durable jobs.
+
 # 8.6.0 — Source Identity, Deduplication & Citation Graph
 
 - Added durable canonical scholarly source identity in Postgres with SQLite local/test fallback.

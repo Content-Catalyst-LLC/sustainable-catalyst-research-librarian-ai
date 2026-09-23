@@ -1,6 +1,16 @@
-# Research Librarian AI Python Backend v8.6.0
+# Research Librarian AI Python Backend v8.7.0
 
 FastAPI backend for durable Sustainable Catalyst acquisition, indexing, advanced retrieval/reranking, connected research projects, governance, typed handoffs, and first-class Platform Core v3.3.0+ integration.
+
+## v8.7 Core Evidence Bridge
+
+- Promotes hydrated canonical Librarian sources into governed Platform Core source snapshots.
+- Promotes selected passage evidence into Core evidence records anchored to synchronized snapshots.
+- Stores immutable Librarian↔Core binding records with deterministic Core IDs and idempotency keys.
+- Defaults passage evidence to neutral/unreviewed with no inferred confidence.
+- Refuses citation-only stubs and refuses passage promotion when its snapshot is not synchronized.
+- Platform Core remains authoritative for review, claim linkage, argumentation, lineage, and reproducibility.
+
 
 
 ## v8.5 document intelligence and scholarly parsing
@@ -54,6 +64,9 @@ Python 3.12.12. Production knowledge generations and v8.3 asynchronous jobs use 
 - `POST /v1/core/research-projects/synchronize`
 - `GET /v1/core/research-projects/{core_project_id}/bundle`
 - `POST /v1/core/exchange/packages`
+- `GET /v1/core/evidence/capabilities`
+- `POST /v1/core/evidence/source-snapshots/promote`
+- `POST /v1/core/evidence/passages/promote`
 
 All non-public endpoints require `X-SC-RL-Key`.
 

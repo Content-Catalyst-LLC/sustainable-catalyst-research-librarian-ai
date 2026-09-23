@@ -1,0 +1,19 @@
+GITHUB PUSH/TAG
+
+cd ~/Downloads
+rm -rf sc-research-librarian-v8.7.0-release
+unzip -q sustainable-catalyst-research-librarian-ai-v8.7.0-release-bundle.zip -d sc-research-librarian-v8.7.0-release
+cd sc-research-librarian-v8.7.0-release
+chmod +x PUSH_RESEARCH_LIBRARIAN_V870_PY312.sh
+./PUSH_RESEARCH_LIBRARIAN_V870_PY312.sh "$PWD/sustainable-catalyst-research-librarian-ai-v8.7.0-repository.zip"
+
+BACKEND DEPLOYMENT FROM MAC
+
+cd ~/Downloads/sc-research-librarian-v8.7.0-release
+scp -i ~/.ssh/id_ed25519 sustainable-catalyst-research-librarian-backend-v8.7.0.zip deploy/contabo/upgrade_research_librarian_backend_v8_7_0_contabo.sh catalystadmin@94.72.113.77:/tmp/
+ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes catalystadmin@94.72.113.77
+
+ON CONTABO
+
+chmod +x /tmp/upgrade_research_librarian_backend_v8_7_0_contabo.sh
+/tmp/upgrade_research_librarian_backend_v8_7_0_contabo.sh /tmp/sustainable-catalyst-research-librarian-backend-v8.7.0.zip

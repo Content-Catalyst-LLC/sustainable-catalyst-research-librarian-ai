@@ -1,20 +1,19 @@
-# Sustainable Catalyst Research Librarian AI v8.6.0
+# Sustainable Catalyst Research Librarian AI v8.7.0
 
-Research Librarian AI is the Python-backed acquisition, document-intelligence, source-identity, indexing, retrieval, collaboration, and research-orchestration layer for Sustainable Catalyst. **v8.6.0 adds durable canonical source identity, deduplication, and a scholarly citation graph on top of v8.5 document intelligence, v8.4 advanced retrieval, v8.3 durable jobs, and v8.2 Platform Core integration.**
+Research Librarian AI is the Python-backed acquisition, document-intelligence, source-identity, indexing, retrieval, collaboration, and research-orchestration layer for Sustainable Catalyst. **v8.7.0 adds the Core Evidence Bridge on top of v8.6 source identity, allowing canonical Librarian sources and passage-level evidence candidates to become governed Platform Core source snapshots and evidence records with durable cross-system bindings.**
 
-### v8.6.0 architecture
+### v8.7.0 architecture
 
-- **Canonical scholarly identity:** DOI → arXiv → PMID → ISBN → canonical URL, then bibliographic fingerprint fallback.
-- **Duplicate-safe copies:** publisher URLs, repository copies, PDFs, and other instances can resolve to one canonical work.
-- **Citation graph:** bibliography identifiers create persistent outgoing/incoming citation edges. Unknown cited works can exist as stubs and hydrate later.
-- **Fail-closed conflicts:** identifiers that point to multiple existing works are never silently merged.
-- **Ingestion integration:** v8.5 parsing resolves canonical identity before the existing durable index activation path.
-- **Storage:** Postgres is authoritative in production; SQLite is the local/test fallback for the source graph.
-- **Core boundary:** Platform Core v3.3+ remains authoritative for governed evidence, findings, claims, reasoning, provenance, lineage, and reproducibility.
+- **Source snapshot promotion:** hydrated canonical v8.6 sources can become immutable Platform Core `SourceSnapshot` objects.
+- **Passage evidence promotion:** selected passages can become Core `EvidenceRecord` objects anchored to their promoted source snapshot.
+- **Governance defaults:** passage promotions default to `neutral`, `unreviewed`, and no confidence value; the bridge does not infer truth, stance, or evidentiary strength.
+- **Durable lineage:** every promotion creates a Librarian↔Core binding carrying canonical source identity, local IDs, Core IDs, payload hash, idempotency key, and synchronization state.
+- **Fail closed:** citation-only stubs cannot be promoted as source snapshots, snapshot/evidence bindings are immutable, and passage promotion requires a synchronized snapshot binding.
+- **Core authority:** Platform Core v3.3+ remains authoritative for governed evidence, reviews, claims, arguments, lineage, reasoning, and reproducibility.
 
-### New v8.6.0 backend resources
+### New v8.7.0 backend resources
 
-`GET /v1/sources/capabilities`, `POST /v1/sources/resolve`, `GET /v1/sources/{canonical_source_id}`, `GET /v1/sources/{canonical_source_id}/graph`, and `POST /v1/sources/{canonical_source_id}/citations`.
+`GET /v1/core/evidence/capabilities`, `POST /v1/core/evidence/source-snapshots/promote`, and `POST /v1/core/evidence/passages/promote`.
 
 ## v8.0.0 highlights
 
@@ -42,7 +41,7 @@ WordPress remains the canonical publishing, administration, identity, and recove
 
 ## Backend resources
 
-`/v1/sources/capabilities`, `/v1/sources/resolve`, `/v1/sources/{canonical_source_id}`, `/v1/sources/{canonical_source_id}/graph`, `/v1/sources/{canonical_source_id}/citations`, `/v1/documents/capabilities`, `/v1/documents/parse`, `/v1/documents/parse/async`, `/v1/retrieval/plan`, `/v1/retrieve`, `/v1/retrieve/explain`, `/v1/core/architecture`, `/v1/core/readiness`, `/v1/core/bindings`, `/v1/core/research-objects/promote`, `/v1/core/research-projects/synchronize`, `/v1/core/exchange/packages`, `/v1/projects`, `/v1/investigations`, `/v1/projects/entities`, `/v1/library/object-model`, `/v1/library/objects`, `/v1/research/contexts`, `/v1/research/contexts/{context_id}/evidence-quality`, `/v1/research/sources/evaluate`, `/v1/research/evidence/compare`, `/v1/research/evidence/gaps`, `/v1/research/state/summary`, `/v1/research/activity`, `/v1/research/object-states`, `/v1/research/questions`, `/v1/research/rooms`, `/v1/research/rooms/{room_id}`, `/v1/research/rooms/{room_id}/members`, `/v1/research/rooms/{room_id}/evidence`, `/v1/research/rooms/{room_id}/questions`, `/v1/research/rooms/{room_id}/disagreements`, `/v1/research/rooms/{room_id}/activity`, `/v1/research/rooms/{room_id}/synthesis`, `/v1/federation/providers`, `/v1/federation/search`, `/v1/federation/searches`, `/v1/federation/searches/{search_id}`, `/v1/federation/searches/{search_id}/results/{result_id}/save`, `/v1/workspace/promotions/catalog`, `/v1/workspace/promotions`, `/v1/workspace/promotions/{promotion_id}`, `/v1/workspace/promotions/{promotion_id}/receipt`, `/v1/research/lifecycle/catalog`, `/v1/research/lifecycles`, `/v1/research/lifecycles/{lifecycle_id}`, `/v1/research/lifecycles/{lifecycle_id}/summary`, `/v1/research/lifecycles/{lifecycle_id}/transition`, `/v1/research/lifecycles/{lifecycle_id}/checkpoint`, `/v1/workflows/template`, `/v1/research/contradictions`, `/v1/research/uncertainties`, `/v1/projects/{project_id}/backup`, `/v1/platform/backups/import`, `/v1/platform/api`, and `/v1/platform/summary`.
+`/v1/core/evidence/capabilities`, `/v1/core/evidence/source-snapshots/promote`, `/v1/core/evidence/passages/promote`, `/v1/sources/capabilities`, `/v1/sources/resolve`, `/v1/sources/{canonical_source_id}`, `/v1/sources/{canonical_source_id}/graph`, `/v1/sources/{canonical_source_id}/citations`, `/v1/documents/capabilities`, `/v1/documents/parse`, `/v1/documents/parse/async`, `/v1/retrieval/plan`, `/v1/retrieve`, `/v1/retrieve/explain`, `/v1/core/architecture`, `/v1/core/readiness`, `/v1/core/bindings`, `/v1/core/research-objects/promote`, `/v1/core/research-projects/synchronize`, `/v1/core/exchange/packages`, `/v1/projects`, `/v1/investigations`, `/v1/projects/entities`, `/v1/library/object-model`, `/v1/library/objects`, `/v1/research/contexts`, `/v1/research/contexts/{context_id}/evidence-quality`, `/v1/research/sources/evaluate`, `/v1/research/evidence/compare`, `/v1/research/evidence/gaps`, `/v1/research/state/summary`, `/v1/research/activity`, `/v1/research/object-states`, `/v1/research/questions`, `/v1/research/rooms`, `/v1/research/rooms/{room_id}`, `/v1/research/rooms/{room_id}/members`, `/v1/research/rooms/{room_id}/evidence`, `/v1/research/rooms/{room_id}/questions`, `/v1/research/rooms/{room_id}/disagreements`, `/v1/research/rooms/{room_id}/activity`, `/v1/research/rooms/{room_id}/synthesis`, `/v1/federation/providers`, `/v1/federation/search`, `/v1/federation/searches`, `/v1/federation/searches/{search_id}`, `/v1/federation/searches/{search_id}/results/{result_id}/save`, `/v1/workspace/promotions/catalog`, `/v1/workspace/promotions`, `/v1/workspace/promotions/{promotion_id}`, `/v1/workspace/promotions/{promotion_id}/receipt`, `/v1/research/lifecycle/catalog`, `/v1/research/lifecycles`, `/v1/research/lifecycles/{lifecycle_id}`, `/v1/research/lifecycles/{lifecycle_id}/summary`, `/v1/research/lifecycles/{lifecycle_id}/transition`, `/v1/research/lifecycles/{lifecycle_id}/checkpoint`, `/v1/workflows/template`, `/v1/research/contradictions`, `/v1/research/uncertainties`, `/v1/projects/{project_id}/backup`, `/v1/platform/backups/import`, `/v1/platform/api`, and `/v1/platform/summary`.
 
 ## Runtime
 
@@ -57,4 +56,4 @@ WordPress remains the canonical publishing, administration, identity, and recove
 - WordPress 6.0+
 - No Render persistent disk is required for the durable production knowledge index
 
-See `docs/V860_SOURCE_IDENTITY_DEDUPLICATION_CITATION_GRAPH.md`, `docs/V850_DOCUMENT_INTELLIGENCE_SCHOLARLY_PARSING.md`, `docs/V840_ADVANCED_RETRIEVAL_RERANKING_ENGINE.md`, `docs/V800_UNIFIED_RESEARCH_INTELLIGENCE_LIFECYCLE.md`, `docs/V770_GLOBAL_LIBRARY_DISCOVERY_FEDERATED_RESEARCH.md`, `docs/V760_WORKSPACE_RESEARCH_HANDOFF_ARTIFACT_PROMOTION.md`, `docs/V750_COLLABORATIVE_RESEARCH_ROOM_INTELLIGENCE.md`, `docs/V740_PERSISTENT_RESEARCH_STATE_READING_HISTORY_OPEN_QUESTIONS.md`, `docs/V730_SOURCE_EVALUATION_EVIDENCE_COMPARISON_RESEARCH_QUALITY_SIGNALS.md`, and `docs/INSTALL.md`.
+See `docs/V870_CORE_EVIDENCE_BRIDGE.md`, `docs/V860_SOURCE_IDENTITY_DEDUPLICATION_CITATION_GRAPH.md`, `docs/V850_DOCUMENT_INTELLIGENCE_SCHOLARLY_PARSING.md`, `docs/V840_ADVANCED_RETRIEVAL_RERANKING_ENGINE.md`, `docs/V800_UNIFIED_RESEARCH_INTELLIGENCE_LIFECYCLE.md`, `docs/V770_GLOBAL_LIBRARY_DISCOVERY_FEDERATED_RESEARCH.md`, `docs/V760_WORKSPACE_RESEARCH_HANDOFF_ARTIFACT_PROMOTION.md`, `docs/V750_COLLABORATIVE_RESEARCH_ROOM_INTELLIGENCE.md`, `docs/V740_PERSISTENT_RESEARCH_STATE_READING_HISTORY_OPEN_QUESTIONS.md`, `docs/V730_SOURCE_EVALUATION_EVIDENCE_COMPARISON_RESEARCH_QUALITY_SIGNALS.md`, and `docs/INSTALL.md`.

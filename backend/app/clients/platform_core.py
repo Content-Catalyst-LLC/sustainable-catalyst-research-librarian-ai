@@ -107,8 +107,8 @@ class PlatformCoreClient:
         self._configured()
         headers = {
             "Accept": "application/json",
-            "User-Agent": "SustainableCatalystResearchLibrarian/8.6.0",
-            "X-SC-Research-Librarian-Version": "8.6.0",
+            "User-Agent": "SustainableCatalystResearchLibrarian/8.7.0",
+            "X-SC-Research-Librarian-Version": "8.7.0",
         }
         if write:
             if not self.write_api_key:
@@ -173,6 +173,21 @@ class PlatformCoreClient:
 
         pairs = await asyncio.gather(*(one(name, path) for name, path in endpoints.items()))
         return dict(pairs)
+
+    async def create_source_snapshot(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return await self._request("POST", "/v1/source-snapshots", payload=payload, write=True)
+
+    async def source_snapshot(self, snapshot_id: str) -> dict[str, Any]:
+        return await self._request("GET", f"/v1/source-snapshots/{snapshot_id}")
+
+    async def verify_source_snapshot(self, snapshot_id: str, content: str) -> dict[str, Any]:
+        return await self._request("POST", f"/v1/source-snapshots/{snapshot_id}/verify", payload={"content": content})
+
+    async def create_evidence_record(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return await self._request("POST", "/v1/evidence-records", payload=payload, write=True)
+
+    async def evidence_record(self, evidence_id: str) -> dict[str, Any]:
+        return await self._request("GET", f"/v1/evidence-records/{evidence_id}")
 
     async def create_research_object(self, payload: dict[str, Any]) -> dict[str, Any]:
         return await self._request("POST", "/v1/research-objects", payload=payload, write=True)

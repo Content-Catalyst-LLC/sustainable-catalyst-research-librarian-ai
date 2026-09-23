@@ -8,11 +8,21 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 
 from ..clients.platform_core import PlatformCoreClient, PlatformCoreError
 from ..config import settings
+from ..contracts.evidence_bridge import (
+    CORE_EVIDENCE_BRIDGE_SCHEMA,
+    CorePassageEvidencePromotionRequest,
+    CoreSourceSnapshotPromotionRequest,
+)
 from ..contracts.platform_core import (
     CORE_INTEGRATION_SCHEMA,
     CoreExchangePackageRequest,
     CoreResearchObjectPromotionRequest,
     CoreUnifiedProjectSyncRequest,
+)
+from ..services.core_evidence_bridge import (
+    evidence_bridge_capabilities,
+    promote_passage_evidence,
+    promote_source_snapshot,
 )
 from ..services.platform_core_integration import (
     CoreBindingConflict,
@@ -23,7 +33,7 @@ from ..services.platform_core_integration import (
 )
 from ..store import store
 
-router = APIRouter(prefix="/v1/core", tags=["Platform Core Integration v8.2"])
+router = APIRouter(prefix="/v1/core", tags=["Platform Core Integration"])
 
 
 def require_backend_key(x_sc_rl_key: str = Header(default="", alias="X-SC-RL-Key")) -> None:
@@ -47,6 +57,8 @@ def _translate(exc: Exception) -> HTTPException:
             status_code=code,
             detail={"message": str(exc), "core_detail": exc.detail},
         )
+    if isinstance(exc, ValueError):
+        return HTTPException(status_code=422, detail=str(exc))
     return HTTPException(status_code=500, detail=str(exc))
 
 
@@ -64,9 +76,12 @@ def architecture() -> dict[str, Any]:
             "connectors",
             "document-intelligence",
             "core-client-orchestration",
+            "canonical-source-identity",
+            "evidence-promotion-orchestration",
         ],
         "platform_core_owns": [
             "governed-research-objects",
+            "governed-source-snapshots-and-evidence-records",
             "provenance-and-lineage",
             "claims-findings-arguments",
             "cross-study-synthesis",
@@ -137,5 +152,26 @@ async def research_project_bundle(core_project_id: str) -> dict[str, Any]:
 async def exchange_package(payload: CoreExchangePackageRequest) -> dict[str, Any]:
     try:
         return await create_exchange_package(payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+
+@router.get("/evidence/capabilities", dependencies=[Depends(require_backend_key)])
+def evidence_capabilities() -> dict[str, Any]:
+    return evidence_bridge_capabilities()
+
+
+@router.post("/evidence/source-snapshots/promote", dependencies=[Depends(require_backend_key)])
+async def evidence_source_snapshot_promote(payload: CoreSourceSnapshotPromotionRequest) -> dict[str, Any]:
+    try:
+        return await promote_source_snapshot(payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+
+@router.post("/evidence/passages/promote", dependencies=[Depends(require_backend_key)])
+async def evidence_passage_promote(payload: CorePassageEvidencePromotionRequest) -> dict[str, Any]:
+    try:
+        return await promote_passage_evidence(payload)
     except Exception as exc:
         raise _translate(exc) from exc

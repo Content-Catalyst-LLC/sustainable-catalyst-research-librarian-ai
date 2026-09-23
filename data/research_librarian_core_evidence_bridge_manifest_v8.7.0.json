@@ -1,0 +1,29 @@
+{
+  "schema": "sc-research-librarian-core-evidence-bridge/1.0",
+  "release": "8.7.0",
+  "platform_core_minimum": "3.3.0",
+  "capabilities": {
+    "source_snapshot_promotion": true,
+    "passage_evidence_promotion": true,
+    "canonical_source_identity_required": true,
+    "snapshot_before_evidence": true,
+    "durable_cross_system_bindings": true,
+    "immutable_promotions": true,
+    "deterministic_core_ids": true,
+    "idempotent_replay": true
+  },
+  "governance": {
+    "default_stance": "neutral",
+    "default_review_status": "unreviewed",
+    "automatic_claim_creation": false,
+    "automatic_stance_inference": false,
+    "automatic_confidence_inference": false,
+    "citation_stub_promotion_allowed": false,
+    "platform_core_is_governed_evidence_authority": true
+  },
+  "routes": [
+    "GET /v1/core/evidence/capabilities",
+    "POST /v1/core/evidence/source-snapshots/promote",
+    "POST /v1/core/evidence/passages/promote"
+  ]
+}
