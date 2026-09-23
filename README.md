@@ -1,15 +1,22 @@
-# Sustainable Catalyst Research Librarian AI v8.2.0
+# Sustainable Catalyst Research Librarian AI v8.3.0
 
-Research Librarian AI is the Python-backed acquisition, document-intelligence, indexing, retrieval, collaboration, and research-orchestration layer for Sustainable Catalyst. v8.2.0 makes Platform Core v3.3.0+ a first-class governed reasoning dependency instead of treating Core as a generic handoff destination.
+Research Librarian AI is the Python-backed acquisition, document-intelligence, indexing, retrieval, collaboration, and research-orchestration layer for Sustainable Catalyst. **v8.3.0 adds the durable asynchronous ingestion and document-processing runtime on top of the v8.2 Platform Core integration.**
 
-### v8.2.0 architecture
+### v8.3.0 architecture
 
-- **Research Librarian Python:** source acquisition, normalization, parsing, chunking, embeddings, indexing, retrieval, federation, document intelligence, research workflow state, and Core orchestration.
-- **Platform Core:** governed research objects, evidence/provenance, lineage, claims/findings/arguments/conclusions, reproducibility, statistical reasoning objects, visual reasoning, and cross-product exchange.
-- **Specialist runtimes:** Workspace, Workbench, Research Lab, Analytics R, and other runtimes perform computation; Core records governed results rather than becoming an arbitrary execution engine.
-- **WordPress:** presentation, access, configuration, and user interaction.
+- **Durable Python job plane:** authenticated `/v1/jobs/*` APIs, idempotent enqueue, priority, retry/backoff, worker leases, event history, cancellation, manual retry, and restart recovery.
+- **Postgres-first production queue:** production jobs use the configured Neon/Postgres database and workers claim tasks with `FOR UPDATE SKIP LOCKED`; SQLite is the local/test fallback.
+- **Document worker:** normalized document payloads flow through staging, restart-safe index activation, optional embedding, and read-back validation without bypassing the existing knowledge-index transaction model.
+- **Research Librarian Python:** owns source acquisition, parsing, chunking, embedding, indexing, retrieval, connectors, document intelligence, and asynchronous processing.
+- **Platform Core v3.3+:** remains the authoritative layer for governed research/evidence objects, provenance and lineage, findings/claims/arguments, statistical and visual reasoning, reproducibility, and cross-product exchange.
+- **Specialist runtimes:** Workspace, Workbench, Research Lab, Analytics R, and other runtimes perform computation; Core records governed results.
+- **WordPress:** presentation, access, configuration, and user interaction rather than the document-processing engine.
 
-v8.2.0 adds the typed `PlatformCoreClient`, `/v1/core/*` service boundary, durable Core bindings, deterministic IDs, compatibility checks, retries, and fail-closed write authentication. Ancillary SQLite advances to schema 19; the Postgres/pgvector knowledge index does not require a migration.
+v8.3.0 intentionally does **not** duplicate Platform Core reasoning objects and does not enable autonomous truth promotion. The asynchronous runtime performs operational processing; governed evidence and research reasoning continue to cross the v8.2 typed Core boundary.
+
+### New v8.3.0 backend resources
+
+`GET /v1/jobs/runtime`, `GET /v1/jobs`, `POST /v1/jobs`, `POST /v1/jobs/documents`, `GET /v1/jobs/{job_id}`, `GET /v1/jobs/{job_id}/events`, `POST /v1/jobs/{job_id}/retry`, and `DELETE /v1/jobs/{job_id}`.
 
 ## v8.0.0 highlights
 
@@ -22,7 +29,7 @@ v8.2.0 adds the typed `PlatformCoreClient`, `/v1/core/*` service boundary, durab
 
 ## Architecture
 
-WordPress remains the canonical publishing, administration, identity, and recovery boundary. FastAPI uses Neon/Postgres for production knowledge generations, source records, retrieval chunks, and pgvector embeddings. SQLite remains the local-development and ancillary governance/workspace/Library-context/research-state/collaboration/promotion/lifecycle store in v8.0.0. Generation is isolated behind `sc-generation-adapter/1.0`; deterministic retrieval and project continuity remain usable when generation is unavailable.
+WordPress remains the canonical publishing, administration, identity, and recovery boundary. FastAPI uses Neon/Postgres for production knowledge generations, source records, retrieval chunks, and pgvector embeddings. SQLite remains the local-development and ancillary governance/workspace/Library-context/research-state/collaboration/promotion/lifecycle/Core-binding store. v8.3 asynchronous jobs use Postgres in production and a separate SQLite queue only for local/test operation. Generation is isolated behind `sc-generation-adapter/1.0`; deterministic retrieval and project continuity remain usable when generation is unavailable.
 
 ## Public shortcodes
 
@@ -45,6 +52,7 @@ WordPress remains the canonical publishing, administration, identity, and recove
 - FastAPI
 - Neon-compatible PostgreSQL with pgvector for the production knowledge index
 - SQLite schema 19 for local development and ancillary platform/Library/research-state/collaboration/promotion/lifecycle/Core-binding records
+- Async job runtime schema `sc-research-librarian-async-runtime/1.0`; Postgres production queue uses `sc_rl_async_jobs` / `sc_rl_async_job_events`
 - Knowledge-index schema remains `sc-research-librarian-knowledge-index/13.0`
 - WordPress 6.0+
 - No Render persistent disk is required for the durable production knowledge index

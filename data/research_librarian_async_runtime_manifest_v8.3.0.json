@@ -1,0 +1,34 @@
+{
+  "schema": "sc-research-librarian-async-runtime-manifest/1.0",
+  "release": "8.3.0",
+  "runtime_schema": "sc-research-librarian-async-runtime/1.0",
+  "job_schema": "sc-research-librarian-async-job/1.0",
+  "event_schema": "sc-research-librarian-async-job-event/1.0",
+  "production_backend": "postgres",
+  "local_backend": "sqlite",
+  "claim_strategy": {
+    "postgres": "FOR UPDATE SKIP LOCKED",
+    "sqlite": "BEGIN IMMEDIATE"
+  },
+  "states": ["queued", "retry_wait", "running", "succeeded", "failed", "cancelled"],
+  "job_types": ["document-process", "ingestion", "embedding", "index", "validation", "connector-run"],
+  "executors_in_release": ["document-process", "ingestion", "validation"],
+  "features": {
+    "idempotent_enqueue": true,
+    "priority": true,
+    "worker_leases": true,
+    "heartbeats": true,
+    "exponential_retry": true,
+    "expired_lease_recovery": true,
+    "event_history": true,
+    "manual_retry": true,
+    "cancellation": true,
+    "optional_embedding": true,
+    "restart_safe_index_activation": true
+  },
+  "platform_core_boundary": {
+    "minimum_version": "3.3.0",
+    "async_runtime_owns": ["operational processing", "document normalization", "index orchestration"],
+    "core_owns": ["governed evidence", "provenance", "lineage", "findings", "claims", "arguments", "reproducibility", "visual reasoning", "statistical reasoning"]
+  }
+}

@@ -1,6 +1,18 @@
-# Research Librarian AI Python Backend v8.2.0
+# Research Librarian AI Python Backend v8.3.0
 
 FastAPI backend for durable Sustainable Catalyst acquisition, indexing, retrieval, connected research projects, governance, typed handoffs, and first-class Platform Core v3.3.0+ integration.
+
+
+## v8.3 durable asynchronous processing
+
+- Production queue: Postgres/Neon `sc_rl_async_jobs` + `sc_rl_async_job_events`.
+- Worker claim: `FOR UPDATE SKIP LOCKED` with durable worker leases and heartbeats.
+- Local/test queue: SQLite `async_jobs.sqlite3` with `BEGIN IMMEDIATE` claims.
+- Retry: bounded exponential backoff plus expired-lease recovery.
+- Document processing: normalize → stage/index → restart-safe activation → optional embedding → read-back validation.
+- Authenticated API: `/v1/jobs/*`.
+
+The queue is operational infrastructure, not a truth/evidence authority. Governed research objects remain in Platform Core.
 
 ## v8.2 Platform Core boundary
 
@@ -12,7 +24,7 @@ FastAPI backend for durable Sustainable Catalyst acquisition, indexing, retrieva
 
 ## Runtime
 
-Python 3.12.12. Production knowledge generations use Postgres/pgvector; ancillary workflow/Core-binding state uses SQLite schema 19.
+Python 3.12.12. Production knowledge generations and v8.3 asynchronous jobs use Postgres/pgvector-compatible infrastructure; ancillary workflow/Core-binding state uses SQLite schema 19. Local/test async jobs use a separate SQLite queue.
 
 ## Platform Core integration endpoints
 

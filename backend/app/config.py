@@ -109,8 +109,8 @@ class Settings:
     postgres_activation_checksum_batch_limit: int = _int("SC_RL_POSTGRES_ACTIVATION_CHECKSUM_BATCH_LIMIT", 250, 25, 2000)
     postgres_generation_retention: int = _int("SC_RL_POSTGRES_GENERATION_RETENTION", 1, 1, 20)
     neon_free_storage_warning_mb: int = _int("SC_RL_NEON_FREE_STORAGE_WARNING_MB", 400, 100, 500)
-    release_version: str = os.getenv("SC_RL_RELEASE_VERSION", "8.2.0")
-    # Platform Core v8.2 integration. The default URL resolves the Core container
+    release_version: str = os.getenv("SC_RL_RELEASE_VERSION", "8.3.0")
+    # Platform Core v8.3 integration. The default URL resolves the Core container
     # directly on the shared sc-internal Docker network used by the VPS stack.
     core_enabled: bool = _bool("SC_RL_CORE_ENABLED", True)
     core_base_url: str = os.getenv("SC_RL_CORE_BASE_URL", "http://sc-core:8090").strip()
@@ -121,6 +121,13 @@ class Settings:
     core_retry_limit: int = _int("SC_RL_CORE_RETRY_LIMIT", 2, 0, 8)
     core_retry_backoff_seconds: float = _float("SC_RL_CORE_RETRY_BACKOFF_SECONDS", 0.35, 0.0, 10.0)
     core_fail_closed_writes: bool = _bool("SC_RL_CORE_FAIL_CLOSED_WRITES", True)
+    # v8.3 durable asynchronous ingestion/document-processing runtime.
+    async_jobs_enabled: bool = _bool("SC_RL_ASYNC_JOBS_ENABLED", True)
+    async_job_poll_seconds: float = _float("SC_RL_ASYNC_JOB_POLL_SECONDS", 1.0, 0.1, 30.0)
+    async_job_lease_seconds: int = _int("SC_RL_ASYNC_JOB_LEASE_SECONDS", 120, 30, 3600)
+    async_job_reclaim_interval_seconds: int = _int("SC_RL_ASYNC_JOB_RECLAIM_INTERVAL_SECONDS", 60, 10, 3600)
+    async_job_retry_base_seconds: float = _float("SC_RL_ASYNC_JOB_RETRY_BASE_SECONDS", 5.0, 0.1, 3600.0)
+    async_job_retry_max_seconds: int = _int("SC_RL_ASYNC_JOB_RETRY_MAX_SECONDS", 900, 1, 86400)
     federated_discovery_enabled: bool = _bool("SC_RL_FEDERATED_DISCOVERY_ENABLED", True)
     federated_timeout_seconds: int = _int("SC_RL_FEDERATED_TIMEOUT_SECONDS", 12, 5, 60)
     federated_provider_result_limit: int = _int("SC_RL_FEDERATED_PROVIDER_RESULT_LIMIT", 10, 1, 50)

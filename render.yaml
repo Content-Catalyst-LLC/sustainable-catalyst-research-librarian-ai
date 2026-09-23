@@ -63,7 +63,7 @@ services:
       - key: SC_RL_ACTIVATION_SNAPSHOT_RECORD_LIMIT
         value: "500"
       - key: SC_RL_RELEASE_VERSION
-        value: "8.2.0"
+        value: "8.3.0"
       - key: SC_RL_CORE_ENABLED
         value: "false"
       - key: SC_RL_CORE_BASE_URL
@@ -74,6 +74,18 @@ services:
         value: "3.3.0"
       - key: SC_RL_CORE_SUPPORTED_MAJOR
         value: "3"
+      - key: SC_RL_ASYNC_JOBS_ENABLED
+        value: "true"
+      - key: SC_RL_ASYNC_JOB_POLL_SECONDS
+        value: "1.0"
+      - key: SC_RL_ASYNC_JOB_LEASE_SECONDS
+        value: "120"
+      - key: SC_RL_ASYNC_JOB_RECLAIM_INTERVAL_SECONDS
+        value: "60"
+      - key: SC_RL_ASYNC_JOB_RETRY_BASE_SECONDS
+        value: "5.0"
+      - key: SC_RL_ASYNC_JOB_RETRY_MAX_SECONDS
+        value: "900"
       - key: SC_RL_POSTGRES_ACTIVATION_CHUNK_RECORD_BATCH_LIMIT
         value: "5"
       - key: SC_RL_POSTGRES_ACTIVATION_CHUNK_MIN_BATCH_LIMIT

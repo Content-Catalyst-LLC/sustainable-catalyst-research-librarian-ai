@@ -8,9 +8,9 @@ $api = file_get_contents($root . '/backend/app/api/core.py');
 $store = file_get_contents($root . '/backend/app/store.py');
 $compose = file_get_contents($root . '/compose.yml');
 $checks = array(
-    'version_header' => false !== strpos($main, 'Version: 8.2.0'),
-    'version_constant' => false !== strpos($main, "const VERSION        = '8.2.0';"),
-    'backend_version' => false !== strpos(file_get_contents($root . '/backend/app/__init__.py'), '__version__ = "8.2.0"'),
+    'version_header' => false !== strpos($main, 'Version: 8.3.0'),
+    'version_constant' => false !== strpos($main, "const VERSION        = '8.3.0';"),
+    'backend_version' => false !== strpos(file_get_contents($root . '/backend/app/__init__.py'), '__version__ = "8.3.0"'),
     'sqlite_schema_19' => false !== strpos($store, 'SCHEMA_VERSION = 19'),
     'core_client' => false !== strpos($client, 'class PlatformCoreClient'),
     'core_private_write_header' => false !== strpos($client, 'X-SC-API-Key'),
@@ -29,4 +29,4 @@ if ($failed) {
     fwrite(STDERR, 'FAIL: ' . implode(', ', $failed) . PHP_EOL);
     exit(1);
 }
-echo 'PASS: Research Librarian v8.2.0 Python service architecture + Platform Core client contract.' . PHP_EOL;
+echo 'PASS: Research Librarian v8.3.0 Python service architecture + Platform Core client contract.' . PHP_EOL;

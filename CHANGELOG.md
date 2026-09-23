@@ -1,5 +1,15 @@
 # Changelog
 
+## 8.3.0 — Asynchronous Ingestion & Document Processing Runtime
+
+- Adds a durable Python job plane for document processing, ingestion, validation, and the future embedding/index/connector executor family.
+- Uses Neon/Postgres in production with transactional `FOR UPDATE SKIP LOCKED` worker claims; SQLite remains the local/test fallback.
+- Adds idempotency keys, priority, worker leases and heartbeats, bounded retries with exponential backoff, expired-lease recovery, cancellation, manual retry, and immutable job-event history.
+- Adds `/v1/jobs/*` authenticated APIs and an in-process FastAPI lifespan-managed worker that can scale safely to multiple workers because the queue claim is database-serialized.
+- Adds document normalization → index staging → restart-safe activation → optional embedding → read-back validation while preserving the existing v7.1.x generation/index transaction machinery.
+- Keeps Platform Core v3.3+ as the governed evidence/reasoning authority; asynchronous operational processing does not create truth judgments or bypass Core provenance.
+- Adds the Postgres migration contract `004_async_document_processing_runtime.sql` and the standalone async runtime schema `sc-research-librarian-async-runtime/1.0`.
+
 ## 8.2.0 — Python Service Architecture & Platform Core Client
 
 - Establishes Platform Core v3.3.0+ as a first-class Research Librarian dependency through a typed asynchronous Python client.
@@ -440,6 +450,16 @@
 
 # Changelog
 
+## 8.3.0 — Asynchronous Ingestion & Document Processing Runtime
+
+- Adds a durable Python job plane for document processing, ingestion, validation, and the future embedding/index/connector executor family.
+- Uses Neon/Postgres in production with transactional `FOR UPDATE SKIP LOCKED` worker claims; SQLite remains the local/test fallback.
+- Adds idempotency keys, priority, worker leases and heartbeats, bounded retries with exponential backoff, expired-lease recovery, cancellation, manual retry, and immutable job-event history.
+- Adds `/v1/jobs/*` authenticated APIs and an in-process FastAPI lifespan-managed worker that can scale safely to multiple workers because the queue claim is database-serialized.
+- Adds document normalization → index staging → restart-safe activation → optional embedding → read-back validation while preserving the existing v7.1.x generation/index transaction machinery.
+- Keeps Platform Core v3.3+ as the governed evidence/reasoning authority; asynchronous operational processing does not create truth judgments or bypass Core provenance.
+- Adds the Postgres migration contract `004_async_document_processing_runtime.sql` and the standalone async runtime schema `sc-research-librarian-async-runtime/1.0`.
+
 ## 7.3.0 — Source Evaluation, Evidence Comparison & Research Quality Signals
 
 - Adds descriptive source profiles for source type, primary/secondary/tertiary role metadata, publisher/institution, publication date, methodology, citations, access state, provenance, and known limitations.
@@ -515,6 +535,16 @@
 
 # Changelog
 
+## 8.3.0 — Asynchronous Ingestion & Document Processing Runtime
+
+- Adds a durable Python job plane for document processing, ingestion, validation, and the future embedding/index/connector executor family.
+- Uses Neon/Postgres in production with transactional `FOR UPDATE SKIP LOCKED` worker claims; SQLite remains the local/test fallback.
+- Adds idempotency keys, priority, worker leases and heartbeats, bounded retries with exponential backoff, expired-lease recovery, cancellation, manual retry, and immutable job-event history.
+- Adds `/v1/jobs/*` authenticated APIs and an in-process FastAPI lifespan-managed worker that can scale safely to multiple workers because the queue claim is database-serialized.
+- Adds document normalization → index staging → restart-safe activation → optional embedding → read-back validation while preserving the existing v7.1.x generation/index transaction machinery.
+- Keeps Platform Core v3.3+ as the governed evidence/reasoning authority; asynchronous operational processing does not create truth judgments or bypass Core provenance.
+- Adds the Postgres migration contract `004_async_document_processing_runtime.sql` and the standalone async runtime schema `sc-research-librarian-async-runtime/1.0`.
+
 ## 7.3.0 — Source Evaluation, Evidence Comparison & Research Quality Signals
 
 - Adds descriptive source profiles for source type, primary/secondary/tertiary role metadata, publisher/institution, publication date, methodology, citations, access state, provenance, and known limitations.
@@ -558,6 +588,16 @@
 
 # Changelog
 
+## 8.3.0 — Asynchronous Ingestion & Document Processing Runtime
+
+- Adds a durable Python job plane for document processing, ingestion, validation, and the future embedding/index/connector executor family.
+- Uses Neon/Postgres in production with transactional `FOR UPDATE SKIP LOCKED` worker claims; SQLite remains the local/test fallback.
+- Adds idempotency keys, priority, worker leases and heartbeats, bounded retries with exponential backoff, expired-lease recovery, cancellation, manual retry, and immutable job-event history.
+- Adds `/v1/jobs/*` authenticated APIs and an in-process FastAPI lifespan-managed worker that can scale safely to multiple workers because the queue claim is database-serialized.
+- Adds document normalization → index staging → restart-safe activation → optional embedding → read-back validation while preserving the existing v7.1.x generation/index transaction machinery.
+- Keeps Platform Core v3.3+ as the governed evidence/reasoning authority; asynchronous operational processing does not create truth judgments or bypass Core provenance.
+- Adds the Postgres migration contract `004_async_document_processing_runtime.sql` and the standalone async runtime schema `sc-research-librarian-async-runtime/1.0`.
+
 ## 7.3.0 — Source Evaluation, Evidence Comparison & Research Quality Signals
 
 - Adds descriptive source profiles for source type, primary/secondary/tertiary role metadata, publisher/institution, publication date, methodology, citations, access state, provenance, and known limitations.
@@ -599,6 +639,16 @@
 - Added path builder UI while keeping the public assistant answer layout intact.
 
 # Changelog
+
+## 8.3.0 — Asynchronous Ingestion & Document Processing Runtime
+
+- Adds a durable Python job plane for document processing, ingestion, validation, and the future embedding/index/connector executor family.
+- Uses Neon/Postgres in production with transactional `FOR UPDATE SKIP LOCKED` worker claims; SQLite remains the local/test fallback.
+- Adds idempotency keys, priority, worker leases and heartbeats, bounded retries with exponential backoff, expired-lease recovery, cancellation, manual retry, and immutable job-event history.
+- Adds `/v1/jobs/*` authenticated APIs and an in-process FastAPI lifespan-managed worker that can scale safely to multiple workers because the queue claim is database-serialized.
+- Adds document normalization → index staging → restart-safe activation → optional embedding → read-back validation while preserving the existing v7.1.x generation/index transaction machinery.
+- Keeps Platform Core v3.3+ as the governed evidence/reasoning authority; asynchronous operational processing does not create truth judgments or bypass Core provenance.
+- Adds the Postgres migration contract `004_async_document_processing_runtime.sql` and the standalone async runtime schema `sc-research-librarian-async-runtime/1.0`.
 
 ## 7.3.0 — Source Evaluation, Evidence Comparison & Research Quality Signals
 
@@ -693,6 +743,16 @@
 
 # Changelog
 
+## 8.3.0 — Asynchronous Ingestion & Document Processing Runtime
+
+- Adds a durable Python job plane for document processing, ingestion, validation, and the future embedding/index/connector executor family.
+- Uses Neon/Postgres in production with transactional `FOR UPDATE SKIP LOCKED` worker claims; SQLite remains the local/test fallback.
+- Adds idempotency keys, priority, worker leases and heartbeats, bounded retries with exponential backoff, expired-lease recovery, cancellation, manual retry, and immutable job-event history.
+- Adds `/v1/jobs/*` authenticated APIs and an in-process FastAPI lifespan-managed worker that can scale safely to multiple workers because the queue claim is database-serialized.
+- Adds document normalization → index staging → restart-safe activation → optional embedding → read-back validation while preserving the existing v7.1.x generation/index transaction machinery.
+- Keeps Platform Core v3.3+ as the governed evidence/reasoning authority; asynchronous operational processing does not create truth judgments or bypass Core provenance.
+- Adds the Postgres migration contract `004_async_document_processing_runtime.sql` and the standalone async runtime schema `sc-research-librarian-async-runtime/1.0`.
+
 ## 7.3.0 — Source Evaluation, Evidence Comparison & Research Quality Signals
 
 - Adds descriptive source profiles for source type, primary/secondary/tertiary role metadata, publisher/institution, publication date, methodology, citations, access state, provenance, and known limitations.
@@ -715,6 +775,16 @@
 - Added health/alert configuration for index maintenance.
 
 # Changelog
+
+## 8.3.0 — Asynchronous Ingestion & Document Processing Runtime
+
+- Adds a durable Python job plane for document processing, ingestion, validation, and the future embedding/index/connector executor family.
+- Uses Neon/Postgres in production with transactional `FOR UPDATE SKIP LOCKED` worker claims; SQLite remains the local/test fallback.
+- Adds idempotency keys, priority, worker leases and heartbeats, bounded retries with exponential backoff, expired-lease recovery, cancellation, manual retry, and immutable job-event history.
+- Adds `/v1/jobs/*` authenticated APIs and an in-process FastAPI lifespan-managed worker that can scale safely to multiple workers because the queue claim is database-serialized.
+- Adds document normalization → index staging → restart-safe activation → optional embedding → read-back validation while preserving the existing v7.1.x generation/index transaction machinery.
+- Keeps Platform Core v3.3+ as the governed evidence/reasoning authority; asynchronous operational processing does not create truth judgments or bypass Core provenance.
+- Adds the Postgres migration contract `004_async_document_processing_runtime.sql` and the standalone async runtime schema `sc-research-librarian-async-runtime/1.0`.
 
 ## 7.3.0 — Source Evaluation, Evidence Comparison & Research Quality Signals
 
@@ -784,6 +854,16 @@
 - Preserved v3.3.3 Gemini key-persistence and embedding queue behavior.
 
 # Changelog
+
+## 8.3.0 — Asynchronous Ingestion & Document Processing Runtime
+
+- Adds a durable Python job plane for document processing, ingestion, validation, and the future embedding/index/connector executor family.
+- Uses Neon/Postgres in production with transactional `FOR UPDATE SKIP LOCKED` worker claims; SQLite remains the local/test fallback.
+- Adds idempotency keys, priority, worker leases and heartbeats, bounded retries with exponential backoff, expired-lease recovery, cancellation, manual retry, and immutable job-event history.
+- Adds `/v1/jobs/*` authenticated APIs and an in-process FastAPI lifespan-managed worker that can scale safely to multiple workers because the queue claim is database-serialized.
+- Adds document normalization → index staging → restart-safe activation → optional embedding → read-back validation while preserving the existing v7.1.x generation/index transaction machinery.
+- Keeps Platform Core v3.3+ as the governed evidence/reasoning authority; asynchronous operational processing does not create truth judgments or bypass Core provenance.
+- Adds the Postgres migration contract `004_async_document_processing_runtime.sql` and the standalone async runtime schema `sc-research-librarian-async-runtime/1.0`.
 
 ## 7.3.0 — Source Evaluation, Evidence Comparison & Research Quality Signals
 

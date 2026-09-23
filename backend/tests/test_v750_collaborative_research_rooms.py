@@ -245,7 +245,7 @@ def test_project_backup_carries_collaborative_room_state() -> None:
 
 def test_platform_api_advertises_v750_room_contracts() -> None:
     body = client.get("/v1/platform/api", headers=HEADERS).json()
-    assert body["version"] == "8.2.0"
+    assert body["version"] == "8.3.0"
     assert body["schema"] == "sc-connected-research-api/2.0"
     assert "research-rooms" in body["resources"]
     assert "room-synthesis" in body["resources"]

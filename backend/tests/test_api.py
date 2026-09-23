@@ -17,7 +17,7 @@ client = TestClient(app)
 def test_health() -> None:
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json()["version"] == "8.2.0"
+    assert response.json()["version"] == "8.3.0"
 
 
 def test_sync_requires_key() -> None:
@@ -83,7 +83,7 @@ def test_startup_status_is_exposed() -> None:
     response = client.get("/startup")
     assert response.status_code == 200
     body = response.json()
-    assert body["version"] == "8.2.0"
+    assert body["version"] == "8.3.0"
     assert body["startup_state"] in {"warming", "ready"}
     assert 0 <= body["startup_progress"] <= 100
 
@@ -151,5 +151,38 @@ def test_embedding_status_is_available_without_provider_call() -> None:
     response = client.get("/v1/knowledge/embeddings/status", headers=headers)
     assert response.status_code == 200
     body = response.json()
-    assert body["version"] == "8.2.0"
+    assert body["version"] == "8.3.0"
     assert "semantic_coverage" in body
+
+
+def test_v830_async_job_api_requires_key_and_reports_runtime() -> None:
+    denied = client.get("/v1/jobs/runtime")
+    assert denied.status_code == 401
+    response = client.get("/v1/jobs/runtime", headers={"X-SC-RL-Key": "test-key"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["version"] == "8.3.0"
+    assert body["schema"] == "sc-research-librarian-async-runtime/1.0"
+    assert body["durable"] is True
+    assert body["claim_strategy"] in {"begin-immediate", "for-update-skip-locked"}
+
+
+def test_v830_document_job_enqueue_endpoint_is_idempotent() -> None:
+    headers = {"X-SC-RL-Key": "test-key"}
+    payload = {
+        "document": {
+            "id": "api-async-doc-1",
+            "title": "Asynchronous Research Source",
+            "url": "https://example.test/async-doc-1",
+            "content": "A durable asynchronous document-processing test source."
+        },
+        "idempotency_key": "api-async-doc-1-once",
+        "embed": False
+    }
+    first = client.post("/v1/jobs/documents", headers=headers, json=payload)
+    second = client.post("/v1/jobs/documents", headers=headers, json=payload)
+    assert first.status_code == 202
+    assert second.status_code == 202
+    assert first.json()["job"]["job_id"] == second.json()["job"]["job_id"]
+    assert first.json()["duplicate"] is False
+    assert second.json()["duplicate"] is True

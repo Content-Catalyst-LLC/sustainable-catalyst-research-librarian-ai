@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 import asyncio
 import hashlib
@@ -161,11 +162,24 @@ from .research_lifecycle import (
 
 
 from .api.core import router as platform_core_router
+from .api.jobs import router as async_jobs_router, register_authenticated_routes as register_async_job_routes
+from .workers.document_worker import worker as document_worker
+
+
+@asynccontextmanager
+async def _lifespan(_app: FastAPI):
+    document_worker.start()
+    try:
+        yield
+    finally:
+        document_worker.stop()
+
 
 app = FastAPI(
     title="Sustainable Catalyst Research Librarian AI",
     version=__version__,
     description="Python knowledge intelligence, title-aware retrieval, and grounded AI guidance for Sustainable Catalyst.",
+    lifespan=_lifespan,
 )
 app.add_middleware(GZipMiddleware, minimum_size=900)
 app.add_middleware(
@@ -285,6 +299,12 @@ def require_key(x_sc_rl_key: str = Header(default="")) -> None:
         )
     if not x_sc_rl_key or not hmac.compare_digest(hashlib.sha256(x_sc_rl_key.encode()).digest(), hashlib.sha256(settings.api_key.encode()).digest()):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid backend integration key.")
+
+
+# v8.3 registers the durable async job API only after the shared backend-key
+# dependency exists, keeping the same trust boundary as knowledge sync and Core writes.
+register_async_job_routes(require_key)
+app.include_router(async_jobs_router)
 
 
 def _idempotency_payload_hash(payload: dict[str, Any]) -> str:
@@ -1323,7 +1343,7 @@ def _research_state_summary(owner_ref: str = "", project_id: str = "", context_i
 
 @app.get("/v1/platform/api", dependencies=[Depends(require_key)])
 def connected_api_manifest() -> dict[str, Any]:
-    return {"schema": API_SCHEMA, "version": __version__, "stability": "stable-v8", "resources": ["projects", "investigations", "entities", "library-objects", "research-contexts", "research-rooms", "room-members", "room-evidence", "room-questions", "room-disagreements", "room-synthesis", "source-evaluations", "evidence-comparisons", "evidence-gaps", "research-state", "research-activity", "object-review-state", "open-questions", "workflows", "contradictions", "uncertainties", "backups", "handoffs", "artifacts", "federated-providers", "federated-search", "federated-history", "federated-library-import", "workspace-promotions", "research-lifecycles", "lifecycle-transitions", "lifecycle-checkpoints"], "object_model": object_model_manifest(), "evidence_quality": {"source_evaluation_schema": SOURCE_EVALUATION_SCHEMA, "comparison_schema": EVIDENCE_COMPARISON_SCHEMA, "gap_schema": EVIDENCE_GAP_SCHEMA, "quality_signals_schema": QUALITY_SIGNALS_SCHEMA, "truth_score": False}, "research_state": {"summary_schema": RESEARCH_STATE_SUMMARY_SCHEMA, "activity_schema": RESEARCH_ACTIVITY_SCHEMA, "object_state_schema": RESEARCH_OBJECT_STATE_SCHEMA, "open_question_schema": OPEN_QUESTION_SCHEMA, "workflow_memory_only": True, "not_evidence": True}, "research_rooms": {"room_schema": ROOM_SCHEMA, "member_schema": ROOM_MEMBER_SCHEMA, "evidence_state_schema": ROOM_EVIDENCE_STATE_SCHEMA, "question_schema": ROOM_QUESTION_SCHEMA, "disagreement_schema": ROOM_DISAGREEMENT_SCHEMA, "activity_schema": ROOM_ACTIVITY_SCHEMA, "synthesis_schema": ROOM_SYNTHESIS_SCHEMA, "prompt_schema": ROOM_PROMPT_SCHEMA, "participant_attribution": True, "individual_shared_state_separate": True, "not_evidence": True}, "federated_discovery": {"provider_catalog_schema": FEDERATED_PROVIDER_CATALOG_SCHEMA, "search_schema": FEDERATED_SEARCH_SCHEMA, "result_schema": FEDERATED_RESULT_SCHEMA, "import_schema": FEDERATED_IMPORT_SCHEMA, "external_discovery_only": True, "explicit_library_save_required": True}, "workspace_promotions": {"promotion_schema": PROMOTION_SCHEMA, "packet_schema": PROMOTION_PACKET_SCHEMA, "receipt_schema": PROMOTION_RECEIPT_SCHEMA, "workspace_import_contract": WORKSPACE_IMPORT_CONTRACT, "artifact_types": artifact_catalog(), "explicit_import_required": True}, "research_lifecycle": {"lifecycle_schema": LIFECYCLE_SCHEMA, "summary_schema": LIFECYCLE_SUMMARY_SCHEMA, "event_schema": LIFECYCLE_EVENT_SCHEMA, "checkpoint_schema": LIFECYCLE_CHECKPOINT_SCHEMA, "catalog": lifecycle_catalog(), "human_confirmed_transitions": True, "automatic_stage_advancement": False, "not_evidence": True}, "generation_boundary": adapter_status()}
+    return {"schema": API_SCHEMA, "version": __version__, "stability": "stable-v8", "resources": ["projects", "investigations", "entities", "library-objects", "research-contexts", "research-rooms", "room-members", "room-evidence", "room-questions", "room-disagreements", "room-synthesis", "source-evaluations", "evidence-comparisons", "evidence-gaps", "research-state", "research-activity", "object-review-state", "open-questions", "workflows", "contradictions", "uncertainties", "backups", "handoffs", "artifacts", "federated-providers", "federated-search", "federated-history", "federated-library-import", "workspace-promotions", "research-lifecycles", "lifecycle-transitions", "lifecycle-checkpoints", "async-jobs", "document-processing-jobs"], "object_model": object_model_manifest(), "evidence_quality": {"source_evaluation_schema": SOURCE_EVALUATION_SCHEMA, "comparison_schema": EVIDENCE_COMPARISON_SCHEMA, "gap_schema": EVIDENCE_GAP_SCHEMA, "quality_signals_schema": QUALITY_SIGNALS_SCHEMA, "truth_score": False}, "research_state": {"summary_schema": RESEARCH_STATE_SUMMARY_SCHEMA, "activity_schema": RESEARCH_ACTIVITY_SCHEMA, "object_state_schema": RESEARCH_OBJECT_STATE_SCHEMA, "open_question_schema": OPEN_QUESTION_SCHEMA, "workflow_memory_only": True, "not_evidence": True}, "research_rooms": {"room_schema": ROOM_SCHEMA, "member_schema": ROOM_MEMBER_SCHEMA, "evidence_state_schema": ROOM_EVIDENCE_STATE_SCHEMA, "question_schema": ROOM_QUESTION_SCHEMA, "disagreement_schema": ROOM_DISAGREEMENT_SCHEMA, "activity_schema": ROOM_ACTIVITY_SCHEMA, "synthesis_schema": ROOM_SYNTHESIS_SCHEMA, "prompt_schema": ROOM_PROMPT_SCHEMA, "participant_attribution": True, "individual_shared_state_separate": True, "not_evidence": True}, "federated_discovery": {"provider_catalog_schema": FEDERATED_PROVIDER_CATALOG_SCHEMA, "search_schema": FEDERATED_SEARCH_SCHEMA, "result_schema": FEDERATED_RESULT_SCHEMA, "import_schema": FEDERATED_IMPORT_SCHEMA, "external_discovery_only": True, "explicit_library_save_required": True}, "workspace_promotions": {"promotion_schema": PROMOTION_SCHEMA, "packet_schema": PROMOTION_PACKET_SCHEMA, "receipt_schema": PROMOTION_RECEIPT_SCHEMA, "workspace_import_contract": WORKSPACE_IMPORT_CONTRACT, "artifact_types": artifact_catalog(), "explicit_import_required": True}, "research_lifecycle": {"lifecycle_schema": LIFECYCLE_SCHEMA, "summary_schema": LIFECYCLE_SUMMARY_SCHEMA, "event_schema": LIFECYCLE_EVENT_SCHEMA, "checkpoint_schema": LIFECYCLE_CHECKPOINT_SCHEMA, "catalog": lifecycle_catalog(), "human_confirmed_transitions": True, "automatic_stage_advancement": False, "not_evidence": True}, "generation_boundary": adapter_status()}
 
 @app.get("/v1/platform/summary", dependencies=[Depends(require_key)])
 def connected_platform_summary() -> dict[str, Any]:
