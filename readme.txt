@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 8.3.0
+Stable tag: 8.4.0
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
@@ -14,7 +14,7 @@ Research Librarian AI retrieves Sustainable Catalyst publications and documents 
 
 v8.0.0 unifies Library context, federated discovery, evidence evaluation, persistent research state, Research Rooms, synthesis, Workspace promotion, and preservation through an inspectable eight-stage research lifecycle. Readiness is descriptive; every lifecycle stage transition remains an explicit human action.
 
-v8.3.0 adds a durable Python asynchronous ingestion/document-processing runtime with Postgres job leases, idempotent enqueue, retries, recovery, job-event history, and restart-safe indexing. Platform Core remains the governed evidence/reasoning authority.
+v8.4.0 adds an advanced Python retrieval and reranking engine with deterministic query decomposition, multi-query fusion, metadata/date/taxonomy filters, transparent reranking, duplicate suppression, diversity selection, and explainable diagnostics. Platform Core remains the governed evidence/reasoning authority.
 
 == Shortcodes ==
 
@@ -40,6 +40,14 @@ v8.3.0 adds a durable Python asynchronous ingestion/document-processing runtime 
 [sc_research_librarian_platform_handoffs]
 
 == Changelog ==
+
+= 8.4.0 =
+* Add deterministic multi-query planning using only user-supplied query text.
+* Add advanced rank fusion and transparent reranking over exact-title, BM25, optional semantic retrieval, and RRF.
+* Add typed research filters for source, content type, series, records, URL prefixes, taxonomies, and modified dates.
+* Add canonical URL/content-hash/near-duplicate suppression and bounded diversity selection.
+* Add query-plan and expanded retrieval diagnostics while keeping retrieval scores separate from evidence-quality/truth judgments.
+* Preserve Platform Core v3.3+ as the governed evidence/reasoning authority and retain the v8.3 durable asynchronous processing runtime.
 
 = 8.0.0 =
 * Add the persistent Frame → Discover → Evaluate → Organize → Collaborate → Synthesize → Promote → Preserve research lifecycle.

@@ -1,5 +1,16 @@
 # Changelog
 
+## 8.4.0 — Advanced Retrieval & Reranking Engine
+
+- Adds deterministic, non-generative query decomposition for quoted phrases, comparison components, clauses, and keyword variants derived only from the user's request.
+- Adds multi-query rank fusion over the existing exact-title, BM25, optional semantic, and reciprocal-rank-fusion retrieval foundation.
+- Adds transparent candidate reranking with query coverage, title coverage, phrase alignment, multi-query consensus, and lexical/semantic support diagnostics.
+- Adds typed post-type, source, series, record-ID, URL-prefix, taxonomy, and modified-date retrieval filters applied before ranking.
+- Adds canonical-URL, content-hash, and near-duplicate suppression plus bounded maximum-marginal-relevance-style diversity selection.
+- Adds `/v1/retrieval/plan` and expands `/v1/retrieve` and `/v1/retrieve/explain` without breaking the existing request defaults.
+- Keeps retrieval relevance explicitly separate from evidence quality/truth judgments; Platform Core v3.3+ remains the governed evidence/reasoning authority.
+- Preserves the v8.3 Postgres asynchronous processing runtime and v8.2 typed Platform Core integration unchanged.
+
 ## 8.3.0 — Asynchronous Ingestion & Document Processing Runtime
 
 - Adds a durable Python job plane for document processing, ingestion, validation, and the future embedding/index/connector executor family.

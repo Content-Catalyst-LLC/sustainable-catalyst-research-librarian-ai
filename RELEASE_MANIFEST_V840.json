@@ -1,0 +1,31 @@
+{
+  "schema": "sc-research-librarian-release-manifest/1.0",
+  "release": "8.4.0",
+  "title": "Advanced Retrieval & Reranking Engine",
+  "repository": "Content-Catalyst-LLC/sustainable-catalyst-research-librarian-ai",
+  "python": "3.12+",
+  "platform_core_minimum": "3.3.0",
+  "vps_runtime_root": "/opt/sustainable-catalyst/research-librarian-ai",
+  "artifacts": [
+    "sustainable-catalyst-research-librarian-ai-v8.4.0-repository.zip",
+    "sustainable-catalyst-research-librarian-backend-v8.4.0.zip",
+    "sustainable-catalyst-research-librarian-ai-wordpress-v8.4.0.zip",
+    "sustainable-catalyst-research-librarian-ai-v8.4.0-release-bundle.zip"
+  ],
+  "capabilities": [
+    "deterministic query planning",
+    "multi-query hybrid retrieval",
+    "transparent reranking",
+    "metadata/date/taxonomy filtering",
+    "duplicate suppression",
+    "diversity selection",
+    "retrieval diagnostics",
+    "Platform Core v3.3+ integration",
+    "durable asynchronous ingestion runtime"
+  ],
+  "governance": {
+    "retrieval_relevance_is_truth_score": false,
+    "platform_core_remains_governed_evidence_authority": true,
+    "generative_query_expansion": false
+  }
+}

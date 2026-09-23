@@ -1,0 +1,28 @@
+{
+  "schema": "sc-research-librarian-advanced-retrieval-manifest/1.0",
+  "release": "8.4.0",
+  "title": "Advanced Retrieval & Reranking Engine",
+  "backend": "python-fastapi",
+  "query_planning": {
+    "deterministic": true,
+    "generative_expansion": false,
+    "max_queries_default": 4,
+    "sources": ["original", "quoted-phrase", "comparison-component", "clause", "keyword"]
+  },
+  "ranking": {
+    "base": ["exact-title", "structural", "bm25", "semantic-cosine", "rrf"],
+    "advanced": ["multi-query-rank-fusion", "transparent-rerank", "duplicate-suppression", "diversity-selection"],
+    "candidate_pool_default": 20
+  },
+  "filters": ["post_types", "sources", "series", "record_ids", "url_prefixes", "taxonomies", "modified_from_utc", "modified_to_utc"],
+  "governance": {
+    "retrieval_score_is_evidence_quality": false,
+    "retrieval_score_is_truth_score": false,
+    "platform_core_governs_evidence": true,
+    "human_review_boundary_preserved": true
+  },
+  "platform_core": {
+    "minimum_version": "3.3.0",
+    "role": "governed research/evidence/reasoning authority"
+  }
+}

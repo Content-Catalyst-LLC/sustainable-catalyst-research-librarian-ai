@@ -103,7 +103,7 @@ class MaintenanceRequest(BaseModel):
 
 
 class RetrievalCalibrationUpdate(BaseModel):
-    profile: str = Field(default="balanced-v6.5.0", max_length=100)
+    profile: str = Field(default="advanced-v8.4.0", max_length=100)
     weights: dict[str, float] = Field(default_factory=dict)
     rrf_k: int = Field(default=60, ge=1, le=500)
     thresholds: dict[str, float | int] = Field(default_factory=dict)
@@ -111,6 +111,7 @@ class RetrievalCalibrationUpdate(BaseModel):
     post_type_weights: dict[str, float] = Field(default_factory=dict)
     source_weights: dict[str, float] = Field(default_factory=dict)
     exclusions: dict[str, list[str]] = Field(default_factory=dict)
+    advanced: dict[str, Any] = Field(default_factory=dict)
 
 
 class BenchmarkCase(BaseModel):
@@ -127,10 +128,26 @@ class BenchmarkRequest(BaseModel):
     persist: bool = True
 
 
+class RetrievalFilters(BaseModel):
+    post_types: list[str] = Field(default_factory=list, max_length=50)
+    sources: list[str] = Field(default_factory=list, max_length=50)
+    series: list[str] = Field(default_factory=list, max_length=50)
+    record_ids: list[str] = Field(default_factory=list, max_length=250)
+    url_prefixes: list[str] = Field(default_factory=list, max_length=50)
+    taxonomies: dict[str, list[str]] = Field(default_factory=dict)
+    modified_from_utc: str = Field(default="", max_length=80)
+    modified_to_utc: str = Field(default="", max_length=80)
+
+
 class RetrievalRequest(BaseModel):
     query: str = Field(min_length=2, max_length=3000)
     limit: int = Field(default=10, ge=1, le=25)
     include_diagnostics: bool = False
+    include_semantic: bool = True
+    advanced: bool = True
+    max_queries: int | None = Field(default=None, ge=1, le=8)
+    candidate_pool: int | None = Field(default=None, ge=5, le=25)
+    filters: RetrievalFilters = Field(default_factory=RetrievalFilters)
 
 
 class EmbeddingProcessRequest(BaseModel):

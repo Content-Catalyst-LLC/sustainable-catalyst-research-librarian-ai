@@ -1,22 +1,21 @@
-# Sustainable Catalyst Research Librarian AI v8.3.0
+# Sustainable Catalyst Research Librarian AI v8.4.0
 
-Research Librarian AI is the Python-backed acquisition, document-intelligence, indexing, retrieval, collaboration, and research-orchestration layer for Sustainable Catalyst. **v8.3.0 adds the durable asynchronous ingestion and document-processing runtime on top of the v8.2 Platform Core integration.**
+Research Librarian AI is the Python-backed acquisition, document-intelligence, indexing, retrieval, collaboration, and research-orchestration layer for Sustainable Catalyst. **v8.4.0 adds an advanced retrieval and reranking engine on top of the v8.2 Platform Core integration and v8.3 durable asynchronous processing runtime.**
 
-### v8.3.0 architecture
+### v8.4.0 architecture
 
-- **Durable Python job plane:** authenticated `/v1/jobs/*` APIs, idempotent enqueue, priority, retry/backoff, worker leases, event history, cancellation, manual retry, and restart recovery.
-- **Postgres-first production queue:** production jobs use the configured Neon/Postgres database and workers claim tasks with `FOR UPDATE SKIP LOCKED`; SQLite is the local/test fallback.
-- **Document worker:** normalized document payloads flow through staging, restart-safe index activation, optional embedding, and read-back validation without bypassing the existing knowledge-index transaction model.
-- **Research Librarian Python:** owns source acquisition, parsing, chunking, embedding, indexing, retrieval, connectors, document intelligence, and asynchronous processing.
-- **Platform Core v3.3+:** remains the authoritative layer for governed research/evidence objects, provenance and lineage, findings/claims/arguments, statistical and visual reasoning, reproducibility, and cross-product exchange.
-- **Specialist runtimes:** Workspace, Workbench, Research Lab, Analytics R, and other runtimes perform computation; Core records governed results.
-- **WordPress:** presentation, access, configuration, and user interaction rather than the document-processing engine.
+- **Deterministic query planning:** decomposes only the user's own query text into bounded original, quoted, comparison, clause, and keyword variants; no generative query rewriting is required.
+- **Advanced hybrid retrieval:** preserves exact-title priority, BM25, optional semantic embeddings, and RRF while adding multi-query rank fusion and a bounded candidate pool.
+- **Transparent reranking:** query coverage, title coverage, phrase alignment, multi-query consensus, and lexical/semantic support are individually exposed in diagnostics.
+- **Research filters:** post type, source, series, record ID, URL prefix, taxonomy, and modified-date filtering occurs before ranking.
+- **Duplicate suppression + diversity:** canonical URL/content-hash/near-duplicate suppression and bounded MMR-style diversity prevent redundant evidence lists.
+- **Research Librarian Python:** owns retrieval relevance and document intelligence. Retrieval scores are not evidence-quality or truth scores.
+- **Platform Core v3.3+:** remains authoritative for governed evidence/research objects, provenance, lineage, findings/claims/arguments, statistical/visual reasoning, reproducibility, and cross-product exchange.
+- **v8.3 async runtime:** remains the durable job plane for ingestion/document processing; v8.4 does not bypass its restart-safe index activation contract.
 
-v8.3.0 intentionally does **not** duplicate Platform Core reasoning objects and does not enable autonomous truth promotion. The asynchronous runtime performs operational processing; governed evidence and research reasoning continue to cross the v8.2 typed Core boundary.
+### New v8.4.0 backend resources
 
-### New v8.3.0 backend resources
-
-`GET /v1/jobs/runtime`, `GET /v1/jobs`, `POST /v1/jobs`, `POST /v1/jobs/documents`, `GET /v1/jobs/{job_id}`, `GET /v1/jobs/{job_id}/events`, `POST /v1/jobs/{job_id}/retry`, and `DELETE /v1/jobs/{job_id}`.
+`POST /v1/retrieval/plan`; enhanced backward-compatible `POST /v1/retrieve` and `POST /v1/retrieve/explain`; and an expanded `GET|POST /v1/retrieval/config` advanced tuning block.
 
 ## v8.0.0 highlights
 
@@ -29,7 +28,7 @@ v8.3.0 intentionally does **not** duplicate Platform Core reasoning objects and 
 
 ## Architecture
 
-WordPress remains the canonical publishing, administration, identity, and recovery boundary. FastAPI uses Neon/Postgres for production knowledge generations, source records, retrieval chunks, and pgvector embeddings. SQLite remains the local-development and ancillary governance/workspace/Library-context/research-state/collaboration/promotion/lifecycle/Core-binding store. v8.3 asynchronous jobs use Postgres in production and a separate SQLite queue only for local/test operation. Generation is isolated behind `sc-generation-adapter/1.0`; deterministic retrieval and project continuity remain usable when generation is unavailable.
+WordPress remains the canonical publishing, administration, identity, and recovery boundary. FastAPI uses Neon/Postgres for production knowledge generations, source records, retrieval chunks, and pgvector embeddings. SQLite remains the local-development and ancillary governance/workspace/Library-context/research-state/collaboration/promotion/lifecycle/Core-binding store. v8.3+ asynchronous jobs use Postgres in production and a separate SQLite queue only for local/test operation. Generation is isolated behind `sc-generation-adapter/1.0`; deterministic retrieval and project continuity remain usable when generation is unavailable.
 
 ## Public shortcodes
 
@@ -44,7 +43,7 @@ WordPress remains the canonical publishing, administration, identity, and recove
 
 ## Backend resources
 
-`/v1/core/architecture`, `/v1/core/readiness`, `/v1/core/bindings`, `/v1/core/research-objects/promote`, `/v1/core/research-projects/synchronize`, `/v1/core/exchange/packages`, `/v1/projects`, `/v1/investigations`, `/v1/projects/entities`, `/v1/library/object-model`, `/v1/library/objects`, `/v1/research/contexts`, `/v1/research/contexts/{context_id}/evidence-quality`, `/v1/research/sources/evaluate`, `/v1/research/evidence/compare`, `/v1/research/evidence/gaps`, `/v1/research/state/summary`, `/v1/research/activity`, `/v1/research/object-states`, `/v1/research/questions`, `/v1/research/rooms`, `/v1/research/rooms/{room_id}`, `/v1/research/rooms/{room_id}/members`, `/v1/research/rooms/{room_id}/evidence`, `/v1/research/rooms/{room_id}/questions`, `/v1/research/rooms/{room_id}/disagreements`, `/v1/research/rooms/{room_id}/activity`, `/v1/research/rooms/{room_id}/synthesis`, `/v1/federation/providers`, `/v1/federation/search`, `/v1/federation/searches`, `/v1/federation/searches/{search_id}`, `/v1/federation/searches/{search_id}/results/{result_id}/save`, `/v1/workspace/promotions/catalog`, `/v1/workspace/promotions`, `/v1/workspace/promotions/{promotion_id}`, `/v1/workspace/promotions/{promotion_id}/receipt`, `/v1/research/lifecycle/catalog`, `/v1/research/lifecycles`, `/v1/research/lifecycles/{lifecycle_id}`, `/v1/research/lifecycles/{lifecycle_id}/summary`, `/v1/research/lifecycles/{lifecycle_id}/transition`, `/v1/research/lifecycles/{lifecycle_id}/checkpoint`, `/v1/workflows/template`, `/v1/research/contradictions`, `/v1/research/uncertainties`, `/v1/projects/{project_id}/backup`, `/v1/platform/backups/import`, `/v1/platform/api`, and `/v1/platform/summary`.
+`/v1/retrieval/plan`, `/v1/retrieve`, `/v1/retrieve/explain`, `/v1/core/architecture`, `/v1/core/readiness`, `/v1/core/bindings`, `/v1/core/research-objects/promote`, `/v1/core/research-projects/synchronize`, `/v1/core/exchange/packages`, `/v1/projects`, `/v1/investigations`, `/v1/projects/entities`, `/v1/library/object-model`, `/v1/library/objects`, `/v1/research/contexts`, `/v1/research/contexts/{context_id}/evidence-quality`, `/v1/research/sources/evaluate`, `/v1/research/evidence/compare`, `/v1/research/evidence/gaps`, `/v1/research/state/summary`, `/v1/research/activity`, `/v1/research/object-states`, `/v1/research/questions`, `/v1/research/rooms`, `/v1/research/rooms/{room_id}`, `/v1/research/rooms/{room_id}/members`, `/v1/research/rooms/{room_id}/evidence`, `/v1/research/rooms/{room_id}/questions`, `/v1/research/rooms/{room_id}/disagreements`, `/v1/research/rooms/{room_id}/activity`, `/v1/research/rooms/{room_id}/synthesis`, `/v1/federation/providers`, `/v1/federation/search`, `/v1/federation/searches`, `/v1/federation/searches/{search_id}`, `/v1/federation/searches/{search_id}/results/{result_id}/save`, `/v1/workspace/promotions/catalog`, `/v1/workspace/promotions`, `/v1/workspace/promotions/{promotion_id}`, `/v1/workspace/promotions/{promotion_id}/receipt`, `/v1/research/lifecycle/catalog`, `/v1/research/lifecycles`, `/v1/research/lifecycles/{lifecycle_id}`, `/v1/research/lifecycles/{lifecycle_id}/summary`, `/v1/research/lifecycles/{lifecycle_id}/transition`, `/v1/research/lifecycles/{lifecycle_id}/checkpoint`, `/v1/workflows/template`, `/v1/research/contradictions`, `/v1/research/uncertainties`, `/v1/projects/{project_id}/backup`, `/v1/platform/backups/import`, `/v1/platform/api`, and `/v1/platform/summary`.
 
 ## Runtime
 
@@ -52,9 +51,10 @@ WordPress remains the canonical publishing, administration, identity, and recove
 - FastAPI
 - Neon-compatible PostgreSQL with pgvector for the production knowledge index
 - SQLite schema 19 for local development and ancillary platform/Library/research-state/collaboration/promotion/lifecycle/Core-binding records
+- Advanced retrieval schema `sc-research-librarian-advanced-retrieval/1.0` with deterministic multi-query planning, reranking, deduplication, and diversity selection
 - Async job runtime schema `sc-research-librarian-async-runtime/1.0`; Postgres production queue uses `sc_rl_async_jobs` / `sc_rl_async_job_events`
 - Knowledge-index schema remains `sc-research-librarian-knowledge-index/13.0`
 - WordPress 6.0+
 - No Render persistent disk is required for the durable production knowledge index
 
-See `docs/V800_UNIFIED_RESEARCH_INTELLIGENCE_LIFECYCLE.md`, `docs/V770_GLOBAL_LIBRARY_DISCOVERY_FEDERATED_RESEARCH.md`, `docs/V760_WORKSPACE_RESEARCH_HANDOFF_ARTIFACT_PROMOTION.md`, `docs/V750_COLLABORATIVE_RESEARCH_ROOM_INTELLIGENCE.md`, `docs/V740_PERSISTENT_RESEARCH_STATE_READING_HISTORY_OPEN_QUESTIONS.md`, `docs/V730_SOURCE_EVALUATION_EVIDENCE_COMPARISON_RESEARCH_QUALITY_SIGNALS.md`, and `docs/INSTALL.md`.
+See `docs/V840_ADVANCED_RETRIEVAL_RERANKING_ENGINE.md`, `docs/V800_UNIFIED_RESEARCH_INTELLIGENCE_LIFECYCLE.md`, `docs/V770_GLOBAL_LIBRARY_DISCOVERY_FEDERATED_RESEARCH.md`, `docs/V760_WORKSPACE_RESEARCH_HANDOFF_ARTIFACT_PROMOTION.md`, `docs/V750_COLLABORATIVE_RESEARCH_ROOM_INTELLIGENCE.md`, `docs/V740_PERSISTENT_RESEARCH_STATE_READING_HISTORY_OPEN_QUESTIONS.md`, `docs/V730_SOURCE_EVALUATION_EVIDENCE_COMPARISON_RESEARCH_QUALITY_SIGNALS.md`, and `docs/INSTALL.md`.

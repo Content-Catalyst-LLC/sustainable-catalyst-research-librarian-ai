@@ -48,7 +48,7 @@ async def process_document_job(claim: JobClaim, progress: Progress) -> dict[str,
         batch_index=1,
         batch_count=1,
         deleted_ids=[],
-        reason="async-document-processing-v8.3.0",
+        reason="async-document-processing-v8.4.0",
         defer_commit=False,
     )
 
@@ -58,9 +58,9 @@ async def process_document_job(claim: JobClaim, progress: Progress) -> dict[str,
     if not result.committed and result.state not in {"completed", "completed-with-rejections"}:
         progress("activate-index", 55)
         try:
-            store.queue_sync_commit(sync_id, "async-document-processing-v8.3.0")
+            store.queue_sync_commit(sync_id, "async-document-processing-v8.4.0")
             for _ in range(200):
-                status = store.advance_sync_commit(sync_id, "async-document-processing-v8.3.0")
+                status = store.advance_sync_commit(sync_id, "async-document-processing-v8.4.0")
                 commit_steps += 1
                 state = str(status.get("state") or "")
                 if state in {"completed", "completed-with-rejections"}:

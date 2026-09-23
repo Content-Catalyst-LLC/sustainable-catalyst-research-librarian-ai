@@ -69,6 +69,7 @@ from .platform_handoffs import (
     validate_handoff,
 )
 from .retrieval import confidence, evidence_from_matches, related_titles, retrieve, retrieve_with_diagnostics
+from .advanced_retrieval import ADVANCED_RETRIEVAL_SCHEMA, build_query_plan, advanced_retrieve_with_diagnostics
 from .governance import build_answer_trace, evaluate_release_gate, public_methodology, sanitize_governance_policy, source_governance
 from .store import store
 from .platform_v7 import API_SCHEMA, BACKUP_SCHEMA, backup_envelope, contradiction_report, normalize_investigation, normalize_project, uncertainty_register, verify_backup, workflow_template
@@ -503,7 +504,7 @@ def _status() -> StatusResponse:
         index_ready=index_ready,
         indexed_records=int(summary.get("total_records", 0)),
         indexed_titles=int(summary.get("indexed_titles", 0)),
-        semantic_retrieval=("exact-title+bm25+semantic+rrf" if float(summary.get("semantic_coverage", 0)) > 0 else "exact-title+bm25+rrf"),
+        semantic_retrieval=("advanced-multi-query+bm25+semantic+rrf+rerank" if float(summary.get("semantic_coverage", 0)) > 0 else "advanced-multi-query+bm25+rrf+rerank"),
         last_sync_utc=str(summary.get("last_sync_utc", "")),
         source_site=str(summary.get("source_site", "")),
         storage_engine=str(summary.get("storage_engine", "sqlite")),
@@ -549,6 +550,11 @@ async def _hybrid_retrieve(
     limit: int,
     calibration: dict[str, Any] | None = None,
     include_semantic: bool = True,
+    *,
+    filters: dict[str, Any] | None = None,
+    advanced_enabled: bool = True,
+    max_queries: int | None = None,
+    candidate_pool: int | None = None,
 ) -> tuple[list[RetrievedSource], dict[str, Any]]:
     config = sanitize_retrieval_config(calibration or store.retrieval_config())
     records = store.records()
@@ -571,7 +577,17 @@ async def _hybrid_retrieve(
         except RuntimeError as exc:
             semantic_error = str(exc)[:500]
         embedding_latency_ms = (time.perf_counter() - embedding_started) * 1000
-    matches, diagnostics = retrieve_with_diagnostics(query, records, chunks, limit, query_embedding, config)
+
+    if advanced_enabled:
+        matches, diagnostics = advanced_retrieve_with_diagnostics(
+            query, records, chunks, limit, query_embedding, config, filters,
+            advanced_enabled=True,
+            max_queries_override=max_queries,
+            candidate_pool_override=candidate_pool,
+        )
+    else:
+        matches, diagnostics = retrieve_with_diagnostics(query, records, chunks, limit, query_embedding, config)
+
     policy = store.governance_policy()
     matches, source_review = source_governance(matches, records, store.source_review_map(), policy)
     matches = matches[:limit]
@@ -1343,7 +1359,7 @@ def _research_state_summary(owner_ref: str = "", project_id: str = "", context_i
 
 @app.get("/v1/platform/api", dependencies=[Depends(require_key)])
 def connected_api_manifest() -> dict[str, Any]:
-    return {"schema": API_SCHEMA, "version": __version__, "stability": "stable-v8", "resources": ["projects", "investigations", "entities", "library-objects", "research-contexts", "research-rooms", "room-members", "room-evidence", "room-questions", "room-disagreements", "room-synthesis", "source-evaluations", "evidence-comparisons", "evidence-gaps", "research-state", "research-activity", "object-review-state", "open-questions", "workflows", "contradictions", "uncertainties", "backups", "handoffs", "artifacts", "federated-providers", "federated-search", "federated-history", "federated-library-import", "workspace-promotions", "research-lifecycles", "lifecycle-transitions", "lifecycle-checkpoints", "async-jobs", "document-processing-jobs"], "object_model": object_model_manifest(), "evidence_quality": {"source_evaluation_schema": SOURCE_EVALUATION_SCHEMA, "comparison_schema": EVIDENCE_COMPARISON_SCHEMA, "gap_schema": EVIDENCE_GAP_SCHEMA, "quality_signals_schema": QUALITY_SIGNALS_SCHEMA, "truth_score": False}, "research_state": {"summary_schema": RESEARCH_STATE_SUMMARY_SCHEMA, "activity_schema": RESEARCH_ACTIVITY_SCHEMA, "object_state_schema": RESEARCH_OBJECT_STATE_SCHEMA, "open_question_schema": OPEN_QUESTION_SCHEMA, "workflow_memory_only": True, "not_evidence": True}, "research_rooms": {"room_schema": ROOM_SCHEMA, "member_schema": ROOM_MEMBER_SCHEMA, "evidence_state_schema": ROOM_EVIDENCE_STATE_SCHEMA, "question_schema": ROOM_QUESTION_SCHEMA, "disagreement_schema": ROOM_DISAGREEMENT_SCHEMA, "activity_schema": ROOM_ACTIVITY_SCHEMA, "synthesis_schema": ROOM_SYNTHESIS_SCHEMA, "prompt_schema": ROOM_PROMPT_SCHEMA, "participant_attribution": True, "individual_shared_state_separate": True, "not_evidence": True}, "federated_discovery": {"provider_catalog_schema": FEDERATED_PROVIDER_CATALOG_SCHEMA, "search_schema": FEDERATED_SEARCH_SCHEMA, "result_schema": FEDERATED_RESULT_SCHEMA, "import_schema": FEDERATED_IMPORT_SCHEMA, "external_discovery_only": True, "explicit_library_save_required": True}, "workspace_promotions": {"promotion_schema": PROMOTION_SCHEMA, "packet_schema": PROMOTION_PACKET_SCHEMA, "receipt_schema": PROMOTION_RECEIPT_SCHEMA, "workspace_import_contract": WORKSPACE_IMPORT_CONTRACT, "artifact_types": artifact_catalog(), "explicit_import_required": True}, "research_lifecycle": {"lifecycle_schema": LIFECYCLE_SCHEMA, "summary_schema": LIFECYCLE_SUMMARY_SCHEMA, "event_schema": LIFECYCLE_EVENT_SCHEMA, "checkpoint_schema": LIFECYCLE_CHECKPOINT_SCHEMA, "catalog": lifecycle_catalog(), "human_confirmed_transitions": True, "automatic_stage_advancement": False, "not_evidence": True}, "generation_boundary": adapter_status()}
+    return {"schema": API_SCHEMA, "version": __version__, "stability": "stable-v8", "resources": ["projects", "investigations", "entities", "library-objects", "research-contexts", "research-rooms", "room-members", "room-evidence", "room-questions", "room-disagreements", "room-synthesis", "source-evaluations", "evidence-comparisons", "evidence-gaps", "research-state", "research-activity", "object-review-state", "open-questions", "workflows", "contradictions", "uncertainties", "backups", "handoffs", "artifacts", "federated-providers", "federated-search", "federated-history", "federated-library-import", "workspace-promotions", "research-lifecycles", "lifecycle-transitions", "lifecycle-checkpoints", "async-jobs", "document-processing-jobs", "advanced-retrieval"], "object_model": object_model_manifest(), "evidence_quality": {"source_evaluation_schema": SOURCE_EVALUATION_SCHEMA, "comparison_schema": EVIDENCE_COMPARISON_SCHEMA, "gap_schema": EVIDENCE_GAP_SCHEMA, "quality_signals_schema": QUALITY_SIGNALS_SCHEMA, "truth_score": False}, "research_state": {"summary_schema": RESEARCH_STATE_SUMMARY_SCHEMA, "activity_schema": RESEARCH_ACTIVITY_SCHEMA, "object_state_schema": RESEARCH_OBJECT_STATE_SCHEMA, "open_question_schema": OPEN_QUESTION_SCHEMA, "workflow_memory_only": True, "not_evidence": True}, "research_rooms": {"room_schema": ROOM_SCHEMA, "member_schema": ROOM_MEMBER_SCHEMA, "evidence_state_schema": ROOM_EVIDENCE_STATE_SCHEMA, "question_schema": ROOM_QUESTION_SCHEMA, "disagreement_schema": ROOM_DISAGREEMENT_SCHEMA, "activity_schema": ROOM_ACTIVITY_SCHEMA, "synthesis_schema": ROOM_SYNTHESIS_SCHEMA, "prompt_schema": ROOM_PROMPT_SCHEMA, "participant_attribution": True, "individual_shared_state_separate": True, "not_evidence": True}, "federated_discovery": {"provider_catalog_schema": FEDERATED_PROVIDER_CATALOG_SCHEMA, "search_schema": FEDERATED_SEARCH_SCHEMA, "result_schema": FEDERATED_RESULT_SCHEMA, "import_schema": FEDERATED_IMPORT_SCHEMA, "external_discovery_only": True, "explicit_library_save_required": True}, "workspace_promotions": {"promotion_schema": PROMOTION_SCHEMA, "packet_schema": PROMOTION_PACKET_SCHEMA, "receipt_schema": PROMOTION_RECEIPT_SCHEMA, "workspace_import_contract": WORKSPACE_IMPORT_CONTRACT, "artifact_types": artifact_catalog(), "explicit_import_required": True}, "research_lifecycle": {"lifecycle_schema": LIFECYCLE_SCHEMA, "summary_schema": LIFECYCLE_SUMMARY_SCHEMA, "event_schema": LIFECYCLE_EVENT_SCHEMA, "checkpoint_schema": LIFECYCLE_CHECKPOINT_SCHEMA, "catalog": lifecycle_catalog(), "human_confirmed_transitions": True, "automatic_stage_advancement": False, "not_evidence": True}, "generation_boundary": adapter_status()}
 
 @app.get("/v1/platform/summary", dependencies=[Depends(require_key)])
 def connected_platform_summary() -> dict[str, Any]:
@@ -2378,18 +2394,34 @@ def reset_session(payload: SessionResetRequest) -> dict[str, Any]:
     return {"ok": True, "version": __version__, "session_id": session_id, "removed_turns": removed_turns}
 
 
+@app.post("/v1/retrieval/plan", dependencies=[Depends(require_key)])
+def retrieval_plan_endpoint(payload: RetrievalRequest) -> dict[str, Any]:
+    config = sanitize_retrieval_config(store.retrieval_config())
+    maximum = payload.max_queries or int(config["advanced"]["max_queries"])
+    return {"ok": True, "version": __version__, "plan": build_query_plan(payload.query, maximum)}
+
+
 @app.post("/v1/retrieve", response_model=list[RetrievedSource], dependencies=[Depends(require_key)])
 async def retrieve_endpoint(payload: RetrievalRequest) -> list[RetrievedSource]:
-    matches, _ = await _hybrid_retrieve(payload.query, payload.limit)
+    matches, _ = await _hybrid_retrieve(
+        payload.query, payload.limit, include_semantic=payload.include_semantic,
+        filters=payload.filters.model_dump(), advanced_enabled=payload.advanced,
+        max_queries=payload.max_queries, candidate_pool=payload.candidate_pool,
+    )
     return matches
 
 
 @app.post("/v1/retrieve/explain", dependencies=[Depends(require_key)])
 async def retrieve_explain_endpoint(payload: RetrievalRequest) -> dict[str, Any]:
-    matches, diagnostics = await _hybrid_retrieve(payload.query, payload.limit)
+    matches, diagnostics = await _hybrid_retrieve(
+        payload.query, payload.limit, include_semantic=payload.include_semantic,
+        filters=payload.filters.model_dump(), advanced_enabled=payload.advanced,
+        max_queries=payload.max_queries, candidate_pool=payload.candidate_pool,
+    )
     return {
         "ok": True,
         "version": __version__,
+        "schema": diagnostics.get("schema", ADVANCED_RETRIEVAL_SCHEMA),
         "query": payload.query,
         "matches": [item.model_dump() for item in matches],
         "evidence": [item.model_dump() for item in evidence_from_matches(matches)],

@@ -5,8 +5,10 @@ import re
 from typing import Any
 
 
+LEGACY_RETRIEVAL_PROFILE = "balanced-v6.5.0"
+
 DEFAULT_RETRIEVAL_CONFIG: dict[str, Any] = {
-    "profile": "balanced-v6.5.0",
+    "profile": "advanced-v8.4.0",
     "weights": {
         "structural": 1.0,
         "lexical": 24.0,
@@ -14,6 +16,23 @@ DEFAULT_RETRIEVAL_CONFIG: dict[str, Any] = {
         "rrf": 1400.0,
     },
     "rrf_k": 60,
+    "advanced": {
+        "enabled": True,
+        "multi_query": True,
+        "max_queries": 4,
+        "candidate_pool": 20,
+        "query_fusion_k": 40,
+        "query_fusion_weight": 1200.0,
+        "rerank": True,
+        "rerank_coverage_weight": 72.0,
+        "rerank_title_weight": 42.0,
+        "rerank_phrase_bonus": 28.0,
+        "rerank_multi_query_hit_bonus": 8.0,
+        "duplicate_title_similarity": 0.92,
+        "duplicate_passage_similarity": 0.86,
+        "diversity": True,
+        "diversity_lambda": 0.82,
+    },
     "thresholds": {
         "minimum_score": 8.0,
         "minimum_sources": 1,
@@ -97,6 +116,7 @@ def sanitize_retrieval_config(value: Any) -> dict[str, Any]:
     raw_thresholds = incoming.get("thresholds") if isinstance(incoming.get("thresholds"), dict) else {}
     raw_limits = incoming.get("limits") if isinstance(incoming.get("limits"), dict) else {}
     raw_exclusions = incoming.get("exclusions") if isinstance(incoming.get("exclusions"), dict) else {}
+    raw_advanced = incoming.get("advanced") if isinstance(incoming.get("advanced"), dict) else {}
 
     config = {
         "profile": re.sub(r"[^a-zA-Z0-9_.:-]", "", str(incoming.get("profile") or defaults["profile"]))[:100] or defaults["profile"],
@@ -107,6 +127,23 @@ def sanitize_retrieval_config(value: Any) -> dict[str, Any]:
             "rrf": _number(raw_weights.get("rrf"), defaults["weights"]["rrf"], 0.0, 5000.0),
         },
         "rrf_k": _integer(incoming.get("rrf_k"), defaults["rrf_k"], 1, 500),
+        "advanced": {
+            "enabled": bool(raw_advanced.get("enabled", defaults["advanced"]["enabled"])),
+            "multi_query": bool(raw_advanced.get("multi_query", defaults["advanced"]["multi_query"])),
+            "max_queries": _integer(raw_advanced.get("max_queries"), defaults["advanced"]["max_queries"], 1, 8),
+            "candidate_pool": _integer(raw_advanced.get("candidate_pool"), defaults["advanced"]["candidate_pool"], 5, 25),
+            "query_fusion_k": _integer(raw_advanced.get("query_fusion_k"), defaults["advanced"]["query_fusion_k"], 1, 200),
+            "query_fusion_weight": _number(raw_advanced.get("query_fusion_weight"), defaults["advanced"]["query_fusion_weight"], 0.0, 5000.0),
+            "rerank": bool(raw_advanced.get("rerank", defaults["advanced"]["rerank"])),
+            "rerank_coverage_weight": _number(raw_advanced.get("rerank_coverage_weight"), defaults["advanced"]["rerank_coverage_weight"], 0.0, 500.0),
+            "rerank_title_weight": _number(raw_advanced.get("rerank_title_weight"), defaults["advanced"]["rerank_title_weight"], 0.0, 500.0),
+            "rerank_phrase_bonus": _number(raw_advanced.get("rerank_phrase_bonus"), defaults["advanced"]["rerank_phrase_bonus"], 0.0, 500.0),
+            "rerank_multi_query_hit_bonus": _number(raw_advanced.get("rerank_multi_query_hit_bonus"), defaults["advanced"]["rerank_multi_query_hit_bonus"], 0.0, 100.0),
+            "duplicate_title_similarity": _number(raw_advanced.get("duplicate_title_similarity"), defaults["advanced"]["duplicate_title_similarity"], 0.5, 1.0),
+            "duplicate_passage_similarity": _number(raw_advanced.get("duplicate_passage_similarity"), defaults["advanced"]["duplicate_passage_similarity"], 0.5, 1.0),
+            "diversity": bool(raw_advanced.get("diversity", defaults["advanced"]["diversity"])),
+            "diversity_lambda": _number(raw_advanced.get("diversity_lambda"), defaults["advanced"]["diversity_lambda"], 0.5, 1.0),
+        },
         "thresholds": {
             "minimum_score": _number(raw_thresholds.get("minimum_score"), defaults["thresholds"]["minimum_score"], 0.0, 5000.0),
             "minimum_sources": _integer(raw_thresholds.get("minimum_sources"), defaults["thresholds"]["minimum_sources"], 1, 10),

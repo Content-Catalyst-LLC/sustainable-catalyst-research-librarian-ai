@@ -1,6 +1,16 @@
-# Research Librarian AI Python Backend v8.3.0
+# Research Librarian AI Python Backend v8.4.0
 
-FastAPI backend for durable Sustainable Catalyst acquisition, indexing, retrieval, connected research projects, governance, typed handoffs, and first-class Platform Core v3.3.0+ integration.
+FastAPI backend for durable Sustainable Catalyst acquisition, indexing, advanced retrieval/reranking, connected research projects, governance, typed handoffs, and first-class Platform Core v3.3.0+ integration.
+
+
+## v8.4 advanced retrieval and reranking
+
+- Deterministic, non-generative query decomposition and inspectable `/v1/retrieval/plan`.
+- Multi-query candidate retrieval over exact-title, BM25, optional semantic similarity, and reciprocal-rank fusion.
+- Transparent reranking with query/title coverage, phrase alignment, multi-query consensus, and lexical/semantic support.
+- Typed metadata, taxonomy, source, series, record, URL-prefix, and modified-date filtering before ranking.
+- Canonical URL, content-hash, and near-duplicate suppression followed by bounded MMR-style diversity selection.
+- Retrieval relevance remains separate from evidence quality and Platform Core governance.
 
 
 ## v8.3 durable asynchronous processing
