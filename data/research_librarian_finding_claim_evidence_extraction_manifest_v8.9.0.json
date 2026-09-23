@@ -1,0 +1,25 @@
+{
+  "schema": "sc-research-librarian-release-capability-manifest/1.0",
+  "release": "8.9.0",
+  "name": "Finding, Claim & Evidence Extraction Pipeline",
+  "core_contract": "sc.research.finding-claim-evidence.v1",
+  "capabilities": {
+    "deterministic_sentence_extraction": true,
+    "candidate_findings": true,
+    "candidate_claims": true,
+    "uncertainty_cue_detection": true,
+    "passage_level_provenance": true,
+    "v8_7_core_evidence_binding_resolution": true,
+    "durable_async_extraction_jobs": true,
+    "human_review_required_for_core_promotion": true,
+    "proposed_status_on_core_registration": true,
+    "default_evidence_relation": "contextualizes",
+    "platform_core_project_state_readiness_registered": true,
+    "platform_core_research_intelligence_readiness_registered": true,
+    "automatic_truth_determination": false,
+    "automatic_claim_acceptance": false,
+    "automatic_finding_acceptance": false,
+    "automatic_evidence_strength_judgment": false,
+    "semantic_contradiction_resolution": false
+  }
+}

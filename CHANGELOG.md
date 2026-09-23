@@ -1,3 +1,13 @@
+# 8.9.0 — Finding, Claim & Evidence Extraction Pipeline
+
+- Added deterministic passage-to-candidate extraction for reviewable findings and claims with exact evidence provenance and uncertainty cues.
+- Added an explicit human review gate: candidates default to pending and require approved + reviewer identity before Core registration.
+- Added Platform Core v3.3+ Finding/Claim/Evidence Intelligence client methods and governed promotion as proposed findings/claims plus evidence links.
+- Defaulted candidate evidence relationships to contextualizes unless a stronger relationship is explicitly supplied by a reviewer/caller.
+- Added durable `research-intelligence-extraction` jobs to the Postgres-backed v8.3 queue.
+- Added Core readiness probes for project-state/versioning and Finding/Claim/Evidence Intelligence, closing the v8.8 readiness-registration gap.
+- Preserved governance boundaries: no automatic truth determination, claim/finding acceptance, evidence-strength judgment, contradiction resolution, or publication.
+
 # 8.8.0 — Core Research Object Synchronization
 
 - Added project-level synchronization to Platform Core v3.3+ project-state/versioning contracts.

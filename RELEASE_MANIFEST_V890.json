@@ -1,0 +1,19 @@
+{
+  "release": "8.9.0",
+  "title": "Finding, Claim & Evidence Extraction Pipeline",
+  "backend": "Python 3.12/FastAPI",
+  "platform_core_minimum": "3.3.0",
+  "core_contract": "sc.research.finding-claim-evidence.v1",
+  "artifacts": [
+    "sustainable-catalyst-research-librarian-ai-v8.9.0-repository.zip",
+    "sustainable-catalyst-research-librarian-backend-v8.9.0.zip",
+    "sustainable-catalyst-research-librarian-ai-wordpress-v8.9.0.zip"
+  ],
+  "governance": {
+    "candidate_review_default": "pending",
+    "core_registration_status": "proposed",
+    "human_review_required": true,
+    "automatic_truth_determination": false,
+    "automatic_evidence_strength_judgment": false
+  }
+}

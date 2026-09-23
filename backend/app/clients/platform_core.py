@@ -107,8 +107,8 @@ class PlatformCoreClient:
         self._configured()
         headers = {
             "Accept": "application/json",
-            "User-Agent": "SustainableCatalystResearchLibrarian/8.7.0",
-            "X-SC-Research-Librarian-Version": "8.7.0",
+            "User-Agent": "SustainableCatalystResearchLibrarian/8.9.0",
+            "X-SC-Research-Librarian-Version": "8.9.0",
         }
         if write:
             if not self.write_api_key:
@@ -162,6 +162,8 @@ class PlatformCoreClient:
             "statistical_reasoning": "/v1/analytics/statistical-reasoning/readiness",
             "unified_visual_reasoning": "/v1/visual-runtime/unified/readiness",
             "cross_product_exchange": "/v1/exchange/readiness",
+            "project_state": "/v1/research/project-state/readiness",
+            "finding_claim_evidence_intelligence": "/v1/research/intelligence/readiness",
         }
 
         async def one(name: str, path: str) -> tuple[str, dict[str, Any]]:
@@ -206,6 +208,24 @@ class PlatformCoreClient:
 
     async def exchange_package(self, package_id: str) -> dict[str, Any]:
         return await self._request("GET", f"/v1/exchange/packages/{package_id}")
+
+    async def research_intelligence_readiness(self) -> dict[str, Any]:
+        return await self._request("GET", "/v1/research/intelligence/readiness")
+
+    async def create_research_finding(self, project_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        return await self._request("POST", f"/v1/research/intelligence/projects/{project_id}/findings", payload={"data": payload}, write=True)
+
+    async def create_research_claim(self, project_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        return await self._request("POST", f"/v1/research/intelligence/projects/{project_id}/claims", payload={"data": payload}, write=True)
+
+    async def create_research_evidence_link(self, project_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        return await self._request("POST", f"/v1/research/intelligence/projects/{project_id}/evidence-links", payload={"data": payload}, write=True)
+
+    async def research_intelligence_bundle(self, project_id: str) -> dict[str, Any]:
+        return await self._request("GET", f"/v1/research/intelligence/projects/{project_id}/bundle")
+
+    async def research_contradiction_candidates(self, project_id: str) -> dict[str, Any]:
+        return await self._request("GET", f"/v1/research/intelligence/projects/{project_id}/contradiction-candidates")
 
     async def create_lineage_graph(self, project_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         return await self._request("POST", f"/v1/research/lineage/projects/{project_id}/graphs", payload={"data": payload}, write=True)

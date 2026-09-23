@@ -11,6 +11,8 @@ from ..provider import embeddings_configured, generate_embedding
 from ..store import store
 from ..document_intelligence import knowledge_metadata, parse_document
 from ..source_identity import get_source_graph_store
+from ..contracts.research_intelligence_extraction import ResearchIntelligenceExtractionRequest
+from .research_intelligence_extraction import extract_candidates
 
 Progress = Callable[[str, int], None]
 
@@ -198,6 +200,15 @@ async def process_source_identity_job(claim: JobClaim, progress: Progress) -> di
     return result
 
 
+async def process_research_intelligence_extraction_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
+    progress("normalize-evidence", 20)
+    request = ResearchIntelligenceExtractionRequest.model_validate(claim.payload)
+    progress("extract-candidates", 55)
+    result = extract_candidates(request)
+    progress("review-queue-ready", 95)
+    return result
+
+
 async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
     if claim.job_type in {"document-process", "ingestion"}:
         return await process_document_job(claim, progress)
@@ -207,7 +218,9 @@ async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
         return await process_validation_job(claim, progress)
     if claim.job_type == "source-identity":
         return await process_source_identity_job(claim, progress)
+    if claim.job_type == "research-intelligence-extraction":
+        return await process_research_intelligence_extraction_job(claim, progress)
     raise ValueError(
         f"Job type {claim.job_type!r} is registered for the durable queue but has no v8.3 executor yet; "
-        "use document-process, document-intelligence, source-identity, ingestion, or validation."
+        "use document-process, document-intelligence, source-identity, research-intelligence-extraction, ingestion, or validation."
     )

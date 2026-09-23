@@ -13,6 +13,10 @@ from ..contracts.evidence_bridge import (
     CorePassageEvidencePromotionRequest,
     CoreSourceSnapshotPromotionRequest,
 )
+from ..contracts.research_intelligence_extraction import (
+    CoreResearchCandidatePromotionRequest,
+    ResearchIntelligenceExtractionRequest,
+)
 from ..contracts.research_sync import (
     CoreProjectSynchronizationPlanRequest,
     CoreProjectSynchronizationRequest,
@@ -27,6 +31,11 @@ from ..services.core_evidence_bridge import (
     evidence_bridge_capabilities,
     promote_passage_evidence,
     promote_source_snapshot,
+)
+from ..services.research_intelligence_extraction import (
+    capabilities as research_intelligence_extraction_capabilities,
+    extract_candidates,
+    promote_candidate,
 )
 from ..services.core_research_sync import (
     build_project_sync_plan,
@@ -88,6 +97,8 @@ def architecture() -> dict[str, Any]:
             "canonical-source-identity",
             "evidence-promotion-orchestration",
             "project-state-synchronization-orchestration",
+            "candidate-finding-claim-extraction",
+            "human-reviewed-core-research-intelligence-promotion",
         ],
         "platform_core_owns": [
             "governed-research-objects",
@@ -102,6 +113,8 @@ def architecture() -> dict[str, Any]:
             "immutable-project-state-versions",
             "versioned-cross-product-object-bindings",
             "declared-project-lineage",
+            "governed-finding-claim-evidence-registry",
+            "research-intelligence-version-history",
         ],
         "automatic_truth_promotion": False,
         "core_executes_arbitrary_research_code": False,
@@ -207,5 +220,26 @@ def research_sync_plan(payload: CoreProjectSynchronizationPlanRequest) -> dict[s
 async def research_sync_synchronize(payload: CoreProjectSynchronizationRequest) -> dict[str, Any]:
     try:
         return await synchronize_project_research_objects(payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+
+@router.get("/research-intelligence/capabilities", dependencies=[Depends(require_backend_key)])
+def research_intelligence_extraction_capability_report() -> dict[str, Any]:
+    return research_intelligence_extraction_capabilities()
+
+
+@router.post("/research-intelligence/extract", dependencies=[Depends(require_backend_key)])
+def research_intelligence_extract(payload: ResearchIntelligenceExtractionRequest) -> dict[str, Any]:
+    try:
+        return extract_candidates(payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+
+@router.post("/research-intelligence/promote", dependencies=[Depends(require_backend_key)])
+async def research_intelligence_promote(payload: CoreResearchCandidatePromotionRequest) -> dict[str, Any]:
+    try:
+        return await promote_candidate(payload)
     except Exception as exc:
         raise _translate(exc) from exc

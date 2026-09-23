@@ -22,7 +22,7 @@ $assert = static function ( $name, $condition, $detail = '' ) use ( &$checks, &$
     }
 };
 
-$assert( 'plugin_version_712', 1 === preg_match( "/const\s+VERSION\s*=\s*'8\.8\.0';/", $main ) );
+$assert( 'plugin_version_712', 1 === preg_match( "/const\s+VERSION\s*=\s*'8\.9\.0';/", $main ) );
 $assert( 'public_ai_status_endpoint', false !== strpos( $main, "'/ai/status'" ) );
 $assert( 'admin_ai_test_endpoint', false !== strpos( $main, "'/ai/test'" ) );
 $assert( 'admin_ai_models_endpoint', false !== strpos( $main, "'/ai/models'" ) );
