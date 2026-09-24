@@ -8,6 +8,9 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 
 from ..clients.platform_core import PlatformCoreClient, PlatformCoreError
 from ..config import settings
+from ..contracts.visual_research import (
+    VisualResearchPlanRequest, CoreVisualResearchPromotionRequest,
+)
 from ..contracts.statistical_research import (
     StatisticalAnalysisPlanRequest, CoreStatisticalValidationPromotionRequest,
     CoreCoefficientRequest, CoreIntervalRequest, CoreInterpretationRequest,
@@ -34,6 +37,10 @@ from ..contracts.platform_core import (
     CoreExchangePackageRequest,
     CoreResearchObjectPromotionRequest,
     CoreUnifiedProjectSyncRequest,
+)
+from ..services.visual_research import (
+    capabilities as visual_research_capabilities, build_plan as build_visual_research_plan,
+    readiness as visual_research_readiness, promote_plan as promote_visual_research_plan,
 )
 from ..services.statistical_research import (
     capabilities as statistical_research_capabilities, build_plan as build_statistical_analysis_plan,
@@ -121,6 +128,7 @@ def architecture() -> dict[str, Any]:
             "human-reviewed-core-research-intelligence-promotion",
             "reviewed-argument-synthesis-planning",
             "statistical-analysis-planning-and-runtime-handoffs",
+            "visual-research-intelligence-planning-and-core-orchestration",
         ],
         "platform_core_owns": [
             "governed-research-objects",
@@ -139,6 +147,8 @@ def architecture() -> dict[str, Any]:
             "research-intelligence-version-history",
             "governed-argument-graphs-and-evidentiary-syntheses",
             "governed-statistical-reasoning-objects",
+            "governed-visual-reasoning-objects-and-scene-semantics",
+            "unified-visual-research-session-bindings",
         ],
         "automatic_truth_promotion": False,
         "core_executes_arbitrary_research_code": False,
@@ -331,3 +341,23 @@ async def statistical_research_interval(payload: CoreIntervalRequest) -> dict[st
 async def statistical_research_interpretation(payload: CoreInterpretationRequest) -> dict[str, Any]:
     try: return await add_statistical_interpretation(payload)
     except Exception as exc: raise _translate(exc) from exc
+
+@router.get("/visual-research/capabilities", dependencies=[Depends(require_backend_key)])
+def visual_research_capability_report() -> dict[str, Any]:
+    return visual_research_capabilities()
+
+@router.get("/visual-research/readiness", dependencies=[Depends(require_backend_key)])
+async def visual_research_core_readiness() -> dict[str, Any]:
+    try: return await visual_research_readiness()
+    except Exception as exc: raise _translate(exc) from exc
+
+@router.post("/visual-research/plan", dependencies=[Depends(require_backend_key)])
+def visual_research_plan(payload: VisualResearchPlanRequest) -> dict[str, Any]:
+    try: return build_visual_research_plan(payload)
+    except Exception as exc: raise _translate(exc) from exc
+
+@router.post("/visual-research/promote", dependencies=[Depends(require_backend_key)])
+async def visual_research_promote(payload: CoreVisualResearchPromotionRequest) -> dict[str, Any]:
+    try: return await promote_visual_research_plan(payload)
+    except Exception as exc: raise _translate(exc) from exc
+

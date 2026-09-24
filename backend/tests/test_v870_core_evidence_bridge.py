@@ -172,6 +172,6 @@ def test_api_registers_v870_evidence_bridge_routes() -> None:
     response = TestClient(app).get("/v1/core/evidence/capabilities", headers={"X-SC-RL-Key": "test-key"})
     assert response.status_code == 200
     body = response.json()
-    assert body["release"] == "8.11.0"
+    assert body["release"] == "8.12.0"
     assert body["default_stance"] == "neutral"
     assert body["default_review_status"] == "unreviewed"

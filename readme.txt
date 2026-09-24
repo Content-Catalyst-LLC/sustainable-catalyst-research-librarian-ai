@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 8.7.0
+Stable tag: 8.12.0
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
@@ -13,6 +13,9 @@ A connected, site-scoped research intelligence platform for Sustainable Catalyst
 Research Librarian AI retrieves Sustainable Catalyst publications and documents through exact-title priority, section-aware BM25 ranking, optional Gemini embeddings, calibrated reciprocal-rank fusion, and citation-verified synthesis. WordPress remains the canonical publishing and recovery source, while FastAPI stores the production knowledge index durably in Neon Postgres with pgvector.
 
 v8.0.0 unifies Library context, federated discovery, evidence evaluation, persistent research state, Research Rooms, synthesis, Workspace promotion, and preservation through an inspectable eight-stage research lifecycle. Readiness is descriptive; every lifecycle stage transition remains an explicit human action.
+
+
+v8.12.0 adds Visual Research Intelligence. Reviewed sources, citations, evidence, findings, claims, arguments, statistical reasoning objects, provenance, and timelines can be assembled into renderer-neutral visual research plans and explicitly promoted into Platform Core visual reasoning objects after human review. The Librarian does not render, infer graph edges, compute layout, or promote visual form to truth.
 
 v8.7.0 adds the Core Evidence Bridge. Hydrated canonical Librarian sources can be promoted to governed Platform Core source snapshots, and selected passages can be promoted to Core evidence records with durable cross-system bindings. Promotions default to neutral/unreviewed with no inferred confidence; Platform Core remains the governed evidence/reasoning authority.
 
@@ -40,6 +43,13 @@ v8.7.0 adds the Core Evidence Bridge. Hydrated canonical Librarian sources can b
 [sc_research_librarian_platform_handoffs]
 
 == Changelog ==
+
+= 8.12.0 =
+* Add Visual Research Intelligence plans for citation networks, evidence/claim/finding maps, contradiction maps, argument graphs, statistical views, provenance graphs, timelines, and source lineage.
+* Add explicit human-reviewed promotion into Platform Core Visual Reasoning objects and unified research-session visual bindings.
+* Preserve renderer-neutral semantics and source-hash provenance while leaving layout/render execution to specialist visual runtimes.
+* Forbid inferred graph edges, automatic claim/finding promotion, visual truth promotion, argument ranking, and statistical interpretation.
+
 
 = 8.7.0 =
 * Add the Core Evidence Bridge for canonical-source snapshot and passage-evidence promotion.
@@ -363,6 +373,13 @@ v8.7.0 adds the Core Evidence Bridge. Hydrated canonical Librarian sources can b
 
 
 == Changelog ==
+
+= 8.12.0 =
+* Add Visual Research Intelligence plans for citation networks, evidence/claim/finding maps, contradiction maps, argument graphs, statistical views, provenance graphs, timelines, and source lineage.
+* Add explicit human-reviewed promotion into Platform Core Visual Reasoning objects and unified research-session visual bindings.
+* Preserve renderer-neutral semantics and source-hash provenance while leaving layout/render execution to specialist visual runtimes.
+* Forbid inferred graph edges, automatic claim/finding promotion, visual truth promotion, argument ranking, and statistical interpretation.
+
 = 7.0.0 =
 * Adds the Research Quality and Governance Center.
 * Adds answer traces, source review, quality evaluation, release gates, retention enforcement, and public methodology.
@@ -451,6 +468,13 @@ v8.7.0 adds the Core Evidence Bridge. Hydrated canonical Librarian sources can b
 
 
 == Changelog ==
+
+= 8.12.0 =
+* Add Visual Research Intelligence plans for citation networks, evidence/claim/finding maps, contradiction maps, argument graphs, statistical views, provenance graphs, timelines, and source lineage.
+* Add explicit human-reviewed promotion into Platform Core Visual Reasoning objects and unified research-session visual bindings.
+* Preserve renderer-neutral semantics and source-hash provenance while leaving layout/render execution to specialist visual runtimes.
+* Forbid inferred graph edges, automatic claim/finding promotion, visual truth promotion, argument ranking, and statistical interpretation.
+
 = 7.0.0 =
 * Adds the Research Quality and Governance Center.
 * Adds answer traces, source review, quality evaluation, release gates, retention enforcement, and public methodology.

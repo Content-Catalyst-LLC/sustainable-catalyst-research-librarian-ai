@@ -1,3 +1,12 @@
+# 8.12.0 — Visual Research Intelligence
+
+- Added deterministic renderer-neutral visual research plans over publications, canonical sources, citation relationships, evidence, findings, claims, arguments, statistical reasoning objects, project state, and provenance.
+- Added citation-network, evidence/claim/finding map, contradiction-map, argument-graph, statistical-result, uncertainty, provenance, timeline, source-lineage, concept-map, and generic view kinds.
+- Added Platform Core Visual Reasoning Object registration, semantic layer/element/relation registration, immutable visual snapshots, and optional unified research-session visual bindings.
+- Added durable `visual-research-plan` jobs to the Postgres-backed queue.
+- Added visual object-model and unified visual-runtime readiness probes to the Core client.
+- Preserved governance boundaries: no renderer execution, layout computation, inferred graph edges, claim/finding promotion, argument ranking, statistical interpretation, or visual truth promotion.
+
 # 8.10.0 — Argument, Contradiction & Synthesis Integration
 
 - Added deterministic, reviewer-directed argument planning over reviewed Core findings, claims, and evidence.

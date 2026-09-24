@@ -1,0 +1,31 @@
+{
+  "release": "8.12.0",
+  "title": "Visual Research Intelligence",
+  "schema": "sc-research-librarian-visual-research-intelligence/1.0",
+  "core_minimum_version": "3.3.0",
+  "core_surfaces": [
+    "/v1/visual-reasoning/readiness",
+    "/v1/visual-reasoning/objects",
+    "/v1/visual-runtime/unified/readiness",
+    "/v1/research/unified-runtime/visual-bindings"
+  ],
+  "features": [
+    "deterministic-renderer-neutral-visual-plans",
+    "explicit-visual-relations",
+    "linked-view-specifications",
+    "source-hash-provenance",
+    "core-visual-object-promotion",
+    "semantic-layer-element-relation-registration",
+    "immutable-visual-snapshots",
+    "core-session-visual-binding",
+    "durable-visual-research-plan-jobs"
+  ],
+  "governance": {
+    "human_review_required": true,
+    "librarian_renders_visuals": false,
+    "automatic_graph_edge_inference": false,
+    "automatic_visual_truth_promotion": false,
+    "automatic_argument_ranking": false,
+    "automatic_statistical_interpretation": false
+  }
+}

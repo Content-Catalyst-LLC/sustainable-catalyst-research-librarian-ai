@@ -1,6 +1,20 @@
-# Sustainable Catalyst Research Librarian AI v8.11.0
+# Sustainable Catalyst Research Librarian AI v8.12.0
 
-Research Librarian AI is the Python-backed acquisition, document-intelligence, source-identity, indexing, retrieval, collaboration, and research-orchestration layer for Sustainable Catalyst. **v8.10.0 adds human-gated Argument, Contradiction & Synthesis Integration on top of v8.9 reviewed findings/claims/evidence, using Platform Core as the authoritative governed argument and synthesis registry.**
+Research Librarian AI is the Python-backed acquisition, document-intelligence, source-identity, indexing, retrieval, collaboration, and research-orchestration layer for Sustainable Catalyst. **v8.12.0 adds Visual Research Intelligence: renderer-neutral, human-reviewed visual research plans that bind publications, sources, evidence, claims, findings, arguments, statistical reasoning, provenance, and timelines to Platform Core visual reasoning without moving rendering or truth judgment into the Librarian.**
+
+
+### v8.12.0 architecture
+
+- **Renderer-neutral visual plans:** citation networks, evidence/claim/finding maps, contradiction maps, argument graphs, statistical/uncertainty views, provenance graphs, timelines, source lineage, and concept maps.
+- **Explicit relations only:** visual graph edges are preserved only when supplied by the researcher/reviewer; the Librarian does not infer support, contradiction, causality, or relevance edges from visual form.
+- **Core visual authority:** approved plans register canonical Platform Core visual reasoning objects, semantic elements/layers/relations, immutable snapshots, and optional unified-research-session visual bindings.
+- **Rendering boundary:** the Librarian does not perform layout, SVG/Canvas/WebGL rendering, GPU work, animation, or visual inference. Specialist visual runtimes remain rendering authorities.
+- **Human review gate:** plans default to `pending`; Core promotion requires `approved` and an explicit reviewer identity.
+- **Durable planning:** `visual-research-plan` is supported by the Postgres durable job runtime.
+
+### New v8.12.0 backend resources
+
+`GET /v1/core/visual-research/capabilities`, `GET /v1/core/visual-research/readiness`, `POST /v1/core/visual-research/plan`, and `POST /v1/core/visual-research/promote`; generic durable jobs also accept `visual-research-plan`.
 
 ### v8.10.0 architecture
 

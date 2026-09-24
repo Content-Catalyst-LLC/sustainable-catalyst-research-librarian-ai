@@ -14,9 +14,11 @@ from ..source_identity import get_source_graph_store
 from ..contracts.research_intelligence_extraction import ResearchIntelligenceExtractionRequest
 from ..contracts.argument_synthesis import ArgumentSynthesisPlanRequest
 from ..contracts.statistical_research import StatisticalAnalysisPlanRequest
+from ..contracts.visual_research import VisualResearchPlanRequest
 from .research_intelligence_extraction import extract_candidates
 from .argument_synthesis import build_plan as build_argument_synthesis_plan
 from .statistical_research import build_plan as build_statistical_analysis_plan
+from .visual_research import build_plan as build_visual_research_plan
 
 Progress = Callable[[str, int], None]
 
@@ -231,6 +233,15 @@ async def process_statistical_analysis_plan_job(claim: JobClaim, progress: Progr
     return result
 
 
+async def process_visual_research_plan_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
+    progress("normalize-visual-research-context", 20)
+    request = VisualResearchPlanRequest.model_validate(claim.payload)
+    progress("assemble-renderer-neutral-visual-plan", 60)
+    result = build_visual_research_plan(request)
+    progress("human-review-ready", 95)
+    return result
+
+
 async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
     if claim.job_type in {"document-process", "ingestion"}:
         return await process_document_job(claim, progress)
@@ -246,7 +257,9 @@ async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
         return await process_argument_synthesis_plan_job(claim, progress)
     if claim.job_type == "statistical-analysis-plan":
         return await process_statistical_analysis_plan_job(claim, progress)
+    if claim.job_type == "visual-research-plan":
+        return await process_visual_research_plan_job(claim, progress)
     raise ValueError(
         f"Job type {claim.job_type!r} is registered for the durable queue but has no v8.3 executor yet; "
-        "use document-process, document-intelligence, source-identity, research-intelligence-extraction, argument-synthesis-plan, statistical-analysis-plan, ingestion, or validation."
+        "use document-process, document-intelligence, source-identity, research-intelligence-extraction, argument-synthesis-plan, statistical-analysis-plan, visual-research-plan, ingestion, or validation."
     )

@@ -1,0 +1,33 @@
+{
+  "release": "8.12.0",
+  "title": "Visual Research Intelligence",
+  "schema": "sc-research-librarian-visual-research-intelligence/1.0",
+  "core_contracts": [
+    "sc.visual-reasoning.object.v1",
+    "sc.visual-runtime.scene.v1",
+    "sc.visual-runtime.unified-reasoning.v1",
+    "sc.visual-runtime.cross-product-integration.v1"
+  ],
+  "features": [
+    "renderer-neutral-visual-plans",
+    "citation-networks",
+    "evidence-claim-finding-maps",
+    "contradiction-and-argument-graphs",
+    "statistical-and-uncertainty-views",
+    "provenance-and-source-lineage",
+    "research-timelines",
+    "core-visual-object-registration",
+    "immutable-core-visual-snapshots",
+    "unified-research-session-visual-bindings",
+    "durable-visual-research-plan-jobs"
+  ],
+  "governance": {
+    "human_review_required": true,
+    "renderer_neutral": true,
+    "automatic_graph_edge_inference": false,
+    "layout_execution_by_librarian": false,
+    "renderer_execution_by_librarian": false,
+    "automatic_claim_or_finding_promotion": false,
+    "automatic_visual_truth_promotion": false
+  }
+}

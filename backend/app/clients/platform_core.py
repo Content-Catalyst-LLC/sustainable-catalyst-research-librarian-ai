@@ -107,8 +107,8 @@ class PlatformCoreClient:
         self._configured()
         headers = {
             "Accept": "application/json",
-            "User-Agent": "SustainableCatalystResearchLibrarian/8.11.0",
-            "X-SC-Research-Librarian-Version": "8.11.0",
+            "User-Agent": "SustainableCatalystResearchLibrarian/8.12.0",
+            "X-SC-Research-Librarian-Version": "8.12.0",
         }
         if write:
             if not self.write_api_key:
@@ -160,6 +160,7 @@ class PlatformCoreClient:
             "research_conclusions": "/v1/research/conclusions/readiness",
             "reproducible_research": "/v1/research/reproducibility/readiness",
             "statistical_reasoning": "/v1/analytics/statistical-reasoning/readiness",
+            "visual_reasoning_objects": "/v1/visual-reasoning/readiness",
             "unified_visual_reasoning": "/v1/visual-runtime/unified/readiness",
             "cross_product_exchange": "/v1/exchange/readiness",
             "project_state": "/v1/research/project-state/readiness",
@@ -280,6 +281,31 @@ class PlatformCoreClient:
 
     async def create_statistical_reasoning_snapshot(self, reasoning_ref: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         return await self._request("POST", f"/v1/analytics/statistical-reasoning/{reasoning_ref}/snapshots", payload={"data": payload or {}}, write=True)
+
+
+    async def visual_reasoning_readiness(self) -> dict[str, Any]:
+        return await self._request("GET", "/v1/visual-reasoning/readiness")
+
+    async def unified_visual_reasoning_readiness(self) -> dict[str, Any]:
+        return await self._request("GET", "/v1/visual-runtime/unified/readiness")
+
+    async def create_visual_reasoning_object(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return await self._request("POST", "/v1/visual-reasoning/objects", payload={"data": payload}, write=True)
+
+    async def add_visual_reasoning_element(self, visual_entity_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        return await self._request("POST", f"/v1/visual-reasoning/objects/{visual_entity_id}/elements", payload={"data": payload}, write=True)
+
+    async def add_visual_reasoning_relation(self, visual_entity_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        return await self._request("POST", f"/v1/visual-reasoning/objects/{visual_entity_id}/relations", payload={"data": payload}, write=True)
+
+    async def add_visual_reasoning_layer(self, visual_entity_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        return await self._request("POST", f"/v1/visual-reasoning/objects/{visual_entity_id}/layers", payload={"data": payload}, write=True)
+
+    async def create_visual_reasoning_snapshot(self, visual_entity_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        return await self._request("POST", f"/v1/visual-reasoning/objects/{visual_entity_id}/snapshots", payload={"data": payload}, write=True)
+
+    async def bind_unified_visual(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return await self._request("POST", "/v1/research/unified-runtime/visual-bindings", payload={"data": payload}, write=True)
 
     async def unified_visual_workspace_bundle(self, workspace_id: str) -> dict[str, Any]:
         return await self._request("GET", f"/v1/visual-runtime/unified/workspaces/{workspace_id}/bundle")
