@@ -1,0 +1,26 @@
+{
+  "release": "8.10.0",
+  "schema": "sc-research-librarian-argument-contradiction-synthesis/1.0",
+  "core_contract": "sc.research.argument-evidentiary-synthesis.v1",
+  "title": "Argument, Contradiction & Synthesis Integration",
+  "capabilities": {
+    "declared_argument_planning": true,
+    "core_contradiction_candidate_inspection": true,
+    "governed_argument_graph_promotion": true,
+    "open_tension_registration": true,
+    "researcher_authored_synthesis_promotion": true,
+    "human_review_required_for_core_promotion": true,
+    "durable_argument_plan_jobs": true
+  },
+  "governance": {
+    "default_review_decision": "pending",
+    "automatic_argument_generation": false,
+    "automatic_relation_inference": false,
+    "automatic_contradiction_resolution": false,
+    "automatic_argument_ranking": false,
+    "automatic_best_argument_selection": false,
+    "automatic_synthesis_generation": false,
+    "automatic_conclusion_generation": false,
+    "automatic_truth_determination": false
+  }
+}

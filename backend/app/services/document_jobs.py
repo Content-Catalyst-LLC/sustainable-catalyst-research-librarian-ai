@@ -12,7 +12,9 @@ from ..store import store
 from ..document_intelligence import knowledge_metadata, parse_document
 from ..source_identity import get_source_graph_store
 from ..contracts.research_intelligence_extraction import ResearchIntelligenceExtractionRequest
+from ..contracts.argument_synthesis import ArgumentSynthesisPlanRequest
 from .research_intelligence_extraction import extract_candidates
+from .argument_synthesis import build_plan as build_argument_synthesis_plan
 
 Progress = Callable[[str, int], None]
 
@@ -209,6 +211,15 @@ async def process_research_intelligence_extraction_job(claim: JobClaim, progress
     return result
 
 
+async def process_argument_synthesis_plan_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
+    progress("normalize-reviewed-objects", 20)
+    request = ArgumentSynthesisPlanRequest.model_validate(claim.payload)
+    progress("assemble-declared-argument", 60)
+    result = build_argument_synthesis_plan(request)
+    progress("review-queue-ready", 95)
+    return result
+
+
 async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
     if claim.job_type in {"document-process", "ingestion"}:
         return await process_document_job(claim, progress)
@@ -220,7 +231,9 @@ async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
         return await process_source_identity_job(claim, progress)
     if claim.job_type == "research-intelligence-extraction":
         return await process_research_intelligence_extraction_job(claim, progress)
+    if claim.job_type == "argument-synthesis-plan":
+        return await process_argument_synthesis_plan_job(claim, progress)
     raise ValueError(
         f"Job type {claim.job_type!r} is registered for the durable queue but has no v8.3 executor yet; "
-        "use document-process, document-intelligence, source-identity, research-intelligence-extraction, ingestion, or validation."
+        "use document-process, document-intelligence, source-identity, research-intelligence-extraction, argument-synthesis-plan, ingestion, or validation."
     )

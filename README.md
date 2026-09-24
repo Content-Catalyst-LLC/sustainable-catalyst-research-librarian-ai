@@ -1,6 +1,20 @@
-# Sustainable Catalyst Research Librarian AI v8.9.0
+# Sustainable Catalyst Research Librarian AI v8.10.0
 
-Research Librarian AI is the Python-backed acquisition, document-intelligence, source-identity, indexing, retrieval, collaboration, and research-orchestration layer for Sustainable Catalyst. **v8.9.0 adds a human-gated Finding, Claim & Evidence Extraction Pipeline on top of v8.7 governed evidence and v8.8 project synchronization, producing reviewable candidate research intelligence for Platform Core without converting retrieval relevance into truth judgments.**
+Research Librarian AI is the Python-backed acquisition, document-intelligence, source-identity, indexing, retrieval, collaboration, and research-orchestration layer for Sustainable Catalyst. **v8.10.0 adds human-gated Argument, Contradiction & Synthesis Integration on top of v8.9 reviewed findings/claims/evidence, using Platform Core as the authoritative governed argument and synthesis registry.**
+
+### v8.10.0 architecture
+
+- **Declared argument planning:** reviewer-supplied Core findings, claims, evidence, roles, and relations become a deterministic pending argument plan.
+- **No relation inference:** support, contradiction, qualification, dependency, and contextual relations are preserved only when explicitly supplied.
+- **Contradiction inspection:** the Librarian can surface Core contradiction candidates for review without automatically resolving them.
+- **Governed Core graph:** approved plans create Core arguments, nodes, edges, and open tensions under `sc.research.argument-evidentiary-synthesis.v1`.
+- **Researcher-authored synthesis:** synthesis prose must be supplied by the researcher/reviewer; the Librarian does not generate a conclusion from it.
+- **Human review gate:** plans default to `pending`; Core promotion requires `approved` and an explicit reviewer identity.
+- **Durable planning:** `argument-synthesis-plan` is supported by the Postgres durable job runtime.
+
+### New v8.10.0 backend resources
+
+`GET /v1/core/argument-synthesis/capabilities`, `POST /v1/core/argument-synthesis/plan`, `GET /v1/core/argument-synthesis/contradictions/{core_project_id}`, and `POST /v1/core/argument-synthesis/promote`; generic durable jobs also accept `argument-synthesis-plan`.
 
 ### v8.9.0 architecture
 
@@ -9,12 +23,11 @@ Research Librarian AI is the Python-backed acquisition, document-intelligence, s
 - **Human review gate:** every extracted candidate defaults to `pending`; Core promotion requires explicit `approved` plus a reviewer identity.
 - **Conservative evidence semantics:** links default to `contextualizes` unless a reviewer/caller explicitly supplies supports/contradicts/qualifies or another Core relation.
 - **Governed Core registration:** approved candidates enter Core as `proposed`, preserving revision history and avoiding automatic acceptance or truth determination.
-- **Durable execution:** `research-intelligence-extraction` is available through the v8.3 Postgres durable-job runtime.
-- **Readiness repair:** normal Core readiness now includes both project-state/versioning and Finding/Claim/Evidence Intelligence capability probes.
+- **Durable execution:** `research-intelligence-extraction` is available through the Postgres durable-job runtime.
 
-### New v8.9.0 backend resources
+### v8.9.0 backend resources
 
-`GET /v1/core/research-intelligence/capabilities`, `POST /v1/core/research-intelligence/extract`, and `POST /v1/core/research-intelligence/promote`; generic durable jobs also accept `research-intelligence-extraction`.
+`GET /v1/core/research-intelligence/capabilities`, `POST /v1/core/research-intelligence/extract`, and `POST /v1/core/research-intelligence/promote`.
 
 ### v8.8.0 architecture
 
@@ -68,7 +81,7 @@ WordPress remains the canonical publishing, administration, identity, and recove
 
 ## Backend resources
 
-`/v1/core/research-intelligence/capabilities`, `/v1/core/research-intelligence/extract`, `/v1/core/research-intelligence/promote`, `/v1/core/research-sync/capabilities`, `/v1/core/research-sync/plan`, `/v1/core/research-sync/synchronize`, `/v1/core/evidence/capabilities`, `/v1/core/evidence/source-snapshots/promote`, `/v1/core/evidence/passages/promote`, `/v1/sources/capabilities`, `/v1/sources/resolve`, `/v1/sources/{canonical_source_id}`, `/v1/sources/{canonical_source_id}/graph`, `/v1/sources/{canonical_source_id}/citations`, `/v1/documents/capabilities`, `/v1/documents/parse`, `/v1/documents/parse/async`, `/v1/retrieval/plan`, `/v1/retrieve`, `/v1/retrieve/explain`, `/v1/core/architecture`, `/v1/core/readiness`, `/v1/core/bindings`, `/v1/core/research-objects/promote`, `/v1/core/research-projects/synchronize`, `/v1/core/exchange/packages`, `/v1/projects`, `/v1/investigations`, `/v1/projects/entities`, `/v1/library/object-model`, `/v1/library/objects`, `/v1/research/contexts`, `/v1/research/contexts/{context_id}/evidence-quality`, `/v1/research/sources/evaluate`, `/v1/research/evidence/compare`, `/v1/research/evidence/gaps`, `/v1/research/state/summary`, `/v1/research/activity`, `/v1/research/object-states`, `/v1/research/questions`, `/v1/research/rooms`, `/v1/research/rooms/{room_id}`, `/v1/research/rooms/{room_id}/members`, `/v1/research/rooms/{room_id}/evidence`, `/v1/research/rooms/{room_id}/questions`, `/v1/research/rooms/{room_id}/disagreements`, `/v1/research/rooms/{room_id}/activity`, `/v1/research/rooms/{room_id}/synthesis`, `/v1/federation/providers`, `/v1/federation/search`, `/v1/federation/searches`, `/v1/federation/searches/{search_id}`, `/v1/federation/searches/{search_id}/results/{result_id}/save`, `/v1/workspace/promotions/catalog`, `/v1/workspace/promotions`, `/v1/workspace/promotions/{promotion_id}`, `/v1/workspace/promotions/{promotion_id}/receipt`, `/v1/research/lifecycle/catalog`, `/v1/research/lifecycles`, `/v1/research/lifecycles/{lifecycle_id}`, `/v1/research/lifecycles/{lifecycle_id}/summary`, `/v1/research/lifecycles/{lifecycle_id}/transition`, `/v1/research/lifecycles/{lifecycle_id}/checkpoint`, `/v1/workflows/template`, `/v1/research/contradictions`, `/v1/research/uncertainties`, `/v1/projects/{project_id}/backup`, `/v1/platform/backups/import`, `/v1/platform/api`, and `/v1/platform/summary`.
+`/v1/core/argument-synthesis/capabilities`, `/v1/core/argument-synthesis/plan`, `/v1/core/argument-synthesis/contradictions/{core_project_id}`, `/v1/core/argument-synthesis/promote`, `/v1/core/research-intelligence/capabilities`, `/v1/core/research-intelligence/extract`, `/v1/core/research-intelligence/promote`, `/v1/core/research-sync/capabilities`, `/v1/core/research-sync/plan`, `/v1/core/research-sync/synchronize`, `/v1/core/evidence/capabilities`, `/v1/core/evidence/source-snapshots/promote`, `/v1/core/evidence/passages/promote`, `/v1/sources/capabilities`, `/v1/sources/resolve`, `/v1/sources/{canonical_source_id}`, `/v1/sources/{canonical_source_id}/graph`, `/v1/sources/{canonical_source_id}/citations`, `/v1/documents/capabilities`, `/v1/documents/parse`, `/v1/documents/parse/async`, `/v1/retrieval/plan`, `/v1/retrieve`, `/v1/retrieve/explain`, `/v1/core/architecture`, `/v1/core/readiness`, `/v1/core/bindings`, `/v1/core/research-objects/promote`, `/v1/core/research-projects/synchronize`, `/v1/core/exchange/packages`, `/v1/projects`, `/v1/investigations`, `/v1/projects/entities`, `/v1/library/object-model`, `/v1/library/objects`, `/v1/research/contexts`, `/v1/research/contexts/{context_id}/evidence-quality`, `/v1/research/sources/evaluate`, `/v1/research/evidence/compare`, `/v1/research/evidence/gaps`, `/v1/research/state/summary`, `/v1/research/activity`, `/v1/research/object-states`, `/v1/research/questions`, `/v1/research/rooms`, `/v1/research/rooms/{room_id}`, `/v1/research/rooms/{room_id}/members`, `/v1/research/rooms/{room_id}/evidence`, `/v1/research/rooms/{room_id}/questions`, `/v1/research/rooms/{room_id}/disagreements`, `/v1/research/rooms/{room_id}/activity`, `/v1/research/rooms/{room_id}/synthesis`, `/v1/federation/providers`, `/v1/federation/search`, `/v1/federation/searches`, `/v1/federation/searches/{search_id}`, `/v1/federation/searches/{search_id}/results/{result_id}/save`, `/v1/workspace/promotions/catalog`, `/v1/workspace/promotions`, `/v1/workspace/promotions/{promotion_id}`, `/v1/workspace/promotions/{promotion_id}/receipt`, `/v1/research/lifecycle/catalog`, `/v1/research/lifecycles`, `/v1/research/lifecycles/{lifecycle_id}`, `/v1/research/lifecycles/{lifecycle_id}/summary`, `/v1/research/lifecycles/{lifecycle_id}/transition`, `/v1/research/lifecycles/{lifecycle_id}/checkpoint`, `/v1/workflows/template`, `/v1/research/contradictions`, `/v1/research/uncertainties`, `/v1/projects/{project_id}/backup`, `/v1/platform/backups/import`, `/v1/platform/api`, and `/v1/platform/summary`.
 
 ## Runtime
 
@@ -83,4 +96,4 @@ WordPress remains the canonical publishing, administration, identity, and recove
 - WordPress 6.0+
 - No Render persistent disk is required for the durable production knowledge index
 
-See `docs/V890_FINDING_CLAIM_EVIDENCE_EXTRACTION_PIPELINE.md`, `docs/V880_CORE_RESEARCH_OBJECT_SYNCHRONIZATION.md`, `docs/V870_CORE_EVIDENCE_BRIDGE.md`, `docs/V860_SOURCE_IDENTITY_DEDUPLICATION_CITATION_GRAPH.md`, `docs/V850_DOCUMENT_INTELLIGENCE_SCHOLARLY_PARSING.md`, `docs/V840_ADVANCED_RETRIEVAL_RERANKING_ENGINE.md`, `docs/V800_UNIFIED_RESEARCH_INTELLIGENCE_LIFECYCLE.md`, `docs/V770_GLOBAL_LIBRARY_DISCOVERY_FEDERATED_RESEARCH.md`, `docs/V760_WORKSPACE_RESEARCH_HANDOFF_ARTIFACT_PROMOTION.md`, `docs/V750_COLLABORATIVE_RESEARCH_ROOM_INTELLIGENCE.md`, `docs/V740_PERSISTENT_RESEARCH_STATE_READING_HISTORY_OPEN_QUESTIONS.md`, `docs/V730_SOURCE_EVALUATION_EVIDENCE_COMPARISON_RESEARCH_QUALITY_SIGNALS.md`, and `docs/INSTALL.md`.
+See `docs/V8100_ARGUMENT_CONTRADICTION_SYNTHESIS_INTEGRATION.md`, `docs/V890_FINDING_CLAIM_EVIDENCE_EXTRACTION_PIPELINE.md`, `docs/V880_CORE_RESEARCH_OBJECT_SYNCHRONIZATION.md`, `docs/V870_CORE_EVIDENCE_BRIDGE.md`, `docs/V860_SOURCE_IDENTITY_DEDUPLICATION_CITATION_GRAPH.md`, `docs/V850_DOCUMENT_INTELLIGENCE_SCHOLARLY_PARSING.md`, `docs/V840_ADVANCED_RETRIEVAL_RERANKING_ENGINE.md`, `docs/V800_UNIFIED_RESEARCH_INTELLIGENCE_LIFECYCLE.md`, `docs/V770_GLOBAL_LIBRARY_DISCOVERY_FEDERATED_RESEARCH.md`, `docs/V760_WORKSPACE_RESEARCH_HANDOFF_ARTIFACT_PROMOTION.md`, `docs/V750_COLLABORATIVE_RESEARCH_ROOM_INTELLIGENCE.md`, `docs/V740_PERSISTENT_RESEARCH_STATE_READING_HISTORY_OPEN_QUESTIONS.md`, `docs/V730_SOURCE_EVALUATION_EVIDENCE_COMPARISON_RESEARCH_QUALITY_SIGNALS.md`, and `docs/INSTALL.md`.

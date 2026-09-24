@@ -1,3 +1,13 @@
+# 8.10.0 — Argument, Contradiction & Synthesis Integration
+
+- Added deterministic, reviewer-directed argument planning over reviewed Core findings, claims, and evidence.
+- Added explicit support/contradiction/qualification/dependency edge preservation without relation inference.
+- Added Core contradiction-candidate inspection and reviewer-declared open-tension registration.
+- Added researcher-authored synthesis promotion into Core argument synthesis objects and components.
+- Added durable `argument-synthesis-plan` jobs to the Postgres-backed v8.3 queue; promotion remains explicit and reviewed.
+- Added typed Platform Core v3.3+ argument-node, edge, synthesis, tension, bundle, and readiness client methods.
+- Preserved governance boundaries: no automatic argument generation, relation inference, contradiction resolution, ranking, best-argument selection, synthesis generation, conclusion generation, or truth determination.
+
 # 8.9.0 — Finding, Claim & Evidence Extraction Pipeline
 
 - Added deterministic passage-to-candidate extraction for reviewable findings and claims with exact evidence provenance and uncertainty cues.

@@ -37,6 +37,7 @@ JOB_TYPES = {
     "connector-run",
     "source-identity",
     "research-intelligence-extraction",
+    "argument-synthesis-plan",
 }
 TERMINAL_STATES = {"succeeded", "failed", "cancelled"}
 ACTIVE_STATES = {"queued", "retry_wait", "running"}

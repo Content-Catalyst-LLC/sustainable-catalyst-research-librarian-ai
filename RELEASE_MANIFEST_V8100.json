@@ -1,0 +1,22 @@
+{
+  "release": "8.10.0",
+  "title": "Argument, Contradiction & Synthesis Integration",
+  "backend": "Python 3.12/FastAPI",
+  "platform_core_minimum": "3.3.0",
+  "core_contract": "sc.research.argument-evidentiary-synthesis.v1",
+  "artifacts": [
+    "sustainable-catalyst-research-librarian-ai-v8.10.0-repository.zip",
+    "sustainable-catalyst-research-librarian-backend-v8.10.0.zip",
+    "sustainable-catalyst-research-librarian-ai-wordpress-v8.10.0.zip"
+  ],
+  "governance": {
+    "review_default": "pending",
+    "human_review_required": true,
+    "automatic_relation_inference": false,
+    "automatic_argument_ranking": false,
+    "automatic_contradiction_resolution": false,
+    "automatic_synthesis_generation": false,
+    "automatic_conclusion_generation": false,
+    "automatic_truth_determination": false
+  }
+}

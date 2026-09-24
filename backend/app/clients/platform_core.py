@@ -107,8 +107,8 @@ class PlatformCoreClient:
         self._configured()
         headers = {
             "Accept": "application/json",
-            "User-Agent": "SustainableCatalystResearchLibrarian/8.9.0",
-            "X-SC-Research-Librarian-Version": "8.9.0",
+            "User-Agent": "SustainableCatalystResearchLibrarian/8.10.0",
+            "X-SC-Research-Librarian-Version": "8.10.0",
         }
         if write:
             if not self.write_api_key:
@@ -230,8 +230,32 @@ class PlatformCoreClient:
     async def create_lineage_graph(self, project_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         return await self._request("POST", f"/v1/research/lineage/projects/{project_id}/graphs", payload={"data": payload}, write=True)
 
+    async def argument_readiness(self) -> dict[str, Any]:
+        return await self._request("GET", "/v1/research/arguments/readiness")
+
     async def create_argument(self, project_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         return await self._request("POST", f"/v1/research/arguments/projects/{project_id}", payload={"data": payload}, write=True)
+
+    async def add_argument_node(self, argument_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        return await self._request("POST", f"/v1/research/arguments/{argument_id}/nodes", payload={"data": payload}, write=True)
+
+    async def add_argument_edge(self, argument_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        return await self._request("POST", f"/v1/research/arguments/{argument_id}/edges", payload={"data": payload}, write=True)
+
+    async def create_argument_synthesis(self, argument_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        return await self._request("POST", f"/v1/research/arguments/{argument_id}/syntheses", payload={"data": payload}, write=True)
+
+    async def add_argument_synthesis_component(self, synthesis_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        return await self._request("POST", f"/v1/research/arguments/syntheses/{synthesis_id}/components", payload={"data": payload}, write=True)
+
+    async def add_argument_counterargument(self, argument_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        return await self._request("POST", f"/v1/research/arguments/{argument_id}/counterarguments", payload={"data": payload}, write=True)
+
+    async def add_argument_tension(self, argument_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        return await self._request("POST", f"/v1/research/arguments/{argument_id}/tensions", payload={"data": payload}, write=True)
+
+    async def argument_bundle(self, argument_id: str) -> dict[str, Any]:
+        return await self._request("GET", f"/v1/research/arguments/{argument_id}/bundle")
 
     async def create_conclusion(self, argument_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         return await self._request("POST", f"/v1/research/conclusions/arguments/{argument_id}", payload={"data": payload}, write=True)

@@ -8,6 +8,10 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 
 from ..clients.platform_core import PlatformCoreClient, PlatformCoreError
 from ..config import settings
+from ..contracts.argument_synthesis import (
+    ArgumentSynthesisPlanRequest,
+    CoreArgumentSynthesisPromotionRequest,
+)
 from ..contracts.evidence_bridge import (
     CORE_EVIDENCE_BRIDGE_SCHEMA,
     CorePassageEvidencePromotionRequest,
@@ -26,6 +30,12 @@ from ..contracts.platform_core import (
     CoreExchangePackageRequest,
     CoreResearchObjectPromotionRequest,
     CoreUnifiedProjectSyncRequest,
+)
+from ..services.argument_synthesis import (
+    build_plan as build_argument_synthesis_plan,
+    capabilities as argument_synthesis_capabilities,
+    contradiction_candidates as argument_contradiction_candidates,
+    promote_plan as promote_argument_synthesis_plan,
 )
 from ..services.core_evidence_bridge import (
     evidence_bridge_capabilities,
@@ -99,6 +109,7 @@ def architecture() -> dict[str, Any]:
             "project-state-synchronization-orchestration",
             "candidate-finding-claim-extraction",
             "human-reviewed-core-research-intelligence-promotion",
+            "reviewed-argument-synthesis-planning",
         ],
         "platform_core_owns": [
             "governed-research-objects",
@@ -115,6 +126,7 @@ def architecture() -> dict[str, Any]:
             "declared-project-lineage",
             "governed-finding-claim-evidence-registry",
             "research-intelligence-version-history",
+            "governed-argument-graphs-and-evidentiary-syntheses",
         ],
         "automatic_truth_promotion": False,
         "core_executes_arbitrary_research_code": False,
@@ -241,5 +253,34 @@ def research_intelligence_extract(payload: ResearchIntelligenceExtractionRequest
 async def research_intelligence_promote(payload: CoreResearchCandidatePromotionRequest) -> dict[str, Any]:
     try:
         return await promote_candidate(payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+
+@router.get("/argument-synthesis/capabilities", dependencies=[Depends(require_backend_key)])
+def argument_synthesis_capability_report() -> dict[str, Any]:
+    return argument_synthesis_capabilities()
+
+
+@router.post("/argument-synthesis/plan", dependencies=[Depends(require_backend_key)])
+def argument_synthesis_plan(payload: ArgumentSynthesisPlanRequest) -> dict[str, Any]:
+    try:
+        return build_argument_synthesis_plan(payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+
+@router.get("/argument-synthesis/contradictions/{core_project_id:path}", dependencies=[Depends(require_backend_key)])
+async def argument_synthesis_contradictions(core_project_id: str) -> dict[str, Any]:
+    try:
+        return await argument_contradiction_candidates(core_project_id)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+
+@router.post("/argument-synthesis/promote", dependencies=[Depends(require_backend_key)])
+async def argument_synthesis_promote(payload: CoreArgumentSynthesisPromotionRequest) -> dict[str, Any]:
+    try:
+        return await promote_argument_synthesis_plan(payload)
     except Exception as exc:
         raise _translate(exc) from exc
