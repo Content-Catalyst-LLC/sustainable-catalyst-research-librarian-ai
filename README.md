@@ -1,4 +1,4 @@
-# Sustainable Catalyst Research Librarian AI v8.10.0
+# Sustainable Catalyst Research Librarian AI v8.11.0
 
 Research Librarian AI is the Python-backed acquisition, document-intelligence, source-identity, indexing, retrieval, collaboration, and research-orchestration layer for Sustainable Catalyst. **v8.10.0 adds human-gated Argument, Contradiction & Synthesis Integration on top of v8.9 reviewed findings/claims/evidence, using Platform Core as the authoritative governed argument and synthesis registry.**
 

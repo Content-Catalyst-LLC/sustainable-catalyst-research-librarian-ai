@@ -8,6 +8,10 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 
 from ..clients.platform_core import PlatformCoreClient, PlatformCoreError
 from ..config import settings
+from ..contracts.statistical_research import (
+    StatisticalAnalysisPlanRequest, CoreStatisticalValidationPromotionRequest,
+    CoreCoefficientRequest, CoreIntervalRequest, CoreInterpretationRequest,
+)
 from ..contracts.argument_synthesis import (
     ArgumentSynthesisPlanRequest,
     CoreArgumentSynthesisPromotionRequest,
@@ -30,6 +34,12 @@ from ..contracts.platform_core import (
     CoreExchangePackageRequest,
     CoreResearchObjectPromotionRequest,
     CoreUnifiedProjectSyncRequest,
+)
+from ..services.statistical_research import (
+    capabilities as statistical_research_capabilities, build_plan as build_statistical_analysis_plan,
+    readiness as statistical_research_readiness, promote_validation as promote_statistical_validation,
+    add_coefficient as add_statistical_coefficient, add_interval as add_statistical_interval,
+    add_interpretation as add_statistical_interpretation,
 )
 from ..services.argument_synthesis import (
     build_plan as build_argument_synthesis_plan,
@@ -110,6 +120,7 @@ def architecture() -> dict[str, Any]:
             "candidate-finding-claim-extraction",
             "human-reviewed-core-research-intelligence-promotion",
             "reviewed-argument-synthesis-planning",
+            "statistical-analysis-planning-and-runtime-handoffs",
         ],
         "platform_core_owns": [
             "governed-research-objects",
@@ -127,6 +138,7 @@ def architecture() -> dict[str, Any]:
             "governed-finding-claim-evidence-registry",
             "research-intelligence-version-history",
             "governed-argument-graphs-and-evidentiary-syntheses",
+            "governed-statistical-reasoning-objects",
         ],
         "automatic_truth_promotion": False,
         "core_executes_arbitrary_research_code": False,
@@ -284,3 +296,38 @@ async def argument_synthesis_promote(payload: CoreArgumentSynthesisPromotionRequ
         return await promote_argument_synthesis_plan(payload)
     except Exception as exc:
         raise _translate(exc) from exc
+
+
+@router.get("/statistical-research/capabilities", dependencies=[Depends(require_backend_key)])
+def statistical_research_capability_report() -> dict[str, Any]:
+    return statistical_research_capabilities()
+
+@router.get("/statistical-research/readiness", dependencies=[Depends(require_backend_key)])
+async def statistical_research_core_readiness() -> dict[str, Any]:
+    try: return await statistical_research_readiness()
+    except Exception as exc: raise _translate(exc) from exc
+
+@router.post("/statistical-research/plan", dependencies=[Depends(require_backend_key)])
+def statistical_research_plan(payload: StatisticalAnalysisPlanRequest) -> dict[str, Any]:
+    try: return build_statistical_analysis_plan(payload)
+    except Exception as exc: raise _translate(exc) from exc
+
+@router.post("/statistical-research/promote-validation", dependencies=[Depends(require_backend_key)])
+async def statistical_research_promote_validation(payload: CoreStatisticalValidationPromotionRequest) -> dict[str, Any]:
+    try: return await promote_statistical_validation(payload)
+    except Exception as exc: raise _translate(exc) from exc
+
+@router.post("/statistical-research/coefficients", dependencies=[Depends(require_backend_key)])
+async def statistical_research_coefficient(payload: CoreCoefficientRequest) -> dict[str, Any]:
+    try: return await add_statistical_coefficient(payload)
+    except Exception as exc: raise _translate(exc) from exc
+
+@router.post("/statistical-research/intervals", dependencies=[Depends(require_backend_key)])
+async def statistical_research_interval(payload: CoreIntervalRequest) -> dict[str, Any]:
+    try: return await add_statistical_interval(payload)
+    except Exception as exc: raise _translate(exc) from exc
+
+@router.post("/statistical-research/interpretations", dependencies=[Depends(require_backend_key)])
+async def statistical_research_interpretation(payload: CoreInterpretationRequest) -> dict[str, Any]:
+    try: return await add_statistical_interpretation(payload)
+    except Exception as exc: raise _translate(exc) from exc

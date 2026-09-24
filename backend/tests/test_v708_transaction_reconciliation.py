@@ -86,7 +86,7 @@ def test_reconcile_api_reports_explicit_action() -> None:
     )
     assert response.status_code == 200
     body = response.json()
-    assert body["version"] == "8.10.0"
+    assert body["version"] == "8.11.0"
     assert body["reconciliation_action"] == "replay-all"
     assert body["transaction_state"] == "missing"
     assert body["expected_batch_count"] == 24

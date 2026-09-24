@@ -107,8 +107,8 @@ class PlatformCoreClient:
         self._configured()
         headers = {
             "Accept": "application/json",
-            "User-Agent": "SustainableCatalystResearchLibrarian/8.10.0",
-            "X-SC-Research-Librarian-Version": "8.10.0",
+            "User-Agent": "SustainableCatalystResearchLibrarian/8.11.0",
+            "X-SC-Research-Librarian-Version": "8.11.0",
         }
         if write:
             if not self.write_api_key:
@@ -260,8 +260,26 @@ class PlatformCoreClient:
     async def create_conclusion(self, argument_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         return await self._request("POST", f"/v1/research/conclusions/arguments/{argument_id}", payload={"data": payload}, write=True)
 
+    async def statistical_reasoning_readiness(self) -> dict[str, Any]:
+        return await self._request("GET", "/v1/analytics/statistical-reasoning/readiness")
+
+    async def ingest_statistical_validation(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return await self._request("POST", "/v1/analytics/statistical-reasoning/ingest-validation", payload={"data": payload}, write=True)
+
     async def statistical_reasoning_bundle(self, reasoning_ref: str) -> dict[str, Any]:
         return await self._request("GET", f"/v1/analytics/statistical-reasoning/{reasoning_ref}/bundle")
+
+    async def record_statistical_coefficient(self, reasoning_ref: str, payload: dict[str, Any]) -> dict[str, Any]:
+        return await self._request("POST", f"/v1/analytics/statistical-reasoning/{reasoning_ref}/coefficients", payload={"data": payload}, write=True)
+
+    async def record_statistical_interval(self, reasoning_ref: str, payload: dict[str, Any]) -> dict[str, Any]:
+        return await self._request("POST", f"/v1/analytics/statistical-reasoning/{reasoning_ref}/intervals", payload={"data": payload}, write=True)
+
+    async def record_statistical_interpretation(self, reasoning_ref: str, payload: dict[str, Any]) -> dict[str, Any]:
+        return await self._request("POST", f"/v1/analytics/statistical-reasoning/{reasoning_ref}/interpretations", payload={"data": payload}, write=True)
+
+    async def create_statistical_reasoning_snapshot(self, reasoning_ref: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        return await self._request("POST", f"/v1/analytics/statistical-reasoning/{reasoning_ref}/snapshots", payload={"data": payload or {}}, write=True)
 
     async def unified_visual_workspace_bundle(self, workspace_id: str) -> dict[str, Any]:
         return await self._request("GET", f"/v1/visual-runtime/unified/workspaces/{workspace_id}/bundle")

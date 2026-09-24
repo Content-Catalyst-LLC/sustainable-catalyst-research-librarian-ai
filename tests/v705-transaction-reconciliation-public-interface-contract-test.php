@@ -11,8 +11,8 @@ $docs = file_get_contents( $root . '/docs/V705_TRANSACTION_RECONCILIATION_PUBLIC
 $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_v705_transaction_reconciliation_public_interface_manifest.json' ), true );
 
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 8.10.0' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '8.10.0';" ),
+    'version_header' => false !== strpos( $main, 'Version: 8.11.0' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '8.11.0';" ),
     'durable_version' => false !== strpos( $module, "const VERSION = '8.0.0';" ),
     'backend_status_endpoint' => false !== strpos( $backend, '/v1/knowledge/sync/jobs/{job_id}' ),
     'backend_reset_endpoint' => false !== strpos( $backend, '@app.delete("/v1/knowledge/sync/jobs/{job_id}"' ),

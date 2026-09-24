@@ -38,6 +38,7 @@ JOB_TYPES = {
     "source-identity",
     "research-intelligence-extraction",
     "argument-synthesis-plan",
+    "statistical-analysis-plan",
 }
 TERMINAL_STATES = {"succeeded", "failed", "cancelled"}
 ACTIVE_STATES = {"queued", "retry_wait", "running"}
