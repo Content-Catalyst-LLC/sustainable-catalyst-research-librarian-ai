@@ -147,7 +147,7 @@ def test_platform_api_advertises_v730_quality_contracts() -> None:
     response = client.get("/v1/platform/api", headers=HEADERS)
     assert response.status_code == 200, response.text
     body = response.json()
-    assert body["version"] == "9.2.0"
+    assert body["version"] == "9.3.0"
     assert body["schema"] == "sc-connected-research-api/2.0"
     assert "source-evaluations" in body["resources"]
     assert "evidence-comparisons" in body["resources"]

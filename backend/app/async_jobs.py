@@ -43,6 +43,7 @@ JOB_TYPES = {
     "unified-research-runtime",
     "research-workflow-advance",
     "scholarly-research-package",
+    "peer-review-validation-package",
 }
 TERMINAL_STATES = {"succeeded", "failed", "cancelled"}
 ACTIVE_STATES = {"queued", "retry_wait", "running"}

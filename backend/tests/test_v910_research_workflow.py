@@ -65,4 +65,4 @@ def test_authenticated_api_surface():
     required={"/v1/core/research-workflows/capabilities","/v1/core/research-workflows","/v1/core/research-workflows/{workflow_id}","/v1/core/research-workflows/{workflow_id}/control","/v1/core/research-workflows/{workflow_id}/approvals","/v1/core/research-workflows/{workflow_id}/advance","/v1/core/research-workflows/{workflow_id}/events","/v1/core/research-workflows/{workflow_id}/checkpoints"}
     assert not(required-paths)
     body=TestClient(app).get("/v1/core/research-workflows/capabilities",headers={"X-SC-RL-Key":"test-key"}).json()
-    assert body["release"]=="9.2.0" and body["durable"] is True and body["automatic_core_writes"] is False
+    assert body["release"]=="9.3.0" and body["durable"] is True and body["automatic_core_writes"] is False

@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 9.2.0
+Stable tag: 9.3.0
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
@@ -15,7 +15,7 @@ Research Librarian AI retrieves Sustainable Catalyst publications and documents 
 v8.0.0 unifies Library context, federated discovery, evidence evaluation, persistent research state, Research Rooms, synthesis, Workspace promotion, and preservation through an inspectable eight-stage research lifecycle. Readiness is descriptive; every lifecycle stage transition remains an explicit human action.
 
 
-v9.2.0 adds the Original Research & Scholarly Research Environment. Research projects can now maintain durable studies with frozen protocols, explicit post-freeze deviations, provenance-rich results, human-authored interpretations and manuscript sections, publication-readiness checks, immutable revisions, and frozen reproducibility packages. The environment does not create authorship, certify peer review, accept claims, interpret significance, or promote truth automatically.
+v9.3.0 adds the Original Research & Scholarly Research Environment. Research projects can now maintain durable studies with frozen protocols, explicit post-freeze deviations, provenance-rich results, human-authored interpretations and manuscript sections, publication-readiness checks, immutable revisions, and frozen reproducibility packages. The environment does not create authorship, certify peer review, accept claims, interpret significance, or promote truth automatically.
 
 v8.12.0 adds Visual Research Intelligence. Reviewed sources, citations, evidence, findings, claims, arguments, statistical reasoning objects, provenance, and timelines can be assembled into renderer-neutral visual research plans and explicitly promoted into Platform Core visual reasoning objects after human review. The Librarian does not render, infer graph edges, compute layout, or promote visual form to truth.
 
@@ -46,7 +46,7 @@ v8.7.0 adds the Core Evidence Bridge. Hydrated canonical Librarian sources can b
 
 == Changelog ==
 
-= 9.2.0 =
+= 9.3.0 =
 * Added durable Original Research & Scholarly Research study registry.
 * Added protocol freeze with immutable hashes and explicit post-freeze deviations.
 * Added provenance-rich result registration tied to evidence, specialist runtimes, statistical reasoning, and visuals.

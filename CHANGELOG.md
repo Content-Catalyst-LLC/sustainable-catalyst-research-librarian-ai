@@ -1,3 +1,12 @@
+# Changelog
+
+## 9.3.0 — Peer Review, Replication & Scholarly Validation Environment
+- Adds durable structured peer-review rounds and reviewer assignments with conflict declarations.
+- Adds human-authored review reports, author responses, revision submissions, and immutable review events.
+- Adds explicit replication-attempt registration with runtime/artifact/result/evidence provenance.
+- Adds human editorial decisions, validation-readiness checks, and frozen peer-review/replication packages.
+- Preserves v9.2 study/protocol/result lineage without automated acceptance, validity certification, replication judgment, or truth promotion.
+
 # v9.2.0 — Original Research & Scholarly Research Environment
 
 - Added durable original/scholarly study registry with Postgres production storage and SQLite local fallback.

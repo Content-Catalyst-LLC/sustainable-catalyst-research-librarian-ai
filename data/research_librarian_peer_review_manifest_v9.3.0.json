@@ -1,0 +1,25 @@
+{
+  "schema": "sc-research-librarian-peer-review-replication-validation/1.0",
+  "release": "9.3.0",
+  "title": "Peer Review, Replication & Scholarly Validation Environment",
+  "storage": ["postgres", "sqlite-local-fallback"],
+  "capabilities": [
+    "structured-review-rounds",
+    "reviewer-assignments-and-conflict-declarations",
+    "human-authored-peer-review-reports",
+    "author-response-lineage",
+    "revision-submission-lineage",
+    "replication-attempt-registry",
+    "explicit-editorial-decisions",
+    "validation-readiness-checks",
+    "immutable-review-events",
+    "frozen-peer-review-validation-packages"
+  ],
+  "boundaries": {
+    "automatic_acceptance": false,
+    "automatic_rejection": false,
+    "automatic_replication_judgment": false,
+    "machine_peer_review_certification": false,
+    "automatic_truth_promotion": false
+  }
+}

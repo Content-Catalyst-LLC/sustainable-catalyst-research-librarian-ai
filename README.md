@@ -1,8 +1,8 @@
-# Sustainable Catalyst Research Librarian AI v9.2.0
+# Sustainable Catalyst Research Librarian AI v9.3.0
 
-Research Librarian AI v9.2.0 adds the **Original Research & Scholarly Research Environment** on top of the v9.1 durable workflow engine. It provides durable scholarly study records, frozen protocols, explicit post-freeze deviations, result provenance, human-authored interpretations and manuscript sections, publication-readiness checks, immutable study revisions, and frozen reproducibility packages without automatic authorship or truth promotion.
+Research Librarian AI v9.3.0 adds the **Original Research & Scholarly Research Environment** on top of the v9.1 durable workflow engine. It provides durable scholarly study records, frozen protocols, explicit post-freeze deviations, result provenance, human-authored interpretations and manuscript sections, publication-readiness checks, immutable study revisions, and frozen reproducibility packages without automatic authorship or truth promotion.
 
-### v9.2.0 scholarly research environment
+### v9.3.0 scholarly research environment
 
 - Durable Postgres/SQLite scholarly study registry
 - Protocol freeze with immutable protocol hash
@@ -132,3 +132,6 @@ WordPress remains the canonical publishing, administration, identity, and recove
 - No Render persistent disk is required for the durable production knowledge index
 
 See `docs/V8100_ARGUMENT_CONTRADICTION_SYNTHESIS_INTEGRATION.md`, `docs/V890_FINDING_CLAIM_EVIDENCE_EXTRACTION_PIPELINE.md`, `docs/V880_CORE_RESEARCH_OBJECT_SYNCHRONIZATION.md`, `docs/V870_CORE_EVIDENCE_BRIDGE.md`, `docs/V860_SOURCE_IDENTITY_DEDUPLICATION_CITATION_GRAPH.md`, `docs/V850_DOCUMENT_INTELLIGENCE_SCHOLARLY_PARSING.md`, `docs/V840_ADVANCED_RETRIEVAL_RERANKING_ENGINE.md`, `docs/V800_UNIFIED_RESEARCH_INTELLIGENCE_LIFECYCLE.md`, `docs/V770_GLOBAL_LIBRARY_DISCOVERY_FEDERATED_RESEARCH.md`, `docs/V760_WORKSPACE_RESEARCH_HANDOFF_ARTIFACT_PROMOTION.md`, `docs/V750_COLLABORATIVE_RESEARCH_ROOM_INTELLIGENCE.md`, `docs/V740_PERSISTENT_RESEARCH_STATE_READING_HISTORY_OPEN_QUESTIONS.md`, `docs/V730_SOURCE_EVALUATION_EVIDENCE_COMPARISON_RESEARCH_QUALITY_SIGNALS.md`, and `docs/INSTALL.md`.
+
+## v9.3.0 Peer Review, Replication & Scholarly Validation Environment
+The v9.3 layer preserves human peer-review and replication records as durable scholarly lineage: review rounds, assignments/conflict declarations, structured review reports, author responses, revisions, replication attempts, editorial decisions, readiness checks, audit events, and frozen validation packages. The environment records human judgments but does not certify validity, infer replication success, accept/reject studies automatically, or promote truth.

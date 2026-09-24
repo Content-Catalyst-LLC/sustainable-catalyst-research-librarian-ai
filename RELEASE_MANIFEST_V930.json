@@ -1,0 +1,24 @@
+{
+  "schema": "sc-research-librarian-release-manifest/9.3.0",
+  "release": "9.3.0",
+  "title": "Peer Review, Replication & Scholarly Validation Environment",
+  "peer_review_schema": "sc-research-librarian-peer-review-replication-validation/1.0",
+  "features": [
+    "durable-peer-review-registry",
+    "review-rounds-and-reviewer-assignments",
+    "conflict-declarations",
+    "structured-review-reports",
+    "author-response-and-revision-lineage",
+    "replication-attempts-with-provenance",
+    "human-editorial-decisions",
+    "validation-readiness-checks",
+    "immutable-review-events",
+    "frozen-peer-review-replication-packages",
+    "v9.2-study-lineage-binding"
+  ],
+  "automatic_acceptance": false,
+  "automatic_rejection": false,
+  "automatic_replication_judgment": false,
+  "machine_peer_review_certification": false,
+  "automatic_truth_promotion": false
+}

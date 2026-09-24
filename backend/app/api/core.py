@@ -20,6 +20,11 @@ from ..contracts.scholarly_research import (
     ScholarlyResultRequest, ScholarlyInterpretationRequest, ScholarlyManuscriptSectionRequest,
     ScholarlyReviewRequest, ScholarlyPackageFreezeRequest,
 )
+from ..contracts.peer_review import (
+    ReviewRoundCreateRequest, ReviewerAssignmentRequest, StructuredPeerReviewRequest,
+    AuthorResponseRequest, RevisionSubmissionRequest, ReplicationAttemptRequest,
+    EditorialDecisionRequest, PeerReviewPackageFreezeRequest,
+)
 from ..contracts.visual_research import (
     VisualResearchPlanRequest, CoreVisualResearchPromotionRequest,
 )
@@ -58,6 +63,9 @@ from ..services.research_workflow import (
 )
 from ..services.scholarly_research import (
     get_scholarly_research_store, capabilities as scholarly_research_capabilities,
+)
+from ..services.peer_review import (
+    get_peer_review_store, capabilities as peer_review_capabilities,
 )
 from ..services.visual_research import (
     capabilities as visual_research_capabilities, build_plan as build_visual_research_plan,
@@ -152,6 +160,7 @@ def architecture() -> dict[str, Any]:
             "visual-research-intelligence-planning-and-core-orchestration",
             "unified-research-intelligence-runtime-orchestration",
             "original-scholarly-research-environment",
+            "human-peer-review-replication-and-scholarly-validation-registry",
         ],
         "platform_core_owns": [
             "governed-research-objects",
@@ -573,3 +582,93 @@ def scholarly_research_packages(study_id: str, limit: int = 100) -> dict[str, An
     except Exception as exc:
         raise _translate(exc) from exc
 
+
+
+@router.get("/scholarly-validation/capabilities", dependencies=[Depends(require_backend_key)])
+def scholarly_validation_capabilities() -> dict[str, Any]:
+    return peer_review_capabilities()
+
+@router.get("/scholarly-validation/studies/{study_id}", dependencies=[Depends(require_backend_key)])
+def scholarly_validation_get(study_id: str) -> dict[str, Any]:
+    try:
+        return get_peer_review_store().get(study_id)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/scholarly-validation/studies/{study_id}/rounds", dependencies=[Depends(require_backend_key)])
+def scholarly_validation_round(study_id: str, payload: ReviewRoundCreateRequest) -> dict[str, Any]:
+    try:
+        item, replayed = get_peer_review_store().create_round(study_id, payload)
+        return {"round": item, "idempotent_replay": replayed}
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/scholarly-validation/studies/{study_id}/rounds/{round_id}/assignments", dependencies=[Depends(require_backend_key)])
+def scholarly_validation_assignment(study_id: str, round_id: str, payload: ReviewerAssignmentRequest) -> dict[str, Any]:
+    try:
+        return get_peer_review_store().assign_reviewer(study_id, round_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/scholarly-validation/studies/{study_id}/rounds/{round_id}/reviews", dependencies=[Depends(require_backend_key)])
+def scholarly_validation_review(study_id: str, round_id: str, payload: StructuredPeerReviewRequest) -> dict[str, Any]:
+    try:
+        return get_peer_review_store().submit_review(study_id, round_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/scholarly-validation/studies/{study_id}/responses", dependencies=[Depends(require_backend_key)])
+def scholarly_validation_response(study_id: str, payload: AuthorResponseRequest) -> dict[str, Any]:
+    try:
+        return get_peer_review_store().add_response(study_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/scholarly-validation/studies/{study_id}/revisions", dependencies=[Depends(require_backend_key)])
+def scholarly_validation_revision(study_id: str, payload: RevisionSubmissionRequest) -> dict[str, Any]:
+    try:
+        return get_peer_review_store().add_revision(study_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/scholarly-validation/studies/{study_id}/replications", dependencies=[Depends(require_backend_key)])
+def scholarly_validation_replication(study_id: str, payload: ReplicationAttemptRequest) -> dict[str, Any]:
+    try:
+        return get_peer_review_store().add_replication(study_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/scholarly-validation/studies/{study_id}/editorial-decisions", dependencies=[Depends(require_backend_key)])
+def scholarly_validation_decision(study_id: str, payload: EditorialDecisionRequest) -> dict[str, Any]:
+    try:
+        return get_peer_review_store().add_decision(study_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/scholarly-validation/studies/{study_id}/readiness", dependencies=[Depends(require_backend_key)])
+def scholarly_validation_readiness(study_id: str) -> dict[str, Any]:
+    try:
+        return get_peer_review_store().readiness(study_id)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/scholarly-validation/studies/{study_id}/packages/freeze", dependencies=[Depends(require_backend_key)])
+def scholarly_validation_package_freeze(study_id: str, payload: PeerReviewPackageFreezeRequest) -> dict[str, Any]:
+    try:
+        return get_peer_review_store().freeze_package(study_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/scholarly-validation/studies/{study_id}/events", dependencies=[Depends(require_backend_key)])
+def scholarly_validation_events(study_id: str, limit: int = 500) -> dict[str, Any]:
+    try:
+        return {"events": get_peer_review_store().events(study_id, limit)}
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/scholarly-validation/studies/{study_id}/packages", dependencies=[Depends(require_backend_key)])
+def scholarly_validation_packages(study_id: str, limit: int = 100) -> dict[str, Any]:
+    try:
+        return {"packages": get_peer_review_store().packages(study_id, limit)}
+    except Exception as exc:
+        raise _translate(exc) from exc

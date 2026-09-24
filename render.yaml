@@ -63,7 +63,7 @@ services:
       - key: SC_RL_ACTIVATION_SNAPSHOT_RECORD_LIMIT
         value: "500"
       - key: SC_RL_RELEASE_VERSION
-        value: "9.2.0"
+        value: "9.3.0"
       - key: SC_RL_CORE_ENABLED
         value: "false"
       - key: SC_RL_CORE_BASE_URL
