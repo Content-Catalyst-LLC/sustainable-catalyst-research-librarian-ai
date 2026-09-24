@@ -11,6 +11,10 @@ from ..config import settings
 from ..contracts.unified_research_runtime import (
     UnifiedResearchRuntimePlanRequest, UnifiedResearchRuntimeExecutionRequest,
 )
+from ..contracts.research_workflow import (
+    ResearchWorkflowCreateRequest, ResearchWorkflowControlRequest,
+    ResearchWorkflowApprovalRequest, ResearchWorkflowAdvanceRequest,
+)
 from ..contracts.visual_research import (
     VisualResearchPlanRequest, CoreVisualResearchPromotionRequest,
 )
@@ -43,6 +47,9 @@ from ..contracts.platform_core import (
 )
 from ..services.unified_research_runtime import (
     capabilities as unified_research_capabilities, build_runtime_plan, readiness as unified_research_readiness, execute_safe_runtime,
+)
+from ..services.research_workflow import (
+    get_research_workflow_store, capabilities as research_workflow_capabilities,
 )
 from ..services.visual_research import (
     capabilities as visual_research_capabilities, build_plan as build_visual_research_plan,
@@ -397,3 +404,65 @@ def unified_research_execute(payload: UnifiedResearchRuntimeExecutionRequest) ->
     except Exception as exc:
         raise _translate(exc) from exc
 
+
+
+@router.get("/research-workflows/capabilities", dependencies=[Depends(require_backend_key)])
+def research_workflow_capability_report() -> dict[str, Any]:
+    return research_workflow_capabilities()
+
+@router.post("/research-workflows", dependencies=[Depends(require_backend_key)])
+def research_workflow_create(payload: ResearchWorkflowCreateRequest) -> dict[str, Any]:
+    try:
+        workflow, replayed = get_research_workflow_store().create(payload)
+        return {"workflow": workflow, "idempotent_replay": replayed}
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/research-workflows", dependencies=[Depends(require_backend_key)])
+def research_workflow_list(state: str = "", limit: int = 100) -> dict[str, Any]:
+    try:
+        return {"workflows": get_research_workflow_store().list(state=state, limit=limit)}
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/research-workflows/{workflow_id}", dependencies=[Depends(require_backend_key)])
+def research_workflow_get(workflow_id: str) -> dict[str, Any]:
+    try:
+        return get_research_workflow_store().get(workflow_id)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/research-workflows/{workflow_id}/control", dependencies=[Depends(require_backend_key)])
+def research_workflow_control(workflow_id: str, payload: ResearchWorkflowControlRequest) -> dict[str, Any]:
+    try:
+        return get_research_workflow_store().control(workflow_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/research-workflows/{workflow_id}/approvals", dependencies=[Depends(require_backend_key)])
+def research_workflow_approve(workflow_id: str, payload: ResearchWorkflowApprovalRequest) -> dict[str, Any]:
+    try:
+        return get_research_workflow_store().approve(workflow_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/research-workflows/{workflow_id}/advance", dependencies=[Depends(require_backend_key)])
+def research_workflow_advance(workflow_id: str, payload: ResearchWorkflowAdvanceRequest) -> dict[str, Any]:
+    try:
+        return get_research_workflow_store().advance(workflow_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/research-workflows/{workflow_id}/events", dependencies=[Depends(require_backend_key)])
+def research_workflow_events(workflow_id: str, limit: int = 200) -> dict[str, Any]:
+    try:
+        return {"events": get_research_workflow_store().events(workflow_id, limit)}
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/research-workflows/{workflow_id}/checkpoints", dependencies=[Depends(require_backend_key)])
+def research_workflow_checkpoints(workflow_id: str, limit: int = 100) -> dict[str, Any]:
+    try:
+        return {"checkpoints": get_research_workflow_store().checkpoints(workflow_id, limit)}
+    except Exception as exc:
+        raise _translate(exc) from exc

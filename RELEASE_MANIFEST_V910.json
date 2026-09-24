@@ -1,0 +1,18 @@
+{
+  "schema": "sc-research-librarian-release-manifest/9.1.0",
+  "release": "9.1.0",
+  "title": "Research Automation & Durable Workflow Engine",
+  "workflow_schema": "sc-research-librarian-research-workflow/1.0",
+  "features": [
+    "durable-workflows",
+    "dependency-aware-scheduling",
+    "idempotent-stage-jobs",
+    "pause-resume-cancel",
+    "retry-failed",
+    "human-approvals",
+    "audit-events",
+    "workflow-checkpoints"
+  ],
+  "automatic_core_writes": false,
+  "automatic_truth_promotion": false
+}

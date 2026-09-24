@@ -7,9 +7,9 @@ $service = file_get_contents($root . '/backend/app/services/core_evidence_bridge
 $contracts = file_get_contents($root . '/backend/app/contracts/evidence_bridge.py');
 $manifest = json_decode(file_get_contents($root . '/data/research_librarian_core_evidence_bridge_manifest_v8.7.0.json'), true);
 $checks = [
-  'version_header' => false !== strpos($main, 'Version: 9.0.0'),
-  'version_constant' => false !== strpos($main, "const VERSION        = '9.0.0';"),
-  'backend_version' => false !== strpos(file_get_contents($root . '/backend/app/__init__.py'), '__version__ = "9.0.0"'),
+  'version_header' => false !== strpos($main, 'Version: 9.1.0'),
+  'version_constant' => false !== strpos($main, "const VERSION        = '9.1.0';"),
+  'backend_version' => false !== strpos(file_get_contents($root . '/backend/app/__init__.py'), '__version__ = "9.1.0"'),
   'bridge_schema' => false !== strpos($contracts, 'sc-research-librarian-core-evidence-bridge/1.0'),
   'core_snapshot_client' => false !== strpos($client, '/v1/source-snapshots'),
   'core_evidence_client' => false !== strpos($client, '/v1/evidence-records'),

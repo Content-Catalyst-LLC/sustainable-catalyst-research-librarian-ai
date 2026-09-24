@@ -1,12 +1,13 @@
-# Sustainable Catalyst Research Librarian AI v9.0.0
+# Sustainable Catalyst Research Librarian AI v9.1.0
 
-Research Librarian AI is the Python-backed acquisition, document-intelligence, source-identity, indexing, retrieval, collaboration, and research-orchestration layer for Sustainable Catalyst. **v9.0.0 adds the Unified Research Intelligence Runtime: a governed 12-stage research lifecycle that composes the v8.x subsystems into one deterministic, durable and reproducible research-run contract without bypassing human review or Platform Core authority.**
+Research Librarian AI v9.1.0 adds the **Research Automation & Durable Workflow Engine** on top of the v9.0 Unified Research Intelligence Runtime: persistent stage state, dependency-aware scheduling, durable job bindings, explicit approvals, pause/resume/cancel, retries, audit events, and reproducible checkpoints without automatic Platform Core writes.
+Research Librarian AI is the Python-backed acquisition, document-intelligence, source-identity, indexing, retrieval, collaboration, and research-orchestration layer for Sustainable Catalyst. **v9.1.0 adds the Unified Research Intelligence Runtime: a governed 12-stage research lifecycle that composes the v8.x subsystems into one deterministic, durable and reproducible research-run contract without bypassing human review or Platform Core authority.**
 
-### v9.0.0 architecture
+### v9.1.0 architecture
 
 The unified runtime coordinates discovery, ingestion, scholarly parsing, canonical source identity, retrieval, evidence governance, findings/claims, argument/contradiction work, statistical planning, visual research, project-state synchronization, and reproducibility. The runtime can execute safe local planning/extraction stages and emit one content-addressed run manifest; promoted research objects still require the existing explicit Core promotion/synchronization endpoints and their human-review gates.
 
-### New v9.0.0 backend resources
+### New v9.1.0 backend resources
 
 - `GET /v1/core/unified-research/capabilities`
 - `GET /v1/core/unified-research/readiness`

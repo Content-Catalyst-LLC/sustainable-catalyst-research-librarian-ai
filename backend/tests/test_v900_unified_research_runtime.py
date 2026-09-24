@@ -37,7 +37,7 @@ def _plan_request() -> UnifiedResearchRuntimePlanRequest:
 def test_unified_plan_has_ordered_stage_graph_and_governance_boundaries():
     out = build_runtime_plan(_plan_request())
     assert out["schema"] == UNIFIED_RESEARCH_RUNTIME_SCHEMA
-    assert out["release"] == "9.0.0"
+    assert out["release"] == "9.1.0"
     plan = out["plan"]
     assert plan["stage_order"][0] == "discovery"
     assert plan["stage_order"][-1] == "reproducibility"
@@ -75,7 +75,7 @@ def test_safe_execution_builds_retrieval_and_candidate_plan_without_core_writes(
         execute_stages=["retrieval","research-intelligence"],
     )
     out = execute_safe_runtime(req)
-    assert out["release"] == "9.0.0"
+    assert out["release"] == "9.1.0"
     assert out["stage_results"]["retrieval"]["status"] == "completed"
     assert out["stage_results"]["research-intelligence"]["status"] == "completed"
     candidates = out["stage_results"]["research-intelligence"]["result"]["candidates"]
@@ -134,6 +134,6 @@ def test_async_runtime_and_authenticated_api_surface():
     response=TestClient(app).get("/v1/core/unified-research/capabilities",headers={"X-SC-RL-Key":"test-key"})
     assert response.status_code == 200
     body=response.json()
-    assert body["release"] == "9.0.0"
+    assert body["release"] == "9.1.0"
     assert body["durable_async_runtime"] is True
     assert body["automatic_core_writes"] is False

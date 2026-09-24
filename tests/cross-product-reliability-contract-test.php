@@ -16,11 +16,11 @@ $roadmap = file_get_contents( $root . '/docs/ROADMAP.md' );
 $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_cross_product_reliability_manifest_v6.6.1.json' ), true );
 
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 9.0.0' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '9.0.0';" ),
+    'version_header' => false !== strpos( $main, 'Version: 9.1.0' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '9.1.0';" ),
     'bridge_version' => false !== strpos( $bridge, "const VERSION = '8.0.0';" ),
     'durable_version' => false !== strpos( $module, "const VERSION = '8.0.0';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "9.0.0"' ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "9.1.0"' ),
     'schema_eight' => false !== strpos( $store, 'SCHEMA_VERSION = 19' ),
     'index_schema_eight' => false !== strpos( $store, 'sc-research-librarian-knowledge-index/13.0' ),
     'capabilities_11' => false !== strpos( $handoffs, 'sc-platform-capabilities/1.1' ),
@@ -96,7 +96,7 @@ $checks = array(
     'js_refresh_control' => false !== strpos( $js, 'data-sc-rl-refresh-handoff-token' ) && false !== strpos( $js, 'refreshTypedHandoffToken' ),
     'js_prepare_idempotency' => false !== strpos( $js, "idempotency_key: 'prepare-'" ),
     'js_compatibility_state' => false !== strpos( $js, 'compatibility.state' ),
-    'render_version' => false !== strpos( $render, '9.0.0' ),
+    'render_version' => false !== strpos( $render, '9.1.0' ),
     'release_docs' => false !== strpos( $docs, 'Cross-Product Reliability Patch' ),
     'roadmap_complete' => false !== strpos( $roadmap, 'v6.6.1 — Cross-Product Reliability Patch — Complete' ),
     'manifest_version' => is_array( $manifest ) && '6.6.1' === ( $manifest['version'] ?? '' ),

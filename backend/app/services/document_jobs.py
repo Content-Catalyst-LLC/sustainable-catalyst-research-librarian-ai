@@ -21,6 +21,8 @@ from .argument_synthesis import build_plan as build_argument_synthesis_plan
 from .statistical_research import build_plan as build_statistical_analysis_plan
 from .visual_research import build_plan as build_visual_research_plan
 from .unified_research_runtime import execute_safe_runtime
+from .research_workflow import get_research_workflow_store
+from ..contracts.research_workflow import ResearchWorkflowAdvanceRequest
 
 Progress = Callable[[str, int], None]
 
@@ -253,6 +255,18 @@ async def process_unified_research_runtime_job(claim: JobClaim, progress: Progre
     return result
 
 
+async def process_research_workflow_advance_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
+    progress("load-workflow-checkpoint", 20)
+    workflow_id = str(claim.payload.get("workflow_id") or "").strip()
+    if not workflow_id:
+        raise ValueError("workflow_id is required")
+    request = ResearchWorkflowAdvanceRequest.model_validate(claim.payload.get("advance") or {})
+    progress("reconcile-stage-jobs", 55)
+    result = get_research_workflow_store().advance(workflow_id, request)
+    progress("workflow-checkpoint-ready", 95)
+    return result
+
+
 async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
     if claim.job_type in {"document-process", "ingestion"}:
         return await process_document_job(claim, progress)
@@ -272,6 +286,8 @@ async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
         return await process_visual_research_plan_job(claim, progress)
     if claim.job_type == "unified-research-runtime":
         return await process_unified_research_runtime_job(claim, progress)
+    if claim.job_type == "research-workflow-advance":
+        return await process_research_workflow_advance_job(claim, progress)
     raise ValueError(
         f"Job type {claim.job_type!r} is registered for the durable queue but has no v8.3 executor yet; "
         "use document-process, document-intelligence, source-identity, research-intelligence-extraction, argument-synthesis-plan, statistical-analysis-plan, visual-research-plan, unified-research-runtime, ingestion, or validation."

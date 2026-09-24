@@ -11,10 +11,10 @@ $roadmap = file_get_contents( $root . '/docs/ROADMAP.md' );
 $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_accessibility_performance_manifest_v6.5.1.json' ), true );
 
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 9.0.0' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '9.0.0';" ),
+    'version_header' => false !== strpos( $main, 'Version: 9.1.0' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '9.1.0';" ),
     'module_version' => false !== strpos( $module, "const VERSION = '8.0.0';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "9.0.0"' ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "9.1.0"' ),
     'workspace_schema_markup' => false !== strpos( $main, 'data-workspace-version="2.1"' ),
     'workspace_schema_backend' => false !== strpos( $backend, 'sc-research-librarian-public-workspace/3.0' ),
     'workspace_accessibility_profile' => false !== strpos( $backend, 'wcag-focused-v6.5.1' ),
