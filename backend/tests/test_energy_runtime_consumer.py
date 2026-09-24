@@ -6,7 +6,7 @@ def packet():
     return {"schema":"sc-energy-runtime-handoff/1.0","version":"1.2.0","packet":{"handoff_id":"es-test","source":{"product":"Library","subsystem":"Energy Systems Intelligence","version":"1.2.0"},"target":{"key":TARGET_KEY,"product":'Research Librarian',"consumer_contract":CONSUMER_CONTRACT},"contract_refs":["integrated-energy-study-contract"],"payload":payload}}
 
 def test_framework_contract():
-    x=framework(); assert x["ok"] is True; assert x["target_key"]=='research-librarian'; assert x["consumer_version"]=='9.1.0'; assert x["capabilities"]["automatic_execution"] is False; assert x["capabilities"]["persistence"] is False
+    x=framework(); assert x["ok"] is True; assert x["target_key"]=='research-librarian'; assert x["consumer_version"]=='9.2.0'; assert x["capabilities"]["automatic_execution"] is False; assert x["capabilities"]["persistence"] is False
 
 def test_consume_builds_ephemeral_receipt():
     x=consume(packet()); assert x["accepted"] is True; assert x["execution"]["performed"] is False; assert x["persistence"]["performed"] is False; assert len(x["receipt_fingerprint"])==64

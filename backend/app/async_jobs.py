@@ -42,6 +42,7 @@ JOB_TYPES = {
     "visual-research-plan",
     "unified-research-runtime",
     "research-workflow-advance",
+    "scholarly-research-package",
 }
 TERMINAL_STATES = {"succeeded", "failed", "cancelled"}
 ACTIVE_STATES = {"queued", "retry_wait", "running"}

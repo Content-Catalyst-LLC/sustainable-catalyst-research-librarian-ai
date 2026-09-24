@@ -23,6 +23,8 @@ from .visual_research import build_plan as build_visual_research_plan
 from .unified_research_runtime import execute_safe_runtime
 from .research_workflow import get_research_workflow_store
 from ..contracts.research_workflow import ResearchWorkflowAdvanceRequest
+from ..contracts.scholarly_research import ScholarlyPackageFreezeRequest
+from .scholarly_research import get_scholarly_research_store
 
 Progress = Callable[[str, int], None]
 
@@ -267,6 +269,21 @@ async def process_research_workflow_advance_job(claim: JobClaim, progress: Progr
     return result
 
 
+async def process_scholarly_research_package_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
+    progress("load-scholarly-study", 20)
+    study_id = str(claim.payload.get("study_id") or "").strip()
+    if not study_id:
+        raise ValueError("study_id is required")
+    request = ScholarlyPackageFreezeRequest.model_validate(claim.payload.get("freeze") or {})
+    progress("evaluate-publication-readiness", 50)
+    store = get_scholarly_research_store()
+    store.readiness(study_id)
+    progress("freeze-reproducibility-package", 80)
+    result = store.freeze_package(study_id, request)
+    progress("scholarly-package-ready", 95)
+    return result
+
+
 async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
     if claim.job_type in {"document-process", "ingestion"}:
         return await process_document_job(claim, progress)
@@ -288,7 +305,9 @@ async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
         return await process_unified_research_runtime_job(claim, progress)
     if claim.job_type == "research-workflow-advance":
         return await process_research_workflow_advance_job(claim, progress)
+    if claim.job_type == "scholarly-research-package":
+        return await process_scholarly_research_package_job(claim, progress)
     raise ValueError(
         f"Job type {claim.job_type!r} is registered for the durable queue but has no v8.3 executor yet; "
-        "use document-process, document-intelligence, source-identity, research-intelligence-extraction, argument-synthesis-plan, statistical-analysis-plan, visual-research-plan, unified-research-runtime, ingestion, or validation."
+        "use document-process, document-intelligence, source-identity, research-intelligence-extraction, argument-synthesis-plan, statistical-analysis-plan, visual-research-plan, unified-research-runtime, research-workflow-advance, scholarly-research-package, ingestion, or validation."
     )

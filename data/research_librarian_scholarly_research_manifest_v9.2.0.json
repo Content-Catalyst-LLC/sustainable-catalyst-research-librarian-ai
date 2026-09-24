@@ -1,0 +1,26 @@
+{
+  "schema": "sc-research-librarian-original-scholarly-research/1.0",
+  "release": "9.2.0",
+  "title": "Original Research & Scholarly Research Environment",
+  "storage": ["postgres", "sqlite-local-fallback"],
+  "capabilities": [
+    "durable-study-registry",
+    "immutable-revision-history",
+    "protocol-freeze",
+    "explicit-protocol-deviations",
+    "result-provenance-registry",
+    "human-authored-interpretations",
+    "human-authored-manuscript-sections",
+    "publication-readiness-gate",
+    "frozen-reproducibility-packages",
+    "workflow-binding",
+    "platform-core-lineage-refs"
+  ],
+  "boundaries": {
+    "automatic_authorship": false,
+    "automatic_truth_promotion": false,
+    "automatic_claim_acceptance": false,
+    "automatic_statistical_interpretation": false,
+    "package_is_peer_review": false
+  }
+}

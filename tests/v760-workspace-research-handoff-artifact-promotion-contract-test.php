@@ -18,9 +18,9 @@ $v750 = json_decode( file_get_contents( $root . '/data/research_librarian_collab
 $migrations = glob( $root . '/backend/migrations/*.sql' );
 
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 9.1.0' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '9.1.0';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "9.1.0"' ),
+    'version_header' => false !== strpos( $main, 'Version: 9.2.0' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '9.2.0';" ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "9.2.0"' ),
     'module_version' => false !== strpos( $module, "const VERSION = '8.0.0';" ),
     'api_15' => false !== strpos( $platform, 'sc-connected-research-api/2.0' ),
     'workspace_25' => false !== strpos( $module, 'sc-research-librarian-public-workspace/3.0' ),

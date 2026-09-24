@@ -1,0 +1,25 @@
+{
+  "schema": "sc-research-librarian-release-manifest/9.2.0",
+  "release": "9.2.0",
+  "title": "Original Research & Scholarly Research Environment",
+  "scholarly_research_schema": "sc-research-librarian-original-scholarly-research/1.0",
+  "features": [
+    "durable-scholarly-study-registry",
+    "immutable-study-revisions",
+    "protocol-freeze",
+    "explicit-post-freeze-deviations",
+    "provenance-rich-result-registry",
+    "human-authored-interpretations",
+    "human-authored-manuscript-sections",
+    "publication-readiness-gate",
+    "frozen-scholarly-reproducibility-packages",
+    "v9.1-workflow-binding",
+    "platform-core-lineage-references"
+  ],
+  "automatic_authorship": false,
+  "automatic_core_writes": false,
+  "automatic_claim_acceptance": false,
+  "automatic_statistical_interpretation": false,
+  "automatic_truth_promotion": false,
+  "package_is_peer_review": false
+}

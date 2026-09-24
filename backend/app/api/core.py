@@ -15,6 +15,11 @@ from ..contracts.research_workflow import (
     ResearchWorkflowCreateRequest, ResearchWorkflowControlRequest,
     ResearchWorkflowApprovalRequest, ResearchWorkflowAdvanceRequest,
 )
+from ..contracts.scholarly_research import (
+    ScholarlyStudyCreateRequest, ScholarlyProtocolFreezeRequest, ScholarlyDeviationRequest,
+    ScholarlyResultRequest, ScholarlyInterpretationRequest, ScholarlyManuscriptSectionRequest,
+    ScholarlyReviewRequest, ScholarlyPackageFreezeRequest,
+)
 from ..contracts.visual_research import (
     VisualResearchPlanRequest, CoreVisualResearchPromotionRequest,
 )
@@ -50,6 +55,9 @@ from ..services.unified_research_runtime import (
 )
 from ..services.research_workflow import (
     get_research_workflow_store, capabilities as research_workflow_capabilities,
+)
+from ..services.scholarly_research import (
+    get_scholarly_research_store, capabilities as scholarly_research_capabilities,
 )
 from ..services.visual_research import (
     capabilities as visual_research_capabilities, build_plan as build_visual_research_plan,
@@ -143,6 +151,7 @@ def architecture() -> dict[str, Any]:
             "statistical-analysis-planning-and-runtime-handoffs",
             "visual-research-intelligence-planning-and-core-orchestration",
             "unified-research-intelligence-runtime-orchestration",
+            "original-scholarly-research-environment",
         ],
         "platform_core_owns": [
             "governed-research-objects",
@@ -164,6 +173,7 @@ def architecture() -> dict[str, Any]:
             "governed-visual-reasoning-objects-and-scene-semantics",
             "unified-visual-research-session-bindings",
             "governed-unified-research-runtime-state",
+            "governed-scholarly-research-lineage-and-reproducibility",
         ],
         "automatic_truth_promotion": False,
         "core_executes_arbitrary_research_code": False,
@@ -466,3 +476,100 @@ def research_workflow_checkpoints(workflow_id: str, limit: int = 100) -> dict[st
         return {"checkpoints": get_research_workflow_store().checkpoints(workflow_id, limit)}
     except Exception as exc:
         raise _translate(exc) from exc
+
+@router.get("/scholarly-research/capabilities", dependencies=[Depends(require_backend_key)])
+def scholarly_research_capability_report() -> dict[str, Any]:
+    return scholarly_research_capabilities()
+
+@router.post("/scholarly-research/studies", dependencies=[Depends(require_backend_key)])
+def scholarly_research_create(payload: ScholarlyStudyCreateRequest) -> dict[str, Any]:
+    try:
+        study, replayed = get_scholarly_research_store().create(payload)
+        return {"study": study, "idempotent_replay": replayed}
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/scholarly-research/studies", dependencies=[Depends(require_backend_key)])
+def scholarly_research_list(state: str = "", core_project_id: str = "", limit: int = 100) -> dict[str, Any]:
+    try:
+        return {"studies": get_scholarly_research_store().list(state=state, core_project_id=core_project_id, limit=limit)}
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/scholarly-research/studies/{study_id}", dependencies=[Depends(require_backend_key)])
+def scholarly_research_get(study_id: str) -> dict[str, Any]:
+    try:
+        return get_scholarly_research_store().get(study_id)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/scholarly-research/studies/{study_id}/protocol/freeze", dependencies=[Depends(require_backend_key)])
+def scholarly_research_freeze_protocol(study_id: str, payload: ScholarlyProtocolFreezeRequest) -> dict[str, Any]:
+    try:
+        return get_scholarly_research_store().freeze_protocol(study_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/scholarly-research/studies/{study_id}/deviations", dependencies=[Depends(require_backend_key)])
+def scholarly_research_deviation(study_id: str, payload: ScholarlyDeviationRequest) -> dict[str, Any]:
+    try:
+        return get_scholarly_research_store().add_deviation(study_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/scholarly-research/studies/{study_id}/results", dependencies=[Depends(require_backend_key)])
+def scholarly_research_result(study_id: str, payload: ScholarlyResultRequest) -> dict[str, Any]:
+    try:
+        return get_scholarly_research_store().add_result(study_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/scholarly-research/studies/{study_id}/interpretations", dependencies=[Depends(require_backend_key)])
+def scholarly_research_interpretation(study_id: str, payload: ScholarlyInterpretationRequest) -> dict[str, Any]:
+    try:
+        return get_scholarly_research_store().add_interpretation(study_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/scholarly-research/studies/{study_id}/manuscript-sections", dependencies=[Depends(require_backend_key)])
+def scholarly_research_manuscript_section(study_id: str, payload: ScholarlyManuscriptSectionRequest) -> dict[str, Any]:
+    try:
+        return get_scholarly_research_store().add_manuscript_section(study_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/scholarly-research/studies/{study_id}/reviews", dependencies=[Depends(require_backend_key)])
+def scholarly_research_review(study_id: str, payload: ScholarlyReviewRequest) -> dict[str, Any]:
+    try:
+        return get_scholarly_research_store().review(study_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/scholarly-research/studies/{study_id}/publication-readiness", dependencies=[Depends(require_backend_key)])
+def scholarly_research_publication_readiness(study_id: str) -> dict[str, Any]:
+    try:
+        return get_scholarly_research_store().readiness(study_id)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/scholarly-research/studies/{study_id}/packages/freeze", dependencies=[Depends(require_backend_key)])
+def scholarly_research_package_freeze(study_id: str, payload: ScholarlyPackageFreezeRequest) -> dict[str, Any]:
+    try:
+        return get_scholarly_research_store().freeze_package(study_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/scholarly-research/studies/{study_id}/revisions", dependencies=[Depends(require_backend_key)])
+def scholarly_research_revisions(study_id: str, limit: int = 200) -> dict[str, Any]:
+    try:
+        return {"revisions": get_scholarly_research_store().revisions(study_id, limit)}
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/scholarly-research/studies/{study_id}/packages", dependencies=[Depends(require_backend_key)])
+def scholarly_research_packages(study_id: str, limit: int = 100) -> dict[str, Any]:
+    try:
+        return {"packages": get_scholarly_research_store().packages(study_id, limit)}
+    except Exception as exc:
+        raise _translate(exc) from exc
+

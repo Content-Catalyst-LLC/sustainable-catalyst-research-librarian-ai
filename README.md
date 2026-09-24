@@ -1,11 +1,20 @@
-# Sustainable Catalyst Research Librarian AI v9.1.0
+# Sustainable Catalyst Research Librarian AI v9.2.0
 
-Research Librarian AI v9.1.0 adds the **Research Automation & Durable Workflow Engine** on top of the v9.0 Unified Research Intelligence Runtime: persistent stage state, dependency-aware scheduling, durable job bindings, explicit approvals, pause/resume/cancel, retries, audit events, and reproducible checkpoints without automatic Platform Core writes.
-Research Librarian AI is the Python-backed acquisition, document-intelligence, source-identity, indexing, retrieval, collaboration, and research-orchestration layer for Sustainable Catalyst. **v9.1.0 adds the Unified Research Intelligence Runtime: a governed 12-stage research lifecycle that composes the v8.x subsystems into one deterministic, durable and reproducible research-run contract without bypassing human review or Platform Core authority.**
+Research Librarian AI v9.2.0 adds the **Original Research & Scholarly Research Environment** on top of the v9.1 durable workflow engine. It provides durable scholarly study records, frozen protocols, explicit post-freeze deviations, result provenance, human-authored interpretations and manuscript sections, publication-readiness checks, immutable study revisions, and frozen reproducibility packages without automatic authorship or truth promotion.
 
-### v9.1.0 architecture
+### v9.2.0 scholarly research environment
 
-The unified runtime coordinates discovery, ingestion, scholarly parsing, canonical source identity, retrieval, evidence governance, findings/claims, argument/contradiction work, statistical planning, visual research, project-state synchronization, and reproducibility. The runtime can execute safe local planning/extraction stages and emit one content-addressed run manifest; promoted research objects still require the existing explicit Core promotion/synchronization endpoints and their human-review gates.
+- Durable Postgres/SQLite scholarly study registry
+- Protocol freeze with immutable protocol hash
+- Explicit protocol/analysis/data deviations after freeze
+- Provenance-rich result registry linked to evidence, runtimes, statistical reasoning and visuals
+- Human-authored interpretations and manuscript sections
+- Authorship, affiliation, funding, conflict and ethics declarations
+- Publication-readiness checks with explicit blockers
+- Immutable study revision history
+- Frozen scholarly reproducibility packages
+- Optional binding to v9.1 durable research workflows and Platform Core project/object references
+- No automatic authorship, peer-review claims, claim acceptance, statistical interpretation or truth promotion
 
 ### New v9.1.0 backend resources
 

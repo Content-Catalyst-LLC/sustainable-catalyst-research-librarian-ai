@@ -1,3 +1,15 @@
+# v9.2.0 — Original Research & Scholarly Research Environment
+
+- Added durable original/scholarly study registry with Postgres production storage and SQLite local fallback.
+- Added protocol freeze, immutable protocol hashes, and explicit post-freeze deviations.
+- Added provenance-rich research result registration linked to evidence, specialist runtimes, statistical reasoning objects, and visuals.
+- Added human-authored interpretation and manuscript-section registries.
+- Added authorship, affiliation, ethics, funding, and conflict declarations.
+- Added publication-readiness evaluation with explicit blockers.
+- Added immutable study revisions and frozen reproducibility packages.
+- Added durable `scholarly-research-package` async job support.
+- Preserved governance boundaries: no automatic authorship, peer-review certification, claim acceptance, statistical interpretation, or truth promotion.
+
 # 9.0.0 — Unified Research Intelligence Runtime
 
 - Added one governed 12-stage research-run graph spanning discovery through reproducibility.
