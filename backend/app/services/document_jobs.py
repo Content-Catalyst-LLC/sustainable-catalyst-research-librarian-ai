@@ -15,10 +15,12 @@ from ..contracts.research_intelligence_extraction import ResearchIntelligenceExt
 from ..contracts.argument_synthesis import ArgumentSynthesisPlanRequest
 from ..contracts.statistical_research import StatisticalAnalysisPlanRequest
 from ..contracts.visual_research import VisualResearchPlanRequest
+from ..contracts.unified_research_runtime import UnifiedResearchRuntimeExecutionRequest
 from .research_intelligence_extraction import extract_candidates
 from .argument_synthesis import build_plan as build_argument_synthesis_plan
 from .statistical_research import build_plan as build_statistical_analysis_plan
 from .visual_research import build_plan as build_visual_research_plan
+from .unified_research_runtime import execute_safe_runtime
 
 Progress = Callable[[str, int], None]
 
@@ -242,6 +244,15 @@ async def process_visual_research_plan_job(claim: JobClaim, progress: Progress) 
     return result
 
 
+async def process_unified_research_runtime_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
+    progress("normalize-unified-research-run", 15)
+    request = UnifiedResearchRuntimeExecutionRequest.model_validate(claim.payload)
+    progress("execute-safe-research-stages", 55)
+    result = execute_safe_runtime(request)
+    progress("reproducible-run-manifest-ready", 95)
+    return result
+
+
 async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
     if claim.job_type in {"document-process", "ingestion"}:
         return await process_document_job(claim, progress)
@@ -259,7 +270,9 @@ async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
         return await process_statistical_analysis_plan_job(claim, progress)
     if claim.job_type == "visual-research-plan":
         return await process_visual_research_plan_job(claim, progress)
+    if claim.job_type == "unified-research-runtime":
+        return await process_unified_research_runtime_job(claim, progress)
     raise ValueError(
         f"Job type {claim.job_type!r} is registered for the durable queue but has no v8.3 executor yet; "
-        "use document-process, document-intelligence, source-identity, research-intelligence-extraction, argument-synthesis-plan, statistical-analysis-plan, visual-research-plan, ingestion, or validation."
+        "use document-process, document-intelligence, source-identity, research-intelligence-extraction, argument-synthesis-plan, statistical-analysis-plan, visual-research-plan, unified-research-runtime, ingestion, or validation."
     )

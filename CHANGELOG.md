@@ -1,3 +1,11 @@
+# 9.0.0 — Unified Research Intelligence Runtime
+
+- Added one governed 12-stage research-run graph spanning discovery through reproducibility.
+- Added deterministic run ids, plan hashes, stage result hashes, and final run fingerprints.
+- Added safe unified execution for retrieval planning, candidate extraction, argument planning, statistical planning, visual planning, and project-state planning.
+- Added durable `unified-research-runtime` jobs.
+- Preserved all human-review gates and prohibited automatic Platform Core writes/truth promotion.
+
 # 8.12.0 — Visual Research Intelligence
 
 - Added deterministic renderer-neutral visual research plans over publications, canonical sources, citation relationships, evidence, findings, claims, arguments, statistical reasoning objects, project state, and provenance.

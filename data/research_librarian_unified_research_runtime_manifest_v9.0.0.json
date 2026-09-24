@@ -1,0 +1,40 @@
+{
+  "release": "9.0.0",
+  "title": "Unified Research Intelligence Runtime",
+  "schema": "sc-research-librarian-unified-research-intelligence-runtime/1.0",
+  "platform_core_contract": "sc.research.unified-research-scientific-investigation-runtime.v1",
+  "stages": [
+    "discovery",
+    "ingestion",
+    "document-intelligence",
+    "source-identity",
+    "retrieval",
+    "evidence-governance",
+    "research-intelligence",
+    "argument-synthesis",
+    "statistical-analysis",
+    "visual-research",
+    "project-state",
+    "reproducibility"
+  ],
+  "features": [
+    "deterministic-stage-graph",
+    "cross-stage-dependency-model",
+    "single-research-run-manifest",
+    "cross-stage-reproducibility-fingerprints",
+    "safe-local-stage-execution",
+    "durable-unified-research-runtime-jobs",
+    "platform-core-readiness-aggregation",
+    "explicit-human-gates",
+    "specialist-runtime-authority-preservation"
+  ],
+  "governance": {
+    "automatic_core_writes": false,
+    "automatic_truth_promotion": false,
+    "automatic_claim_acceptance": false,
+    "automatic_argument_resolution": false,
+    "automatic_statistical_interpretation": false,
+    "automatic_visual_inference": false,
+    "human_review_required_for_promotions": true
+  }
+}

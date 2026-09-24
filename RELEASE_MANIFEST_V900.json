@@ -1,0 +1,28 @@
+{
+  "release": "9.0.0",
+  "title": "Unified Research Intelligence Runtime",
+  "schema": "sc-research-librarian-unified-research-intelligence-runtime/1.0",
+  "core_minimum_version": "3.3.0",
+  "new_backend_routes": [
+    "/v1/core/unified-research/capabilities",
+    "/v1/core/unified-research/readiness",
+    "/v1/core/unified-research/plan",
+    "/v1/core/unified-research/execute"
+  ],
+  "durable_job_type": "unified-research-runtime",
+  "features": [
+    "unified-research-stage-graph",
+    "deterministic-run-id-and-plan-hash",
+    "safe-stage-orchestration",
+    "cross-stage-result-hashes",
+    "reproducible-run-fingerprint",
+    "core-capability-readiness-aggregation",
+    "human-review-gate-preservation"
+  ],
+  "governance": {
+    "automatic_core_writes": false,
+    "automatic_truth_promotion": false,
+    "specialist_computation_retained": true,
+    "platform_core_governs_promoted_research_objects": true
+  }
+}

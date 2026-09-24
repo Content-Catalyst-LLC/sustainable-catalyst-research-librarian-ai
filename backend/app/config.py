@@ -109,7 +109,7 @@ class Settings:
     postgres_activation_checksum_batch_limit: int = _int("SC_RL_POSTGRES_ACTIVATION_CHECKSUM_BATCH_LIMIT", 250, 25, 2000)
     postgres_generation_retention: int = _int("SC_RL_POSTGRES_GENERATION_RETENTION", 1, 1, 20)
     neon_free_storage_warning_mb: int = _int("SC_RL_NEON_FREE_STORAGE_WARNING_MB", 400, 100, 500)
-    release_version: str = os.getenv("SC_RL_RELEASE_VERSION", "8.12.0")
+    release_version: str = os.getenv("SC_RL_RELEASE_VERSION", "9.0.0")
     # Platform Core v8.3 integration. The default URL resolves the Core container
     # directly on the shared sc-internal Docker network used by the VPS stack.
     core_enabled: bool = _bool("SC_RL_CORE_ENABLED", True)

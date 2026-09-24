@@ -107,8 +107,8 @@ class PlatformCoreClient:
         self._configured()
         headers = {
             "Accept": "application/json",
-            "User-Agent": "SustainableCatalystResearchLibrarian/8.12.0",
-            "X-SC-Research-Librarian-Version": "8.12.0",
+            "User-Agent": "SustainableCatalystResearchLibrarian/9.0.0",
+            "X-SC-Research-Librarian-Version": "9.0.0",
         }
         if write:
             if not self.write_api_key:

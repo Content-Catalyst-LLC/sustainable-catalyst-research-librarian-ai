@@ -3,7 +3,7 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 8.12.0
+Stable tag: 9.0.0
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
@@ -14,6 +14,8 @@ Research Librarian AI retrieves Sustainable Catalyst publications and documents 
 
 v8.0.0 unifies Library context, federated discovery, evidence evaluation, persistent research state, Research Rooms, synthesis, Workspace promotion, and preservation through an inspectable eight-stage research lifecycle. Readiness is descriptive; every lifecycle stage transition remains an explicit human action.
 
+
+v9.0.0 adds the Unified Research Intelligence Runtime: one deterministic, durable research-run graph spanning discovery, ingestion, document intelligence, source identity, retrieval, evidence governance, findings/claims, arguments, statistical planning, visual research, project state, and reproducibility. The runtime preserves explicit human review and never performs automatic Core writes or truth promotion.
 
 v8.12.0 adds Visual Research Intelligence. Reviewed sources, citations, evidence, findings, claims, arguments, statistical reasoning objects, provenance, and timelines can be assembled into renderer-neutral visual research plans and explicitly promoted into Platform Core visual reasoning objects after human review. The Librarian does not render, infer graph edges, compute layout, or promote visual form to truth.
 
@@ -43,6 +45,13 @@ v8.7.0 adds the Core Evidence Bridge. Hydrated canonical Librarian sources can b
 [sc_research_librarian_platform_handoffs]
 
 == Changelog ==
+
+= 9.0.0 =
+* Added Unified Research Intelligence Runtime stage graph and safe orchestration.
+* Added deterministic run manifests and reproducibility fingerprints.
+* Added durable unified-research-runtime jobs.
+* Preserved human review gates and Platform Core authority.
+
 
 = 8.12.0 =
 * Add Visual Research Intelligence plans for citation networks, evidence/claim/finding maps, contradiction maps, argument graphs, statistical views, provenance graphs, timelines, and source lineage.

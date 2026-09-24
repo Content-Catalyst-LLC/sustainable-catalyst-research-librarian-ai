@@ -40,6 +40,7 @@ JOB_TYPES = {
     "argument-synthesis-plan",
     "statistical-analysis-plan",
     "visual-research-plan",
+    "unified-research-runtime",
 }
 TERMINAL_STATES = {"succeeded", "failed", "cancelled"}
 ACTIVE_STATES = {"queued", "retry_wait", "running"}

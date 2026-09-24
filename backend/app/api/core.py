@@ -8,6 +8,9 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 
 from ..clients.platform_core import PlatformCoreClient, PlatformCoreError
 from ..config import settings
+from ..contracts.unified_research_runtime import (
+    UnifiedResearchRuntimePlanRequest, UnifiedResearchRuntimeExecutionRequest,
+)
 from ..contracts.visual_research import (
     VisualResearchPlanRequest, CoreVisualResearchPromotionRequest,
 )
@@ -37,6 +40,9 @@ from ..contracts.platform_core import (
     CoreExchangePackageRequest,
     CoreResearchObjectPromotionRequest,
     CoreUnifiedProjectSyncRequest,
+)
+from ..services.unified_research_runtime import (
+    capabilities as unified_research_capabilities, build_runtime_plan, readiness as unified_research_readiness, execute_safe_runtime,
 )
 from ..services.visual_research import (
     capabilities as visual_research_capabilities, build_plan as build_visual_research_plan,
@@ -129,6 +135,7 @@ def architecture() -> dict[str, Any]:
             "reviewed-argument-synthesis-planning",
             "statistical-analysis-planning-and-runtime-handoffs",
             "visual-research-intelligence-planning-and-core-orchestration",
+            "unified-research-intelligence-runtime-orchestration",
         ],
         "platform_core_owns": [
             "governed-research-objects",
@@ -149,6 +156,7 @@ def architecture() -> dict[str, Any]:
             "governed-statistical-reasoning-objects",
             "governed-visual-reasoning-objects-and-scene-semantics",
             "unified-visual-research-session-bindings",
+            "governed-unified-research-runtime-state",
         ],
         "automatic_truth_promotion": False,
         "core_executes_arbitrary_research_code": False,
@@ -360,4 +368,32 @@ def visual_research_plan(payload: VisualResearchPlanRequest) -> dict[str, Any]:
 async def visual_research_promote(payload: CoreVisualResearchPromotionRequest) -> dict[str, Any]:
     try: return await promote_visual_research_plan(payload)
     except Exception as exc: raise _translate(exc) from exc
+
+@router.get("/unified-research/capabilities", dependencies=[Depends(require_backend_key)])
+def unified_research_capability_report() -> dict[str, Any]:
+    return unified_research_capabilities()
+
+
+@router.get("/unified-research/readiness", dependencies=[Depends(require_backend_key)])
+async def unified_research_core_readiness() -> dict[str, Any]:
+    try:
+        return await unified_research_readiness()
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+
+@router.post("/unified-research/plan", dependencies=[Depends(require_backend_key)])
+def unified_research_plan(payload: UnifiedResearchRuntimePlanRequest) -> dict[str, Any]:
+    try:
+        return build_runtime_plan(payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+
+@router.post("/unified-research/execute", dependencies=[Depends(require_backend_key)])
+def unified_research_execute(payload: UnifiedResearchRuntimeExecutionRequest) -> dict[str, Any]:
+    try:
+        return execute_safe_runtime(payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
 

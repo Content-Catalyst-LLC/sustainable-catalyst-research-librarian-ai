@@ -1,7 +1,18 @@
-# Sustainable Catalyst Research Librarian AI v8.12.0
+# Sustainable Catalyst Research Librarian AI v9.0.0
 
-Research Librarian AI is the Python-backed acquisition, document-intelligence, source-identity, indexing, retrieval, collaboration, and research-orchestration layer for Sustainable Catalyst. **v8.12.0 adds Visual Research Intelligence: renderer-neutral, human-reviewed visual research plans that bind publications, sources, evidence, claims, findings, arguments, statistical reasoning, provenance, and timelines to Platform Core visual reasoning without moving rendering or truth judgment into the Librarian.**
+Research Librarian AI is the Python-backed acquisition, document-intelligence, source-identity, indexing, retrieval, collaboration, and research-orchestration layer for Sustainable Catalyst. **v9.0.0 adds the Unified Research Intelligence Runtime: a governed 12-stage research lifecycle that composes the v8.x subsystems into one deterministic, durable and reproducible research-run contract without bypassing human review or Platform Core authority.**
 
+### v9.0.0 architecture
+
+The unified runtime coordinates discovery, ingestion, scholarly parsing, canonical source identity, retrieval, evidence governance, findings/claims, argument/contradiction work, statistical planning, visual research, project-state synchronization, and reproducibility. The runtime can execute safe local planning/extraction stages and emit one content-addressed run manifest; promoted research objects still require the existing explicit Core promotion/synchronization endpoints and their human-review gates.
+
+### New v9.0.0 backend resources
+
+- `GET /v1/core/unified-research/capabilities`
+- `GET /v1/core/unified-research/readiness`
+- `POST /v1/core/unified-research/plan`
+- `POST /v1/core/unified-research/execute`
+- durable job type `unified-research-runtime`
 
 ### v8.12.0 architecture
 

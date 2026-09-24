@@ -7,9 +7,9 @@ $service = file_get_contents($root . '/backend/app/services/core_research_sync.p
 $contracts = file_get_contents($root . '/backend/app/contracts/research_sync.py');
 $manifest = json_decode(file_get_contents($root . '/data/research_librarian_core_research_sync_manifest_v8.8.0.json'), true);
 $checks = [
-  'version_header' => false !== strpos($main, 'Version: 8.12.0'),
-  'version_constant' => false !== strpos($main, "const VERSION        = '8.12.0';"),
-  'backend_version' => false !== strpos(file_get_contents($root . '/backend/app/__init__.py'), '__version__ = "8.12.0"'),
+  'version_header' => false !== strpos($main, 'Version: 9.0.0'),
+  'version_constant' => false !== strpos($main, "const VERSION        = '9.0.0';"),
+  'backend_version' => false !== strpos(file_get_contents($root . '/backend/app/__init__.py'), '__version__ = "9.0.0"'),
   'sync_schema' => false !== strpos($contracts, 'sc-research-librarian-core-research-sync/1.0'),
   'core_state_contract' => false !== strpos($contracts, 'sc.research.project-state-versioning-reproducibility.v1'),
   'capability_route' => false !== strpos($api, '/research-sync/capabilities'),
