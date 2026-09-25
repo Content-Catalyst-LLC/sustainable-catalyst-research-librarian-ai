@@ -1,3 +1,13 @@
+# 9.7.0 — RAG Evaluation & Evidence-Grounding Framework
+
+- Added durable RAG evaluation records linked to v9.6 AI research contexts.
+- Added deterministic retrieval metrics from declared relevance sets: precision@k, recall@k, reciprocal rank, and nDCG@k.
+- Added explicit human claim-grounding and citation-correctness assessments.
+- Added descriptive unsupported-claim, conflict, citation, latency, token, and cost summaries without composite quality scores.
+- Added side-by-side evaluation comparison without winner selection or automatic model ranking.
+- Added immutable evaluation snapshots and durable `rag-evaluation-snapshot` jobs.
+- Preserved governance boundaries: metrics are evidence, not validity/truth/model-quality verdicts.
+
 # 9.6.0 — AI-Aware Retrieval & Research Context Engineering
 
 - Added durable AI research contexts, retrieval-run receipts, lineage, and immutable context snapshots.

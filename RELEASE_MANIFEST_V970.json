@@ -1,0 +1,8 @@
+{
+  "release": "9.7.0",
+  "name": "Research Librarian AI v9.7.0 — RAG Evaluation & Evidence-Grounding Framework",
+  "backend_migration": "012_rag_evaluation_evidence_grounding.sql",
+  "job_type": "rag-evaluation-snapshot",
+  "python_test": "backend/tests/test_v970_rag_evaluation.py",
+  "php_contract": "tests/v970-rag-evaluation-evidence-grounding-contract-test.php"
+}

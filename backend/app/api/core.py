@@ -36,6 +36,10 @@ from ..contracts.research_knowledge_graph import (
 from ..contracts.ai_research_context import (
     AIResearchContextCreateRequest, AIRetrievalRunCreateRequest, AIContextSnapshotRequest,
 )
+from ..contracts.rag_evaluation import (
+    RAGEvaluationCreateRequest, RAGEvaluationCaseRequest, RAGClaimAssessmentRequest,
+    RAGCitationAssessmentRequest, RAGEvaluationComparisonRequest, RAGEvaluationSnapshotRequest,
+)
 from ..contracts.visual_research import (
     VisualResearchPlanRequest, CoreVisualResearchPromotionRequest,
 )
@@ -86,6 +90,9 @@ from ..services.research_knowledge_graph import (
 )
 from ..services.ai_research_context import (
     get_ai_research_context_store, capabilities as ai_research_context_capabilities,
+)
+from ..services.rag_evaluation import (
+    get_rag_evaluation_store, capabilities as rag_evaluation_capabilities,
 )
 from ..services.visual_research import (
     capabilities as visual_research_capabilities, build_plan as build_visual_research_plan,
@@ -795,6 +802,66 @@ def ai_research_context_lineage(context_id: str) -> dict[str, Any]:
 def ai_research_context_snapshot(payload: AIContextSnapshotRequest) -> dict[str, Any]:
     try:
         return get_ai_research_context_store().freeze_snapshot(payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/rag-evaluation/capabilities", dependencies=[Depends(require_backend_key)])
+def rag_evaluation_capability_report() -> dict[str, Any]:
+    return rag_evaluation_capabilities()
+
+@router.post("/rag-evaluation/evaluations", dependencies=[Depends(require_backend_key)])
+def rag_evaluation_create(payload: RAGEvaluationCreateRequest) -> dict[str, Any]:
+    try:
+        return get_rag_evaluation_store().create_evaluation(payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/rag-evaluation/evaluations/{evaluation_id}", dependencies=[Depends(require_backend_key)])
+def rag_evaluation_get(evaluation_id: str) -> dict[str, Any]:
+    try:
+        return get_rag_evaluation_store().get_evaluation(evaluation_id)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/rag-evaluation/evaluations/{evaluation_id}/cases", dependencies=[Depends(require_backend_key)])
+def rag_evaluation_add_case(evaluation_id: str, payload: RAGEvaluationCaseRequest) -> dict[str, Any]:
+    try:
+        return get_rag_evaluation_store().add_case(evaluation_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/rag-evaluation/evaluations/{evaluation_id}/claim-assessments", dependencies=[Depends(require_backend_key)])
+def rag_evaluation_add_claim_assessment(evaluation_id: str, payload: RAGClaimAssessmentRequest) -> dict[str, Any]:
+    try:
+        return get_rag_evaluation_store().add_claim_assessment(evaluation_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/rag-evaluation/evaluations/{evaluation_id}/citation-assessments", dependencies=[Depends(require_backend_key)])
+def rag_evaluation_add_citation_assessment(evaluation_id: str, payload: RAGCitationAssessmentRequest) -> dict[str, Any]:
+    try:
+        return get_rag_evaluation_store().add_citation_assessment(evaluation_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/rag-evaluation/evaluations/{evaluation_id}/summary", dependencies=[Depends(require_backend_key)])
+def rag_evaluation_summary(evaluation_id: str) -> dict[str, Any]:
+    try:
+        return get_rag_evaluation_store().summary(evaluation_id)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/rag-evaluation/comparisons", dependencies=[Depends(require_backend_key)])
+def rag_evaluation_compare(payload: RAGEvaluationComparisonRequest) -> dict[str, Any]:
+    try:
+        return get_rag_evaluation_store().comparison(payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/rag-evaluation/snapshots/freeze", dependencies=[Depends(require_backend_key)])
+def rag_evaluation_snapshot(payload: RAGEvaluationSnapshotRequest) -> dict[str, Any]:
+    try:
+        return get_rag_evaluation_store().freeze_snapshot(payload)
     except Exception as exc:
         raise _translate(exc) from exc
 

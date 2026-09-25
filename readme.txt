@@ -3,14 +3,14 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 9.6.0
+Stable tag: 9.7.0
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
 
 == Description ==
 
-v9.6.0 adds the Scholarly Publication, Citation & Research Dissemination Environment. It provides durable versioned publication records, declared authorship/contributors, structured references, citation exports, explicit dissemination state, canonical URLs, externally assigned identifier records, publication visualization lineage, Knowledge Library handoffs, and frozen publication packages. It does not mint DOIs, infer authorship, make editorial decisions, publish automatically, or promote truth.
+v9.7.0 adds the RAG Evaluation & Evidence-Grounding Framework. It provides durable evaluation records linked to v9.6 AI research contexts, deterministic retrieval metrics, human claim-grounding and citation-correctness review, descriptive unsupported-claim/conflict/latency/cost summaries, comparison packets, and frozen evaluation snapshots. It does not issue composite quality grades, rank models, certify grounding, accept claims, or determine truth.
 
 Research Librarian AI retrieves Sustainable Catalyst publications and documents through exact-title priority, section-aware BM25 ranking, optional Gemini embeddings, calibrated reciprocal-rank fusion, and citation-verified synthesis. WordPress remains the canonical publishing and recovery source, while FastAPI stores the production knowledge index durably in Neon Postgres with pgvector.
 
@@ -48,9 +48,17 @@ v8.7.0 adds the Core Evidence Bridge. Hydrated canonical Librarian sources can b
 
 == Changelog ==
 
+= 9.7.0 =
+* Added durable RAG evaluation records, transparent retrieval metrics, claim/citation grounding review, descriptive comparison, and frozen evaluation snapshots.
+* Evaluation metrics remain evidence rather than automatic validity, truth, quality-grade, or model-ranking judgments.
+
 = 9.6.0 =
-* Added durable scholarly publication records, citation exports, explicit publication state, Knowledge Library handoffs, visual lineage, and frozen dissemination packages.
-* External identifiers remain declared records; the Librarian does not mint DOIs or automate publication/editorial judgment.
+* Added durable AI research-context manifests, retrieval-run receipts, lineage reconstruction, and immutable context snapshots.
+* Model/prompt identity remains external to Platform Core; no model training or grounding certification is performed.
+
+= 9.5.0 =
+* Added Research Knowledge Graph & Publication Intelligence with accepted edges, reviewable proposals, publication materialization, and immutable graph snapshots.
+* Semantic relationships require explicit review; no automatic truth, impact, or authority scoring is performed.
 
 = 9.3.0 =
 * Added durable Original Research & Scholarly Research study registry.

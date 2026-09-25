@@ -1,0 +1,40 @@
+{
+  "schema": "sc-research-librarian-rag-evaluation-manifest/1.0",
+  "release": "9.7.0",
+  "name": "RAG Evaluation & Evidence-Grounding Framework",
+  "depends_on": {
+    "research_librarian": "9.6.0",
+    "context_contract": "sc-research-librarian-ai-research-context/1.0"
+  },
+  "objects": [
+    "rag-evaluation",
+    "rag-evaluation-case",
+    "claim-grounding-assessment",
+    "citation-assessment",
+    "rag-evaluation-summary",
+    "rag-evaluation-comparison",
+    "rag-evaluation-snapshot"
+  ],
+  "retrieval_metrics": [
+    "precision-at-k",
+    "recall-at-k",
+    "reciprocal-rank",
+    "ndcg-at-k"
+  ],
+  "descriptive_metrics": [
+    "unsupported-claim-rate",
+    "conflicting-claim-rate",
+    "citation-correctness-rate",
+    "latency",
+    "token-usage",
+    "cost"
+  ],
+  "job_type": "rag-evaluation-snapshot",
+  "governance": {
+    "automatic_truth_judgment": false,
+    "automatic_model_ranking": false,
+    "automatic_quality_grade": false,
+    "automatic_claim_acceptance": false,
+    "metrics_are_evidence_not_verdicts": true
+  }
+}

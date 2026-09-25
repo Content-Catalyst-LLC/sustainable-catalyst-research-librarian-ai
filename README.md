@@ -1,6 +1,11 @@
-# Sustainable Catalyst Research Librarian AI v9.6.0
+# Sustainable Catalyst Research Librarian AI v9.7.0
 
-Current release: **v9.6.0 — AI-Aware Retrieval & Research Context Engineering**
+Current release: **v9.7.0 — RAG Evaluation & Evidence-Grounding Framework**
+
+
+## v9.7.0 RAG Evaluation & Evidence-Grounding Framework
+
+Research Librarian AI v9.7.0 adds durable evaluation runs over v9.6 AI research contexts. It computes transparent retrieval metrics from declared relevance sets, records human claim-support and citation-correctness assessments, summarizes unsupported/conflicting claims, latency and cost, supports side-by-side benchmark comparison, and freezes immutable evaluation snapshots. It does not generate composite quality grades, rank models, certify grounding, accept claims, or determine truth.
 
 ## v9.6.0 AI-Aware Retrieval & Research Context Engineering
 

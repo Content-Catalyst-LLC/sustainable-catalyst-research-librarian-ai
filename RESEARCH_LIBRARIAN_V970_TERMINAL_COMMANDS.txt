@@ -1,0 +1,18 @@
+# Mac — Git validation / push / tag
+cd ~/Downloads
+rm -rf sc-research-librarian-v9.7.0-release
+unzip -q sustainable-catalyst-research-librarian-ai-v9.7.0-release-bundle.zip -d sc-research-librarian-v9.7.0-release
+cd sc-research-librarian-v9.7.0-release
+chmod +x PUSH_RESEARCH_LIBRARIAN_V970_PY312.sh
+./PUSH_RESEARCH_LIBRARIAN_V970_PY312.sh "$PWD/sustainable-catalyst-research-librarian-ai-v9.7.0-repository.zip"
+
+# Mac — copy backend + deployer
+scp -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes \
+  sustainable-catalyst-research-librarian-backend-v9.7.0.zip \
+  deploy/contabo/upgrade_research_librarian_backend_v9_7_0_contabo.sh \
+  catalystadmin@94.72.113.77:/tmp/
+ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes catalystadmin@94.72.113.77
+
+# Contabo
+chmod +x /tmp/upgrade_research_librarian_backend_v9_7_0_contabo.sh
+/tmp/upgrade_research_librarian_backend_v9_7_0_contabo.sh /tmp/sustainable-catalyst-research-librarian-backend-v9.7.0.zip
