@@ -5,8 +5,8 @@ $backend=file_get_contents($root.'/backend/app/__init__.py');
 $core=file_get_contents($root.'/backend/app/api/core.py');
 $jobs=file_get_contents($root.'/backend/app/async_jobs.py');
 $checks=[
- 'plugin_version'=>strpos($main,'Version: 9.9.0')!==false,
- 'backend_version'=>strpos($backend,'__version__ = "9.9.0"')!==false,
+ 'plugin_version'=>strpos($main,'Version: 10.0.0')!==false,
+ 'backend_version'=>strpos($backend,'__version__ = "10.0.0"')!==false,
  'contract'=>file_exists($root.'/backend/app/contracts/research_knowledge_graph.py'),
  'service'=>file_exists($root.'/backend/app/services/research_knowledge_graph.py'),
  'test'=>file_exists($root.'/backend/tests/test_v950_research_knowledge_graph.py'),
@@ -19,4 +19,4 @@ $checks=[
  'durable_job'=>strpos($jobs,'research-knowledge-graph-snapshot')!==false,
 ];
 foreach($checks as $name=>$ok){if(!$ok){fwrite(STDERR,"FAIL: $name\n");exit(1);}}
-echo "PASS: Research Librarian v9.9.0 Research Knowledge Graph & Publication Intelligence contract\n";
+echo "PASS: Research Librarian v10.0.0 Research Knowledge Graph & Publication Intelligence contract\n";

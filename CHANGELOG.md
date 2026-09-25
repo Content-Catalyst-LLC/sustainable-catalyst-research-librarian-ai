@@ -1,3 +1,9 @@
+# 10.0.0 — Unified Scholarly & AI Research Intelligence Environment
+
+- Adds a durable unified research environment registry binding workflows, scholarly studies, peer review, publications, knowledge graph nodes, AI contexts, RAG evaluations, AI experiments, model-aware lineage, cross-product exchanges, and governed Core objects.
+- Adds assembled lineage, structural readiness, unified research dossiers, append-only binding events, immutable environment snapshots, and the durable `unified-research-environment-snapshot` job.
+- Preserves source-system authority, Platform Core governance, specialist runtime execution, and human scholarly judgment. No automatic truth promotion, model selection, scholarly judgment, or execution is introduced.
+
 # 9.9.0 — Model-Aware Research Intelligence & Cross-Product Exchange
 
 - Adds durable model-aware research records spanning model, dataset, prompt, context, inference, evaluation, experiment and governed research-object lineage.

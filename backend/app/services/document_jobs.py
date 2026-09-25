@@ -39,6 +39,8 @@ from ..contracts.ai_research_experiment import AIExperimentSnapshotRequest
 from .ai_research_experiment import get_ai_research_experiment_store
 from ..contracts.model_aware_exchange import ModelAwareSnapshotRequest
 from .model_aware_exchange import get_model_aware_research_store
+from ..contracts.unified_scholarly_ai_environment import UnifiedResearchEnvironmentSnapshotRequest
+from .unified_scholarly_ai_environment import get_unified_scholarly_ai_environment_store
 
 Progress = Callable[[str, int], None]
 
@@ -385,6 +387,17 @@ async def process_model_aware_research_snapshot_job(claim: JobClaim, progress: P
     progress("model-aware-research-snapshot-ready", 95)
     return result
 
+async def process_unified_research_environment_snapshot_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
+    progress("load-unified-research-environment", 20)
+    request = UnifiedResearchEnvironmentSnapshotRequest.model_validate(claim.payload.get("snapshot") or claim.payload)
+    store = get_unified_scholarly_ai_environment_store()
+    progress("assemble-unified-research-dossier", 55)
+    store.dossier(request.environment_id)
+    progress("freeze-unified-research-environment-snapshot", 80)
+    result = store.freeze_snapshot(request)
+    progress("unified-research-environment-snapshot-ready", 95)
+    return result
+
 async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
     if claim.job_type in {"document-process", "ingestion"}:
         return await process_document_job(claim, progress)
@@ -422,7 +435,9 @@ async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
         return await process_ai_research_experiment_snapshot_job(claim, progress)
     if claim.job_type == "model-aware-research-snapshot":
         return await process_model_aware_research_snapshot_job(claim, progress)
+    if claim.job_type == "unified-research-environment-snapshot":
+        return await process_unified_research_environment_snapshot_job(claim, progress)
     raise ValueError(
         f"Job type {claim.job_type!r} is registered for the durable queue but has no v8.3 executor yet; "
-        "use document-process, document-intelligence, source-identity, research-intelligence-extraction, argument-synthesis-plan, statistical-analysis-plan, visual-research-plan, unified-research-runtime, research-workflow-advance, scholarly-research-package, peer-review-validation-package, scholarly-publication-package, research-knowledge-graph-snapshot, ai-research-context-snapshot, rag-evaluation-snapshot, ai-research-experiment-snapshot, model-aware-research-snapshot, ingestion, or validation."
+        "use document-process, document-intelligence, source-identity, research-intelligence-extraction, argument-synthesis-plan, statistical-analysis-plan, visual-research-plan, unified-research-runtime, research-workflow-advance, scholarly-research-package, peer-review-validation-package, scholarly-publication-package, research-knowledge-graph-snapshot, ai-research-context-snapshot, rag-evaluation-snapshot, ai-research-experiment-snapshot, model-aware-research-snapshot, unified-research-environment-snapshot, ingestion, or validation."
     )

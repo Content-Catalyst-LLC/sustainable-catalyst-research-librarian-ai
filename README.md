@@ -1,11 +1,11 @@
-# Sustainable Catalyst Research Librarian AI v9.9.0
+# Sustainable Catalyst Research Librarian AI v10.0.0
 
-Current release: **v9.9.0 — Model-Aware Research Intelligence & Cross-Product Exchange**
+Current release: **v10.0.0 — Unified Scholarly & AI Research Intelligence Environment**
 
 
-## v9.9.0 Model-Aware Research Intelligence & Cross-Product Exchange
+## v10.0.0 Unified Scholarly & AI Research Intelligence Environment
 
-Research Librarian AI v9.9.0 adds durable model-aware research lineage and transport-neutral cross-product exchange above the v9.6 context, v9.7 evaluation and v9.8 experiment layers. It connects governed model/model-version, dataset/version, prompt/version, context, inference, evaluation and experiment references to evidence, claims, findings, statistical and visual objects, studies and publications, then packages selected lineage for Platform Core, Workspace, Research Lab, Workbench, Knowledge Library, Decision Studio and Site Intelligence. Packet creation is not delivery; destination acceptance requires an explicit receipt. The Librarian does not register models, select models, rank research outputs, perform automatic delivery, or infer research validity.
+Research Librarian AI v10.0.0 is the convergence milestone for the scholarly and AI research stack. It binds durable workflows, scholarly studies, peer review and replication, publications, research knowledge graphs, AI research contexts, RAG evaluations, AI experiments, model-aware lineage, cross-product exchanges and governed Core objects into one persistent research environment. The environment assembles lineage and dossiers without replacing the authority of the underlying systems. Platform Core remains the governed object authority, specialist runtimes retain computation, and scholarly/model judgments remain human-controlled.
 
 ## v9.8.0 AI Research Experiment Orchestration
 

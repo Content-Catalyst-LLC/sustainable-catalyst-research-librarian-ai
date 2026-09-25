@@ -23,7 +23,7 @@ def test_library_object_model_declares_library_native_types_and_boundaries() -> 
     response = client.get("/v1/library/object-model", headers=HEADERS)
     assert response.status_code == 200, response.text
     body = response.json()
-    assert body["version"] == "9.9.0"
+    assert body["version"] == "10.0.0"
     assert body["schema"] == "sc-research-library-object-model/1.0"
     required = {
         "source",

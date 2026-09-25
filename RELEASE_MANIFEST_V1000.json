@@ -1,0 +1,8 @@
+{
+  "release": "10.0.0",
+  "name": "Research Librarian AI v10.0.0 — Unified Scholarly & AI Research Intelligence Environment",
+  "backend_migration": "015_unified_scholarly_ai_research_environment.sql",
+  "job_type": "unified-research-environment-snapshot",
+  "python_test": "backend/tests/test_v1000_unified_scholarly_ai_environment.py",
+  "php_contract": "tests/v1000-unified-scholarly-ai-research-environment-contract-test.php"
+}

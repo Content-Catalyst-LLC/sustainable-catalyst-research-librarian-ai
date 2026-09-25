@@ -1,0 +1,16 @@
+{
+  "schema": "sc-research-librarian-unified-scholarly-ai-research-environment-manifest/1.0",
+  "release": "10.0.0",
+  "milestone": "10.0",
+  "title": "Unified Scholarly & AI Research Intelligence Environment",
+  "database_migration": "015_unified_scholarly_ai_research_environment.sql",
+  "durable_job": "unified-research-environment-snapshot",
+  "governance": {
+    "component_authority_remains_with_source_system": true,
+    "platform_core_governance_remains_external": true,
+    "automatic_execution": false,
+    "automatic_model_selection": false,
+    "automatic_scholarly_judgment": false,
+    "automatic_truth_promotion": false
+  }
+}

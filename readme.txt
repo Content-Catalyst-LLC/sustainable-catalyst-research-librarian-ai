@@ -3,14 +3,14 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 9.9.0
+Stable tag: 10.0.0
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
 
 == Description ==
 
-v9.9.0 adds Model-Aware Research Intelligence & Cross-Product Exchange. It binds research outputs to governed model, dataset, prompt, context, inference, evaluation, experiment, evidence, claim, finding, statistical, visual, study and publication lineage, and creates transport-neutral exchange packets with explicit destination receipts. It does not register models, deliver packets automatically, infer destination acceptance, rank models, or make research-validity judgments.
+v10.0.0 adds the Unified Scholarly & AI Research Intelligence Environment. It binds workflows, studies, peer review, publication, knowledge graphs, AI contexts, RAG evaluations, experiments, model-aware lineage, cross-product exchanges and governed Core objects into a durable research environment with assembled dossiers, structural readiness and immutable snapshots. It does not replace source-system authority, execute specialist computation, select models, make scholarly judgments, or promote truth automatically.
 
 Research Librarian AI retrieves Sustainable Catalyst publications and documents through exact-title priority, section-aware BM25 ranking, optional Gemini embeddings, calibrated reciprocal-rank fusion, and citation-verified synthesis. WordPress remains the canonical publishing and recovery source, while FastAPI stores the production knowledge index durably in Neon Postgres with pgvector.
 
@@ -48,7 +48,7 @@ v8.7.0 adds the Core Evidence Bridge. Hydrated canonical Librarian sources can b
 
 == Changelog ==
 
-= 9.9.0 =
+= 10.0.0 =
 * Model-aware research lineage across Core AI and governed research objects.
 * Cross-product exchange packets and explicit destination receipts.
 * Structural exchange readiness and immutable lineage/exchange snapshots.

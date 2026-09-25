@@ -49,6 +49,10 @@ from ..contracts.model_aware_exchange import (
     ModelAwareResearchRecordRequest, CrossProductExchangeCreateRequest,
     CrossProductExchangeReceiptRequest, ModelAwareSnapshotRequest,
 )
+from ..contracts.unified_scholarly_ai_environment import (
+    UnifiedResearchEnvironmentCreateRequest, UnifiedResearchEnvironmentBindingRequest,
+    UnifiedResearchEnvironmentSnapshotRequest,
+)
 from ..contracts.visual_research import (
     VisualResearchPlanRequest, CoreVisualResearchPromotionRequest,
 )
@@ -108,6 +112,9 @@ from ..services.ai_research_experiment import (
 )
 from ..services.model_aware_exchange import (
     get_model_aware_research_store, capabilities as model_aware_research_capabilities,
+)
+from ..services.unified_scholarly_ai_environment import (
+    get_unified_scholarly_ai_environment_store, capabilities as unified_scholarly_ai_environment_capabilities,
 )
 from ..services.visual_research import (
     capabilities as visual_research_capabilities, build_plan as build_visual_research_plan,
@@ -209,6 +216,7 @@ def architecture() -> dict[str, Any]:
             "rag-evaluation-and-evidence-grounding",
             "ai-research-experiment-orchestration",
             "model-aware-research-intelligence-and-cross-product-exchange",
+            "unified-scholarly-and-ai-research-intelligence-environment",
         ],
         "platform_core_owns": [
             "governed-research-objects",
@@ -1010,6 +1018,60 @@ def model_aware_research_snapshot(payload: ModelAwareSnapshotRequest) -> dict[st
         return get_model_aware_research_store().freeze_snapshot(payload)
     except Exception as exc:
         raise _translate(exc) from exc
+
+@router.get("/unified-research-environment/capabilities", dependencies=[Depends(require_backend_key)])
+def unified_research_environment_capabilities_route() -> dict[str, Any]:
+    return unified_scholarly_ai_environment_capabilities()
+
+@router.post("/unified-research-environment/environments", dependencies=[Depends(require_backend_key)])
+def unified_research_environment_create(payload: UnifiedResearchEnvironmentCreateRequest) -> dict[str, Any]:
+    try:
+        return get_unified_scholarly_ai_environment_store().create(payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/unified-research-environment/environments/{environment_id}", dependencies=[Depends(require_backend_key)])
+def unified_research_environment_get(environment_id: str) -> dict[str, Any]:
+    try:
+        return get_unified_scholarly_ai_environment_store().get(environment_id)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/unified-research-environment/environments/{environment_id}/bindings", dependencies=[Depends(require_backend_key)])
+def unified_research_environment_bind(environment_id: str, payload: UnifiedResearchEnvironmentBindingRequest) -> dict[str, Any]:
+    try:
+        return get_unified_scholarly_ai_environment_store().bind(environment_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/unified-research-environment/environments/{environment_id}/lineage", dependencies=[Depends(require_backend_key)])
+def unified_research_environment_lineage(environment_id: str) -> dict[str, Any]:
+    try:
+        return get_unified_scholarly_ai_environment_store().lineage(environment_id)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/unified-research-environment/environments/{environment_id}/readiness", dependencies=[Depends(require_backend_key)])
+def unified_research_environment_readiness(environment_id: str) -> dict[str, Any]:
+    try:
+        return get_unified_scholarly_ai_environment_store().readiness(environment_id)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/unified-research-environment/environments/{environment_id}/dossier", dependencies=[Depends(require_backend_key)])
+def unified_research_environment_dossier(environment_id: str) -> dict[str, Any]:
+    try:
+        return get_unified_scholarly_ai_environment_store().dossier(environment_id)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/unified-research-environment/snapshots/freeze", dependencies=[Depends(require_backend_key)])
+def unified_research_environment_snapshot(payload: UnifiedResearchEnvironmentSnapshotRequest) -> dict[str, Any]:
+    try:
+        return get_unified_scholarly_ai_environment_store().freeze_snapshot(payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
 
 @router.get("/scholarly-validation/capabilities", dependencies=[Depends(require_backend_key)])
 def scholarly_validation_capabilities() -> dict[str, Any]:
