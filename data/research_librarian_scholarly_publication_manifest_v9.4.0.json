@@ -1,0 +1,22 @@
+{
+  "schema": "sc-research-librarian-scholarly-publication-manifest/1.0",
+  "release": "9.4.0",
+  "title": "Scholarly Publication, Citation & Research Dissemination Environment",
+  "contracts": [
+    "sc-research-librarian-scholarly-publication/1.0",
+    "sc-research-librarian-scholarly-publication-package/1.0",
+    "sc-research-librarian-scholarly-dissemination-readiness/1.0",
+    "sc-research-librarian-knowledge-library-publication-handoff/1.0",
+    "sc-research-librarian-citation-export/1.0"
+  ],
+  "durable_job_type": "scholarly-publication-package",
+  "migration": "009_scholarly_publication_dissemination.sql",
+  "governance": {
+    "doi_minting": false,
+    "automatic_authorship": false,
+    "automatic_editorial_acceptance": false,
+    "automatic_publication": false,
+    "automatic_core_writes": false,
+    "automatic_truth_promotion": false
+  }
+}

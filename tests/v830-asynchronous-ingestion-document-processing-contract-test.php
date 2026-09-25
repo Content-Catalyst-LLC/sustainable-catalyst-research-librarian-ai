@@ -7,9 +7,9 @@ $service = file_get_contents($root . '/backend/app/services/document_jobs.py');
 $api = file_get_contents($root . '/backend/app/api/jobs.py');
 $compose = file_get_contents($root . '/compose.yml');
 $checks = array(
-    'version_header' => false !== strpos($main, 'Version: 9.3.0'),
-    'version_constant' => false !== strpos($main, "const VERSION        = '9.3.0';"),
-    'backend_version' => false !== strpos(file_get_contents($root . '/backend/app/__init__.py'), '__version__ = "9.3.0"'),
+    'version_header' => false !== strpos($main, 'Version: 9.4.0'),
+    'version_constant' => false !== strpos($main, "const VERSION        = '9.4.0';"),
+    'backend_version' => false !== strpos(file_get_contents($root . '/backend/app/__init__.py'), '__version__ = "9.4.0"'),
     'durable_job_table' => false !== strpos($backend, 'sc_rl_async_jobs'),
     'skip_locked' => false !== strpos($backend, 'FOR UPDATE SKIP LOCKED'),
     'lease_recovery' => false !== strpos($backend, 'lease_expires_utc'),
@@ -17,7 +17,7 @@ $checks = array(
     'worker_runtime' => false !== strpos($worker, 'DocumentWorker'),
     'document_pipeline' => false !== strpos($service, 'process_document_job'),
     'job_api' => false !== strpos($api, '/documents'),
-    'compose_release' => false !== strpos($compose, '9.3.0'),
+    'compose_release' => false !== strpos($compose, '9.4.0'),
 );
 $failed = array_keys(array_filter($checks, fn($ok) => !$ok));
 if ($failed) {

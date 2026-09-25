@@ -8,9 +8,9 @@ $contracts = file_get_contents($root . '/backend/app/contracts/research_intellig
 $jobs = file_get_contents($root . '/backend/app/async_jobs.py');
 $manifest = json_decode(file_get_contents($root . '/data/research_librarian_finding_claim_evidence_extraction_manifest_v8.9.0.json'), true);
 $checks = [
-  'version_header' => false !== strpos($main, 'Version: 9.3.0'),
-  'version_constant' => false !== strpos($main, "const VERSION        = '9.3.0';"),
-  'backend_version' => false !== strpos(file_get_contents($root . '/backend/app/__init__.py'), '__version__ = "9.3.0"'),
+  'version_header' => false !== strpos($main, 'Version: 9.4.0'),
+  'version_constant' => false !== strpos($main, "const VERSION        = '9.4.0';"),
+  'backend_version' => false !== strpos(file_get_contents($root . '/backend/app/__init__.py'), '__version__ = "9.4.0"'),
   'schema' => false !== strpos($contracts, 'sc-research-librarian-finding-claim-evidence-extraction/1.0'),
   'core_contract' => false !== strpos($contracts, 'sc.research.finding-claim-evidence.v1'),
   'capability_route' => false !== strpos($api, '/research-intelligence/capabilities'),

@@ -25,6 +25,10 @@ from ..contracts.peer_review import (
     AuthorResponseRequest, RevisionSubmissionRequest, ReplicationAttemptRequest,
     EditorialDecisionRequest, PeerReviewPackageFreezeRequest,
 )
+from ..contracts.scholarly_publication import (
+    ScholarlyPublicationCreateRequest, PublicationVersionRequest, PublicationIdentifierRequest,
+    PublicationStateTransitionRequest, PublicationHandoffRequest, PublicationPackageFreezeRequest,
+)
 from ..contracts.visual_research import (
     VisualResearchPlanRequest, CoreVisualResearchPromotionRequest,
 )
@@ -66,6 +70,9 @@ from ..services.scholarly_research import (
 )
 from ..services.peer_review import (
     get_peer_review_store, capabilities as peer_review_capabilities,
+)
+from ..services.scholarly_publication import (
+    get_scholarly_publication_store, capabilities as scholarly_publication_capabilities,
 )
 from ..services.visual_research import (
     capabilities as visual_research_capabilities, build_plan as build_visual_research_plan,
@@ -161,6 +168,7 @@ def architecture() -> dict[str, Any]:
             "unified-research-intelligence-runtime-orchestration",
             "original-scholarly-research-environment",
             "human-peer-review-replication-and-scholarly-validation-registry",
+            "scholarly-publication-citation-and-research-dissemination-registry",
         ],
         "platform_core_owns": [
             "governed-research-objects",
@@ -583,6 +591,97 @@ def scholarly_research_packages(study_id: str, limit: int = 100) -> dict[str, An
         raise _translate(exc) from exc
 
 
+
+
+
+@router.get("/scholarly-publication/capabilities", dependencies=[Depends(require_backend_key)])
+def scholarly_publication_capability_report() -> dict[str, Any]:
+    return scholarly_publication_capabilities()
+
+@router.post("/scholarly-publication/studies/{study_id}/publications", dependencies=[Depends(require_backend_key)])
+def scholarly_publication_create(study_id: str, payload: ScholarlyPublicationCreateRequest) -> dict[str, Any]:
+    try:
+        item, replayed = get_scholarly_publication_store().create(study_id, payload)
+        return {"publication": item, "idempotent_replay": replayed}
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/scholarly-publication/publications", dependencies=[Depends(require_backend_key)])
+def scholarly_publication_list(study_id: str = "", state: str = "", limit: int = 100) -> dict[str, Any]:
+    try:
+        return {"publications": get_scholarly_publication_store().list(study_id=study_id, state=state, limit=limit)}
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/scholarly-publication/publications/{publication_id}", dependencies=[Depends(require_backend_key)])
+def scholarly_publication_get(publication_id: str) -> dict[str, Any]:
+    try:
+        return get_scholarly_publication_store().get(publication_id)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/scholarly-publication/publications/{publication_id}/versions", dependencies=[Depends(require_backend_key)])
+def scholarly_publication_version(publication_id: str, payload: PublicationVersionRequest) -> dict[str, Any]:
+    try:
+        return get_scholarly_publication_store().add_version(publication_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/scholarly-publication/publications/{publication_id}/identifiers", dependencies=[Depends(require_backend_key)])
+def scholarly_publication_identifier(publication_id: str, payload: PublicationIdentifierRequest) -> dict[str, Any]:
+    try:
+        return get_scholarly_publication_store().add_identifier(publication_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/scholarly-publication/publications/{publication_id}/state", dependencies=[Depends(require_backend_key)])
+def scholarly_publication_state(publication_id: str, payload: PublicationStateTransitionRequest) -> dict[str, Any]:
+    try:
+        return get_scholarly_publication_store().transition(publication_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/scholarly-publication/publications/{publication_id}/citation-exports", dependencies=[Depends(require_backend_key)])
+def scholarly_publication_citations(publication_id: str) -> dict[str, Any]:
+    try:
+        return get_scholarly_publication_store().citation_exports(publication_id)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/scholarly-publication/publications/{publication_id}/readiness", dependencies=[Depends(require_backend_key)])
+def scholarly_publication_readiness(publication_id: str) -> dict[str, Any]:
+    try:
+        return get_scholarly_publication_store().readiness(publication_id)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/scholarly-publication/publications/{publication_id}/knowledge-library-handoffs", dependencies=[Depends(require_backend_key)])
+def scholarly_publication_handoff(publication_id: str, payload: PublicationHandoffRequest) -> dict[str, Any]:
+    try:
+        return get_scholarly_publication_store().knowledge_library_handoff(publication_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/scholarly-publication/publications/{publication_id}/packages/freeze", dependencies=[Depends(require_backend_key)])
+def scholarly_publication_package(publication_id: str, payload: PublicationPackageFreezeRequest) -> dict[str, Any]:
+    try:
+        return get_scholarly_publication_store().freeze_package(publication_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/scholarly-publication/publications/{publication_id}/events", dependencies=[Depends(require_backend_key)])
+def scholarly_publication_events(publication_id: str, limit: int = 500) -> dict[str, Any]:
+    try:
+        return {"events": get_scholarly_publication_store().events(publication_id, limit)}
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/scholarly-publication/publications/{publication_id}/packages", dependencies=[Depends(require_backend_key)])
+def scholarly_publication_packages(publication_id: str, limit: int = 100) -> dict[str, Any]:
+    try:
+        return {"packages": get_scholarly_publication_store().packages(publication_id, limit)}
+    except Exception as exc:
+        raise _translate(exc) from exc
 
 @router.get("/scholarly-validation/capabilities", dependencies=[Depends(require_backend_key)])
 def scholarly_validation_capabilities() -> dict[str, Any]:

@@ -26,7 +26,9 @@ from ..contracts.research_workflow import ResearchWorkflowAdvanceRequest
 from ..contracts.scholarly_research import ScholarlyPackageFreezeRequest
 from .scholarly_research import get_scholarly_research_store
 from ..contracts.peer_review import PeerReviewPackageFreezeRequest
+from ..contracts.scholarly_publication import PublicationPackageFreezeRequest
 from .peer_review import get_peer_review_store
+from .scholarly_publication import get_scholarly_publication_store
 
 Progress = Callable[[str, int], None]
 
@@ -301,6 +303,21 @@ async def process_peer_review_validation_package_job(claim: JobClaim, progress: 
     return result
 
 
+async def process_scholarly_publication_package_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
+    progress("load-scholarly-publication", 20)
+    publication_id = str(claim.payload.get("publication_id") or "").strip()
+    if not publication_id:
+        raise ValueError("publication_id is required")
+    request = PublicationPackageFreezeRequest.model_validate(claim.payload.get("freeze") or {})
+    store = get_scholarly_publication_store()
+    progress("evaluate-dissemination-readiness", 50)
+    store.readiness(publication_id)
+    progress("freeze-scholarly-publication-package", 80)
+    result = store.freeze_package(publication_id, request)
+    progress("scholarly-publication-package-ready", 95)
+    return result
+
+
 async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
     if claim.job_type in {"document-process", "ingestion"}:
         return await process_document_job(claim, progress)
@@ -326,7 +343,9 @@ async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
         return await process_scholarly_research_package_job(claim, progress)
     if claim.job_type == "peer-review-validation-package":
         return await process_peer_review_validation_package_job(claim, progress)
+    if claim.job_type == "scholarly-publication-package":
+        return await process_scholarly_publication_package_job(claim, progress)
     raise ValueError(
         f"Job type {claim.job_type!r} is registered for the durable queue but has no v8.3 executor yet; "
-        "use document-process, document-intelligence, source-identity, research-intelligence-extraction, argument-synthesis-plan, statistical-analysis-plan, visual-research-plan, unified-research-runtime, research-workflow-advance, scholarly-research-package, peer-review-validation-package, ingestion, or validation."
+        "use document-process, document-intelligence, source-identity, research-intelligence-extraction, argument-synthesis-plan, statistical-analysis-plan, visual-research-plan, unified-research-runtime, research-workflow-advance, scholarly-research-package, peer-review-validation-package, scholarly-publication-package, ingestion, or validation."
     )
