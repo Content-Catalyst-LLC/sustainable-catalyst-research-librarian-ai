@@ -1,0 +1,21 @@
+{
+  "schema": "sc-research-librarian-release-capability-manifest/1.0",
+  "release": "9.9.0",
+  "capability": "model-aware-research-intelligence-and-cross-product-exchange",
+  "contracts": [
+    "sc-research-librarian-model-aware-research-intelligence/1.0",
+    "sc-research-librarian-cross-product-exchange/1.0",
+    "sc-research-librarian-cross-product-exchange-receipt/1.0",
+    "sc-research-librarian-model-aware-research-snapshot/1.0"
+  ],
+  "destinations": ["platform-core", "workspace", "research-lab", "workbench", "knowledge-library", "decision-studio", "site-intelligence"],
+  "durable_job": "model-aware-research-snapshot",
+  "governance": {
+    "core_ai_object_refs_are_external": true,
+    "automatic_delivery": false,
+    "automatic_model_registration": false,
+    "automatic_model_selection": false,
+    "automatic_research_judgment": false,
+    "destination_acceptance_requires_receipt": true
+  }
+}

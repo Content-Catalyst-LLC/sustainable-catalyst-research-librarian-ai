@@ -1,7 +1,11 @@
-# Sustainable Catalyst Research Librarian AI v9.8.0
+# Sustainable Catalyst Research Librarian AI v9.9.0
 
-Current release: **v9.8.0 — AI Research Experiment Orchestration**
+Current release: **v9.9.0 — Model-Aware Research Intelligence & Cross-Product Exchange**
 
+
+## v9.9.0 Model-Aware Research Intelligence & Cross-Product Exchange
+
+Research Librarian AI v9.9.0 adds durable model-aware research lineage and transport-neutral cross-product exchange above the v9.6 context, v9.7 evaluation and v9.8 experiment layers. It connects governed model/model-version, dataset/version, prompt/version, context, inference, evaluation and experiment references to evidence, claims, findings, statistical and visual objects, studies and publications, then packages selected lineage for Platform Core, Workspace, Research Lab, Workbench, Knowledge Library, Decision Studio and Site Intelligence. Packet creation is not delivery; destination acceptance requires an explicit receipt. The Librarian does not register models, select models, rank research outputs, perform automatic delivery, or infer research validity.
 
 ## v9.8.0 AI Research Experiment Orchestration
 

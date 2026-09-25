@@ -3,14 +3,14 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 9.8.0
+Stable tag: 9.9.0
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
 
 == Description ==
 
-v9.8.0 adds AI Research Experiment Orchestration. It provides durable experiment definitions, parameterized trials, explicit runtime handoffs, external run receipts, v9.7 evaluation bindings, human-controlled experiment state, and frozen reproducibility snapshots. It does not execute model training, infer successful execution, select a best model, rank experiments, or infer causality.
+v9.9.0 adds Model-Aware Research Intelligence & Cross-Product Exchange. It binds research outputs to governed model, dataset, prompt, context, inference, evaluation, experiment, evidence, claim, finding, statistical, visual, study and publication lineage, and creates transport-neutral exchange packets with explicit destination receipts. It does not register models, deliver packets automatically, infer destination acceptance, rank models, or make research-validity judgments.
 
 Research Librarian AI retrieves Sustainable Catalyst publications and documents through exact-title priority, section-aware BM25 ranking, optional Gemini embeddings, calibrated reciprocal-rank fusion, and citation-verified synthesis. WordPress remains the canonical publishing and recovery source, while FastAPI stores the production knowledge index durably in Neon Postgres with pgvector.
 
@@ -47,6 +47,12 @@ v8.7.0 adds the Core Evidence Bridge. Hydrated canonical Librarian sources can b
 [sc_research_librarian_platform_handoffs]
 
 == Changelog ==
+
+= 9.9.0 =
+* Model-aware research lineage across Core AI and governed research objects.
+* Cross-product exchange packets and explicit destination receipts.
+* Structural exchange readiness and immutable lineage/exchange snapshots.
+* No automatic delivery, model selection, truth promotion, or destination acceptance inference.
 
 = 9.8.0 =
 * Added durable AI research experiments, parameterized trial specifications, explicit execution handoffs, external run receipts, evaluation bindings, state controls, and frozen experiment snapshots.

@@ -14,9 +14,9 @@ $css = file_get_contents( $root . '/assets/sc-research-librarian-ai.css' );
 $docs = file_get_contents( $root . '/docs/V730_SOURCE_EVALUATION_EVIDENCE_COMPARISON_RESEARCH_QUALITY_SIGNALS.md' );
 $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_source_evaluation_manifest_v7.3.0.json' ), true );
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 9.8.0' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '9.8.0';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "9.8.0"' ),
+    'version_header' => false !== strpos( $main, 'Version: 9.9.0' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '9.9.0';" ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "9.9.0"' ),
     'module_version' => false !== strpos( $module, "const VERSION = '8.0.0';" ),
     'api_12' => false !== strpos( $platform, 'sc-connected-research-api/2.0' ),
     'workspace_22' => false !== strpos( $module, 'sc-research-librarian-public-workspace/3.0' ),

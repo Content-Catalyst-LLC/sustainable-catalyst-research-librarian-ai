@@ -1,0 +1,15 @@
+# Git push/tag
+cd ~/Downloads
+rm -rf sc-research-librarian-v9.9.0-release
+unzip -q sustainable-catalyst-research-librarian-ai-v9.9.0-release-bundle.zip -d sc-research-librarian-v9.9.0-release
+cd sc-research-librarian-v9.9.0-release
+chmod +x PUSH_RESEARCH_LIBRARIAN_V990_PY312.sh
+./PUSH_RESEARCH_LIBRARIAN_V990_PY312.sh "$PWD/sustainable-catalyst-research-librarian-ai-v9.9.0-repository.zip"
+
+# Backend transfer
+scp -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes sustainable-catalyst-research-librarian-backend-v9.9.0.zip deploy/contabo/upgrade_research_librarian_backend_v9_9_0_contabo.sh catalystadmin@94.72.113.77:/tmp/
+ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes catalystadmin@94.72.113.77
+
+# On Contabo
+chmod +x /tmp/upgrade_research_librarian_backend_v9_9_0_contabo.sh
+/tmp/upgrade_research_librarian_backend_v9_9_0_contabo.sh /tmp/sustainable-catalyst-research-librarian-backend-v9.9.0.zip

@@ -45,6 +45,10 @@ from ..contracts.ai_research_experiment import (
     AIExperimentRunReceiptRequest, AIExperimentEvaluationBindingRequest, AIExperimentStateRequest,
     AIExperimentSnapshotRequest,
 )
+from ..contracts.model_aware_exchange import (
+    ModelAwareResearchRecordRequest, CrossProductExchangeCreateRequest,
+    CrossProductExchangeReceiptRequest, ModelAwareSnapshotRequest,
+)
 from ..contracts.visual_research import (
     VisualResearchPlanRequest, CoreVisualResearchPromotionRequest,
 )
@@ -101,6 +105,9 @@ from ..services.rag_evaluation import (
 )
 from ..services.ai_research_experiment import (
     get_ai_research_experiment_store, capabilities as ai_research_experiment_capabilities,
+)
+from ..services.model_aware_exchange import (
+    get_model_aware_research_store, capabilities as model_aware_research_capabilities,
 )
 from ..services.visual_research import (
     capabilities as visual_research_capabilities, build_plan as build_visual_research_plan,
@@ -201,6 +208,7 @@ def architecture() -> dict[str, Any]:
             "ai-aware-retrieval-and-research-context-engineering",
             "rag-evaluation-and-evidence-grounding",
             "ai-research-experiment-orchestration",
+            "model-aware-research-intelligence-and-cross-product-exchange",
         ],
         "platform_core_owns": [
             "governed-research-objects",
@@ -939,6 +947,67 @@ def ai_research_experiment_state(experiment_id: str, payload: AIExperimentStateR
 def ai_research_experiment_snapshot(payload: AIExperimentSnapshotRequest) -> dict[str, Any]:
     try:
         return get_ai_research_experiment_store().freeze_snapshot(payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+
+@router.get("/model-aware-research/capabilities", dependencies=[Depends(require_backend_key)])
+def model_aware_research_capabilities_route() -> dict[str, Any]:
+    return model_aware_research_capabilities()
+
+@router.post("/model-aware-research/records", dependencies=[Depends(require_backend_key)])
+def model_aware_research_create(payload: ModelAwareResearchRecordRequest) -> dict[str, Any]:
+    try:
+        return get_model_aware_research_store().create_record(payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/model-aware-research/records/{record_id}", dependencies=[Depends(require_backend_key)])
+def model_aware_research_get(record_id: str) -> dict[str, Any]:
+    try:
+        return get_model_aware_research_store().get_record(record_id)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/model-aware-research/records/{record_id}/lineage", dependencies=[Depends(require_backend_key)])
+def model_aware_research_lineage(record_id: str) -> dict[str, Any]:
+    try:
+        return get_model_aware_research_store().lineage(record_id)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/model-aware-research/records/{record_id}/exchange-readiness", dependencies=[Depends(require_backend_key)])
+def model_aware_exchange_readiness(record_id: str, destination: str = Query(..., min_length=1)) -> dict[str, Any]:
+    try:
+        return get_model_aware_research_store().exchange_readiness(record_id, destination)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/cross-product-exchange/exchanges", dependencies=[Depends(require_backend_key)])
+def cross_product_exchange_create(payload: CrossProductExchangeCreateRequest) -> dict[str, Any]:
+    try:
+        return get_model_aware_research_store().create_exchange(payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/cross-product-exchange/exchanges/{exchange_id}", dependencies=[Depends(require_backend_key)])
+def cross_product_exchange_get(exchange_id: str) -> dict[str, Any]:
+    try:
+        return get_model_aware_research_store().get_exchange(exchange_id)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/cross-product-exchange/exchanges/{exchange_id}/receipts", dependencies=[Depends(require_backend_key)])
+def cross_product_exchange_receipt(exchange_id: str, payload: CrossProductExchangeReceiptRequest) -> dict[str, Any]:
+    try:
+        return get_model_aware_research_store().add_receipt(exchange_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/model-aware-research/snapshots/freeze", dependencies=[Depends(require_backend_key)])
+def model_aware_research_snapshot(payload: ModelAwareSnapshotRequest) -> dict[str, Any]:
+    try:
+        return get_model_aware_research_store().freeze_snapshot(payload)
     except Exception as exc:
         raise _translate(exc) from exc
 

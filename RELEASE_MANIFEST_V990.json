@@ -1,0 +1,8 @@
+{
+  "release": "9.9.0",
+  "name": "Research Librarian AI v9.9.0 — Model-Aware Research Intelligence & Cross-Product Exchange",
+  "backend_migration": "014_model_aware_research_cross_product_exchange.sql",
+  "job_type": "model-aware-research-snapshot",
+  "python_test": "backend/tests/test_v990_model_aware_exchange.py",
+  "php_contract": "tests/v990-model-aware-research-cross-product-exchange-contract-test.php"
+}

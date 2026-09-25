@@ -1,3 +1,11 @@
+# 9.9.0 — Model-Aware Research Intelligence & Cross-Product Exchange
+
+- Adds durable model-aware research records spanning model, dataset, prompt, context, inference, evaluation, experiment and governed research-object lineage.
+- Adds structural exchange readiness for Platform Core, Workspace, Research Lab, Workbench, Knowledge Library, Decision Studio and Site Intelligence.
+- Adds transport-neutral cross-product exchange packets with explicit destination receipts; packet creation never implies delivery or acceptance.
+- Adds immutable model-aware lineage/exchange snapshots and the `model-aware-research-snapshot` durable job.
+- Preserves Core as AI-object authority and disables automatic model registration, automatic delivery, model selection, research ranking and truth promotion.
+
 # 9.8.0 — AI Research Experiment Orchestration
 
 - Added durable AI research experiment definitions with deterministic content identity.

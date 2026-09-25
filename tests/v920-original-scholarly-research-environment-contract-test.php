@@ -5,8 +5,8 @@ $backend = file_get_contents($root . '/backend/app/__init__.py');
 $core = file_get_contents($root . '/backend/app/api/core.py');
 $jobs = file_get_contents($root . '/backend/app/async_jobs.py');
 $required = [
-  'plugin_version' => strpos($main, 'Version: 9.8.0') !== false,
-  'backend_version' => strpos($backend, '__version__ = "9.8.0"') !== false,
+  'plugin_version' => strpos($main, 'Version: 9.9.0') !== false,
+  'backend_version' => strpos($backend, '__version__ = "9.9.0"') !== false,
   'contract' => file_exists($root . '/backend/app/contracts/scholarly_research.py'),
   'service' => file_exists($root . '/backend/app/services/scholarly_research.py'),
   'migration' => file_exists($root . '/backend/migrations/007_original_scholarly_research_environment.sql'),
@@ -19,4 +19,4 @@ $required = [
 foreach ($required as $name => $ok) {
   if (!$ok) { fwrite(STDERR, "FAIL: $name\n"); exit(1); }
 }
-echo "PASS: Research Librarian v9.8.0 Original Research & Scholarly Research Environment contract\n";
+echo "PASS: Research Librarian v9.9.0 Original Research & Scholarly Research Environment contract\n";
