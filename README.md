@@ -1,9 +1,8 @@
-# Sustainable Catalyst Research Librarian AI v9.4.0
+# Sustainable Catalyst Research Librarian AI v9.5.0
 
-## v9.4.0 Scholarly Publication, Citation & Research Dissemination Environment
+## v9.5.0 Research Knowledge Graph & Publication Intelligence
 
-Research Librarian AI v9.4.0 adds durable, versioned scholarly publication records above the v9.2 original-research and v9.3 peer-review layers. Publications preserve declared authorship, manuscript and study lineage, structured references, citation exports, visual-research references, canonical publication URLs, externally assigned identifiers, explicit dissemination state transitions, Knowledge Library handoffs, and frozen publication packages. The Librarian does not mint DOIs, infer authorship, make editorial decisions, publish automatically, or determine truth.
-
+Research Librarian AI v9.5.0 adds a durable cross-object research knowledge graph above the v9.4 publication environment. It materializes only declared publication/study/citation/provenance relationships into accepted graph edges, supports human-reviewed semantic edge proposals, descriptive publication intelligence, graph neighborhoods, and immutable accepted-graph snapshots. It does not infer graph facts automatically, rank scholarly authority, compute impact/truth scores, or perform automatic Core writes.
 
 Research Librarian AI v9.3.0 adds the **Original Research & Scholarly Research Environment** on top of the v9.1 durable workflow engine. It provides durable scholarly study records, frozen protocols, explicit post-freeze deviations, result provenance, human-authored interpretations and manuscript sections, publication-readiness checks, immutable study revisions, and frozen reproducibility packages without automatic authorship or truth promotion.
 

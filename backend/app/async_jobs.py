@@ -45,6 +45,7 @@ JOB_TYPES = {
     "scholarly-research-package",
     "peer-review-validation-package",
     "scholarly-publication-package",
+    "research-knowledge-graph-snapshot",
 }
 TERMINAL_STATES = {"succeeded", "failed", "cancelled"}
 ACTIVE_STATES = {"queued", "retry_wait", "running"}

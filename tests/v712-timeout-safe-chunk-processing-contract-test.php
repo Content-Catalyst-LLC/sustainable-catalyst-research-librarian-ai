@@ -7,7 +7,7 @@ $config = file_get_contents( $root . '/backend/app/config.py' );
 $store = file_get_contents( $root . '/backend/app/postgres_store.py' );
 $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_timeout_safe_chunk_manifest_v7.1.2.json' ), true );
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 9.4.0' ),
+    'version_header' => false !== strpos( $main, 'Version: 9.5.0' ),
     'module_version' => false !== strpos( $module, "const VERSION = '8.0.0';" ),
     'small_default_batch' => false !== strpos( $config, 'SC_RL_POSTGRES_ACTIVATION_CHUNK_RECORD_BATCH_LIMIT", 5' ),
     'bulk_chunk_insert' => false !== strpos( $store, 'jsonb_to_recordset' ),

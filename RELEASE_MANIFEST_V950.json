@@ -1,0 +1,15 @@
+{
+  "schema": "sc-research-librarian-release-manifest/9.5.0",
+  "release": "9.5.0",
+  "title": "Research Knowledge Graph & Publication Intelligence",
+  "backend_migration": "010_research_knowledge_graph_publication_intelligence.sql",
+  "durable_job_type": "research-knowledge-graph-snapshot",
+  "api_prefix": "/v1/core/research-knowledge-graph",
+  "governance": {
+    "automatic_semantic_inference": false,
+    "automatic_edge_acceptance": false,
+    "automatic_impact_ranking": false,
+    "automatic_truth_scoring": false,
+    "automatic_core_writes": false
+  }
+}

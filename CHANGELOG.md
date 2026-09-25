@@ -1,3 +1,10 @@
+## 9.5.0 — Research Knowledge Graph & Publication Intelligence
+- Added durable research graph nodes, accepted edges, reviewable edge proposals, graph events and immutable snapshots.
+- Added publication materialization from declared v9.4 scholarly lineage.
+- Added descriptive publication intelligence and graph-neighborhood APIs without impact/truth scoring.
+- Added durable research-knowledge-graph-snapshot jobs.
+- Preserved human review before semantic relationship acceptance and disabled automatic Core writes.
+
 # Changelog
 
 ## 9.3.0 — Peer Review, Replication & Scholarly Validation Environment

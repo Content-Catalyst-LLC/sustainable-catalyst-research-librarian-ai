@@ -29,6 +29,10 @@ from ..contracts.scholarly_publication import (
     ScholarlyPublicationCreateRequest, PublicationVersionRequest, PublicationIdentifierRequest,
     PublicationStateTransitionRequest, PublicationHandoffRequest, PublicationPackageFreezeRequest,
 )
+from ..contracts.research_knowledge_graph import (
+    KnowledgeGraphNodeRequest, KnowledgeGraphEdgeRequest, KnowledgeGraphProposalRequest,
+    KnowledgeGraphProposalDecisionRequest, PublicationGraphMaterializationRequest, KnowledgeGraphSnapshotRequest,
+)
 from ..contracts.visual_research import (
     VisualResearchPlanRequest, CoreVisualResearchPromotionRequest,
 )
@@ -73,6 +77,9 @@ from ..services.peer_review import (
 )
 from ..services.scholarly_publication import (
     get_scholarly_publication_store, capabilities as scholarly_publication_capabilities,
+)
+from ..services.research_knowledge_graph import (
+    get_research_knowledge_graph_store, capabilities as research_knowledge_graph_capabilities,
 )
 from ..services.visual_research import (
     capabilities as visual_research_capabilities, build_plan as build_visual_research_plan,
@@ -169,6 +176,7 @@ def architecture() -> dict[str, Any]:
             "original-scholarly-research-environment",
             "human-peer-review-replication-and-scholarly-validation-registry",
             "scholarly-publication-citation-and-research-dissemination-registry",
+            "research-knowledge-graph-and-publication-intelligence-registry",
         ],
         "platform_core_owns": [
             "governed-research-objects",
@@ -680,6 +688,66 @@ def scholarly_publication_events(publication_id: str, limit: int = 500) -> dict[
 def scholarly_publication_packages(publication_id: str, limit: int = 100) -> dict[str, Any]:
     try:
         return {"packages": get_scholarly_publication_store().packages(publication_id, limit)}
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/research-knowledge-graph/capabilities", dependencies=[Depends(require_backend_key)])
+def research_knowledge_graph_capability_report() -> dict[str, Any]:
+    return research_knowledge_graph_capabilities()
+
+@router.post("/research-knowledge-graph/nodes", dependencies=[Depends(require_backend_key)])
+def research_knowledge_graph_node(payload: KnowledgeGraphNodeRequest) -> dict[str, Any]:
+    try:
+        return get_research_knowledge_graph_store().upsert_node(payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/research-knowledge-graph/edges", dependencies=[Depends(require_backend_key)])
+def research_knowledge_graph_edge(payload: KnowledgeGraphEdgeRequest) -> dict[str, Any]:
+    try:
+        return get_research_knowledge_graph_store().add_edge(payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/research-knowledge-graph/edge-proposals", dependencies=[Depends(require_backend_key)])
+def research_knowledge_graph_proposal(payload: KnowledgeGraphProposalRequest) -> dict[str, Any]:
+    try:
+        return get_research_knowledge_graph_store().propose_edge(payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/research-knowledge-graph/edge-proposals/{proposal_id}/decision", dependencies=[Depends(require_backend_key)])
+def research_knowledge_graph_proposal_decision(proposal_id: str, payload: KnowledgeGraphProposalDecisionRequest) -> dict[str, Any]:
+    try:
+        return get_research_knowledge_graph_store().decide_proposal(proposal_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/research-knowledge-graph/publications/{publication_id}/materialize", dependencies=[Depends(require_backend_key)])
+def research_knowledge_graph_materialize_publication(publication_id: str, payload: PublicationGraphMaterializationRequest) -> dict[str, Any]:
+    try:
+        return get_research_knowledge_graph_store().materialize_publication(publication_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/research-knowledge-graph/nodes/{node_ref:path}/neighborhood", dependencies=[Depends(require_backend_key)])
+def research_knowledge_graph_neighborhood(node_ref: str, limit: int = 200) -> dict[str, Any]:
+    try:
+        return get_research_knowledge_graph_store().neighborhood(node_ref, limit)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/research-knowledge-graph/publications/{publication_id}/intelligence", dependencies=[Depends(require_backend_key)])
+def research_knowledge_graph_publication_intelligence(publication_id: str) -> dict[str, Any]:
+    try:
+        return get_research_knowledge_graph_store().publication_intelligence(publication_id)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/research-knowledge-graph/snapshots/freeze", dependencies=[Depends(require_backend_key)])
+def research_knowledge_graph_snapshot(payload: KnowledgeGraphSnapshotRequest) -> dict[str, Any]:
+    try:
+        return get_research_knowledge_graph_store().freeze_snapshot(payload)
     except Exception as exc:
         raise _translate(exc) from exc
 

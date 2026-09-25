@@ -3,14 +3,14 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 9.4.0
+Stable tag: 9.5.0
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
 
 == Description ==
 
-v9.4.0 adds the Scholarly Publication, Citation & Research Dissemination Environment. It provides durable versioned publication records, declared authorship/contributors, structured references, citation exports, explicit dissemination state, canonical URLs, externally assigned identifier records, publication visualization lineage, Knowledge Library handoffs, and frozen publication packages. It does not mint DOIs, infer authorship, make editorial decisions, publish automatically, or promote truth.
+v9.5.0 adds the Scholarly Publication, Citation & Research Dissemination Environment. It provides durable versioned publication records, declared authorship/contributors, structured references, citation exports, explicit dissemination state, canonical URLs, externally assigned identifier records, publication visualization lineage, Knowledge Library handoffs, and frozen publication packages. It does not mint DOIs, infer authorship, make editorial decisions, publish automatically, or promote truth.
 
 Research Librarian AI retrieves Sustainable Catalyst publications and documents through exact-title priority, section-aware BM25 ranking, optional Gemini embeddings, calibrated reciprocal-rank fusion, and citation-verified synthesis. WordPress remains the canonical publishing and recovery source, while FastAPI stores the production knowledge index durably in Neon Postgres with pgvector.
 
@@ -48,7 +48,7 @@ v8.7.0 adds the Core Evidence Bridge. Hydrated canonical Librarian sources can b
 
 == Changelog ==
 
-= 9.4.0 =
+= 9.5.0 =
 * Added durable scholarly publication records, citation exports, explicit publication state, Knowledge Library handoffs, visual lineage, and frozen dissemination packages.
 * External identifiers remain declared records; the Librarian does not mint DOIs or automate publication/editorial judgment.
 
