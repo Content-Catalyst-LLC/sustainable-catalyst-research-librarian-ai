@@ -1,0 +1,15 @@
+{
+  "schema": "sc-research-librarian-release-manifest/1.0",
+  "release": "9.6.0",
+  "title": "AI-Aware Retrieval & Research Context Engineering",
+  "contract": "sc-research-librarian-ai-research-context/1.0",
+  "migration": "011_ai_aware_retrieval_context_engineering.sql",
+  "durable_job": "ai-research-context-snapshot",
+  "governance": {
+    "core_ai_object_refs_are_external": true,
+    "automatic_model_registration": false,
+    "model_training_execution": false,
+    "automatic_grounding_certification": false,
+    "automatic_quality_ranking": false
+  }
+}

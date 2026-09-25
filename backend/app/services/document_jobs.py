@@ -31,6 +31,8 @@ from .peer_review import get_peer_review_store
 from .scholarly_publication import get_scholarly_publication_store
 from .research_knowledge_graph import get_research_knowledge_graph_store
 from ..contracts.research_knowledge_graph import KnowledgeGraphSnapshotRequest
+from ..contracts.ai_research_context import AIContextSnapshotRequest
+from .ai_research_context import get_ai_research_context_store
 
 Progress = Callable[[str, int], None]
 
@@ -332,6 +334,18 @@ async def process_research_knowledge_graph_snapshot_job(claim: JobClaim, progres
     progress("research-knowledge-graph-snapshot-ready", 95)
     return result
 
+
+async def process_ai_research_context_snapshot_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
+    progress("load-ai-research-context", 20)
+    request = AIContextSnapshotRequest.model_validate(claim.payload.get("snapshot") or claim.payload)
+    store = get_ai_research_context_store()
+    progress("assemble-ai-context-lineage", 55)
+    store.lineage(request.context_id)
+    progress("freeze-ai-research-context-snapshot", 80)
+    result = store.freeze_snapshot(request)
+    progress("ai-research-context-snapshot-ready", 95)
+    return result
+
 async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
     if claim.job_type in {"document-process", "ingestion"}:
         return await process_document_job(claim, progress)
@@ -361,7 +375,9 @@ async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
         return await process_scholarly_publication_package_job(claim, progress)
     if claim.job_type == "research-knowledge-graph-snapshot":
         return await process_research_knowledge_graph_snapshot_job(claim, progress)
+    if claim.job_type == "ai-research-context-snapshot":
+        return await process_ai_research_context_snapshot_job(claim, progress)
     raise ValueError(
         f"Job type {claim.job_type!r} is registered for the durable queue but has no v8.3 executor yet; "
-        "use document-process, document-intelligence, source-identity, research-intelligence-extraction, argument-synthesis-plan, statistical-analysis-plan, visual-research-plan, unified-research-runtime, research-workflow-advance, scholarly-research-package, peer-review-validation-package, scholarly-publication-package, research-knowledge-graph-snapshot, ingestion, or validation."
+        "use document-process, document-intelligence, source-identity, research-intelligence-extraction, argument-synthesis-plan, statistical-analysis-plan, visual-research-plan, unified-research-runtime, research-workflow-advance, scholarly-research-package, peer-review-validation-package, scholarly-publication-package, research-knowledge-graph-snapshot, ai-research-context-snapshot, ingestion, or validation."
     )

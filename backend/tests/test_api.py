@@ -17,7 +17,7 @@ client = TestClient(app)
 def test_health() -> None:
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json()["version"] == "9.5.0"
+    assert response.json()["version"] == "9.6.0"
 
 
 def test_sync_requires_key() -> None:
@@ -83,7 +83,7 @@ def test_startup_status_is_exposed() -> None:
     response = client.get("/startup")
     assert response.status_code == 200
     body = response.json()
-    assert body["version"] == "9.5.0"
+    assert body["version"] == "9.6.0"
     assert body["startup_state"] in {"warming", "ready"}
     assert 0 <= body["startup_progress"] <= 100
 
@@ -151,7 +151,7 @@ def test_embedding_status_is_available_without_provider_call() -> None:
     response = client.get("/v1/knowledge/embeddings/status", headers=headers)
     assert response.status_code == 200
     body = response.json()
-    assert body["version"] == "9.5.0"
+    assert body["version"] == "9.6.0"
     assert "semantic_coverage" in body
 
 
@@ -161,7 +161,7 @@ def test_v830_async_job_api_requires_key_and_reports_runtime() -> None:
     response = client.get("/v1/jobs/runtime", headers={"X-SC-RL-Key": "test-key"})
     assert response.status_code == 200
     body = response.json()
-    assert body["version"] == "9.5.0"
+    assert body["version"] == "9.6.0"
     assert body["schema"] == "sc-research-librarian-async-runtime/1.0"
     assert body["durable"] is True
     assert body["claim_strategy"] in {"begin-immediate", "for-update-skip-locked"}

@@ -7,9 +7,9 @@ $calibration = file_get_contents($root . '/backend/app/calibration.py');
 $models = file_get_contents($root . '/backend/app/models.py');
 $manifest = json_decode(file_get_contents($root . '/data/research_librarian_advanced_retrieval_manifest_v8.4.0.json'), true);
 $checks = array(
-  'version_header' => false !== strpos($main, 'Version: 9.5.0'),
-  'version_constant' => false !== strpos($main, "const VERSION        = '9.5.0';"),
-  'backend_version' => false !== strpos(file_get_contents($root . '/backend/app/__init__.py'), '__version__ = "9.5.0"'),
+  'version_header' => false !== strpos($main, 'Version: 9.6.0'),
+  'version_constant' => false !== strpos($main, "const VERSION        = '9.6.0';"),
+  'backend_version' => false !== strpos(file_get_contents($root . '/backend/app/__init__.py'), '__version__ = "9.6.0"'),
   'advanced_module' => false !== strpos($advanced, 'ADVANCED_RETRIEVAL_SCHEMA'),
   'query_plan' => false !== strpos($advanced, 'def build_query_plan'),
   'non_generative' => false !== strpos($advanced, '"generative_expansion": False'),

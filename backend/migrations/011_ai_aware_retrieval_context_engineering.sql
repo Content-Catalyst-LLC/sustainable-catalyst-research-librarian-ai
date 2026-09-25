@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS sc_rl_ai_research_contexts(context_id TEXT PRIMARY KEY,record JSONB NOT NULL,record_hash TEXT NOT NULL,created_utc TIMESTAMPTZ NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS sc_rl_ai_retrieval_runs(run_id TEXT PRIMARY KEY,context_id TEXT NOT NULL,record JSONB NOT NULL,record_hash TEXT NOT NULL,created_utc TIMESTAMPTZ NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS sc_rl_ai_context_snapshots(snapshot_id TEXT PRIMARY KEY,context_id TEXT NOT NULL,snapshot_hash TEXT NOT NULL,record JSONB NOT NULL,created_utc TIMESTAMPTZ NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS sc_rl_ai_context_events(event_id BIGSERIAL PRIMARY KEY,context_id TEXT NOT NULL,event_type TEXT NOT NULL,actor_ref TEXT NOT NULL,payload JSONB NOT NULL,event_hash TEXT NOT NULL,created_utc TIMESTAMPTZ NOT NULL DEFAULT now());

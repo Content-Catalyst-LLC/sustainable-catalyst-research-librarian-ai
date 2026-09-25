@@ -1,8 +1,10 @@
-# Sustainable Catalyst Research Librarian AI v9.5.0
+# Sustainable Catalyst Research Librarian AI v9.6.0
 
-## v9.5.0 Research Knowledge Graph & Publication Intelligence
+Current release: **v9.6.0 — AI-Aware Retrieval & Research Context Engineering**
 
-Research Librarian AI v9.5.0 adds a durable cross-object research knowledge graph above the v9.4 publication environment. It materializes only declared publication/study/citation/provenance relationships into accepted graph edges, supports human-reviewed semantic edge proposals, descriptive publication intelligence, graph neighborhoods, and immutable accepted-graph snapshots. It does not infer graph facts automatically, rank scholarly authority, compute impact/truth scores, or perform automatic Core writes.
+## v9.6.0 AI-Aware Retrieval & Research Context Engineering
+
+Research Librarian AI v9.6.0 adds durable AI research-context manifests and retrieval-run lineage above the v9.5 knowledge graph. It records corpus and dataset versions, chunking strategy, embedding/retriever/reranker configuration, prompt and model-version references, generation parameters, retrieved evidence, and immutable context snapshots. It does not mint model identity, train models, certify grounding, rank model quality, or perform automatic Core writes.
 
 Research Librarian AI v9.3.0 adds the **Original Research & Scholarly Research Environment** on top of the v9.1 durable workflow engine. It provides durable scholarly study records, frozen protocols, explicit post-freeze deviations, result provenance, human-authored interpretations and manuscript sections, publication-readiness checks, immutable study revisions, and frozen reproducibility packages without automatic authorship or truth promotion.
 

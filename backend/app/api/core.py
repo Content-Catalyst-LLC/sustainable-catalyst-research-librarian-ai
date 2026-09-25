@@ -33,6 +33,9 @@ from ..contracts.research_knowledge_graph import (
     KnowledgeGraphNodeRequest, KnowledgeGraphEdgeRequest, KnowledgeGraphProposalRequest,
     KnowledgeGraphProposalDecisionRequest, PublicationGraphMaterializationRequest, KnowledgeGraphSnapshotRequest,
 )
+from ..contracts.ai_research_context import (
+    AIResearchContextCreateRequest, AIRetrievalRunCreateRequest, AIContextSnapshotRequest,
+)
 from ..contracts.visual_research import (
     VisualResearchPlanRequest, CoreVisualResearchPromotionRequest,
 )
@@ -80,6 +83,9 @@ from ..services.scholarly_publication import (
 )
 from ..services.research_knowledge_graph import (
     get_research_knowledge_graph_store, capabilities as research_knowledge_graph_capabilities,
+)
+from ..services.ai_research_context import (
+    get_ai_research_context_store, capabilities as ai_research_context_capabilities,
 )
 from ..services.visual_research import (
     capabilities as visual_research_capabilities, build_plan as build_visual_research_plan,
@@ -177,6 +183,7 @@ def architecture() -> dict[str, Any]:
             "human-peer-review-replication-and-scholarly-validation-registry",
             "scholarly-publication-citation-and-research-dissemination-registry",
             "research-knowledge-graph-and-publication-intelligence-registry",
+            "ai-aware-retrieval-and-research-context-engineering",
         ],
         "platform_core_owns": [
             "governed-research-objects",
@@ -748,6 +755,46 @@ def research_knowledge_graph_publication_intelligence(publication_id: str) -> di
 def research_knowledge_graph_snapshot(payload: KnowledgeGraphSnapshotRequest) -> dict[str, Any]:
     try:
         return get_research_knowledge_graph_store().freeze_snapshot(payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+
+@router.get("/ai-research-context/capabilities", dependencies=[Depends(require_backend_key)])
+def ai_research_context_capability_report() -> dict[str, Any]:
+    return ai_research_context_capabilities()
+
+@router.post("/ai-research-context/contexts", dependencies=[Depends(require_backend_key)])
+def ai_research_context_create(payload: AIResearchContextCreateRequest) -> dict[str, Any]:
+    try:
+        return get_ai_research_context_store().create_context(payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/ai-research-context/contexts/{context_id}", dependencies=[Depends(require_backend_key)])
+def ai_research_context_get(context_id: str) -> dict[str, Any]:
+    try:
+        return get_ai_research_context_store().get_context(context_id)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/ai-research-context/retrieval-runs", dependencies=[Depends(require_backend_key)])
+def ai_research_context_register_run(payload: AIRetrievalRunCreateRequest) -> dict[str, Any]:
+    try:
+        return get_ai_research_context_store().register_run(payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/ai-research-context/contexts/{context_id}/lineage", dependencies=[Depends(require_backend_key)])
+def ai_research_context_lineage(context_id: str) -> dict[str, Any]:
+    try:
+        return get_ai_research_context_store().lineage(context_id)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/ai-research-context/snapshots/freeze", dependencies=[Depends(require_backend_key)])
+def ai_research_context_snapshot(payload: AIContextSnapshotRequest) -> dict[str, Any]:
+    try:
+        return get_ai_research_context_store().freeze_snapshot(payload)
     except Exception as exc:
         raise _translate(exc) from exc
 

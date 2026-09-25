@@ -1,0 +1,8 @@
+{
+  "release": "9.6.0",
+  "name": "Research Librarian AI v9.6.0 — AI-Aware Retrieval & Research Context Engineering",
+  "backend_migration": "011_ai_aware_retrieval_context_engineering.sql",
+  "job_type": "ai-research-context-snapshot",
+  "python_test": "backend/tests/test_v960_ai_research_context.py",
+  "php_contract": "tests/v960-ai-aware-retrieval-research-context-contract-test.php"
+}

@@ -1,3 +1,9 @@
+# 9.6.0 — AI-Aware Retrieval & Research Context Engineering
+
+- Added durable AI research contexts, retrieval-run receipts, lineage, and immutable context snapshots.
+- Added migration 011 and durable `ai-research-context-snapshot` jobs.
+- Preserves Platform Core as the owner of governed AI model/prompt/evaluation semantics.
+
 ## 9.5.0 — Research Knowledge Graph & Publication Intelligence
 - Added durable research graph nodes, accepted edges, reviewable edge proposals, graph events and immutable snapshots.
 - Added publication materialization from declared v9.4 scholarly lineage.
