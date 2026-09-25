@@ -1,0 +1,9 @@
+{
+  "release": "10.1.0",
+  "name": "Research Librarian AI v10.1.0 — Research Question & Hypothesis Intelligence",
+  "backend_migration": "016_research_question_hypothesis_intelligence.sql",
+  "job_type": "research-question-hypothesis-snapshot",
+  "python_test": "backend/tests/test_v1010_research_question_hypothesis.py",
+  "php_contract": "tests/v1010-research-question-hypothesis-intelligence-contract-test.php",
+  "unified_environment_component": "research-question-plan"
+}

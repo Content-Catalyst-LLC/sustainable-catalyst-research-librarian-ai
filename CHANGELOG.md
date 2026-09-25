@@ -1,3 +1,10 @@
+# 10.1.0 — Research Question & Hypothesis Intelligence
+
+- Adds durable research-question plans with structured scope, constructs, typed variables, subquestions, evidence requirements, assumptions, and falsification criteria.
+- Adds deterministic candidate hypothesis scaffolding with explicit human review and no automatic hypothesis acceptance or causal inference.
+- Adds Platform Core candidate handoffs without automatic Core writes, plus immutable snapshots and durable snapshot jobs.
+- Integrates question plans into the v10.0 unified scholarly/AI research environment as `research-question-plan`.
+
 # 10.0.0 — Unified Scholarly & AI Research Intelligence Environment
 
 - Adds a durable unified research environment registry binding workflows, scholarly studies, peer review, publications, knowledge graph nodes, AI contexts, RAG evaluations, AI experiments, model-aware lineage, cross-product exchanges, and governed Core objects.

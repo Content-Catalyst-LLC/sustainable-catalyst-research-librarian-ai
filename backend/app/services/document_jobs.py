@@ -41,6 +41,8 @@ from ..contracts.model_aware_exchange import ModelAwareSnapshotRequest
 from .model_aware_exchange import get_model_aware_research_store
 from ..contracts.unified_scholarly_ai_environment import UnifiedResearchEnvironmentSnapshotRequest
 from .unified_scholarly_ai_environment import get_unified_scholarly_ai_environment_store
+from ..contracts.research_question_hypothesis import ResearchQuestionSnapshotRequest
+from .research_question_hypothesis import get_research_question_hypothesis_store
 
 Progress = Callable[[str, int], None]
 
@@ -398,6 +400,17 @@ async def process_unified_research_environment_snapshot_job(claim: JobClaim, pro
     progress("unified-research-environment-snapshot-ready", 95)
     return result
 
+async def process_research_question_hypothesis_snapshot_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
+    progress("load-research-question-hypothesis-plan", 20)
+    request = ResearchQuestionSnapshotRequest.model_validate(claim.payload.get("snapshot") or claim.payload)
+    store = get_research_question_hypothesis_store()
+    progress("assemble-research-question-hypothesis-intelligence", 55)
+    store.readiness(request.plan_id)
+    progress("freeze-research-question-hypothesis-snapshot", 80)
+    result = store.freeze_snapshot(request)
+    progress("research-question-hypothesis-snapshot-ready", 95)
+    return result
+
 async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
     if claim.job_type in {"document-process", "ingestion"}:
         return await process_document_job(claim, progress)
@@ -437,7 +450,9 @@ async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
         return await process_model_aware_research_snapshot_job(claim, progress)
     if claim.job_type == "unified-research-environment-snapshot":
         return await process_unified_research_environment_snapshot_job(claim, progress)
+    if claim.job_type == "research-question-hypothesis-snapshot":
+        return await process_research_question_hypothesis_snapshot_job(claim, progress)
     raise ValueError(
         f"Job type {claim.job_type!r} is registered for the durable queue but has no v8.3 executor yet; "
-        "use document-process, document-intelligence, source-identity, research-intelligence-extraction, argument-synthesis-plan, statistical-analysis-plan, visual-research-plan, unified-research-runtime, research-workflow-advance, scholarly-research-package, peer-review-validation-package, scholarly-publication-package, research-knowledge-graph-snapshot, ai-research-context-snapshot, rag-evaluation-snapshot, ai-research-experiment-snapshot, model-aware-research-snapshot, unified-research-environment-snapshot, ingestion, or validation."
+        "use document-process, document-intelligence, source-identity, research-intelligence-extraction, argument-synthesis-plan, statistical-analysis-plan, visual-research-plan, unified-research-runtime, research-workflow-advance, scholarly-research-package, peer-review-validation-package, scholarly-publication-package, research-knowledge-graph-snapshot, ai-research-context-snapshot, rag-evaluation-snapshot, ai-research-experiment-snapshot, model-aware-research-snapshot, unified-research-environment-snapshot, research-question-hypothesis-snapshot, ingestion, or validation."
     )

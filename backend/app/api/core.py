@@ -53,6 +53,10 @@ from ..contracts.unified_scholarly_ai_environment import (
     UnifiedResearchEnvironmentCreateRequest, UnifiedResearchEnvironmentBindingRequest,
     UnifiedResearchEnvironmentSnapshotRequest,
 )
+from ..contracts.research_question_hypothesis import (
+    ResearchQuestionPlanCreateRequest, ResearchSubquestionAddRequest, ResearchHypothesisAddRequest,
+    ResearchEvidenceRequirementRequest, ResearchQuestionReviewStateRequest, ResearchQuestionSnapshotRequest,
+)
 from ..contracts.visual_research import (
     VisualResearchPlanRequest, CoreVisualResearchPromotionRequest,
 )
@@ -115,6 +119,9 @@ from ..services.model_aware_exchange import (
 )
 from ..services.unified_scholarly_ai_environment import (
     get_unified_scholarly_ai_environment_store, capabilities as unified_scholarly_ai_environment_capabilities,
+)
+from ..services.research_question_hypothesis import (
+    get_research_question_hypothesis_store, capabilities as research_question_hypothesis_capabilities,
 )
 from ..services.visual_research import (
     capabilities as visual_research_capabilities, build_plan as build_visual_research_plan,
@@ -1016,6 +1023,73 @@ def cross_product_exchange_receipt(exchange_id: str, payload: CrossProductExchan
 def model_aware_research_snapshot(payload: ModelAwareSnapshotRequest) -> dict[str, Any]:
     try:
         return get_model_aware_research_store().freeze_snapshot(payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/research-question-hypothesis/capabilities", dependencies=[Depends(require_backend_key)])
+def research_question_hypothesis_capabilities_route() -> dict[str, Any]:
+    return research_question_hypothesis_capabilities()
+
+@router.post("/research-question-hypothesis/plans", dependencies=[Depends(require_backend_key)])
+def research_question_hypothesis_create(payload: ResearchQuestionPlanCreateRequest) -> dict[str, Any]:
+    try:
+        return get_research_question_hypothesis_store().create(payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/research-question-hypothesis/plans/{plan_id}", dependencies=[Depends(require_backend_key)])
+def research_question_hypothesis_get(plan_id: str) -> dict[str, Any]:
+    try:
+        return get_research_question_hypothesis_store().get(plan_id)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/research-question-hypothesis/plans/{plan_id}/subquestions", dependencies=[Depends(require_backend_key)])
+def research_question_hypothesis_add_subquestion(plan_id: str, payload: ResearchSubquestionAddRequest) -> dict[str, Any]:
+    try:
+        return get_research_question_hypothesis_store().add_subquestion(plan_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/research-question-hypothesis/plans/{plan_id}/hypotheses", dependencies=[Depends(require_backend_key)])
+def research_question_hypothesis_add_hypothesis(plan_id: str, payload: ResearchHypothesisAddRequest) -> dict[str, Any]:
+    try:
+        return get_research_question_hypothesis_store().add_hypothesis(plan_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/research-question-hypothesis/plans/{plan_id}/evidence-requirements", dependencies=[Depends(require_backend_key)])
+def research_question_hypothesis_add_evidence_requirement(plan_id: str, payload: ResearchEvidenceRequirementRequest) -> dict[str, Any]:
+    try:
+        return get_research_question_hypothesis_store().add_evidence_requirement(plan_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/research-question-hypothesis/plans/{plan_id}/review-state", dependencies=[Depends(require_backend_key)])
+def research_question_hypothesis_review_state(plan_id: str, payload: ResearchQuestionReviewStateRequest) -> dict[str, Any]:
+    try:
+        return get_research_question_hypothesis_store().set_review_state(plan_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/research-question-hypothesis/plans/{plan_id}/readiness", dependencies=[Depends(require_backend_key)])
+def research_question_hypothesis_readiness(plan_id: str) -> dict[str, Any]:
+    try:
+        return get_research_question_hypothesis_store().readiness(plan_id)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/research-question-hypothesis/plans/{plan_id}/core-candidates", dependencies=[Depends(require_backend_key)])
+def research_question_hypothesis_core_candidates(plan_id: str) -> dict[str, Any]:
+    try:
+        return get_research_question_hypothesis_store().core_candidates(plan_id)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/research-question-hypothesis/snapshots/freeze", dependencies=[Depends(require_backend_key)])
+def research_question_hypothesis_snapshot(payload: ResearchQuestionSnapshotRequest) -> dict[str, Any]:
+    try:
+        return get_research_question_hypothesis_store().freeze_snapshot(payload)
     except Exception as exc:
         raise _translate(exc) from exc
 

@@ -16,9 +16,9 @@ $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_fe
 $v760 = json_decode( file_get_contents( $root . '/data/research_librarian_workspace_promotion_manifest_v7.6.0.json' ), true );
 $migrations = glob( $root . '/backend/migrations/*.sql' );
 $checks = array(
-  'version_header' => false !== strpos($main,'Version: 10.0.0'),
-  'version_constant' => false !== strpos($main,"const VERSION        = '10.0.0';"),
-  'backend_version' => false !== strpos(file_get_contents($root.'/backend/app/__init__.py'),'__version__ = "10.0.0"'),
+  'version_header' => false !== strpos($main,'Version: 10.1.0'),
+  'version_constant' => false !== strpos($main,"const VERSION        = '10.1.0';"),
+  'backend_version' => false !== strpos(file_get_contents($root.'/backend/app/__init__.py'),'__version__ = "10.1.0"'),
   'module_version' => false !== strpos($module,"const VERSION = '8.0.0';"),
   'api_16' => false !== strpos($platform,'sc-connected-research-api/2.0'),
   'workspace_26' => false !== strpos($module,'sc-research-librarian-public-workspace/3.0'),

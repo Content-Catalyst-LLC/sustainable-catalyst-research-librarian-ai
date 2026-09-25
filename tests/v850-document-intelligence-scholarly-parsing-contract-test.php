@@ -7,9 +7,9 @@ $jobs = file_get_contents($root . '/backend/app/services/document_jobs.py');
 $requirements = file_get_contents($root . '/backend/requirements.txt');
 $manifest = json_decode(file_get_contents($root . '/data/research_librarian_document_intelligence_manifest_v8.5.0.json'), true);
 $checks = array(
-  'version_header' => false !== strpos($main, 'Version: 10.0.0'),
-  'version_constant' => false !== strpos($main, "const VERSION        = '10.0.0';"),
-  'backend_version' => false !== strpos(file_get_contents($root . '/backend/app/__init__.py'), '__version__ = "10.0.0"'),
+  'version_header' => false !== strpos($main, 'Version: 10.1.0'),
+  'version_constant' => false !== strpos($main, "const VERSION        = '10.1.0';"),
+  'backend_version' => false !== strpos(file_get_contents($root . '/backend/app/__init__.py'), '__version__ = "10.1.0"'),
   'document_schema' => false !== strpos($doc, 'DOCUMENT_INTELLIGENCE_SCHEMA'),
   'sections' => false !== strpos($doc, 'DOCUMENT_SECTION_SCHEMA'),
   'references' => false !== strpos($doc, 'DOCUMENT_REFERENCE_SCHEMA'),

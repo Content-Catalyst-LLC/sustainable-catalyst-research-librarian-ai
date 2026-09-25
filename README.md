@@ -1,11 +1,11 @@
-# Sustainable Catalyst Research Librarian AI v10.0.0
+# Sustainable Catalyst Research Librarian AI v10.1.0
 
-Current release: **v10.0.0 — Unified Scholarly & AI Research Intelligence Environment**
+Current release: **v10.1.0 — Research Question & Hypothesis Intelligence**
 
 
-## v10.0.0 Unified Scholarly & AI Research Intelligence Environment
+## v10.1.0 Research Question & Hypothesis Intelligence
 
-Research Librarian AI v10.0.0 is the convergence milestone for the scholarly and AI research stack. It binds durable workflows, scholarly studies, peer review and replication, publications, research knowledge graphs, AI research contexts, RAG evaluations, AI experiments, model-aware lineage, cross-product exchanges and governed Core objects into one persistent research environment. The environment assembles lineage and dossiers without replacing the authority of the underlying systems. Platform Core remains the governed object authority, specialist runtimes retain computation, and scholarly/model judgments remain human-controlled.
+Research Librarian AI v10.1.0 adds durable, reviewable research-question and candidate-hypothesis planning above the v10.0 unified environment. It structures scope, constructs, typed variables, subquestions, evidence requirements, assumptions and falsification criteria; supports deterministic candidate scaffolding; requires explicit human approval before governed handoff; and emits Platform Core candidate packets without automatic Core writes, causal inference, hypothesis acceptance or truth promotion.
 
 ## v9.8.0 AI Research Experiment Orchestration
 

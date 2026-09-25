@@ -1,0 +1,17 @@
+{
+  "schema": "sc-research-librarian-research-question-hypothesis-intelligence-manifest/1.0",
+  "release": "10.1.0",
+  "milestone": "10.1",
+  "title": "Research Question & Hypothesis Intelligence",
+  "database_migration": "016_research_question_hypothesis_intelligence.sql",
+  "durable_job": "research-question-hypothesis-snapshot",
+  "unified_environment_component": "research-question-plan",
+  "governance": {
+    "platform_core_is_governed_question_hypothesis_authority": true,
+    "human_approval_required_for_governed_handoff": true,
+    "automatic_core_write": false,
+    "automatic_hypothesis_acceptance": false,
+    "automatic_causal_inference": false,
+    "automatic_truth_promotion": false
+  }
+}

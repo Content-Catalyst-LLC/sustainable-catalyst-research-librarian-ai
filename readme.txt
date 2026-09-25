@@ -3,14 +3,14 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 10.0.0
+Stable tag: 10.1.0
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
 
 == Description ==
 
-v10.0.0 adds the Unified Scholarly & AI Research Intelligence Environment. It binds workflows, studies, peer review, publication, knowledge graphs, AI contexts, RAG evaluations, experiments, model-aware lineage, cross-product exchanges and governed Core objects into a durable research environment with assembled dossiers, structural readiness and immutable snapshots. It does not replace source-system authority, execute specialist computation, select models, make scholarly judgments, or promote truth automatically.
+v10.1.0 adds Research Question & Hypothesis Intelligence: durable question framing, typed variables and constructs, subquestions, evidence requirements, falsification criteria, candidate hypotheses, human review states, Platform Core candidate handoffs, immutable snapshots, and v10.0 environment bindings. It does not accept hypotheses, infer causality, perform automatic Core writes, or promote truth.
 
 Research Librarian AI retrieves Sustainable Catalyst publications and documents through exact-title priority, section-aware BM25 ranking, optional Gemini embeddings, calibrated reciprocal-rank fusion, and citation-verified synthesis. WordPress remains the canonical publishing and recovery source, while FastAPI stores the production knowledge index durably in Neon Postgres with pgvector.
 
@@ -48,11 +48,8 @@ v8.7.0 adds the Core Evidence Bridge. Hydrated canonical Librarian sources can b
 
 == Changelog ==
 
-= 10.0.0 =
-* Model-aware research lineage across Core AI and governed research objects.
-* Cross-product exchange packets and explicit destination receipts.
-* Structural exchange readiness and immutable lineage/exchange snapshots.
-* No automatic delivery, model selection, truth promotion, or destination acceptance inference.
+= 10.1.0 =
+* Added Research Question & Hypothesis Intelligence with durable planning, candidate scaffolding, human review, Core candidate handoffs, snapshots, and unified-environment binding.
 
 = 9.8.0 =
 * Added durable AI research experiments, parameterized trial specifications, explicit execution handoffs, external run receipts, evaluation bindings, state controls, and frozen experiment snapshots.

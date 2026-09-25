@@ -21,6 +21,7 @@ from .ai_research_context import get_ai_research_context_store
 from .rag_evaluation import get_rag_evaluation_store
 from .ai_research_experiment import get_ai_research_experiment_store
 from .model_aware_exchange import get_model_aware_research_store
+from .research_question_hypothesis import get_research_question_hypothesis_store
 
 try:
     import psycopg
@@ -100,7 +101,7 @@ CREATE TABLE IF NOT EXISTS unified_research_environment_snapshots(snapshot_id TE
         body=req.model_dump(); actor=body.pop("actor_ref")
         initial=[]
         singles=[("research-workflow",body.pop("workflow_id")),("scholarly-study",body.pop("study_id")),("scholarly-publication",body.pop("publication_id"))]
-        multiples=[("ai-research-context",body.pop("context_ids")),("rag-evaluation",body.pop("evaluation_ids")),("ai-research-experiment",body.pop("experiment_ids")),("model-aware-research",body.pop("model_aware_record_ids")),("cross-product-exchange",body.pop("exchange_ids")),("knowledge-graph-node",body.pop("knowledge_graph_node_refs")),("core-object",body.pop("core_object_refs"))]
+        multiples=[("ai-research-context",body.pop("context_ids")),("rag-evaluation",body.pop("evaluation_ids")),("ai-research-experiment",body.pop("experiment_ids")),("model-aware-research",body.pop("model_aware_record_ids")),("cross-product-exchange",body.pop("exchange_ids")),("research-question-plan",body.pop("question_plan_ids")),("knowledge-graph-node",body.pop("knowledge_graph_node_refs")),("core-object",body.pop("core_object_refs"))]
         for typ,ref in singles:
             if ref: initial.append({"component_type":typ,"ref":ref,"role":"primary","note":""})
         for typ,refs in multiples:
@@ -117,12 +118,18 @@ CREATE TABLE IF NOT EXISTS unified_research_environment_snapshots(snapshot_id TE
         return self.get(eid)
     def _refs(self,rec:dict[str,Any],typ:str)->list[str]: return [x["ref"] for x in rec.get("bindings",[]) if x.get("component_type")==typ]
     def lineage(self,eid:str)->dict[str,Any]:
-        rec=self.get(eid); out={"schema":UNIFIED_SCHOLARLY_AI_ENVIRONMENT_SCHEMA,"environment_id":eid,"project_ref":rec["project_ref"],"scholarly":{},"ai":{},"knowledge":{},"exchange":{},"unresolved":[]}
+        rec=self.get(eid); out={"schema":UNIFIED_SCHOLARLY_AI_ENVIRONMENT_SCHEMA,"environment_id":eid,"project_ref":rec["project_ref"],"research_design":{},"scholarly":{},"ai":{},"knowledge":{},"exchange":{},"unresolved":[]}
         def one(typ,key,fn):
             refs=self._refs(rec,typ)
             if refs:
                 try: out[key]=fn(refs[0])
                 except Exception as exc: out["unresolved"].append({"component_type":typ,"ref":refs[0],"error":str(exc)})
+        out["research_design"]["question_plans"]=[]
+        for ref in self._refs(rec,"research-question-plan"):
+            try:
+                qs=self._store("question_store",get_research_question_hypothesis_store)
+                out["research_design"]["question_plans"].append({"plan":qs.get(ref),"readiness":qs.readiness(ref)})
+            except Exception as exc: out["unresolved"].append({"component_type":"research-question-plan","ref":ref,"error":str(exc)})
         one("research-workflow","workflow",lambda x:self._store("workflow_store",get_research_workflow_store).get(x))
         srefs=self._refs(rec,"scholarly-study")
         if srefs:
@@ -162,6 +169,7 @@ CREATE TABLE IF NOT EXISTS unified_research_environment_snapshots(snapshot_id TE
         rec=self.get(eid); line=self.lineage(eid)
         dimensions={
             "project_bound":bool(rec.get("project_ref")),
+            "question_plan_bound":bool(self._refs(rec,"research-question-plan")),
             "scholarly_lineage_bound":bool(self._refs(rec,"scholarly-study") or self._refs(rec,"scholarly-publication")),
             "ai_lineage_bound":bool(self._refs(rec,"ai-research-context") or self._refs(rec,"ai-research-experiment") or self._refs(rec,"model-aware-research")),
             "all_bound_components_resolved":not line["unresolved"],
@@ -173,7 +181,7 @@ CREATE TABLE IF NOT EXISTS unified_research_environment_snapshots(snapshot_id TE
         return {"schema":UNIFIED_SCHOLARLY_AI_ENVIRONMENT_SCHEMA,"environment_id":eid,"ready":not blockers,"dimensions":dimensions,"blockers":blockers,"unresolved":line["unresolved"],"governance":{"readiness_is_structural_completeness_not_scientific_validity":True,"publication_and_exchange_are_optional_maturity_dimensions":True,"automatic_truth_promotion":False}}
     def dossier(self,eid:str)->dict[str,Any]:
         rec=self.get(eid); line=self.lineage(eid); ready=self.readiness(eid)
-        return {"schema":UNIFIED_SCHOLARLY_AI_DOSSIER_SCHEMA,"environment":{"environment_id":eid,"title":rec["title"],"research_question":rec.get("research_question","") ,"project_ref":rec["project_ref"],"record_hash":rec["record_hash"]},"bindings":rec["bindings"],"lineage":line,"readiness":ready,"lifecycle":["research-question","workflow","scholarly-study","evidence-and-analysis","ai-context","rag-evaluation","ai-experiment","model-aware-lineage","peer-review-and-replication","publication","knowledge-graph","cross-product-exchange"],"governance":{"dossier_is_assembled_view_not_new_source_of_truth":True,"human_scholarly_judgment_preserved":True,"specialist_runtime_execution_preserved":True,"platform_core_governance_preserved":True}}
+        return {"schema":UNIFIED_SCHOLARLY_AI_DOSSIER_SCHEMA,"environment":{"environment_id":eid,"title":rec["title"],"research_question":rec.get("research_question","") ,"project_ref":rec["project_ref"],"record_hash":rec["record_hash"]},"bindings":rec["bindings"],"lineage":line,"readiness":ready,"lifecycle":["research-question-and-hypothesis-intelligence","workflow","scholarly-study","evidence-and-analysis","ai-context","rag-evaluation","ai-experiment","model-aware-lineage","peer-review-and-replication","publication","knowledge-graph","cross-product-exchange"],"governance":{"dossier_is_assembled_view_not_new_source_of_truth":True,"human_scholarly_judgment_preserved":True,"specialist_runtime_execution_preserved":True,"platform_core_governance_preserved":True}}
     def freeze_snapshot(self,req:UnifiedResearchEnvironmentSnapshotRequest)->dict[str,Any]:
         dossier=self.dossier(req.environment_id); payload={"schema":UNIFIED_SCHOLARLY_AI_SNAPSHOT_SCHEMA,"environment_id":req.environment_id,"dossier":dossier,"label":req.label,"note":req.note,"frozen_utc":_now(),"governance":{"snapshot_is_reproducible_environment_record_not_truth_certification":True}}
         h=_sha(payload); sid="uraisnap-"+h[:32]; payload.update({"snapshot_id":sid,"snapshot_hash":h})
@@ -184,7 +192,7 @@ CREATE TABLE IF NOT EXISTS unified_research_environment_snapshots(snapshot_id TE
         self._event(req.environment_id,"snapshot.frozen",req.actor_ref,{"snapshot_id":sid,"snapshot_hash":h}); return payload
 
 def capabilities()->dict[str,Any]:
-    return {"schema":UNIFIED_SCHOLARLY_AI_ENVIRONMENT_SCHEMA,"release":settings.release_version,"milestone":"10.0","durable":True,"component_types":["research-workflow","scholarly-study","scholarly-publication","knowledge-graph-node","ai-research-context","rag-evaluation","ai-research-experiment","model-aware-research","cross-product-exchange","core-object"],"unifies":["scholarly-research","peer-review-and-replication","publication","knowledge-graph","ai-context","rag-evaluation","ai-experiments","model-aware-lineage","cross-product-exchange"],"component_authority_remains_with_source_system":True,"platform_core_governance_remains_external":True,"automatic_execution":False,"automatic_model_selection":False,"automatic_scholarly_judgment":False,"automatic_truth_promotion":False}
+    return {"schema":UNIFIED_SCHOLARLY_AI_ENVIRONMENT_SCHEMA,"release":settings.release_version,"milestone":"10.0","durable":True,"component_types":["research-question-plan","research-workflow","scholarly-study","scholarly-publication","knowledge-graph-node","ai-research-context","rag-evaluation","ai-research-experiment","model-aware-research","cross-product-exchange","core-object"],"unifies":["research-question-and-hypothesis-intelligence","scholarly-research","peer-review-and-replication","publication","knowledge-graph","ai-context","rag-evaluation","ai-experiments","model-aware-lineage","cross-product-exchange"],"component_authority_remains_with_source_system":True,"platform_core_governance_remains_external":True,"automatic_execution":False,"automatic_model_selection":False,"automatic_scholarly_judgment":False,"automatic_truth_promotion":False}
 
 _store:UnifiedScholarlyAIEnvironmentStore|None=None
 def get_unified_scholarly_ai_environment_store()->UnifiedScholarlyAIEnvironmentStore:
