@@ -3,14 +3,14 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 10.1.0
+Stable tag: 10.2.0
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
 
 == Description ==
 
-v10.1.0 adds Research Question & Hypothesis Intelligence: durable question framing, typed variables and constructs, subquestions, evidence requirements, falsification criteria, candidate hypotheses, human review states, Platform Core candidate handoffs, immutable snapshots, and v10.0 environment bindings. It does not accept hypotheses, infer causality, perform automatic Core writes, or promote truth.
+v10.2.0 adds Research Design & Methodology Planner: question-linked candidate research designs, explicit assumptions and validity threats, data/sampling requirements, method comparison, human design selection, governed Core candidate handoffs, specialist-runtime execution packets, immutable snapshots, and unified-environment bindings. It does not automatically select a method, execute analyses, establish causal identification, or promote truth.
 
 Research Librarian AI retrieves Sustainable Catalyst publications and documents through exact-title priority, section-aware BM25 ranking, optional Gemini embeddings, calibrated reciprocal-rank fusion, and citation-verified synthesis. WordPress remains the canonical publishing and recovery source, while FastAPI stores the production knowledge index durably in Neon Postgres with pgvector.
 
@@ -47,6 +47,12 @@ v8.7.0 adds the Core Evidence Bridge. Hydrated canonical Librarian sources can b
 [sc_research_librarian_platform_handoffs]
 
 == Changelog ==
+
+= 10.2.0 =
+* Added Research Design & Methodology Planner with question-linked candidate designs, assumptions, validity threats, data and sampling requirements, analysis candidates, execution-target handoffs, and immutable snapshots.
+* Added side-by-side methodology comparison without automatic ranking or method selection.
+* Added explicit human method preference/review state and a governed Platform Core research-design candidate handoff.
+* Specialist runtimes retain execution; the Librarian does not establish causal identification, execute analyses, or promote truth automatically.
 
 = 10.1.0 =
 * Added Research Question & Hypothesis Intelligence with durable planning, candidate scaffolding, human review, Core candidate handoffs, snapshots, and unified-environment binding.

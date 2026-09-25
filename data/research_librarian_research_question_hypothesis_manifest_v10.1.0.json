@@ -1,6 +1,6 @@
 {
   "schema": "sc-research-librarian-research-question-hypothesis-intelligence-manifest/1.0",
-  "release": "10.1.0",
+  "release": "10.2.0",
   "milestone": "10.1",
   "title": "Research Question & Hypothesis Intelligence",
   "database_migration": "016_research_question_hypothesis_intelligence.sql",

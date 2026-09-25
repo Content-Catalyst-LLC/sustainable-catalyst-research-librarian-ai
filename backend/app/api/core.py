@@ -53,6 +53,10 @@ from ..contracts.unified_scholarly_ai_environment import (
     UnifiedResearchEnvironmentCreateRequest, UnifiedResearchEnvironmentBindingRequest,
     UnifiedResearchEnvironmentSnapshotRequest,
 )
+from ..contracts.research_design_methodology import (
+    ResearchDesignPlanCreateRequest, MethodologyCandidateAddRequest, ResearchDesignValidityThreatRequest,
+    ResearchDesignPreferenceRequest, ResearchDesignReviewStateRequest, ResearchDesignSnapshotRequest,
+)
 from ..contracts.research_question_hypothesis import (
     ResearchQuestionPlanCreateRequest, ResearchSubquestionAddRequest, ResearchHypothesisAddRequest,
     ResearchEvidenceRequirementRequest, ResearchQuestionReviewStateRequest, ResearchQuestionSnapshotRequest,
@@ -119,6 +123,9 @@ from ..services.model_aware_exchange import (
 )
 from ..services.unified_scholarly_ai_environment import (
     get_unified_scholarly_ai_environment_store, capabilities as unified_scholarly_ai_environment_capabilities,
+)
+from ..services.research_design_methodology import (
+    get_research_design_methodology_store, capabilities as research_design_methodology_capabilities,
 )
 from ..services.research_question_hypothesis import (
     get_research_question_hypothesis_store, capabilities as research_question_hypothesis_capabilities,
@@ -1092,6 +1099,65 @@ def research_question_hypothesis_snapshot(payload: ResearchQuestionSnapshotReque
         return get_research_question_hypothesis_store().freeze_snapshot(payload)
     except Exception as exc:
         raise _translate(exc) from exc
+
+@router.get("/research-design-methodology/capabilities", dependencies=[Depends(require_backend_key)])
+def research_design_methodology_capabilities_route() -> dict[str, Any]:
+    return research_design_methodology_capabilities()
+
+@router.post("/research-design-methodology/plans", dependencies=[Depends(require_backend_key)])
+def research_design_methodology_create(payload: ResearchDesignPlanCreateRequest) -> dict[str, Any]:
+    try: return get_research_design_methodology_store().create(payload)
+    except Exception as exc: raise _translate(exc) from exc
+
+@router.get("/research-design-methodology/plans/{plan_id}", dependencies=[Depends(require_backend_key)])
+def research_design_methodology_get(plan_id: str) -> dict[str, Any]:
+    try: return get_research_design_methodology_store().get(plan_id)
+    except Exception as exc: raise _translate(exc) from exc
+
+@router.post("/research-design-methodology/plans/{plan_id}/candidates", dependencies=[Depends(require_backend_key)])
+def research_design_methodology_add_candidate(plan_id: str, payload: MethodologyCandidateAddRequest) -> dict[str, Any]:
+    try: return get_research_design_methodology_store().add_candidate(plan_id, payload)
+    except Exception as exc: raise _translate(exc) from exc
+
+@router.post("/research-design-methodology/plans/{plan_id}/validity-threats", dependencies=[Depends(require_backend_key)])
+def research_design_methodology_add_validity_threat(plan_id: str, payload: ResearchDesignValidityThreatRequest) -> dict[str, Any]:
+    try: return get_research_design_methodology_store().add_validity_threat(plan_id, payload)
+    except Exception as exc: raise _translate(exc) from exc
+
+@router.post("/research-design-methodology/plans/{plan_id}/preference", dependencies=[Depends(require_backend_key)])
+def research_design_methodology_preference(plan_id: str, payload: ResearchDesignPreferenceRequest) -> dict[str, Any]:
+    try: return get_research_design_methodology_store().set_preference(plan_id, payload)
+    except Exception as exc: raise _translate(exc) from exc
+
+@router.post("/research-design-methodology/plans/{plan_id}/review-state", dependencies=[Depends(require_backend_key)])
+def research_design_methodology_review_state(plan_id: str, payload: ResearchDesignReviewStateRequest) -> dict[str, Any]:
+    try: return get_research_design_methodology_store().set_review_state(plan_id, payload)
+    except Exception as exc: raise _translate(exc) from exc
+
+@router.get("/research-design-methodology/plans/{plan_id}/comparison", dependencies=[Depends(require_backend_key)])
+def research_design_methodology_comparison(plan_id: str) -> dict[str, Any]:
+    try: return get_research_design_methodology_store().comparison(plan_id)
+    except Exception as exc: raise _translate(exc) from exc
+
+@router.get("/research-design-methodology/plans/{plan_id}/readiness", dependencies=[Depends(require_backend_key)])
+def research_design_methodology_readiness(plan_id: str) -> dict[str, Any]:
+    try: return get_research_design_methodology_store().readiness(plan_id)
+    except Exception as exc: raise _translate(exc) from exc
+
+@router.get("/research-design-methodology/plans/{plan_id}/execution-handoffs", dependencies=[Depends(require_backend_key)])
+def research_design_methodology_execution_handoffs(plan_id: str) -> dict[str, Any]:
+    try: return get_research_design_methodology_store().execution_handoffs(plan_id)
+    except Exception as exc: raise _translate(exc) from exc
+
+@router.get("/research-design-methodology/plans/{plan_id}/core-candidate", dependencies=[Depends(require_backend_key)])
+def research_design_methodology_core_candidate(plan_id: str) -> dict[str, Any]:
+    try: return get_research_design_methodology_store().core_candidate(plan_id)
+    except Exception as exc: raise _translate(exc) from exc
+
+@router.post("/research-design-methodology/snapshots/freeze", dependencies=[Depends(require_backend_key)])
+def research_design_methodology_snapshot(payload: ResearchDesignSnapshotRequest) -> dict[str, Any]:
+    try: return get_research_design_methodology_store().freeze_snapshot(payload)
+    except Exception as exc: raise _translate(exc) from exc
 
 @router.get("/unified-research-environment/capabilities", dependencies=[Depends(require_backend_key)])
 def unified_research_environment_capabilities_route() -> dict[str, Any]:

@@ -15,10 +15,10 @@ $docs = file_get_contents( $root . '/docs/V720_LIBRARY_OBJECT_MODEL_RESEARCH_CON
 $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_library_context_manifest_v7.2.0.json' ), true );
 
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 10.1.0' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '10.1.0';" ),
+    'version_header' => false !== strpos( $main, 'Version: 10.2.0' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '10.2.0';" ),
     'module_version' => false !== strpos( $module, "const VERSION = '8.0.0';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "10.1.0"' ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "10.2.0"' ),
     'sqlite_schema_13' => false !== strpos( $store, 'SCHEMA_VERSION = 19' ),
     'index_schema_13' => false !== strpos( $store, 'sc-research-librarian-knowledge-index/13.0' ),
     'library_table' => false !== strpos( $store, 'CREATE TABLE IF NOT EXISTS research_library_objects' ),

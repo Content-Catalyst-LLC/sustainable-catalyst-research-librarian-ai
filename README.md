@@ -1,11 +1,11 @@
-# Sustainable Catalyst Research Librarian AI v10.1.0
+# Sustainable Catalyst Research Librarian AI v10.2.0
 
-Current release: **v10.1.0 — Research Question & Hypothesis Intelligence**
+Current release: **v10.2.0 — Research Question & Hypothesis Intelligence**
 
 
-## v10.1.0 Research Question & Hypothesis Intelligence
+## v10.2.0 Research Question & Hypothesis Intelligence
 
-Research Librarian AI v10.1.0 adds durable, reviewable research-question and candidate-hypothesis planning above the v10.0 unified environment. It structures scope, constructs, typed variables, subquestions, evidence requirements, assumptions and falsification criteria; supports deterministic candidate scaffolding; requires explicit human approval before governed handoff; and emits Platform Core candidate packets without automatic Core writes, causal inference, hypothesis acceptance or truth promotion.
+Research Librarian AI v10.2.0 adds durable, reviewable research-question and candidate-hypothesis planning above the v10.0 unified environment. It structures scope, constructs, typed variables, subquestions, evidence requirements, assumptions and falsification criteria; supports deterministic candidate scaffolding; requires explicit human approval before governed handoff; and emits Platform Core candidate packets without automatic Core writes, causal inference, hypothesis acceptance or truth promotion.
 
 ## v9.8.0 AI Research Experiment Orchestration
 

@@ -9,7 +9,7 @@ $backend = file_get_contents( $root . '/backend/app/main.py' );
 $retrieval = file_get_contents( $root . '/backend/app/retrieval.py' );
 $render = file_get_contents( $root . '/render.yaml' );
 $checks = array(
-    'version' => false !== strpos( $main, "const VERSION        = '10.1.0';" ),
+    'version' => false !== strpos( $main, "const VERSION        = '10.2.0';" ),
     'python_bridge_loaded' => false !== strpos( $main, 'class-sc-rl-v630-durable-index.php' ),
     'backend_first_ask_path' => false !== strpos( $main, 'SC_RL6_V621_Endpoint_Reliability::ask' ),
     'full_public_post_types' => false !== strpos( $module, 'indexable_post_types' ) && false !== strpos( $module, 'publicly_queryable' ) && false !== strpos( $module, 'show_in_rest' ),

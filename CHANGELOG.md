@@ -1,3 +1,11 @@
+# 10.2.0 — Research Design & Methodology Planner
+
+- Adds durable research-design plans bound to v10.1 question/hypothesis plans.
+- Adds deterministic candidate methodology scaffolding with assumptions, data requirements, sampling guidance, validity threats, limitations, analysis candidates, and execution targets.
+- Adds methodology comparison without automatic ranking, plus explicit human design preference and review state.
+- Adds Platform Core research-design candidate handoffs and specialist-runtime execution packets without automatic promotion, delivery, or execution.
+- Adds immutable methodology snapshots, migration 017, durable snapshot jobs, and v10.0 environment bindings as `research-design-plan`.
+
 # 10.1.0 — Research Question & Hypothesis Intelligence
 
 - Adds durable research-question plans with structured scope, constructs, typed variables, subquestions, evidence requirements, assumptions, and falsification criteria.

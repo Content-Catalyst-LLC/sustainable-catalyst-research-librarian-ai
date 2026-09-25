@@ -15,9 +15,9 @@ $manifest=json_decode(file_get_contents($root.'/data/research_librarian_unified_
 $v770=json_decode(file_get_contents($root.'/data/research_librarian_federated_discovery_manifest_v7.7.0.json'),true);
 $migrations=glob($root.'/backend/migrations/*.sql');
 $checks=array(
- 'version_header'=>false!==strpos($main,'Version: 10.1.0'),
- 'version_constant'=>false!==strpos($main,"const VERSION        = '10.1.0';"),
- 'backend_version'=>false!==strpos(file_get_contents($root.'/backend/app/__init__.py'),'__version__ = "10.1.0"'),
+ 'version_header'=>false!==strpos($main,'Version: 10.2.0'),
+ 'version_constant'=>false!==strpos($main,"const VERSION        = '10.2.0';"),
+ 'backend_version'=>false!==strpos(file_get_contents($root.'/backend/app/__init__.py'),'__version__ = "10.2.0"'),
  'module_version'=>false!==strpos($module,"const VERSION = '8.0.0';"),
  'api_20'=>false!==strpos($module,'sc-connected-research-api/2.0') && false!==strpos(file_get_contents($root.'/backend/app/platform_v7.py'),'sc-connected-research-api/2.0'),
  'workspace_30'=>false!==strpos($module,'sc-research-librarian-public-workspace/3.0') && false!==strpos($backend,'sc-research-librarian-public-workspace/3.0'),
@@ -102,7 +102,7 @@ $checks=array(
  'docs_no_auto'=>false!==strpos($docs,'system never advances a lifecycle stage automatically'),
  'docs_no_neon'=>false!==strpos($docs,'No Neon/Postgres knowledge-index migration is required for v8.0.0'),
  'docs_compat_namespace'=>false!==strpos($docs,'`/platform/v7/` REST route namespace is intentionally retained'),
- 'readme_v8'=>false!==strpos($readme,'# Sustainable Catalyst Research Librarian AI v10.1.0'),
+ 'readme_v8'=>false!==strpos($readme,'# Sustainable Catalyst Research Librarian AI v10.2.0'),
 );
 $failed=array_keys(array_filter($checks,static function($v){return !$v;}));
 echo json_encode(array('version'=>'8.0.0','checks'=>$checks,'passed'=>count($checks)-count($failed),'failed'=>count($failed),'failures'=>$failed),JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES).PHP_EOL;

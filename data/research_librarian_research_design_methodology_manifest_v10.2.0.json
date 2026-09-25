@@ -1,0 +1,24 @@
+{
+  "schema": "sc-research-librarian-research-design-methodology-manifest/1.0",
+  "release": "10.2.0",
+  "milestone": "10.2",
+  "capabilities": [
+    "question-plan-integration",
+    "candidate-methodology-scaffolding",
+    "method-comparison",
+    "sampling-and-data-requirements",
+    "assumption-registry",
+    "validity-threat-registry",
+    "analysis-candidate-planning",
+    "execution-target-handoffs",
+    "platform-core-candidate-handoff",
+    "immutable-snapshots"
+  ],
+  "guardrails": {
+    "human_method_selection_required": true,
+    "automatic_method_selection": false,
+    "automatic_execution": false,
+    "automatic_causal_identification": false,
+    "automatic_truth_promotion": false
+  }
+}

@@ -9,9 +9,9 @@ $config = file_get_contents( $root . '/backend/app/config.py' );
 $docs = file_get_contents( $root . '/docs/V708_TRANSACTION_STATE_RECONCILIATION_DURABLE_RECOVERY.md' );
 $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_v708_transaction_state_reconciliation_manifest.json' ), true );
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 10.1.0' ),
+    'version_header' => false !== strpos( $main, 'Version: 10.2.0' ),
     'durable_version' => false !== strpos( $module, "const VERSION = '8.0.0';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "10.1.0"' ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "10.2.0"' ),
     'schema_twelve' => false !== strpos( $store, 'SCHEMA_VERSION = 19' ),
     'reconcile_endpoint' => false !== strpos( $backend, '/v1/knowledge/sync/jobs/{job_id}/reconcile' ),
     'reconcile_model' => false !== strpos( file_get_contents( $root . '/backend/app/models.py' ), 'class SyncReconcileRequest' ),

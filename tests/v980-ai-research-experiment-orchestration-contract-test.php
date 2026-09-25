@@ -7,7 +7,7 @@ $required = [
     'backend/tests/test_v980_ai_research_experiment.py',
 ];
 foreach ($required as $file) {
-    if (!is_file($root . '/' . $file)) { fwrite(STDERR, "Missing v10.1.0 file: $file\n"); exit(1); }
+    if (!is_file($root . '/' . $file)) { fwrite(STDERR, "Missing v10.2.0 file: $file\n"); exit(1); }
 }
 $core = file_get_contents($root . '/backend/app/api/core.py');
 $jobs = file_get_contents($root . '/backend/app/async_jobs.py');
@@ -22,4 +22,4 @@ foreach ([
 foreach (['ai-research-experiment-snapshot','automatic_best_model_selection','librarian_executes_training','external_runtime_executes','winner_selected'] as $needle) {
     if (strpos($jobs . $service, $needle) === false) { fwrite(STDERR, "Missing v9.8 governance/runtime token: $needle\n"); exit(1); }
 }
-echo "PASS: Research Librarian v10.1.0 AI Research Experiment Orchestration contract\n";
+echo "PASS: Research Librarian v10.2.0 AI Research Experiment Orchestration contract\n";
