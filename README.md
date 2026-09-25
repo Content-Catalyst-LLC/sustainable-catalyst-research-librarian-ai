@@ -1,7 +1,11 @@
-# Sustainable Catalyst Research Librarian AI v9.7.0
+# Sustainable Catalyst Research Librarian AI v9.8.0
 
-Current release: **v9.7.0 — RAG Evaluation & Evidence-Grounding Framework**
+Current release: **v9.8.0 — AI Research Experiment Orchestration**
 
+
+## v9.8.0 AI Research Experiment Orchestration
+
+Research Librarian AI v9.8.0 adds durable AI research experiments above the v9.6 context and v9.7 evaluation layers. It records experiment definitions, parameterized trials, explicit execution handoffs to Workspace/Research Lab/Workbench/external runtimes, external run receipts, evaluation bindings, human-controlled experiment state, and immutable reproducibility snapshots. It does not execute model training, infer successful execution, select a best model, rank experiments, or infer causality.
 
 ## v9.7.0 RAG Evaluation & Evidence-Grounding Framework
 

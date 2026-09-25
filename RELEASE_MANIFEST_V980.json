@@ -1,0 +1,8 @@
+{
+  "release": "9.8.0",
+  "name": "Research Librarian AI v9.8.0 — AI Research Experiment Orchestration",
+  "backend_migration": "013_ai_research_experiment_orchestration.sql",
+  "job_type": "ai-research-experiment-snapshot",
+  "python_test": "backend/tests/test_v980_ai_research_experiment.py",
+  "php_contract": "tests/v980-ai-research-experiment-orchestration-contract-test.php"
+}

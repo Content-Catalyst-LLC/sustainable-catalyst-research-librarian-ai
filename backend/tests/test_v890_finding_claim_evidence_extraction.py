@@ -155,6 +155,6 @@ def test_v890_async_executor_and_api_routes(monkeypatch, tmp_path: Path) -> None
     response=TestClient(app).get("/v1/core/research-intelligence/capabilities",headers={"X-SC-RL-Key":"test-key"})
     assert response.status_code==200
     body=response.json()
-    assert body["release"]=="9.7.0"
+    assert body["release"]=="9.8.0"
     assert body["human_review_required_for_core_promotion"] is True
     assert body["automatic_truth_determination"] is False

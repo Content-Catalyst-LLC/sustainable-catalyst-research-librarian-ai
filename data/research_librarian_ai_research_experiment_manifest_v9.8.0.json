@@ -1,0 +1,25 @@
+{
+  "schema": "sc-research-librarian-ai-research-experiment-manifest/1.0",
+  "release": "9.8.0",
+  "title": "AI Research Experiment Orchestration",
+  "migration": "013_ai_research_experiment_orchestration.sql",
+  "job_type": "ai-research-experiment-snapshot",
+  "execution_targets": ["workspace", "research-lab", "workbench", "external"],
+  "capabilities": [
+    "experiment-definition",
+    "parameterized-trials",
+    "execution-handoffs",
+    "external-run-receipts",
+    "v9.7-evaluation-bindings",
+    "human-controlled-state",
+    "immutable-experiment-snapshots"
+  ],
+  "governance": {
+    "core_ai_objects_remain_external": true,
+    "automatic_execution": false,
+    "model_training_execution": false,
+    "automatic_best_model_selection": false,
+    "automatic_causal_inference": false,
+    "human_interpretation_required": true
+  }
+}

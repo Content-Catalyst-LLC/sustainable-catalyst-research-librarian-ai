@@ -9,9 +9,9 @@ $factory = file_get_contents( $root . '/backend/app/store.py' );
 $api = file_get_contents( $root . '/backend/app/main.py' );
 $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_fail_closed_neon_manifest_v7.1.2.json' ), true );
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 9.7.0' ),
+    'version_header' => false !== strpos( $main, 'Version: 9.8.0' ),
     'durable_version' => false !== strpos( $module, "const VERSION = '8.0.0';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "9.7.0"' ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "9.8.0"' ),
     'fail_closed_setting' => false !== strpos( $config, 'SC_RL_DATABASE_FAIL_CLOSED' ),
     'schema_setting' => false !== strpos( $config, 'SC_RL_DATABASE_SCHEMA' ),
     'no_silent_sqlite' => false !== strpos( $factory, 'Neon connection variables are configured but the selected database backend is SQLite' ),

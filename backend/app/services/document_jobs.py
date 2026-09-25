@@ -35,6 +35,8 @@ from ..contracts.ai_research_context import AIContextSnapshotRequest
 from .ai_research_context import get_ai_research_context_store
 from ..contracts.rag_evaluation import RAGEvaluationSnapshotRequest
 from .rag_evaluation import get_rag_evaluation_store
+from ..contracts.ai_research_experiment import AIExperimentSnapshotRequest
+from .ai_research_experiment import get_ai_research_experiment_store
 
 Progress = Callable[[str, int], None]
 
@@ -359,6 +361,17 @@ async def process_rag_evaluation_snapshot_job(claim: JobClaim, progress: Progres
     progress("rag-evaluation-snapshot-ready", 95)
     return result
 
+async def process_ai_research_experiment_snapshot_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
+    progress("load-ai-research-experiment", 20)
+    request = AIExperimentSnapshotRequest.model_validate(claim.payload.get("snapshot") or claim.payload)
+    store = get_ai_research_experiment_store()
+    progress("assemble-ai-research-experiment", 55)
+    store.summary(request.experiment_id)
+    progress("freeze-ai-research-experiment-snapshot", 80)
+    result = store.freeze_snapshot(request)
+    progress("ai-research-experiment-snapshot-ready", 95)
+    return result
+
 async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
     if claim.job_type in {"document-process", "ingestion"}:
         return await process_document_job(claim, progress)
@@ -392,7 +405,9 @@ async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
         return await process_ai_research_context_snapshot_job(claim, progress)
     if claim.job_type == "rag-evaluation-snapshot":
         return await process_rag_evaluation_snapshot_job(claim, progress)
+    if claim.job_type == "ai-research-experiment-snapshot":
+        return await process_ai_research_experiment_snapshot_job(claim, progress)
     raise ValueError(
         f"Job type {claim.job_type!r} is registered for the durable queue but has no v8.3 executor yet; "
-        "use document-process, document-intelligence, source-identity, research-intelligence-extraction, argument-synthesis-plan, statistical-analysis-plan, visual-research-plan, unified-research-runtime, research-workflow-advance, scholarly-research-package, peer-review-validation-package, scholarly-publication-package, research-knowledge-graph-snapshot, ai-research-context-snapshot, rag-evaluation-snapshot, ingestion, or validation."
+        "use document-process, document-intelligence, source-identity, research-intelligence-extraction, argument-synthesis-plan, statistical-analysis-plan, visual-research-plan, unified-research-runtime, research-workflow-advance, scholarly-research-package, peer-review-validation-package, scholarly-publication-package, research-knowledge-graph-snapshot, ai-research-context-snapshot, rag-evaluation-snapshot, ai-research-experiment-snapshot, ingestion, or validation."
     )

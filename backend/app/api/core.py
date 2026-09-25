@@ -40,6 +40,11 @@ from ..contracts.rag_evaluation import (
     RAGEvaluationCreateRequest, RAGEvaluationCaseRequest, RAGClaimAssessmentRequest,
     RAGCitationAssessmentRequest, RAGEvaluationComparisonRequest, RAGEvaluationSnapshotRequest,
 )
+from ..contracts.ai_research_experiment import (
+    AIResearchExperimentCreateRequest, AIResearchTrialCreateRequest, AIExperimentExecutionHandoffRequest,
+    AIExperimentRunReceiptRequest, AIExperimentEvaluationBindingRequest, AIExperimentStateRequest,
+    AIExperimentSnapshotRequest,
+)
 from ..contracts.visual_research import (
     VisualResearchPlanRequest, CoreVisualResearchPromotionRequest,
 )
@@ -93,6 +98,9 @@ from ..services.ai_research_context import (
 )
 from ..services.rag_evaluation import (
     get_rag_evaluation_store, capabilities as rag_evaluation_capabilities,
+)
+from ..services.ai_research_experiment import (
+    get_ai_research_experiment_store, capabilities as ai_research_experiment_capabilities,
 )
 from ..services.visual_research import (
     capabilities as visual_research_capabilities, build_plan as build_visual_research_plan,
@@ -191,6 +199,8 @@ def architecture() -> dict[str, Any]:
             "scholarly-publication-citation-and-research-dissemination-registry",
             "research-knowledge-graph-and-publication-intelligence-registry",
             "ai-aware-retrieval-and-research-context-engineering",
+            "rag-evaluation-and-evidence-grounding",
+            "ai-research-experiment-orchestration",
         ],
         "platform_core_owns": [
             "governed-research-objects",
@@ -862,6 +872,73 @@ def rag_evaluation_compare(payload: RAGEvaluationComparisonRequest) -> dict[str,
 def rag_evaluation_snapshot(payload: RAGEvaluationSnapshotRequest) -> dict[str, Any]:
     try:
         return get_rag_evaluation_store().freeze_snapshot(payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/ai-research-experiments/capabilities", dependencies=[Depends(require_backend_key)])
+def ai_research_experiment_capability_report() -> dict[str, Any]:
+    return ai_research_experiment_capabilities()
+
+@router.post("/ai-research-experiments/experiments", dependencies=[Depends(require_backend_key)])
+def ai_research_experiment_create(payload: AIResearchExperimentCreateRequest) -> dict[str, Any]:
+    try:
+        return get_ai_research_experiment_store().create_experiment(payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/ai-research-experiments/experiments/{experiment_id}", dependencies=[Depends(require_backend_key)])
+def ai_research_experiment_get(experiment_id: str) -> dict[str, Any]:
+    try:
+        return get_ai_research_experiment_store().get_experiment(experiment_id)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/ai-research-experiments/experiments/{experiment_id}/trials", dependencies=[Depends(require_backend_key)])
+def ai_research_experiment_trial(experiment_id: str, payload: AIResearchTrialCreateRequest) -> dict[str, Any]:
+    try:
+        return get_ai_research_experiment_store().add_trial(experiment_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/ai-research-experiments/experiments/{experiment_id}/execution-handoffs", dependencies=[Depends(require_backend_key)])
+def ai_research_experiment_handoff(experiment_id: str, payload: AIExperimentExecutionHandoffRequest) -> dict[str, Any]:
+    try:
+        return get_ai_research_experiment_store().create_handoff(experiment_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/ai-research-experiments/experiments/{experiment_id}/run-receipts", dependencies=[Depends(require_backend_key)])
+def ai_research_experiment_receipt(experiment_id: str, payload: AIExperimentRunReceiptRequest) -> dict[str, Any]:
+    try:
+        return get_ai_research_experiment_store().add_receipt(experiment_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/ai-research-experiments/experiments/{experiment_id}/evaluation-bindings", dependencies=[Depends(require_backend_key)])
+def ai_research_experiment_evaluation_binding(experiment_id: str, payload: AIExperimentEvaluationBindingRequest) -> dict[str, Any]:
+    try:
+        return get_ai_research_experiment_store().add_evaluation_binding(experiment_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.get("/ai-research-experiments/experiments/{experiment_id}/summary", dependencies=[Depends(require_backend_key)])
+def ai_research_experiment_summary(experiment_id: str) -> dict[str, Any]:
+    try:
+        return get_ai_research_experiment_store().summary(experiment_id)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/ai-research-experiments/experiments/{experiment_id}/state", dependencies=[Depends(require_backend_key)])
+def ai_research_experiment_state(experiment_id: str, payload: AIExperimentStateRequest) -> dict[str, Any]:
+    try:
+        return get_ai_research_experiment_store().set_state(experiment_id, payload)
+    except Exception as exc:
+        raise _translate(exc) from exc
+
+@router.post("/ai-research-experiments/snapshots/freeze", dependencies=[Depends(require_backend_key)])
+def ai_research_experiment_snapshot(payload: AIExperimentSnapshotRequest) -> dict[str, Any]:
+    try:
+        return get_ai_research_experiment_store().freeze_snapshot(payload)
     except Exception as exc:
         raise _translate(exc) from exc
 

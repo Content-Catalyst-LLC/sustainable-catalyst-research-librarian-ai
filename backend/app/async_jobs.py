@@ -48,6 +48,7 @@ JOB_TYPES = {
     "research-knowledge-graph-snapshot",
     "ai-research-context-snapshot",
     "rag-evaluation-snapshot",
+    "ai-research-experiment-snapshot",
 }
 TERMINAL_STATES = {"succeeded", "failed", "cancelled"}
 ACTIVE_STATES = {"queued", "retry_wait", "running"}

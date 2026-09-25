@@ -96,7 +96,7 @@ def test_api_exposes_source_identity_capabilities_and_resolution():
     cap = client.get("/v1/sources/capabilities", headers=headers)
     assert cap.status_code == 200
     body = cap.json()
-    assert body["version"] == "9.7.0"
+    assert body["version"] == "9.8.0"
     assert body["schema"] == "sc-research-librarian-source-identity/1.0"
     assert body["citation_graph"] is True
 

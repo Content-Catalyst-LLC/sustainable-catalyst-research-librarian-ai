@@ -3,14 +3,14 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 9.7.0
+Stable tag: 9.8.0
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
 
 == Description ==
 
-v9.7.0 adds the RAG Evaluation & Evidence-Grounding Framework. It provides durable evaluation records linked to v9.6 AI research contexts, deterministic retrieval metrics, human claim-grounding and citation-correctness review, descriptive unsupported-claim/conflict/latency/cost summaries, comparison packets, and frozen evaluation snapshots. It does not issue composite quality grades, rank models, certify grounding, accept claims, or determine truth.
+v9.8.0 adds AI Research Experiment Orchestration. It provides durable experiment definitions, parameterized trials, explicit runtime handoffs, external run receipts, v9.7 evaluation bindings, human-controlled experiment state, and frozen reproducibility snapshots. It does not execute model training, infer successful execution, select a best model, rank experiments, or infer causality.
 
 Research Librarian AI retrieves Sustainable Catalyst publications and documents through exact-title priority, section-aware BM25 ranking, optional Gemini embeddings, calibrated reciprocal-rank fusion, and citation-verified synthesis. WordPress remains the canonical publishing and recovery source, while FastAPI stores the production knowledge index durably in Neon Postgres with pgvector.
 
@@ -47,6 +47,10 @@ v8.7.0 adds the Core Evidence Bridge. Hydrated canonical Librarian sources can b
 [sc_research_librarian_platform_handoffs]
 
 == Changelog ==
+
+= 9.8.0 =
+* Added durable AI research experiments, parameterized trial specifications, explicit execution handoffs, external run receipts, evaluation bindings, state controls, and frozen experiment snapshots.
+* Execution remains in Workspace/Research Lab/Workbench/external runtimes; the Librarian does not train models, infer success, choose winners, rank models, or infer causality.
 
 = 9.7.0 =
 * Added durable RAG evaluation records, transparent retrieval metrics, claim/citation grounding review, descriptive comparison, and frozen evaluation snapshots.

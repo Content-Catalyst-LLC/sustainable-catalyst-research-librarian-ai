@@ -1,3 +1,12 @@
+# 9.8.0 — AI Research Experiment Orchestration
+
+- Added durable AI research experiment definitions with deterministic content identity.
+- Added parameterized trial specifications linked to v9.6 AI research contexts and external Core AI object references.
+- Added explicit execution handoff packets for Workspace, Research Lab, Workbench, and external runtimes.
+- Added external run receipts that preserve queued/running/succeeded/failed/cancelled status without inferring successful execution.
+- Added v9.7 RAG evaluation bindings, descriptive experiment summaries, human-controlled state transitions, immutable snapshots, and durable `ai-research-experiment-snapshot` jobs.
+- Preserved governance boundaries: no model training execution, automatic best-model selection, experiment ranking, causal inference, or truth determination.
+
 # 9.7.0 — RAG Evaluation & Evidence-Grounding Framework
 
 - Added durable RAG evaluation records linked to v9.6 AI research contexts.

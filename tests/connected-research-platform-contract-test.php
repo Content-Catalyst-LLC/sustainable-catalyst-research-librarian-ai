@@ -13,9 +13,9 @@ $css=file_get_contents($root.'/assets/sc-research-librarian-ai.css');
 $docs=file_get_contents($root.'/docs/V700_CONNECTED_RESEARCH_INTELLIGENCE_PLATFORM.md');
 $manifest=json_decode(file_get_contents($root.'/data/research_librarian_connected_platform_manifest_v7.1.2.json'),true);
 $checks=array(
- 'version_header'=>false!==strpos($main,'Version: 9.7.0'),
- 'version_constant'=>false!==strpos($main,"const VERSION        = '9.7.0';"),
- 'backend_version'=>false!==strpos(file_get_contents($root.'/backend/app/__init__.py'),'__version__ = "9.7.0"'),
+ 'version_header'=>false!==strpos($main,'Version: 9.8.0'),
+ 'version_constant'=>false!==strpos($main,"const VERSION        = '9.8.0';"),
+ 'backend_version'=>false!==strpos(file_get_contents($root.'/backend/app/__init__.py'),'__version__ = "9.8.0"'),
  'module_loaded'=>false!==strpos($main,'class-sc-rl-v700-connected-platform.php'),
  'module_initialized'=>false!==strpos($main,'SC_RL6_V700_Connected_Platform::init()'),
  'activation'=>false!==strpos($main,"SC_RL6_V700_Connected_Platform', 'activate"),
