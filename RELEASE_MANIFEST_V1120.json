@@ -1,0 +1,19 @@
+{
+  "schema": "sc-research-librarian-release-manifest/1.0",
+  "version": "11.2.0",
+  "title": "Statistical Analysis Planning Intelligence",
+  "migration": "027_statistical_analysis_planning_intelligence.sql",
+  "snapshot_job": "statistical-analysis-planning-intelligence-snapshot",
+  "component_type": "statistical-analysis-plan-intelligence",
+  "runtime_core_bridge": "v8.11-statistical-research",
+  "guardrails": [
+    "human_statistical_approval_required",
+    "preregistered_protocol_lineage_inherited_not_rewritten",
+    "no_automatic_method_or_model_selection",
+    "no_automatic_power_calculation",
+    "no_automatic_significance_or_causality_inference",
+    "no_automatic_execution",
+    "no_automatic_result_interpretation",
+    "no_automatic_truth_promotion"
+  ]
+}

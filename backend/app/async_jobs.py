@@ -62,6 +62,7 @@ JOB_TYPES = {
     "computational-research-planning-snapshot",
     "research-program-intelligence-snapshot",
     "study-protocol-preregistration-snapshot",
+    "statistical-analysis-planning-intelligence-snapshot",
 }
 TERMINAL_STATES = {"succeeded", "failed", "cancelled"}
 ACTIVE_STATES = {"queued", "retry_wait", "running"}

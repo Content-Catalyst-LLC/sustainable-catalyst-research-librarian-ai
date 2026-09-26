@@ -3,14 +3,14 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 11.1.0
+Stable tag: 11.2.0
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
 
 == Description ==
 
-v11.1.0 adds the Study Protocol & Preregistration Engine: program-linked protocols, hypotheses, outcomes, variables, sampling plans, human-approved analysis commitments, immutable preregistration baselines, append-only amendments, disclosed deviations, non-executing handoffs, Core candidates, snapshots, and unified-environment bindings. Preregistration records commitments and lineage without certifying scientific validity, selecting methods, executing analyses, or promoting truth.
+v11.2.0 adds Statistical Analysis Planning Intelligence: preregistered-protocol lineage, estimands, model specifications, assumption checks, power/sample-size planning inputs, multiplicity and missing-data plans, sensitivity analyses, reporting commitments, human statistical approvals, non-executing runtime handoffs through the existing v8.11 Statistical Research bridge, Core candidates, snapshots, and unified-environment bindings. It does not automatically choose models or methods, calculate power, execute analyses, infer significance or causality, interpret results, or promote truth.
 
 v10.5.0 adds Scholarly Citation & Literature Intelligence: citation-context/function annotation, literature strands, reviewer-declared research gaps and seminal-work candidates, reviewable related-work relationships, descriptive citation topology, graph/Core handoffs, snapshots, and unified-environment bindings. It does not infer scholarly authority, impact, seminal status, gaps, truth, or automatically write accepted graph edges.
 

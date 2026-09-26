@@ -1,12 +1,16 @@
-# Sustainable Catalyst Research Librarian AI v11.1.0
+# Sustainable Catalyst Research Librarian AI v11.2.0
 
-Current release: **11.1.0 — Study Protocol & Preregistration Engine**
+Current release: **11.2.0 — Statistical Analysis Planning Intelligence**
+
+## v11.2.0 — Statistical Analysis Planning Intelligence
+
+Study Protocol & Preregistration now feeds a durable prospective statistical-planning layer. v11.2 records estimands, model specifications, assumption checks, power/sample-size planning inputs, multiplicity plans, missing-data strategies, sensitivity analyses, reporting commitments, human analysis decisions, structural readiness, non-executing specialist-runtime handoffs, Platform Core candidates, immutable snapshots, durable jobs, and unified-environment bindings.
+
+Governance remains human-centered: the Librarian does not select a best model, calculate power automatically, execute statistical analyses, infer significance or causality, interpret results, or promote truth. Existing v8.11 Statistical Research remains the runtime/Core bridge, specialist runtimes own computation, and Platform Core remains statistical-reasoning authority.
 
 ## v11.1.0 — Study Protocol & Preregistration Engine
 
-Research Program Intelligence adds persistent program-level coordination above the v10.x research pipeline: multiple workstreams, governed component bindings, linked computational plans, milestone/dependency graphs, deliverables, constraints, descriptive portfolio summaries, structural readiness, non-writing handoffs, Platform Core candidates, immutable snapshots, durable jobs, and unified-environment binding.
-
-Governance remains human-centered: program readiness is not scientific validity, component authority remains with the source system, specialist runtimes retain execution, and the Librarian does not automatically prioritize research, allocate resources, complete milestones, make scientific judgments, execute analyses, or promote truth.
+Research Program Intelligence workstreams can be converted into explicit study protocols with hypotheses, outcomes, variables, sampling plans, analysis commitments, immutable preregistration baselines, append-only amendments, deviation disclosure, and governed handoffs. Preregistration records commitments and lineage without certifying validity or truth.
 
 ## v10.6.0 Argument, Claim & Counterclaim Intelligence
 

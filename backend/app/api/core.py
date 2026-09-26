@@ -102,6 +102,12 @@ from ..contracts.study_protocol_preregistration import (
     ProtocolPreregisterRequest, ProtocolAmendmentAddRequest, ProtocolDeviationAddRequest, StudyProtocolStateRequest,
     StudyProtocolSnapshotRequest,
 )
+from ..contracts.statistical_analysis_planning_intelligence import (
+    StatisticalAnalysisPlanningCreateRequest, StatisticalEstimandAddRequest, StatisticalModelSpecificationAddRequest,
+    StatisticalAssumptionCheckAddRequest, StatisticalPowerSampleSizePlanRequest, StatisticalMultiplicityPlanRequest,
+    StatisticalMissingDataPlanRequest, StatisticalSensitivityAnalysisAddRequest, StatisticalReportingCommitmentAddRequest,
+    StatisticalAnalysisDecisionRequest, StatisticalAnalysisPlanningStateRequest, StatisticalAnalysisPlanningSnapshotRequest,
+)
 from ..contracts.research_question_hypothesis import (
     ResearchQuestionPlanCreateRequest, ResearchSubquestionAddRequest, ResearchHypothesisAddRequest,
     ResearchEvidenceRequirementRequest, ResearchQuestionReviewStateRequest, ResearchQuestionSnapshotRequest,
@@ -191,6 +197,7 @@ from ..services.dataset_discovery_data_fitness import get_dataset_discovery_data
 from ..services.computational_research_planning import get_computational_research_planning_store, capabilities as computational_research_planning_capabilities
 from ..services.research_program_intelligence import get_research_program_intelligence_store, capabilities as research_program_intelligence_capabilities
 from ..services.study_protocol_preregistration import get_study_protocol_preregistration_store, capabilities as study_protocol_preregistration_capabilities
+from ..services.statistical_analysis_planning_intelligence import get_statistical_analysis_planning_intelligence_store, capabilities as statistical_analysis_planning_intelligence_capabilities
 from ..services.research_question_hypothesis import (
     get_research_question_hypothesis_store, capabilities as research_question_hypothesis_capabilities,
 )
@@ -1904,4 +1911,59 @@ def study_protocol_preregistration_core(study_protocol_id: str) -> dict[str, Any
 
 @router.post("/study-protocol-preregistration/snapshots/freeze", dependencies=[Depends(require_backend_key)])
 def study_protocol_preregistration_snapshot(req: StudyProtocolSnapshotRequest) -> dict[str, Any]: return get_study_protocol_preregistration_store().freeze_snapshot(req)
+
+
+@router.get("/statistical-analysis-planning-intelligence/capabilities", dependencies=[Depends(require_backend_key)])
+def statistical_analysis_planning_intelligence_capabilities_route() -> dict[str, Any]: return statistical_analysis_planning_intelligence_capabilities()
+
+@router.post("/statistical-analysis-planning-intelligence/plans", dependencies=[Depends(require_backend_key)])
+def statistical_analysis_planning_intelligence_create(req: StatisticalAnalysisPlanningCreateRequest) -> dict[str, Any]: return get_statistical_analysis_planning_intelligence_store().create(req)
+
+@router.get("/statistical-analysis-planning-intelligence/plans/{statistical_analysis_plan_id}", dependencies=[Depends(require_backend_key)])
+def statistical_analysis_planning_intelligence_get(statistical_analysis_plan_id: str) -> dict[str, Any]: return get_statistical_analysis_planning_intelligence_store().get(statistical_analysis_plan_id)
+
+@router.post("/statistical-analysis-planning-intelligence/plans/{statistical_analysis_plan_id}/estimands", dependencies=[Depends(require_backend_key)])
+def statistical_analysis_planning_intelligence_estimand(statistical_analysis_plan_id: str, req: StatisticalEstimandAddRequest) -> dict[str, Any]: return get_statistical_analysis_planning_intelligence_store().add_estimand(statistical_analysis_plan_id,req)
+
+@router.post("/statistical-analysis-planning-intelligence/plans/{statistical_analysis_plan_id}/model-specifications", dependencies=[Depends(require_backend_key)])
+def statistical_analysis_planning_intelligence_model(statistical_analysis_plan_id: str, req: StatisticalModelSpecificationAddRequest) -> dict[str, Any]: return get_statistical_analysis_planning_intelligence_store().add_model_specification(statistical_analysis_plan_id,req)
+
+@router.post("/statistical-analysis-planning-intelligence/plans/{statistical_analysis_plan_id}/assumption-checks", dependencies=[Depends(require_backend_key)])
+def statistical_analysis_planning_intelligence_assumption(statistical_analysis_plan_id: str, req: StatisticalAssumptionCheckAddRequest) -> dict[str, Any]: return get_statistical_analysis_planning_intelligence_store().add_assumption_check(statistical_analysis_plan_id,req)
+
+@router.post("/statistical-analysis-planning-intelligence/plans/{statistical_analysis_plan_id}/power-sample-size-plan", dependencies=[Depends(require_backend_key)])
+def statistical_analysis_planning_intelligence_power(statistical_analysis_plan_id: str, req: StatisticalPowerSampleSizePlanRequest) -> dict[str, Any]: return get_statistical_analysis_planning_intelligence_store().set_power_sample_size_plan(statistical_analysis_plan_id,req)
+
+@router.post("/statistical-analysis-planning-intelligence/plans/{statistical_analysis_plan_id}/multiplicity-plan", dependencies=[Depends(require_backend_key)])
+def statistical_analysis_planning_intelligence_multiplicity(statistical_analysis_plan_id: str, req: StatisticalMultiplicityPlanRequest) -> dict[str, Any]: return get_statistical_analysis_planning_intelligence_store().set_multiplicity_plan(statistical_analysis_plan_id,req)
+
+@router.post("/statistical-analysis-planning-intelligence/plans/{statistical_analysis_plan_id}/missing-data-plan", dependencies=[Depends(require_backend_key)])
+def statistical_analysis_planning_intelligence_missing(statistical_analysis_plan_id: str, req: StatisticalMissingDataPlanRequest) -> dict[str, Any]: return get_statistical_analysis_planning_intelligence_store().set_missing_data_plan(statistical_analysis_plan_id,req)
+
+@router.post("/statistical-analysis-planning-intelligence/plans/{statistical_analysis_plan_id}/sensitivity-analyses", dependencies=[Depends(require_backend_key)])
+def statistical_analysis_planning_intelligence_sensitivity(statistical_analysis_plan_id: str, req: StatisticalSensitivityAnalysisAddRequest) -> dict[str, Any]: return get_statistical_analysis_planning_intelligence_store().add_sensitivity_analysis(statistical_analysis_plan_id,req)
+
+@router.post("/statistical-analysis-planning-intelligence/plans/{statistical_analysis_plan_id}/reporting-commitments", dependencies=[Depends(require_backend_key)])
+def statistical_analysis_planning_intelligence_reporting(statistical_analysis_plan_id: str, req: StatisticalReportingCommitmentAddRequest) -> dict[str, Any]: return get_statistical_analysis_planning_intelligence_store().add_reporting_commitment(statistical_analysis_plan_id,req)
+
+@router.post("/statistical-analysis-planning-intelligence/plans/{statistical_analysis_plan_id}/decisions", dependencies=[Depends(require_backend_key)])
+def statistical_analysis_planning_intelligence_decision(statistical_analysis_plan_id: str, req: StatisticalAnalysisDecisionRequest) -> dict[str, Any]: return get_statistical_analysis_planning_intelligence_store().decide(statistical_analysis_plan_id,req)
+
+@router.post("/statistical-analysis-planning-intelligence/plans/{statistical_analysis_plan_id}/state", dependencies=[Depends(require_backend_key)])
+def statistical_analysis_planning_intelligence_state(statistical_analysis_plan_id: str, req: StatisticalAnalysisPlanningStateRequest) -> dict[str, Any]: return get_statistical_analysis_planning_intelligence_store().set_state(statistical_analysis_plan_id,req)
+
+@router.get("/statistical-analysis-planning-intelligence/plans/{statistical_analysis_plan_id}/analysis-matrix", dependencies=[Depends(require_backend_key)])
+def statistical_analysis_planning_intelligence_matrix(statistical_analysis_plan_id: str) -> dict[str, Any]: return get_statistical_analysis_planning_intelligence_store().analysis_matrix(statistical_analysis_plan_id)
+
+@router.get("/statistical-analysis-planning-intelligence/plans/{statistical_analysis_plan_id}/readiness", dependencies=[Depends(require_backend_key)])
+def statistical_analysis_planning_intelligence_readiness(statistical_analysis_plan_id: str) -> dict[str, Any]: return get_statistical_analysis_planning_intelligence_store().readiness(statistical_analysis_plan_id)
+
+@router.get("/statistical-analysis-planning-intelligence/plans/{statistical_analysis_plan_id}/runtime-handoffs", dependencies=[Depends(require_backend_key)])
+def statistical_analysis_planning_intelligence_handoffs(statistical_analysis_plan_id: str) -> dict[str, Any]: return get_statistical_analysis_planning_intelligence_store().runtime_handoffs(statistical_analysis_plan_id)
+
+@router.get("/statistical-analysis-planning-intelligence/plans/{statistical_analysis_plan_id}/core-candidate", dependencies=[Depends(require_backend_key)])
+def statistical_analysis_planning_intelligence_core(statistical_analysis_plan_id: str) -> dict[str, Any]: return get_statistical_analysis_planning_intelligence_store().core_candidate(statistical_analysis_plan_id)
+
+@router.post("/statistical-analysis-planning-intelligence/snapshots/freeze", dependencies=[Depends(require_backend_key)])
+def statistical_analysis_planning_intelligence_snapshot(req: StatisticalAnalysisPlanningSnapshotRequest) -> dict[str, Any]: return get_statistical_analysis_planning_intelligence_store().freeze_snapshot(req)
 

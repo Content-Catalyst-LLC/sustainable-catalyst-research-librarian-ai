@@ -1,3 +1,9 @@
+## 11.2.0 — Statistical Analysis Planning Intelligence
+- Added durable statistical-analysis planning bound to v11.1 study protocols and preregistration lineage.
+- Added estimands, model specifications, assumption checks, power/sample-size planning, multiplicity, missing-data, sensitivity-analysis, reporting-commitment, and human-decision registries.
+- Added non-executing runtime handoffs through the existing v8.11 Statistical Research bridge, Platform Core candidates, migration 027, authenticated APIs, durable snapshots, and unified-environment bindings.
+- Preserved human statistical judgment: no automatic model/method selection, power calculation, significance/causality inference, execution, result interpretation, or truth promotion.
+
 ## 11.1.0 — Study Protocol & Preregistration Engine
 - Added program-linked study protocols, preregistration baselines, amendments, deviations, and governed handoffs.
 

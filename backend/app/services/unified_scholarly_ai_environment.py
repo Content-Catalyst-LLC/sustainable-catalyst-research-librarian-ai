@@ -32,6 +32,7 @@ from .dataset_discovery_data_fitness import get_dataset_discovery_data_fitness_s
 from .computational_research_planning import get_computational_research_planning_store
 from .research_program_intelligence import get_research_program_intelligence_store
 from .study_protocol_preregistration import get_study_protocol_preregistration_store
+from .statistical_analysis_planning_intelligence import get_statistical_analysis_planning_intelligence_store
 
 try:
     import psycopg
@@ -111,7 +112,7 @@ CREATE TABLE IF NOT EXISTS unified_research_environment_snapshots(snapshot_id TE
         body=req.model_dump(); actor=body.pop("actor_ref")
         initial=[]
         singles=[("research-workflow",body.pop("workflow_id")),("scholarly-study",body.pop("study_id")),("scholarly-publication",body.pop("publication_id"))]
-        multiples=[("ai-research-context",body.pop("context_ids")),("rag-evaluation",body.pop("evaluation_ids")),("ai-research-experiment",body.pop("experiment_ids")),("model-aware-research",body.pop("model_aware_record_ids")),("cross-product-exchange",body.pop("exchange_ids")),("research-question-plan",body.pop("question_plan_ids")),("research-design-plan",body.pop("research_design_plan_ids")),("evidence-search-strategy-plan",body.pop("evidence_search_strategy_ids")),("systematic-review-plan",body.pop("systematic_review_ids")),("literature-intelligence-plan",body.pop("literature_intelligence_ids")),("argument-intelligence-plan",body.pop("argument_intelligence_ids")),("research-gap-novelty-plan",body.pop("research_gap_novelty_ids")),("dataset-fitness-plan",body.pop("dataset_fitness_ids")),("computational-research-plan",body.pop("computational_research_plan_ids")),("research-program",body.pop("research_program_ids")),("study-protocol",body.pop("study_protocol_ids")),("knowledge-graph-node",body.pop("knowledge_graph_node_refs")),("core-object",body.pop("core_object_refs"))]
+        multiples=[("ai-research-context",body.pop("context_ids")),("rag-evaluation",body.pop("evaluation_ids")),("ai-research-experiment",body.pop("experiment_ids")),("model-aware-research",body.pop("model_aware_record_ids")),("cross-product-exchange",body.pop("exchange_ids")),("research-question-plan",body.pop("question_plan_ids")),("research-design-plan",body.pop("research_design_plan_ids")),("evidence-search-strategy-plan",body.pop("evidence_search_strategy_ids")),("systematic-review-plan",body.pop("systematic_review_ids")),("literature-intelligence-plan",body.pop("literature_intelligence_ids")),("argument-intelligence-plan",body.pop("argument_intelligence_ids")),("research-gap-novelty-plan",body.pop("research_gap_novelty_ids")),("dataset-fitness-plan",body.pop("dataset_fitness_ids")),("computational-research-plan",body.pop("computational_research_plan_ids")),("research-program",body.pop("research_program_ids")),("study-protocol",body.pop("study_protocol_ids")),("statistical-analysis-plan-intelligence",body.pop("statistical_analysis_plan_ids")),("knowledge-graph-node",body.pop("knowledge_graph_node_refs")),("core-object",body.pop("core_object_refs"))]
         for typ,ref in singles:
             if ref: initial.append({"component_type":typ,"ref":ref,"role":"primary","note":""})
         for typ,refs in multiples:
@@ -200,6 +201,12 @@ CREATE TABLE IF NOT EXISTS unified_research_environment_snapshots(snapshot_id TE
                 sps=self._store("study_protocol_store",get_study_protocol_preregistration_store)
                 out["research_design"]["study_protocols"].append({"protocol":sps.get(ref),"readiness":sps.readiness(ref),"protocol_matrix":sps.protocol_matrix(ref)})
             except Exception as exc: out["unresolved"].append({"component_type":"study-protocol","ref":ref,"error":str(exc)})
+        out["research_design"]["statistical_analysis_plans"]=[]
+        for ref in self._refs(rec,"statistical-analysis-plan-intelligence"):
+            try:
+                sas=self._store("statistical_analysis_planning_store",get_statistical_analysis_planning_intelligence_store)
+                out["research_design"]["statistical_analysis_plans"].append({"plan":sas.get(ref),"readiness":sas.readiness(ref),"analysis_matrix":sas.analysis_matrix(ref),"runtime_handoffs":sas.runtime_handoffs(ref)})
+            except Exception as exc: out["unresolved"].append({"component_type":"statistical-analysis-plan-intelligence","ref":ref,"error":str(exc)})
         one("research-workflow","workflow",lambda x:self._store("workflow_store",get_research_workflow_store).get(x))
         srefs=self._refs(rec,"scholarly-study")
         if srefs:
@@ -250,6 +257,7 @@ CREATE TABLE IF NOT EXISTS unified_research_environment_snapshots(snapshot_id TE
             "computational_research_plan_bound":bool(self._refs(rec,"computational-research-plan")),
             "research_program_bound":bool(self._refs(rec,"research-program")),
             "study_protocol_bound":bool(self._refs(rec,"study-protocol")),
+            "statistical_analysis_plan_bound":bool(self._refs(rec,"statistical-analysis-plan-intelligence")),
             "scholarly_lineage_bound":bool(self._refs(rec,"scholarly-study") or self._refs(rec,"scholarly-publication")),
             "ai_lineage_bound":bool(self._refs(rec,"ai-research-context") or self._refs(rec,"ai-research-experiment") or self._refs(rec,"model-aware-research")),
             "all_bound_components_resolved":not line["unresolved"],
@@ -261,7 +269,7 @@ CREATE TABLE IF NOT EXISTS unified_research_environment_snapshots(snapshot_id TE
         return {"schema":UNIFIED_SCHOLARLY_AI_ENVIRONMENT_SCHEMA,"environment_id":eid,"ready":not blockers,"dimensions":dimensions,"blockers":blockers,"unresolved":line["unresolved"],"governance":{"readiness_is_structural_completeness_not_scientific_validity":True,"publication_and_exchange_are_optional_maturity_dimensions":True,"automatic_truth_promotion":False}}
     def dossier(self,eid:str)->dict[str,Any]:
         rec=self.get(eid); line=self.lineage(eid); ready=self.readiness(eid)
-        return {"schema":UNIFIED_SCHOLARLY_AI_DOSSIER_SCHEMA,"environment":{"environment_id":eid,"title":rec["title"],"research_question":rec.get("research_question","") ,"project_ref":rec["project_ref"],"record_hash":rec["record_hash"]},"bindings":rec["bindings"],"lineage":line,"readiness":ready,"lifecycle":["research-question-and-hypothesis-intelligence","research-design-and-methodology-planning","evidence-search-strategy","systematic-review-and-evidence-synthesis","scholarly-citation-and-literature-intelligence","argument-claim-counterclaim-intelligence","research-gap-and-novelty-intelligence","dataset-discovery-and-data-fitness-intelligence","computational-research-planning","research-program-intelligence","study-protocol-and-preregistration","workflow","scholarly-study","evidence-and-analysis","ai-context","rag-evaluation","ai-experiment","model-aware-lineage","peer-review-and-replication","publication","knowledge-graph","cross-product-exchange"],"governance":{"dossier_is_assembled_view_not_new_source_of_truth":True,"human_scholarly_judgment_preserved":True,"specialist_runtime_execution_preserved":True,"platform_core_governance_preserved":True}}
+        return {"schema":UNIFIED_SCHOLARLY_AI_DOSSIER_SCHEMA,"environment":{"environment_id":eid,"title":rec["title"],"research_question":rec.get("research_question","") ,"project_ref":rec["project_ref"],"record_hash":rec["record_hash"]},"bindings":rec["bindings"],"lineage":line,"readiness":ready,"lifecycle":["research-question-and-hypothesis-intelligence","research-design-and-methodology-planning","evidence-search-strategy","systematic-review-and-evidence-synthesis","scholarly-citation-and-literature-intelligence","argument-claim-counterclaim-intelligence","research-gap-and-novelty-intelligence","dataset-discovery-and-data-fitness-intelligence","computational-research-planning","research-program-intelligence","study-protocol-and-preregistration","statistical-analysis-planning-intelligence","workflow","scholarly-study","evidence-and-analysis","ai-context","rag-evaluation","ai-experiment","model-aware-lineage","peer-review-and-replication","publication","knowledge-graph","cross-product-exchange"],"governance":{"dossier_is_assembled_view_not_new_source_of_truth":True,"human_scholarly_judgment_preserved":True,"specialist_runtime_execution_preserved":True,"platform_core_governance_preserved":True}}
     def freeze_snapshot(self,req:UnifiedResearchEnvironmentSnapshotRequest)->dict[str,Any]:
         dossier=self.dossier(req.environment_id); payload={"schema":UNIFIED_SCHOLARLY_AI_SNAPSHOT_SCHEMA,"environment_id":req.environment_id,"dossier":dossier,"label":req.label,"note":req.note,"frozen_utc":_now(),"governance":{"snapshot_is_reproducible_environment_record_not_truth_certification":True}}
         h=_sha(payload); sid="uraisnap-"+h[:32]; payload.update({"snapshot_id":sid,"snapshot_hash":h})

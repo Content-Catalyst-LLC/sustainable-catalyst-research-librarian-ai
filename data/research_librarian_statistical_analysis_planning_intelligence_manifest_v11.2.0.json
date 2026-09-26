@@ -1,0 +1,11 @@
+{
+  "schema": "sc-research-librarian-statistical-analysis-planning-intelligence-manifest/1.0",
+  "release": "11.2.0",
+  "capability": "statistical-analysis-planning-intelligence",
+  "migration": "027",
+  "job": "statistical-analysis-planning-intelligence-snapshot",
+  "source_authority": "study-protocol-preregistration",
+  "execution_authority": "specialist-runtimes",
+  "runtime_core_bridge": "v8.11-statistical-research",
+  "governed_object_authority": "platform-core"
+}
