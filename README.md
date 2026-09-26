@@ -1,6 +1,14 @@
-# Sustainable Catalyst Research Librarian AI v10.5.0
+# Sustainable Catalyst Research Librarian AI v10.6.0
 
-Current release: **10.5.0 — Scholarly Citation & Literature Intelligence**
+Current release: **10.6.0 — Argument, Claim & Counterclaim Intelligence**
+
+## v10.6.0 Argument, Claim & Counterclaim Intelligence
+
+Research Librarian AI v10.6.0 turns the v10.5 literature landscape into durable, explicit argument structures. It records researcher-authored claims and counterclaims, source/evidence relations, claim-to-claim relations, assumptions, unresolved tensions, analysis-scope decisions, descriptive claim-evidence matrices, argument maps, non-writing v8.10 argument-synthesis handoffs, governed Platform Core candidates, and reproducible snapshots. Claims are never automatically accepted as true, contradictions are preserved rather than resolved, and argument ranking/best-argument selection remain disabled.
+
+## v10.5.0 Scholarly Citation & Literature Intelligence
+
+Research Librarian AI v10.5.0 extends the v10.4 review corpus into citation-context, scholarly-lineage, related-work, literature-strand, human-declared research-gap, and seminal-candidate intelligence. Citation topology is descriptive rather than an authority or quality score.
 
 ## v10.4.0 Systematic Review & Evidence Synthesis Intelligence
 

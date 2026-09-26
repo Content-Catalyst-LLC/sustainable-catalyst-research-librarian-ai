@@ -14,10 +14,10 @@ $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_re
 $benchmarks = json_decode( file_get_contents( $root . '/data/research_librarian_retrieval_benchmarks_v6.5.0.json' ), true );
 
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 10.5.0' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '10.5.0';" ),
+    'version_header' => false !== strpos( $main, 'Version: 10.6.0' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '10.6.0';" ),
     'module_version' => false !== strpos( $module, "const VERSION = '8.0.0';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "10.5.0"' ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "10.6.0"' ),
     'schema_version_six' => false !== strpos( $store, 'SCHEMA_VERSION = 19' ),
     'index_schema_six' => false !== strpos( $store, 'sc-research-librarian-knowledge-index/13.0' ),
     'calibration_module' => false !== strpos( $calibration, 'DEFAULT_RETRIEVAL_CONFIG' ),

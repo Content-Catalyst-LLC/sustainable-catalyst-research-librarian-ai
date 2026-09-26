@@ -1,0 +1,19 @@
+{
+  "release": "10.6.0",
+  "name": "Argument, Claim & Counterclaim Intelligence",
+  "backend_migration": "021_argument_claim_counterclaim_intelligence.sql",
+  "milestone": "10.6",
+  "requires": "10.5.0",
+  "governance": {
+    "human_claim_recording_required": true,
+    "human_evidence_relation_recording_required": true,
+    "claim_acceptance_is_for_analysis_not_truth_status": true,
+    "automatic_argument_ranking": false,
+    "automatic_best_argument_selection": false,
+    "automatic_claim_acceptance": false,
+    "automatic_counterclaim_rejection": false,
+    "automatic_contradiction_resolution": false,
+    "automatic_truth_promotion": false,
+    "platform_core_remains_argument_object_authority": true
+  }
+}

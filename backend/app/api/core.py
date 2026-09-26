@@ -73,6 +73,11 @@ from ..contracts.scholarly_literature_intelligence import (
     RelatedWorkCandidateAddRequest, RelatedWorkDecisionRequest, LiteratureIntelligenceStateRequest,
     LiteratureIntelligenceSnapshotRequest,
 )
+from ..contracts.argument_claim_counterclaim_intelligence import (
+    ArgumentIntelligenceCreateRequest, ArgumentClaimAddRequest, ClaimEvidenceLinkRequest,
+    ClaimRelationAddRequest, ClaimAssumptionAddRequest, ClaimDecisionRequest,
+    ArgumentTensionAddRequest, ArgumentIntelligenceStateRequest, ArgumentIntelligenceSnapshotRequest,
+)
 from ..contracts.research_question_hypothesis import (
     ResearchQuestionPlanCreateRequest, ResearchSubquestionAddRequest, ResearchHypothesisAddRequest,
     ResearchEvidenceRequirementRequest, ResearchQuestionReviewStateRequest, ResearchQuestionSnapshotRequest,
@@ -151,6 +156,9 @@ from ..services.systematic_review_evidence_synthesis import (
 )
 from ..services.scholarly_literature_intelligence import (
     get_scholarly_literature_intelligence_store, capabilities as scholarly_literature_intelligence_capabilities,
+)
+from ..services.argument_claim_counterclaim_intelligence import (
+    get_argument_claim_counterclaim_intelligence_store, capabilities as argument_claim_counterclaim_intelligence_capabilities,
 )
 from ..services.research_question_hypothesis import (
     get_research_question_hypothesis_store, capabilities as research_question_hypothesis_capabilities,
@@ -1544,3 +1552,72 @@ def scholarly_literature_intelligence_core_candidate(intelligence_id: str) -> di
 @router.post("/scholarly-literature-intelligence/snapshots/freeze", dependencies=[Depends(require_backend_key)])
 def scholarly_literature_intelligence_snapshot(req: LiteratureIntelligenceSnapshotRequest) -> dict[str, Any]:
     return get_scholarly_literature_intelligence_store().freeze_snapshot(req)
+
+
+@router.get("/argument-claim-counterclaim-intelligence/capabilities", dependencies=[Depends(require_backend_key)])
+def argument_claim_counterclaim_intelligence_capabilities_route() -> dict[str, Any]:
+    return argument_claim_counterclaim_intelligence_capabilities()
+
+@router.post("/argument-claim-counterclaim-intelligence/projects", dependencies=[Depends(require_backend_key)])
+def argument_claim_counterclaim_intelligence_create(req: ArgumentIntelligenceCreateRequest) -> dict[str, Any]:
+    return get_argument_claim_counterclaim_intelligence_store().create(req)
+
+@router.get("/argument-claim-counterclaim-intelligence/projects/{argument_intelligence_id}", dependencies=[Depends(require_backend_key)])
+def argument_claim_counterclaim_intelligence_get(argument_intelligence_id: str) -> dict[str, Any]:
+    return get_argument_claim_counterclaim_intelligence_store().get(argument_intelligence_id)
+
+@router.post("/argument-claim-counterclaim-intelligence/projects/{argument_intelligence_id}/claims", dependencies=[Depends(require_backend_key)])
+def argument_claim_counterclaim_intelligence_add_claim(argument_intelligence_id: str, req: ArgumentClaimAddRequest) -> dict[str, Any]:
+    return get_argument_claim_counterclaim_intelligence_store().add_claim(argument_intelligence_id, req)
+
+@router.post("/argument-claim-counterclaim-intelligence/projects/{argument_intelligence_id}/evidence-links", dependencies=[Depends(require_backend_key)])
+def argument_claim_counterclaim_intelligence_add_evidence_link(argument_intelligence_id: str, req: ClaimEvidenceLinkRequest) -> dict[str, Any]:
+    return get_argument_claim_counterclaim_intelligence_store().add_evidence_link(argument_intelligence_id, req)
+
+@router.post("/argument-claim-counterclaim-intelligence/projects/{argument_intelligence_id}/claim-relations", dependencies=[Depends(require_backend_key)])
+def argument_claim_counterclaim_intelligence_add_relation(argument_intelligence_id: str, req: ClaimRelationAddRequest) -> dict[str, Any]:
+    return get_argument_claim_counterclaim_intelligence_store().add_claim_relation(argument_intelligence_id, req)
+
+@router.post("/argument-claim-counterclaim-intelligence/projects/{argument_intelligence_id}/assumptions", dependencies=[Depends(require_backend_key)])
+def argument_claim_counterclaim_intelligence_add_assumption(argument_intelligence_id: str, req: ClaimAssumptionAddRequest) -> dict[str, Any]:
+    return get_argument_claim_counterclaim_intelligence_store().add_assumption(argument_intelligence_id, req)
+
+@router.post("/argument-claim-counterclaim-intelligence/projects/{argument_intelligence_id}/claim-decisions", dependencies=[Depends(require_backend_key)])
+def argument_claim_counterclaim_intelligence_decide_claim(argument_intelligence_id: str, req: ClaimDecisionRequest) -> dict[str, Any]:
+    return get_argument_claim_counterclaim_intelligence_store().decide_claim(argument_intelligence_id, req)
+
+@router.post("/argument-claim-counterclaim-intelligence/projects/{argument_intelligence_id}/tensions", dependencies=[Depends(require_backend_key)])
+def argument_claim_counterclaim_intelligence_add_tension(argument_intelligence_id: str, req: ArgumentTensionAddRequest) -> dict[str, Any]:
+    return get_argument_claim_counterclaim_intelligence_store().add_tension(argument_intelligence_id, req)
+
+@router.post("/argument-claim-counterclaim-intelligence/projects/{argument_intelligence_id}/review-state", dependencies=[Depends(require_backend_key)])
+def argument_claim_counterclaim_intelligence_state(argument_intelligence_id: str, req: ArgumentIntelligenceStateRequest) -> dict[str, Any]:
+    return get_argument_claim_counterclaim_intelligence_store().set_state(argument_intelligence_id, req)
+
+@router.get("/argument-claim-counterclaim-intelligence/projects/{argument_intelligence_id}/claim-evidence-matrix", dependencies=[Depends(require_backend_key)])
+def argument_claim_counterclaim_intelligence_matrix(argument_intelligence_id: str) -> dict[str, Any]:
+    return get_argument_claim_counterclaim_intelligence_store().claim_evidence_matrix(argument_intelligence_id)
+
+@router.get("/argument-claim-counterclaim-intelligence/projects/{argument_intelligence_id}/argument-map", dependencies=[Depends(require_backend_key)])
+def argument_claim_counterclaim_intelligence_map(argument_intelligence_id: str) -> dict[str, Any]:
+    return get_argument_claim_counterclaim_intelligence_store().argument_map(argument_intelligence_id)
+
+@router.get("/argument-claim-counterclaim-intelligence/projects/{argument_intelligence_id}/contradiction-register", dependencies=[Depends(require_backend_key)])
+def argument_claim_counterclaim_intelligence_contradictions(argument_intelligence_id: str) -> dict[str, Any]:
+    return get_argument_claim_counterclaim_intelligence_store().contradiction_register(argument_intelligence_id)
+
+@router.get("/argument-claim-counterclaim-intelligence/projects/{argument_intelligence_id}/argument-synthesis-handoff", dependencies=[Depends(require_backend_key)])
+def argument_claim_counterclaim_intelligence_handoff(argument_intelligence_id: str) -> dict[str, Any]:
+    return get_argument_claim_counterclaim_intelligence_store().argument_synthesis_handoff(argument_intelligence_id)
+
+@router.get("/argument-claim-counterclaim-intelligence/projects/{argument_intelligence_id}/readiness", dependencies=[Depends(require_backend_key)])
+def argument_claim_counterclaim_intelligence_readiness(argument_intelligence_id: str) -> dict[str, Any]:
+    return get_argument_claim_counterclaim_intelligence_store().readiness(argument_intelligence_id)
+
+@router.get("/argument-claim-counterclaim-intelligence/projects/{argument_intelligence_id}/core-candidate", dependencies=[Depends(require_backend_key)])
+def argument_claim_counterclaim_intelligence_core_candidate(argument_intelligence_id: str) -> dict[str, Any]:
+    return get_argument_claim_counterclaim_intelligence_store().core_candidate(argument_intelligence_id)
+
+@router.post("/argument-claim-counterclaim-intelligence/snapshots/freeze", dependencies=[Depends(require_backend_key)])
+def argument_claim_counterclaim_intelligence_snapshot(req: ArgumentIntelligenceSnapshotRequest) -> dict[str, Any]:
+    return get_argument_claim_counterclaim_intelligence_store().freeze_snapshot(req)

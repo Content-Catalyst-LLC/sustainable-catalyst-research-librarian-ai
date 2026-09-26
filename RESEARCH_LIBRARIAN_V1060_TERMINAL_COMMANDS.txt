@@ -1,0 +1,21 @@
+# GitHub — run on your Mac
+cd ~/Downloads
+rm -rf sc-research-librarian-v10.6.0-release
+unzip -q sustainable-catalyst-research-librarian-ai-v10.6.0-release-bundle.zip -d sc-research-librarian-v10.6.0-release
+cd sc-research-librarian-v10.6.0-release
+chmod +x PUSH_RESEARCH_LIBRARIAN_V1060_PY312.sh
+./PUSH_RESEARCH_LIBRARIAN_V1060_PY312.sh "$PWD/sustainable-catalyst-research-librarian-ai-v10.6.0-repository.zip"
+
+# Backend transfer — still on your Mac
+cd ~/Downloads/sc-research-librarian-v10.6.0-release
+scp -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes \
+  sustainable-catalyst-research-librarian-backend-v10.6.0.zip \
+  deploy/contabo/upgrade_research_librarian_backend_v10_6_0_contabo.sh \
+  catalystadmin@94.72.113.77:/tmp/
+ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes catalystadmin@94.72.113.77
+
+# Contabo
+cd /tmp
+chmod +x upgrade_research_librarian_backend_v10_6_0_contabo.sh
+./upgrade_research_librarian_backend_v10_6_0_contabo.sh \
+  /tmp/sustainable-catalyst-research-librarian-backend-v10.6.0.zip

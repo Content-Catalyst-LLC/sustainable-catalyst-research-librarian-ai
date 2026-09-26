@@ -1,3 +1,15 @@
+# v10.6.0 — Argument, Claim & Counterclaim Intelligence
+
+- Added durable argument-intelligence projects bound to v10.5 literature-intelligence lineage.
+- Added explicit claims, counterclaims, rebuttals, qualifications, evidence links, claim relations, assumptions, and tensions.
+- Added descriptive claim-evidence matrices and argument maps without evidence-strength or truth scoring.
+- Added analysis-scope claim decisions that leave truth status explicitly undetermined.
+- Added contradiction/tension registers that preserve disagreement instead of resolving it automatically.
+- Added non-writing handoffs to the existing v8.10 argument-synthesis contract and governed Platform Core candidates.
+- Added unified-research-environment `argument-intelligence-plan` bindings and durable snapshot jobs.
+- Added migration 021 for Postgres persistence.
+- Preserved human judgment: no automatic claim acceptance, counterclaim rejection, argument ranking, best-argument selection, contradiction resolution, or truth promotion.
+
 ## 10.5.0 — Scholarly Citation & Literature Intelligence
 - Added durable citation-context and literature-intelligence projects, literature strands, gap registry, seminal candidates, related-work review, graph/Core handoffs, snapshots, API, migration 020, and unified-environment bindings.
 

@@ -51,7 +51,7 @@ def _request() -> VisualResearchPlanRequest:
 def test_visual_plan_is_renderer_neutral_pending_and_explicit_relation_only():
     result = build_plan(_request())
     assert result["schema"] == VISUAL_RESEARCH_SCHEMA
-    assert result["release"] == "10.5.0"
+    assert result["release"] == "10.6.0"
     plan = result["plan"]
     assert plan["review_decision"] == "pending"
     assert plan["renderer_policy"]["renderer_neutral"] is True
@@ -158,6 +158,6 @@ def test_async_visual_plan_and_api_surface():
     response=TestClient(app).get("/v1/core/visual-research/capabilities",headers={"X-SC-RL-Key":"test-key"})
     assert response.status_code == 200
     body=response.json()
-    assert body["release"] == "10.5.0"
+    assert body["release"] == "10.6.0"
     assert body["renderer_neutral_specs"] is True
     assert body["librarian_renders_visuals"] is False

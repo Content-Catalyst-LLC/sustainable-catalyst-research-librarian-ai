@@ -10,8 +10,8 @@ $models=file_get_contents($root.'/backend/app/models.py');
 $docs=file_get_contents($root.'/docs/V670_RESEARCH_QUALITY_GOVERNANCE_CENTER.md');
 $manifest=json_decode(file_get_contents($root.'/data/research_librarian_quality_governance_manifest_v7.1.2.json'),true);
 $checks=array(
- 'version_header'=>false!==strpos($main,'Version: 10.5.0'),
- 'version_constant'=>false!==strpos($main,"const VERSION        = '10.5.0';"),
+ 'version_header'=>false!==strpos($main,'Version: 10.6.0'),
+ 'version_constant'=>false!==strpos($main,"const VERSION        = '10.6.0';"),
  'module_loaded'=>false!==strpos($main,'class-sc-rl-v670-governance-center.php'),
  'module_version'=>false!==strpos($module,"const VERSION = '8.0.0';"),
  'activation'=>false!==strpos($main,"SC_RL6_V670_Governance_Center', 'activate"),

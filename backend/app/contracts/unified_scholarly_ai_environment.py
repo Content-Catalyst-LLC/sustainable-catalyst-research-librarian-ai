@@ -9,7 +9,7 @@ UNIFIED_SCHOLARLY_AI_SNAPSHOT_SCHEMA = "sc-research-librarian-unified-scholarly-
 ComponentType = Literal[
     "research-workflow", "scholarly-study", "scholarly-publication", "knowledge-graph-node",
     "ai-research-context", "rag-evaluation", "ai-research-experiment", "model-aware-research",
-    "cross-product-exchange", "research-question-plan", "research-design-plan", "evidence-search-strategy-plan", "systematic-review-plan", "literature-intelligence-plan", "core-object",
+    "cross-product-exchange", "research-question-plan", "research-design-plan", "evidence-search-strategy-plan", "systematic-review-plan", "literature-intelligence-plan", "argument-intelligence-plan", "core-object",
 ]
 
 class UnifiedResearchEnvironmentCreateRequest(BaseModel):
@@ -30,6 +30,7 @@ class UnifiedResearchEnvironmentCreateRequest(BaseModel):
     evidence_search_strategy_ids: list[str] = Field(default_factory=list, max_length=5000)
     systematic_review_ids: list[str] = Field(default_factory=list, max_length=5000)
     literature_intelligence_ids: list[str] = Field(default_factory=list, max_length=5000)
+    argument_intelligence_ids: list[str] = Field(default_factory=list, max_length=5000)
     knowledge_graph_node_refs: list[str] = Field(default_factory=list, max_length=5000)
     core_object_refs: list[str] = Field(default_factory=list, max_length=5000)
     metadata: dict[str, Any] = Field(default_factory=dict)
