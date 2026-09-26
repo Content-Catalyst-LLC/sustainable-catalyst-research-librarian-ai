@@ -1,5 +1,11 @@
 # Changelog
 
+## 11.0.0 — Research Program Intelligence
+
+- Added durable research-program records, workstreams, component bindings, milestones, milestone decisions, deliverables, constraints, program graphs, portfolio summaries, readiness, non-writing handoffs, Core candidates, immutable snapshots, durable jobs, and unified-environment bindings.
+- Added migration 025.
+- Preserved source-system authority, specialist-runtime execution, Platform Core governance, and explicit human program approval.
+
 ## 10.9.0 — Computational Research Planning
 - Added durable computational research plans bound to v10.8 dataset-fitness intelligence.
 - Added runtime-target, analysis-step, dependency-graph, reproducibility, constraint, and human step-decision registries.

@@ -1,0 +1,19 @@
+{
+  "release": "11.0.0",
+  "name": "Research Program Intelligence",
+  "backend_migration": "025_research_program_intelligence.sql",
+  "milestone": "11.0",
+  "requires": "10.9.0",
+  "governance": {
+    "human_program_approval_required": true,
+    "component_authority_remains_with_source_system": true,
+    "specialist_runtimes_own_execution": true,
+    "platform_core_remains_research_object_authority": true,
+    "automatic_research_prioritization": false,
+    "automatic_resource_allocation": false,
+    "automatic_milestone_completion": false,
+    "automatic_scientific_judgment": false,
+    "automatic_execution": false,
+    "automatic_truth_promotion": false
+  }
+}

@@ -59,6 +59,8 @@ from ..contracts.dataset_discovery_data_fitness import DatasetFitnessSnapshotReq
 from .dataset_discovery_data_fitness import get_dataset_discovery_data_fitness_store
 from ..contracts.computational_research_planning import ComputationalResearchPlanSnapshotRequest
 from .computational_research_planning import get_computational_research_planning_store
+from ..contracts.research_program_intelligence import ResearchProgramSnapshotRequest
+from .research_program_intelligence import get_research_program_intelligence_store
 
 Progress = Callable[[str, int], None]
 
@@ -519,6 +521,18 @@ async def process_computational_research_planning_snapshot_job(claim: JobClaim, 
     return result
 
 
+async def process_research_program_intelligence_snapshot_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
+    progress("load-research-program-intelligence", 20)
+    request = ResearchProgramSnapshotRequest.model_validate(claim.payload.get("snapshot") or claim.payload)
+    store = get_research_program_intelligence_store()
+    progress("assemble-research-program-intelligence", 55)
+    store.readiness(request.research_program_id)
+    progress("freeze-research-program-intelligence-snapshot", 80)
+    result = store.freeze_snapshot(request)
+    progress("research-program-intelligence-snapshot-ready", 95)
+    return result
+
+
 async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
     if claim.job_type in {"document-process", "ingestion"}:
         return await process_document_job(claim, progress)
@@ -576,7 +590,9 @@ async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
         return await process_dataset_discovery_data_fitness_snapshot_job(claim, progress)
     if claim.job_type == "computational-research-planning-snapshot":
         return await process_computational_research_planning_snapshot_job(claim, progress)
+    if claim.job_type == "research-program-intelligence-snapshot":
+        return await process_research_program_intelligence_snapshot_job(claim, progress)
     raise ValueError(
         f"Job type {claim.job_type!r} is registered for the durable queue but has no v8.3 executor yet; "
-        "use document-process, document-intelligence, source-identity, research-intelligence-extraction, argument-synthesis-plan, statistical-analysis-plan, visual-research-plan, unified-research-runtime, research-workflow-advance, scholarly-research-package, peer-review-validation-package, scholarly-publication-package, research-knowledge-graph-snapshot, ai-research-context-snapshot, rag-evaluation-snapshot, ai-research-experiment-snapshot, model-aware-research-snapshot, unified-research-environment-snapshot, research-question-hypothesis-snapshot, research-design-methodology-snapshot, evidence-search-strategy-snapshot, systematic-review-evidence-synthesis-snapshot, scholarly-literature-intelligence-snapshot, argument-claim-counterclaim-intelligence-snapshot, research-gap-novelty-intelligence-snapshot, dataset-discovery-data-fitness-snapshot, computational-research-planning-snapshot, ingestion, or validation."
+        "use document-process, document-intelligence, source-identity, research-intelligence-extraction, argument-synthesis-plan, statistical-analysis-plan, visual-research-plan, unified-research-runtime, research-workflow-advance, scholarly-research-package, peer-review-validation-package, scholarly-publication-package, research-knowledge-graph-snapshot, ai-research-context-snapshot, rag-evaluation-snapshot, ai-research-experiment-snapshot, model-aware-research-snapshot, unified-research-environment-snapshot, research-question-hypothesis-snapshot, research-design-methodology-snapshot, evidence-search-strategy-snapshot, systematic-review-evidence-synthesis-snapshot, scholarly-literature-intelligence-snapshot, argument-claim-counterclaim-intelligence-snapshot, research-gap-novelty-intelligence-snapshot, dataset-discovery-data-fitness-snapshot, computational-research-planning-snapshot, research-program-intelligence-snapshot, ingestion, or validation."
     )

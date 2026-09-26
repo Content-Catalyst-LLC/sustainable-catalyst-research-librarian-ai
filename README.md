@@ -1,10 +1,12 @@
-# Sustainable Catalyst Research Librarian AI v10.9.0
+# Sustainable Catalyst Research Librarian AI v11.0.0
 
-Current release: **10.9.0 — Computational Research Planning**
+Current release: **11.0.0 — Research Program Intelligence**
 
-## v10.9.0 — Computational Research Planning
+## v11.0.0 — Research Program Intelligence
 
-Research Librarian can now convert approved data-fitness context into reviewable computational plans: runtime targets, analysis steps, declared dependencies, parameters, reproducibility requirements, validation checks, constraints, and execution handoff packets. The Librarian plans but does not execute analyses; Workspace, Research Lab, Workbench, Python/R/Julia and other specialist runtimes retain execution responsibility.
+Research Program Intelligence adds persistent program-level coordination above the v10.x research pipeline: multiple workstreams, governed component bindings, linked computational plans, milestone/dependency graphs, deliverables, constraints, descriptive portfolio summaries, structural readiness, non-writing handoffs, Platform Core candidates, immutable snapshots, durable jobs, and unified-environment binding.
+
+Governance remains human-centered: program readiness is not scientific validity, component authority remains with the source system, specialist runtimes retain execution, and the Librarian does not automatically prioritize research, allocate resources, complete milestones, make scientific judgments, execute analyses, or promote truth.
 
 ## v10.6.0 Argument, Claim & Counterclaim Intelligence
 

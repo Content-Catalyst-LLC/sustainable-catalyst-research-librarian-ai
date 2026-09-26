@@ -1,0 +1,15 @@
+{
+  "release": "11.0.0",
+  "name": "Research Program Intelligence",
+  "backend_migration": "025_research_program_intelligence.sql",
+  "milestone": "11.0",
+  "requires": "10.9.0",
+  "primary_objects": ["research-program","research-program-workstream","research-program-component-binding","research-program-milestone","research-program-milestone-decision","research-program-deliverable","research-program-constraint","research-program-snapshot"],
+  "coordination_boundaries": ["research-program-coordinates-but-does-not-decide-science","component-authority-remains-with-source-system","specialist-runtimes-own-execution","platform-core-remains-governed-object-authority"],
+  "automatic_research_prioritization": false,
+  "automatic_resource_allocation": false,
+  "automatic_milestone_completion": false,
+  "automatic_scientific_judgment": false,
+  "automatic_execution": false,
+  "automatic_truth_promotion": false
+}

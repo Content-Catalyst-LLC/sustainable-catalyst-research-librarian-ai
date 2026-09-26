@@ -7,8 +7,8 @@ $provider=file_get_contents($root.'/backend/app/provider.py');
 $store=file_get_contents($root.'/backend/app/store.py');
 $manifest=json_decode(file_get_contents($root.'/data/research_librarian_v701_repair_manifest.json'),true);
 $checks=array(
- 'version_header'=>false!==strpos($main,'Version: 10.9.0'),
- 'version_constant'=>false!==strpos($main,"const VERSION        = '10.9.0';"),
+ 'version_header'=>false!==strpos($main,'Version: 11.0.0'),
+ 'version_constant'=>false!==strpos($main,"const VERSION        = '11.0.0';"),
  'all_public_post_types'=>false!==strpos($main,"get_post_types( array( 'public' => true ), 'names' )"),
  'legacy_page_post_ceiling_removed'=>false===strpos($main,"'post_type' => array( 'page', 'post' )"),
  'canonical_delegation'=>false!==strpos($main,'SC_RL6_V630_Durable_Index::sync_and_complete_embeddings'),

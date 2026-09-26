@@ -1,0 +1,22 @@
+Research Librarian AI v11.0.0 — Terminal Commands
+
+MAC — GIT PUSH/TAG
+cd ~/Downloads
+rm -rf sc-research-librarian-v11.0.0-release
+unzip -q sustainable-catalyst-research-librarian-ai-v11.0.0-release-bundle.zip -d sc-research-librarian-v11.0.0-release
+cd sc-research-librarian-v11.0.0-release
+chmod +x PUSH_RESEARCH_LIBRARIAN_V1100_PY312.sh
+./PUSH_RESEARCH_LIBRARIAN_V1100_PY312.sh "$PWD/sustainable-catalyst-research-librarian-ai-v11.0.0-repository.zip"
+
+MAC — TRANSFER BACKEND
+cd ~/Downloads/sc-research-librarian-v11.0.0-release
+scp -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes sustainable-catalyst-research-librarian-backend-v11.0.0.zip deploy/contabo/upgrade_research_librarian_backend_v11_0_0_contabo.sh catalystadmin@94.72.113.77:/tmp/
+ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes catalystadmin@94.72.113.77
+
+CONTABO
+cd /tmp
+chmod +x upgrade_research_librarian_backend_v11_0_0_contabo.sh
+./upgrade_research_librarian_backend_v11_0_0_contabo.sh /tmp/sustainable-catalyst-research-librarian-backend-v11.0.0.zip
+
+EXPECTED FINAL LINE
+PASS: Research Librarian AI v11.0.0 Research Program Intelligence backend deployed and verified.

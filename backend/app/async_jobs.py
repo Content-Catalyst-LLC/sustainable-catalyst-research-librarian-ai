@@ -60,6 +60,7 @@ JOB_TYPES = {
     "research-gap-novelty-intelligence-snapshot",
     "dataset-discovery-data-fitness-snapshot",
     "computational-research-planning-snapshot",
+    "research-program-intelligence-snapshot",
 }
 TERMINAL_STATES = {"succeeded", "failed", "cancelled"}
 ACTIVE_STATES = {"queued", "retry_wait", "running"}

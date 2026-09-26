@@ -7,8 +7,8 @@ $jobs=file_get_contents($root.'/backend/app/async_jobs.py');
 $service=file_get_contents($root.'/backend/app/services/dataset_discovery_data_fitness.py');
 $environment=file_get_contents($root.'/backend/app/services/unified_scholarly_ai_environment.py');
 $checks=[
- 'plugin_version'=>strpos($main,'Version: 10.9.0')!==false,
- 'backend_version'=>strpos($backend,'__version__ = "10.9.0"')!==false,
+ 'plugin_version'=>strpos($main,'Version: 11.0.0')!==false,
+ 'backend_version'=>strpos($backend,'__version__ = "11.0.0"')!==false,
  'capabilities_route'=>strpos($api,'/dataset-discovery-data-fitness/capabilities')!==false,
  'coverage_route'=>strpos($api,'/dataset-discovery-data-fitness/projects/{data_fitness_id}/coverage-matrix')!==false,
  'handoff_route'=>strpos($api,'/dataset-discovery-data-fitness/projects/{data_fitness_id}/computational-planning-handoff')!==false,
@@ -23,4 +23,4 @@ $checks=[
  'environment_binding'=>strpos($environment,'dataset-fitness-plan')!==false,
 ];
 foreach($checks as $k=>$ok){ if(!$ok){ fwrite(STDERR,"FAIL: $k\n"); exit(1);} }
-echo "PASS: Research Librarian v10.9.0 Dataset Discovery & Data Fitness Intelligence contract\n";
+echo "PASS: Research Librarian v11.0.0 Dataset Discovery & Data Fitness Intelligence contract\n";

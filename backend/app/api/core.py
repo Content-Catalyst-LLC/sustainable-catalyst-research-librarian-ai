@@ -91,6 +91,11 @@ from ..contracts.computational_research_planning import (
     ComputationalStepDecisionRequest, ReproducibilityRequirementAddRequest, ComputationalConstraintAddRequest,
     ComputationalResearchPlanStateRequest, ComputationalResearchPlanSnapshotRequest,
 )
+from ..contracts.research_program_intelligence import (
+    ResearchProgramCreateRequest, ResearchProgramWorkstreamAddRequest, ResearchProgramComponentBindingRequest,
+    ResearchProgramMilestoneAddRequest, ResearchProgramMilestoneDecisionRequest, ResearchProgramDeliverableAddRequest,
+    ResearchProgramConstraintAddRequest, ResearchProgramStateRequest, ResearchProgramSnapshotRequest,
+)
 from ..contracts.research_question_hypothesis import (
     ResearchQuestionPlanCreateRequest, ResearchSubquestionAddRequest, ResearchHypothesisAddRequest,
     ResearchEvidenceRequirementRequest, ResearchQuestionReviewStateRequest, ResearchQuestionSnapshotRequest,
@@ -178,6 +183,7 @@ from ..services.research_gap_novelty_intelligence import (
 )
 from ..services.dataset_discovery_data_fitness import get_dataset_discovery_data_fitness_store, capabilities as dataset_discovery_data_fitness_capabilities
 from ..services.computational_research_planning import get_computational_research_planning_store, capabilities as computational_research_planning_capabilities
+from ..services.research_program_intelligence import get_research_program_intelligence_store, capabilities as research_program_intelligence_capabilities
 from ..services.research_question_hypothesis import (
     get_research_question_hypothesis_store, capabilities as research_question_hypothesis_capabilities,
 )
@@ -1788,3 +1794,52 @@ def computational_research_planning_core(computational_plan_id: str) -> dict[str
 
 @router.post("/computational-research-planning/snapshots/freeze", dependencies=[Depends(require_backend_key)])
 def computational_research_planning_snapshot(req: ComputationalResearchPlanSnapshotRequest) -> dict[str, Any]: return get_computational_research_planning_store().freeze_snapshot(req)
+
+@router.get("/research-program-intelligence/capabilities", dependencies=[Depends(require_backend_key)])
+def research_program_intelligence_capabilities_route() -> dict[str, Any]: return research_program_intelligence_capabilities()
+
+@router.post("/research-program-intelligence/programs", dependencies=[Depends(require_backend_key)])
+def research_program_intelligence_create(req: ResearchProgramCreateRequest) -> dict[str, Any]: return get_research_program_intelligence_store().create(req)
+
+@router.get("/research-program-intelligence/programs/{research_program_id}", dependencies=[Depends(require_backend_key)])
+def research_program_intelligence_get(research_program_id: str) -> dict[str, Any]: return get_research_program_intelligence_store().get(research_program_id)
+
+@router.post("/research-program-intelligence/programs/{research_program_id}/workstreams", dependencies=[Depends(require_backend_key)])
+def research_program_intelligence_workstream(research_program_id: str, req: ResearchProgramWorkstreamAddRequest) -> dict[str, Any]: return get_research_program_intelligence_store().add_workstream(research_program_id,req)
+
+@router.post("/research-program-intelligence/programs/{research_program_id}/component-bindings", dependencies=[Depends(require_backend_key)])
+def research_program_intelligence_binding(research_program_id: str, req: ResearchProgramComponentBindingRequest) -> dict[str, Any]: return get_research_program_intelligence_store().bind_component(research_program_id,req)
+
+@router.post("/research-program-intelligence/programs/{research_program_id}/milestones", dependencies=[Depends(require_backend_key)])
+def research_program_intelligence_milestone(research_program_id: str, req: ResearchProgramMilestoneAddRequest) -> dict[str, Any]: return get_research_program_intelligence_store().add_milestone(research_program_id,req)
+
+@router.post("/research-program-intelligence/programs/{research_program_id}/milestone-decisions", dependencies=[Depends(require_backend_key)])
+def research_program_intelligence_milestone_decision(research_program_id: str, req: ResearchProgramMilestoneDecisionRequest) -> dict[str, Any]: return get_research_program_intelligence_store().decide_milestone(research_program_id,req)
+
+@router.post("/research-program-intelligence/programs/{research_program_id}/deliverables", dependencies=[Depends(require_backend_key)])
+def research_program_intelligence_deliverable(research_program_id: str, req: ResearchProgramDeliverableAddRequest) -> dict[str, Any]: return get_research_program_intelligence_store().add_deliverable(research_program_id,req)
+
+@router.post("/research-program-intelligence/programs/{research_program_id}/constraints", dependencies=[Depends(require_backend_key)])
+def research_program_intelligence_constraint(research_program_id: str, req: ResearchProgramConstraintAddRequest) -> dict[str, Any]: return get_research_program_intelligence_store().add_constraint(research_program_id,req)
+
+@router.post("/research-program-intelligence/programs/{research_program_id}/state", dependencies=[Depends(require_backend_key)])
+def research_program_intelligence_state(research_program_id: str, req: ResearchProgramStateRequest) -> dict[str, Any]: return get_research_program_intelligence_store().set_state(research_program_id,req)
+
+@router.get("/research-program-intelligence/programs/{research_program_id}/program-graph", dependencies=[Depends(require_backend_key)])
+def research_program_intelligence_graph(research_program_id: str) -> dict[str, Any]: return get_research_program_intelligence_store().program_graph(research_program_id)
+
+@router.get("/research-program-intelligence/programs/{research_program_id}/portfolio-summary", dependencies=[Depends(require_backend_key)])
+def research_program_intelligence_summary(research_program_id: str) -> dict[str, Any]: return get_research_program_intelligence_store().portfolio_summary(research_program_id)
+
+@router.get("/research-program-intelligence/programs/{research_program_id}/readiness", dependencies=[Depends(require_backend_key)])
+def research_program_intelligence_readiness(research_program_id: str) -> dict[str, Any]: return get_research_program_intelligence_store().readiness(research_program_id)
+
+@router.get("/research-program-intelligence/programs/{research_program_id}/handoffs", dependencies=[Depends(require_backend_key)])
+def research_program_intelligence_handoffs(research_program_id: str) -> dict[str, Any]: return get_research_program_intelligence_store().handoffs(research_program_id)
+
+@router.get("/research-program-intelligence/programs/{research_program_id}/core-candidate", dependencies=[Depends(require_backend_key)])
+def research_program_intelligence_core(research_program_id: str) -> dict[str, Any]: return get_research_program_intelligence_store().core_candidate(research_program_id)
+
+@router.post("/research-program-intelligence/snapshots/freeze", dependencies=[Depends(require_backend_key)])
+def research_program_intelligence_snapshot(req: ResearchProgramSnapshotRequest) -> dict[str, Any]: return get_research_program_intelligence_store().freeze_snapshot(req)
+

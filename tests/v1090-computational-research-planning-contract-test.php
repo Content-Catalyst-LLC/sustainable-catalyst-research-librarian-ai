@@ -7,8 +7,8 @@ $jobs=file_get_contents($root.'/backend/app/async_jobs.py');
 $service=file_get_contents($root.'/backend/app/services/computational_research_planning.py');
 $environment=file_get_contents($root.'/backend/app/services/unified_scholarly_ai_environment.py');
 $checks=[
- 'plugin_version'=>strpos($main,'Version: 10.9.0')!==false,
- 'backend_version'=>strpos($backend,'__version__ = "10.9.0"')!==false,
+ 'plugin_version'=>strpos($main,'Version: 11.0.0')!==false,
+ 'backend_version'=>strpos($backend,'__version__ = "11.0.0"')!==false,
  'capabilities_route'=>strpos($api,'/computational-research-planning/capabilities')!==false,
  'graph_route'=>strpos($api,'/computational-research-planning/plans/{computational_plan_id}/execution-graph')!==false,
  'handoff_route'=>strpos($api,'/computational-research-planning/plans/{computational_plan_id}/execution-handoffs')!==false,
@@ -24,5 +24,5 @@ $checks=[
 ];
 foreach($checks as $k=>$ok){ if(!$ok){ fwrite(STDERR,"FAIL: $k
 "); exit(1);} }
-echo "PASS: Research Librarian v10.9.0 Computational Research Planning contract
+echo "PASS: Research Librarian v11.0.0 Computational Research Planning contract
 ";

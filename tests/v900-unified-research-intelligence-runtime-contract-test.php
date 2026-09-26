@@ -5,8 +5,8 @@ $api=file_get_contents($root.'/backend/app/api/core.py');
 $jobs=file_get_contents($root.'/backend/app/async_jobs.py');
 $service=file_get_contents($root.'/backend/app/services/unified_research_runtime.py');
 $checks=[
-  'plugin_version'=>false!==strpos($main,'Version: 10.9.0'),
-  'backend_version'=>false!==strpos(file_get_contents($root.'/backend/app/__init__.py'),'__version__ = "10.9.0"'),
+  'plugin_version'=>false!==strpos($main,'Version: 11.0.0'),
+  'backend_version'=>false!==strpos(file_get_contents($root.'/backend/app/__init__.py'),'__version__ = "11.0.0"'),
   'contract'=>file_exists($root.'/backend/app/contracts/unified_research_runtime.py') && false!==strpos(file_get_contents($root.'/backend/app/contracts/unified_research_runtime.py'),'sc-research-librarian-unified-research-intelligence-runtime/1.0'),
   'service'=>file_exists($root.'/backend/app/services/unified_research_runtime.py'),
   'capabilities_route'=>false!==strpos($api,'/unified-research/capabilities'),
@@ -19,4 +19,4 @@ $checks=[
   'reproducibility'=>false!==strpos($service,'run_fingerprint'),
 ];
 foreach($checks as $k=>$v){if(!$v){fwrite(STDERR,"FAIL: $k\n");exit(1);}}
-echo "PASS: Research Librarian v10.9.0 Unified Research Intelligence Runtime contract\n";
+echo "PASS: Research Librarian v11.0.0 Unified Research Intelligence Runtime contract\n";
