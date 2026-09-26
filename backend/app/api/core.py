@@ -83,6 +83,9 @@ from ..contracts.research_gap_novelty_intelligence import (
     NoveltyCandidateAddRequest, NoveltyDecisionRequest, OriginalResearchOpportunityAddRequest,
     ResearchGapNoveltyStateRequest, ResearchGapNoveltySnapshotRequest,
 )
+from ..contracts.dataset_discovery_data_fitness import (
+    DatasetFitnessCreateRequest, DatasetCandidateAddRequest, DatasetVariableAddRequest, DataRequirementAddRequest, DatasetFitnessAssessmentRequest, DatasetFitnessStateRequest, DatasetFitnessSnapshotRequest,
+)
 from ..contracts.research_question_hypothesis import (
     ResearchQuestionPlanCreateRequest, ResearchSubquestionAddRequest, ResearchHypothesisAddRequest,
     ResearchEvidenceRequirementRequest, ResearchQuestionReviewStateRequest, ResearchQuestionSnapshotRequest,
@@ -168,6 +171,7 @@ from ..services.argument_claim_counterclaim_intelligence import (
 from ..services.research_gap_novelty_intelligence import (
     get_research_gap_novelty_intelligence_store, capabilities as research_gap_novelty_intelligence_capabilities,
 )
+from ..services.dataset_discovery_data_fitness import get_dataset_discovery_data_fitness_store, capabilities as dataset_discovery_data_fitness_capabilities
 from ..services.research_question_hypothesis import (
     get_research_question_hypothesis_store, capabilities as research_question_hypothesis_capabilities,
 )
@@ -1690,3 +1694,45 @@ def research_gap_novelty_intelligence_core_candidate(gap_novelty_id: str) -> dic
 @router.post("/research-gap-novelty-intelligence/snapshots/freeze", dependencies=[Depends(require_backend_key)])
 def research_gap_novelty_intelligence_snapshot(req: ResearchGapNoveltySnapshotRequest) -> dict[str, Any]:
     return get_research_gap_novelty_intelligence_store().freeze_snapshot(req)
+
+@router.get("/dataset-discovery-data-fitness/capabilities", dependencies=[Depends(require_backend_key)])
+def dataset_discovery_data_fitness_capabilities_route() -> dict[str, Any]: return dataset_discovery_data_fitness_capabilities()
+
+@router.post("/dataset-discovery-data-fitness/projects", dependencies=[Depends(require_backend_key)])
+def dataset_discovery_data_fitness_create(req: DatasetFitnessCreateRequest) -> dict[str, Any]: return get_dataset_discovery_data_fitness_store().create(req)
+
+@router.get("/dataset-discovery-data-fitness/projects/{data_fitness_id}", dependencies=[Depends(require_backend_key)])
+def dataset_discovery_data_fitness_get(data_fitness_id: str) -> dict[str, Any]: return get_dataset_discovery_data_fitness_store().get(data_fitness_id)
+
+@router.post("/dataset-discovery-data-fitness/projects/{data_fitness_id}/requirements", dependencies=[Depends(require_backend_key)])
+def dataset_discovery_data_fitness_requirement(data_fitness_id: str, req: DataRequirementAddRequest) -> dict[str, Any]: return get_dataset_discovery_data_fitness_store().add_requirement(data_fitness_id,req)
+
+@router.post("/dataset-discovery-data-fitness/projects/{data_fitness_id}/datasets", dependencies=[Depends(require_backend_key)])
+def dataset_discovery_data_fitness_dataset(data_fitness_id: str, req: DatasetCandidateAddRequest) -> dict[str, Any]: return get_dataset_discovery_data_fitness_store().add_dataset(data_fitness_id,req)
+
+@router.post("/dataset-discovery-data-fitness/projects/{data_fitness_id}/variables", dependencies=[Depends(require_backend_key)])
+def dataset_discovery_data_fitness_variable(data_fitness_id: str, req: DatasetVariableAddRequest) -> dict[str, Any]: return get_dataset_discovery_data_fitness_store().add_variable(data_fitness_id,req)
+
+@router.post("/dataset-discovery-data-fitness/projects/{data_fitness_id}/assessments", dependencies=[Depends(require_backend_key)])
+def dataset_discovery_data_fitness_assess(data_fitness_id: str, req: DatasetFitnessAssessmentRequest) -> dict[str, Any]: return get_dataset_discovery_data_fitness_store().assess(data_fitness_id,req)
+
+@router.post("/dataset-discovery-data-fitness/projects/{data_fitness_id}/state", dependencies=[Depends(require_backend_key)])
+def dataset_discovery_data_fitness_state(data_fitness_id: str, req: DatasetFitnessStateRequest) -> dict[str, Any]: return get_dataset_discovery_data_fitness_store().set_state(data_fitness_id,req)
+
+@router.get("/dataset-discovery-data-fitness/projects/{data_fitness_id}/coverage-matrix", dependencies=[Depends(require_backend_key)])
+def dataset_discovery_data_fitness_coverage(data_fitness_id: str) -> dict[str, Any]: return get_dataset_discovery_data_fitness_store().coverage_matrix(data_fitness_id)
+
+@router.get("/dataset-discovery-data-fitness/projects/{data_fitness_id}/landscape", dependencies=[Depends(require_backend_key)])
+def dataset_discovery_data_fitness_landscape(data_fitness_id: str) -> dict[str, Any]: return get_dataset_discovery_data_fitness_store().landscape(data_fitness_id)
+
+@router.get("/dataset-discovery-data-fitness/projects/{data_fitness_id}/readiness", dependencies=[Depends(require_backend_key)])
+def dataset_discovery_data_fitness_readiness(data_fitness_id: str) -> dict[str, Any]: return get_dataset_discovery_data_fitness_store().readiness(data_fitness_id)
+
+@router.get("/dataset-discovery-data-fitness/projects/{data_fitness_id}/computational-planning-handoff", dependencies=[Depends(require_backend_key)])
+def dataset_discovery_data_fitness_handoff(data_fitness_id: str) -> dict[str, Any]: return get_dataset_discovery_data_fitness_store().computational_planning_handoff(data_fitness_id)
+
+@router.get("/dataset-discovery-data-fitness/projects/{data_fitness_id}/core-candidate", dependencies=[Depends(require_backend_key)])
+def dataset_discovery_data_fitness_core(data_fitness_id: str) -> dict[str, Any]: return get_dataset_discovery_data_fitness_store().core_candidate(data_fitness_id)
+
+@router.post("/dataset-discovery-data-fitness/snapshots/freeze", dependencies=[Depends(require_backend_key)])
+def dataset_discovery_data_fitness_snapshot(req: DatasetFitnessSnapshotRequest) -> dict[str, Any]: return get_dataset_discovery_data_fitness_store().freeze_snapshot(req)

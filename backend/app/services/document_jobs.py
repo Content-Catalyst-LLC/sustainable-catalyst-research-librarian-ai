@@ -55,6 +55,8 @@ from ..contracts.argument_claim_counterclaim_intelligence import ArgumentIntelli
 from .argument_claim_counterclaim_intelligence import get_argument_claim_counterclaim_intelligence_store
 from ..contracts.research_gap_novelty_intelligence import ResearchGapNoveltySnapshotRequest
 from .research_gap_novelty_intelligence import get_research_gap_novelty_intelligence_store
+from ..contracts.dataset_discovery_data_fitness import DatasetFitnessSnapshotRequest
+from .dataset_discovery_data_fitness import get_dataset_discovery_data_fitness_store
 
 Progress = Callable[[str, int], None]
 
@@ -491,6 +493,18 @@ async def process_research_gap_novelty_intelligence_snapshot_job(claim: JobClaim
     progress("research-gap-novelty-intelligence-snapshot-ready", 95)
     return result
 
+
+async def process_dataset_discovery_data_fitness_snapshot_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
+    progress("load-dataset-discovery-data-fitness", 20)
+    request = DatasetFitnessSnapshotRequest.model_validate(claim.payload.get("snapshot") or claim.payload)
+    store = get_dataset_discovery_data_fitness_store()
+    progress("assemble-dataset-discovery-data-fitness", 55)
+    store.readiness(request.data_fitness_id)
+    progress("freeze-dataset-discovery-data-fitness-snapshot", 80)
+    result = store.freeze_snapshot(request)
+    progress("dataset-discovery-data-fitness-snapshot-ready", 95)
+    return result
+
 async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
     if claim.job_type in {"document-process", "ingestion"}:
         return await process_document_job(claim, progress)
@@ -544,7 +558,9 @@ async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
         return await process_argument_claim_counterclaim_intelligence_snapshot_job(claim, progress)
     if claim.job_type == "research-gap-novelty-intelligence-snapshot":
         return await process_research_gap_novelty_intelligence_snapshot_job(claim, progress)
+    if claim.job_type == "dataset-discovery-data-fitness-snapshot":
+        return await process_dataset_discovery_data_fitness_snapshot_job(claim, progress)
     raise ValueError(
         f"Job type {claim.job_type!r} is registered for the durable queue but has no v8.3 executor yet; "
-        "use document-process, document-intelligence, source-identity, research-intelligence-extraction, argument-synthesis-plan, statistical-analysis-plan, visual-research-plan, unified-research-runtime, research-workflow-advance, scholarly-research-package, peer-review-validation-package, scholarly-publication-package, research-knowledge-graph-snapshot, ai-research-context-snapshot, rag-evaluation-snapshot, ai-research-experiment-snapshot, model-aware-research-snapshot, unified-research-environment-snapshot, research-question-hypothesis-snapshot, research-design-methodology-snapshot, evidence-search-strategy-snapshot, systematic-review-evidence-synthesis-snapshot, scholarly-literature-intelligence-snapshot, argument-claim-counterclaim-intelligence-snapshot, research-gap-novelty-intelligence-snapshot, ingestion, or validation."
+        "use document-process, document-intelligence, source-identity, research-intelligence-extraction, argument-synthesis-plan, statistical-analysis-plan, visual-research-plan, unified-research-runtime, research-workflow-advance, scholarly-research-package, peer-review-validation-package, scholarly-publication-package, research-knowledge-graph-snapshot, ai-research-context-snapshot, rag-evaluation-snapshot, ai-research-experiment-snapshot, model-aware-research-snapshot, unified-research-environment-snapshot, research-question-hypothesis-snapshot, research-design-methodology-snapshot, evidence-search-strategy-snapshot, systematic-review-evidence-synthesis-snapshot, scholarly-literature-intelligence-snapshot, argument-claim-counterclaim-intelligence-snapshot, research-gap-novelty-intelligence-snapshot, dataset-discovery-data-fitness-snapshot, ingestion, or validation."
     )

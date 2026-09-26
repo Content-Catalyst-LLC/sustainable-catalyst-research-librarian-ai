@@ -32,6 +32,7 @@ class UnifiedResearchEnvironmentCreateRequest(BaseModel):
     literature_intelligence_ids: list[str] = Field(default_factory=list, max_length=5000)
     argument_intelligence_ids: list[str] = Field(default_factory=list, max_length=5000)
     research_gap_novelty_ids: list[str] = Field(default_factory=list, max_length=5000)
+    dataset_fitness_ids: list[str] = Field(default_factory=list, max_length=5000)
     knowledge_graph_node_refs: list[str] = Field(default_factory=list, max_length=5000)
     core_object_refs: list[str] = Field(default_factory=list, max_length=5000)
     metadata: dict[str, Any] = Field(default_factory=dict)

@@ -1,0 +1,12 @@
+{
+  "release": "10.8.0",
+  "name": "Dataset Discovery & Data Fitness Intelligence",
+  "backend_migration": "023_dataset_discovery_data_fitness.sql",
+  "milestone": "10.8",
+  "requires": "10.7.0",
+  "primary_objects": ["dataset-fitness-project","data-requirement","dataset-candidate","dataset-variable","fitness-assessment","dataset-fitness-snapshot"],
+  "execution_boundaries": ["knowledge-library-and-connectors-own-discovery-and-ingestion","workspace-lab-workbench-and-catalyst-data-own-specialist-execution","platform-core-remains-governed-object-authority"],
+  "automatic_dataset_suitability": false,
+  "automatic_quality_certification": false,
+  "automatic_ingestion": false
+}

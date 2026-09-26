@@ -1,4 +1,4 @@
-# Sustainable Catalyst Research Librarian AI v10.7.0
+# Sustainable Catalyst Research Librarian AI v10.8.0
 
 Current release: **10.6.0 — Argument, Claim & Counterclaim Intelligence**
 
@@ -165,3 +165,7 @@ See `docs/V8100_ARGUMENT_CONTRADICTION_SYNTHESIS_INTEGRATION.md`, `docs/V890_FIN
 
 ## v9.3.0 Peer Review, Replication & Scholarly Validation Environment
 The v9.3 layer preserves human peer-review and replication records as durable scholarly lineage: review rounds, assignments/conflict declarations, structured review reports, author responses, revisions, replication attempts, editorial decisions, readiness checks, audit events, and frozen validation packages. The environment records human judgments but does not certify validity, infer replication success, accept/reject studies automatically, or promote truth.
+
+
+### v10.8.0 Dataset Discovery & Data Fitness Intelligence
+Connects research gaps and original-research opportunities to candidate datasets and question-specific human data-fitness assessments.
