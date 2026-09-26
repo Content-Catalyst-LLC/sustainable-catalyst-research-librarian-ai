@@ -1,3 +1,6 @@
+## 11.1.0 — Study Protocol & Preregistration Engine
+- Added program-linked study protocols, preregistration baselines, amendments, deviations, and governed handoffs.
+
 # Changelog
 
 ## 11.0.0 — Research Program Intelligence

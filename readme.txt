@@ -3,14 +3,14 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 11.0.0
+Stable tag: 11.1.0
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
 
 == Description ==
 
-v11.0.0 adds Research Program Intelligence: durable multi-workstream research programs, governed component bindings, milestone/dependency graphs, deliverables, program constraints, descriptive portfolio summaries, non-writing handoffs, Core candidates, snapshots, and unified-environment bindings. Research programs coordinate work without automatically prioritizing research, allocating resources, completing milestones, making scientific judgments, executing analyses, or promoting truth.
+v11.1.0 adds the Study Protocol & Preregistration Engine: program-linked protocols, hypotheses, outcomes, variables, sampling plans, human-approved analysis commitments, immutable preregistration baselines, append-only amendments, disclosed deviations, non-executing handoffs, Core candidates, snapshots, and unified-environment bindings. Preregistration records commitments and lineage without certifying scientific validity, selecting methods, executing analyses, or promoting truth.
 
 v10.5.0 adds Scholarly Citation & Literature Intelligence: citation-context/function annotation, literature strands, reviewer-declared research gaps and seminal-work candidates, reviewable related-work relationships, descriptive citation topology, graph/Core handoffs, snapshots, and unified-environment bindings. It does not infer scholarly authority, impact, seminal status, gaps, truth, or automatically write accepted graph edges.
 

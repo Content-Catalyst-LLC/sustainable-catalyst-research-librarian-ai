@@ -96,6 +96,12 @@ from ..contracts.research_program_intelligence import (
     ResearchProgramMilestoneAddRequest, ResearchProgramMilestoneDecisionRequest, ResearchProgramDeliverableAddRequest,
     ResearchProgramConstraintAddRequest, ResearchProgramStateRequest, ResearchProgramSnapshotRequest,
 )
+from ..contracts.study_protocol_preregistration import (
+    StudyProtocolCreateRequest, ProtocolHypothesisAddRequest, ProtocolOutcomeAddRequest, ProtocolVariableAddRequest,
+    ProtocolSamplingPlanRequest, ProtocolAnalysisCommitmentAddRequest, ProtocolCommitmentDecisionRequest,
+    ProtocolPreregisterRequest, ProtocolAmendmentAddRequest, ProtocolDeviationAddRequest, StudyProtocolStateRequest,
+    StudyProtocolSnapshotRequest,
+)
 from ..contracts.research_question_hypothesis import (
     ResearchQuestionPlanCreateRequest, ResearchSubquestionAddRequest, ResearchHypothesisAddRequest,
     ResearchEvidenceRequirementRequest, ResearchQuestionReviewStateRequest, ResearchQuestionSnapshotRequest,
@@ -184,6 +190,7 @@ from ..services.research_gap_novelty_intelligence import (
 from ..services.dataset_discovery_data_fitness import get_dataset_discovery_data_fitness_store, capabilities as dataset_discovery_data_fitness_capabilities
 from ..services.computational_research_planning import get_computational_research_planning_store, capabilities as computational_research_planning_capabilities
 from ..services.research_program_intelligence import get_research_program_intelligence_store, capabilities as research_program_intelligence_capabilities
+from ..services.study_protocol_preregistration import get_study_protocol_preregistration_store, capabilities as study_protocol_preregistration_capabilities
 from ..services.research_question_hypothesis import (
     get_research_question_hypothesis_store, capabilities as research_question_hypothesis_capabilities,
 )
@@ -1842,4 +1849,59 @@ def research_program_intelligence_core(research_program_id: str) -> dict[str, An
 
 @router.post("/research-program-intelligence/snapshots/freeze", dependencies=[Depends(require_backend_key)])
 def research_program_intelligence_snapshot(req: ResearchProgramSnapshotRequest) -> dict[str, Any]: return get_research_program_intelligence_store().freeze_snapshot(req)
+
+
+@router.get("/study-protocol-preregistration/capabilities", dependencies=[Depends(require_backend_key)])
+def study_protocol_preregistration_capabilities_route() -> dict[str, Any]: return study_protocol_preregistration_capabilities()
+
+@router.post("/study-protocol-preregistration/protocols", dependencies=[Depends(require_backend_key)])
+def study_protocol_preregistration_create(req: StudyProtocolCreateRequest) -> dict[str, Any]: return get_study_protocol_preregistration_store().create(req)
+
+@router.get("/study-protocol-preregistration/protocols/{study_protocol_id}", dependencies=[Depends(require_backend_key)])
+def study_protocol_preregistration_get(study_protocol_id: str) -> dict[str, Any]: return get_study_protocol_preregistration_store().get(study_protocol_id)
+
+@router.post("/study-protocol-preregistration/protocols/{study_protocol_id}/hypotheses", dependencies=[Depends(require_backend_key)])
+def study_protocol_preregistration_hypothesis(study_protocol_id: str, req: ProtocolHypothesisAddRequest) -> dict[str, Any]: return get_study_protocol_preregistration_store().add_hypothesis(study_protocol_id,req)
+
+@router.post("/study-protocol-preregistration/protocols/{study_protocol_id}/outcomes", dependencies=[Depends(require_backend_key)])
+def study_protocol_preregistration_outcome(study_protocol_id: str, req: ProtocolOutcomeAddRequest) -> dict[str, Any]: return get_study_protocol_preregistration_store().add_outcome(study_protocol_id,req)
+
+@router.post("/study-protocol-preregistration/protocols/{study_protocol_id}/variables", dependencies=[Depends(require_backend_key)])
+def study_protocol_preregistration_variable(study_protocol_id: str, req: ProtocolVariableAddRequest) -> dict[str, Any]: return get_study_protocol_preregistration_store().add_variable(study_protocol_id,req)
+
+@router.post("/study-protocol-preregistration/protocols/{study_protocol_id}/sampling-plan", dependencies=[Depends(require_backend_key)])
+def study_protocol_preregistration_sampling(study_protocol_id: str, req: ProtocolSamplingPlanRequest) -> dict[str, Any]: return get_study_protocol_preregistration_store().set_sampling_plan(study_protocol_id,req)
+
+@router.post("/study-protocol-preregistration/protocols/{study_protocol_id}/analysis-commitments", dependencies=[Depends(require_backend_key)])
+def study_protocol_preregistration_commitment(study_protocol_id: str, req: ProtocolAnalysisCommitmentAddRequest) -> dict[str, Any]: return get_study_protocol_preregistration_store().add_analysis_commitment(study_protocol_id,req)
+
+@router.post("/study-protocol-preregistration/protocols/{study_protocol_id}/commitment-decisions", dependencies=[Depends(require_backend_key)])
+def study_protocol_preregistration_commitment_decision(study_protocol_id: str, req: ProtocolCommitmentDecisionRequest) -> dict[str, Any]: return get_study_protocol_preregistration_store().decide_commitment(study_protocol_id,req)
+
+@router.post("/study-protocol-preregistration/protocols/{study_protocol_id}/preregister", dependencies=[Depends(require_backend_key)])
+def study_protocol_preregistration_preregister(study_protocol_id: str, req: ProtocolPreregisterRequest) -> dict[str, Any]: return get_study_protocol_preregistration_store().preregister(study_protocol_id,req)
+
+@router.post("/study-protocol-preregistration/protocols/{study_protocol_id}/amendments", dependencies=[Depends(require_backend_key)])
+def study_protocol_preregistration_amendment(study_protocol_id: str, req: ProtocolAmendmentAddRequest) -> dict[str, Any]: return get_study_protocol_preregistration_store().add_amendment(study_protocol_id,req)
+
+@router.post("/study-protocol-preregistration/protocols/{study_protocol_id}/deviations", dependencies=[Depends(require_backend_key)])
+def study_protocol_preregistration_deviation(study_protocol_id: str, req: ProtocolDeviationAddRequest) -> dict[str, Any]: return get_study_protocol_preregistration_store().add_deviation(study_protocol_id,req)
+
+@router.post("/study-protocol-preregistration/protocols/{study_protocol_id}/state", dependencies=[Depends(require_backend_key)])
+def study_protocol_preregistration_state(study_protocol_id: str, req: StudyProtocolStateRequest) -> dict[str, Any]: return get_study_protocol_preregistration_store().set_state(study_protocol_id,req)
+
+@router.get("/study-protocol-preregistration/protocols/{study_protocol_id}/protocol-matrix", dependencies=[Depends(require_backend_key)])
+def study_protocol_preregistration_matrix(study_protocol_id: str) -> dict[str, Any]: return get_study_protocol_preregistration_store().protocol_matrix(study_protocol_id)
+
+@router.get("/study-protocol-preregistration/protocols/{study_protocol_id}/readiness", dependencies=[Depends(require_backend_key)])
+def study_protocol_preregistration_readiness(study_protocol_id: str) -> dict[str, Any]: return get_study_protocol_preregistration_store().readiness(study_protocol_id)
+
+@router.get("/study-protocol-preregistration/protocols/{study_protocol_id}/handoffs", dependencies=[Depends(require_backend_key)])
+def study_protocol_preregistration_handoffs(study_protocol_id: str) -> dict[str, Any]: return get_study_protocol_preregistration_store().handoffs(study_protocol_id)
+
+@router.get("/study-protocol-preregistration/protocols/{study_protocol_id}/core-candidate", dependencies=[Depends(require_backend_key)])
+def study_protocol_preregistration_core(study_protocol_id: str) -> dict[str, Any]: return get_study_protocol_preregistration_store().core_candidate(study_protocol_id)
+
+@router.post("/study-protocol-preregistration/snapshots/freeze", dependencies=[Depends(require_backend_key)])
+def study_protocol_preregistration_snapshot(req: StudyProtocolSnapshotRequest) -> dict[str, Any]: return get_study_protocol_preregistration_store().freeze_snapshot(req)
 

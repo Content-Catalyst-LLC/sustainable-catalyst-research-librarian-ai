@@ -61,6 +61,7 @@ JOB_TYPES = {
     "dataset-discovery-data-fitness-snapshot",
     "computational-research-planning-snapshot",
     "research-program-intelligence-snapshot",
+    "study-protocol-preregistration-snapshot",
 }
 TERMINAL_STATES = {"succeeded", "failed", "cancelled"}
 ACTIVE_STATES = {"queued", "retry_wait", "running"}

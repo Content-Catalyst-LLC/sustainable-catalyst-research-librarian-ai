@@ -1,0 +1,10 @@
+{
+  "schema": "sc-research-librarian-study-protocol-preregistration-manifest/1.0",
+  "release": "11.1.0",
+  "capability": "study-protocol-preregistration",
+  "migration": "026",
+  "job": "study-protocol-preregistration-snapshot",
+  "source_authority": "research-program-intelligence",
+  "execution_authority": "specialist-runtimes",
+  "governed_object_authority": "platform-core"
+}

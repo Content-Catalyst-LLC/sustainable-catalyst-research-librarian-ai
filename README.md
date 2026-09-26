@@ -1,8 +1,8 @@
-# Sustainable Catalyst Research Librarian AI v11.0.0
+# Sustainable Catalyst Research Librarian AI v11.1.0
 
-Current release: **11.0.0 — Research Program Intelligence**
+Current release: **11.1.0 — Study Protocol & Preregistration Engine**
 
-## v11.0.0 — Research Program Intelligence
+## v11.1.0 — Study Protocol & Preregistration Engine
 
 Research Program Intelligence adds persistent program-level coordination above the v10.x research pipeline: multiple workstreams, governed component bindings, linked computational plans, milestone/dependency graphs, deliverables, constraints, descriptive portfolio summaries, structural readiness, non-writing handoffs, Platform Core candidates, immutable snapshots, durable jobs, and unified-environment binding.
 
