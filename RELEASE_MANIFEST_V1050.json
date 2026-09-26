@@ -1,0 +1,21 @@
+{
+  "release": "10.5.0",
+  "name": "Scholarly Citation & Literature Intelligence",
+  "backend_migration": "020_scholarly_citation_literature_intelligence.sql",
+  "milestone": "10.5",
+  "requires": "10.4.0",
+  "governance": {
+    "human_gap_declaration_required": true,
+    "human_seminal_candidate_declaration_required": true,
+    "human_related_work_acceptance_required": true,
+    "automatic_authority_ranking": false,
+    "automatic_impact_scoring": false,
+    "automatic_seminal_work_classification": false,
+    "automatic_literature_gap_claims": false,
+    "automatic_graph_write": false,
+    "automatic_truth_promotion": false,
+    "research_knowledge_graph_remains_citation_graph_authority": true,
+    "knowledge_library_remains_source_authority": true,
+    "platform_core_remains_authority": true
+  }
+}

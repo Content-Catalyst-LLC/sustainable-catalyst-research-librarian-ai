@@ -1,3 +1,6 @@
+## 10.5.0 — Scholarly Citation & Literature Intelligence
+- Added durable citation-context and literature-intelligence projects, literature strands, gap registry, seminal candidates, related-work review, graph/Core handoffs, snapshots, API, migration 020, and unified-environment bindings.
+
 # 10.4.0 — Systematic Review & Evidence Synthesis Intelligence
 
 - Added durable systematic-review registries linked to v10.3 evidence-search strategies.

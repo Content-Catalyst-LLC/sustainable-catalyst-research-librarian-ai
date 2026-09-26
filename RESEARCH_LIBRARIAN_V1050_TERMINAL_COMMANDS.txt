@@ -1,0 +1,28 @@
+Research Librarian AI v10.5.0 — Scholarly Citation & Literature Intelligence
+
+GIT PUSH + TAG (run on Mac):
+
+cd ~/Downloads
+rm -rf sc-research-librarian-v10.5.0-release
+unzip -q sustainable-catalyst-research-librarian-ai-v10.5.0-release-bundle.zip -d sc-research-librarian-v10.5.0-release
+cd sc-research-librarian-v10.5.0-release
+chmod +x PUSH_RESEARCH_LIBRARIAN_V1050_PY312.sh
+./PUSH_RESEARCH_LIBRARIAN_V1050_PY312.sh "$PWD/sustainable-catalyst-research-librarian-ai-v10.5.0-repository.zip"
+
+BACKEND TRANSFER (run on Mac):
+
+scp -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes \
+  sustainable-catalyst-research-librarian-backend-v10.5.0.zip \
+  deploy/contabo/upgrade_research_librarian_backend_v10_5_0_contabo.sh \
+  catalystadmin@94.72.113.77:/tmp/
+
+ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes catalystadmin@94.72.113.77
+
+BACKEND DEPLOY (run on Contabo):
+
+cd /tmp
+chmod +x upgrade_research_librarian_backend_v10_5_0_contabo.sh
+./upgrade_research_librarian_backend_v10_5_0_contabo.sh /tmp/sustainable-catalyst-research-librarian-backend-v10.5.0.zip
+
+EXPECTED FINAL LINE:
+PASS: Research Librarian AI v10.5.0 Scholarly Citation & Literature Intelligence backend deployed and verified.

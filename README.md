@@ -1,6 +1,6 @@
-# Sustainable Catalyst Research Librarian AI v10.4.0
+# Sustainable Catalyst Research Librarian AI v10.5.0
 
-Current release: **v10.4.0 — Systematic Review & Evidence Synthesis Intelligence**
+Current release: **10.5.0 — Scholarly Citation & Literature Intelligence**
 
 ## v10.4.0 Systematic Review & Evidence Synthesis Intelligence
 

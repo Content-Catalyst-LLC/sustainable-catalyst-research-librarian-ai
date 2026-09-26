@@ -3,12 +3,14 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 10.4.0
+Stable tag: 10.5.0
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
 
 == Description ==
+
+v10.5.0 adds Scholarly Citation & Literature Intelligence: citation-context/function annotation, literature strands, reviewer-declared research gaps and seminal-work candidates, reviewable related-work relationships, descriptive citation topology, graph/Core handoffs, snapshots, and unified-environment bindings. It does not infer scholarly authority, impact, seminal status, gaps, truth, or automatically write accepted graph edges.
 
 v10.4.0 adds Systematic Review & Evidence Synthesis Intelligence: search-protocol-linked review registries, two-stage screening, review-flow accounting, structured extraction matrices, reviewer-recorded risk-of-bias and evidence-certainty assessments, synthesis planning, specialist-runtime handoffs, governed Core synthesis candidates, immutable snapshots, and unified-environment bindings. It does not automatically include studies, judge bias or certainty, execute meta-analysis, or promote truth.
 
@@ -47,6 +49,11 @@ v8.7.0 adds the Core Evidence Bridge. Hydrated canonical Librarian sources can b
 [sc_research_librarian_platform_handoffs]
 
 == Changelog ==
+
+= 10.5.0 =
+* Added Scholarly Citation & Literature Intelligence.
+* Added citation-context/function records, literature strands, gap and seminal-candidate registries, related-work review, descriptive citation matrices, graph/Core handoffs, durable snapshots, migration 020, and unified-environment bindings.
+* Preserved human scholarly judgment and graph/Library/Core authority boundaries.
 
 = 10.4.0 =
 * Adds Systematic Review & Evidence Synthesis Intelligence with human-governed screening, extraction, bias/certainty records, synthesis planning, snapshots, and cross-platform handoffs.

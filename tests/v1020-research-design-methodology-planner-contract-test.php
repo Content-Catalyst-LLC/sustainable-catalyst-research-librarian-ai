@@ -7,8 +7,8 @@ $jobs=file_get_contents($root.'/backend/app/async_jobs.py');
 $service=file_get_contents($root.'/backend/app/services/research_design_methodology.py');
 $environment=file_get_contents($root.'/backend/app/services/unified_scholarly_ai_environment.py');
 $checks=[
- 'plugin_version'=>strpos($main,'Version: 10.4.0')!==false,
- 'backend_version'=>strpos($backend,'__version__ = "10.4.0"')!==false,
+ 'plugin_version'=>strpos($main,'Version: 10.5.0')!==false,
+ 'backend_version'=>strpos($backend,'__version__ = "10.5.0"')!==false,
  'capabilities_route'=>strpos($api,'/research-design-methodology/capabilities')!==false,
  'plan_route'=>strpos($api,'/research-design-methodology/plans')!==false,
  'comparison_route'=>strpos($api,'/research-design-methodology/plans/{plan_id}/comparison')!==false,
@@ -21,4 +21,4 @@ $checks=[
  'environment_binding'=>strpos($environment,'research-design-plan')!==false,
 ];
 foreach($checks as $k=>$ok){ if(!$ok){ fwrite(STDERR,"FAIL: $k\n"); exit(1);} }
-echo "PASS: Research Librarian v10.4.0 Research Design & Methodology Planner contract\n";
+echo "PASS: Research Librarian v10.5.0 Research Design & Methodology Planner contract\n";

@@ -67,6 +67,12 @@ from ..contracts.systematic_review_evidence_synthesis import (
     ReviewExtractionRequest, ReviewBiasAssessmentRequest, ReviewEvidenceGradeRequest,
     ReviewSynthesisPlanRequest, SystematicReviewStateRequest, SystematicReviewSnapshotRequest,
 )
+from ..contracts.scholarly_literature_intelligence import (
+    LiteratureIntelligenceCreateRequest, LiteratureWorkAddRequest, CitationContextAddRequest,
+    LiteratureStrandAddRequest, LiteratureGapAddRequest, SeminalCandidateAddRequest,
+    RelatedWorkCandidateAddRequest, RelatedWorkDecisionRequest, LiteratureIntelligenceStateRequest,
+    LiteratureIntelligenceSnapshotRequest,
+)
 from ..contracts.research_question_hypothesis import (
     ResearchQuestionPlanCreateRequest, ResearchSubquestionAddRequest, ResearchHypothesisAddRequest,
     ResearchEvidenceRequirementRequest, ResearchQuestionReviewStateRequest, ResearchQuestionSnapshotRequest,
@@ -142,6 +148,9 @@ from ..services.evidence_search_strategy import (
 )
 from ..services.systematic_review_evidence_synthesis import (
     get_systematic_review_evidence_synthesis_store, capabilities as systematic_review_evidence_synthesis_capabilities,
+)
+from ..services.scholarly_literature_intelligence import (
+    get_scholarly_literature_intelligence_store, capabilities as scholarly_literature_intelligence_capabilities,
 )
 from ..services.research_question_hypothesis import (
     get_research_question_hypothesis_store, capabilities as research_question_hypothesis_capabilities,
@@ -1466,3 +1475,72 @@ def scholarly_validation_packages(study_id: str, limit: int = 100) -> dict[str, 
         return {"packages": get_peer_review_store().packages(study_id, limit)}
     except Exception as exc:
         raise _translate(exc) from exc
+
+
+@router.get("/scholarly-literature-intelligence/capabilities", dependencies=[Depends(require_backend_key)])
+def scholarly_literature_intelligence_capabilities_route() -> dict[str, Any]:
+    return scholarly_literature_intelligence_capabilities()
+
+@router.post("/scholarly-literature-intelligence/projects", dependencies=[Depends(require_backend_key)])
+def scholarly_literature_intelligence_create(req: LiteratureIntelligenceCreateRequest) -> dict[str, Any]:
+    return get_scholarly_literature_intelligence_store().create(req)
+
+@router.get("/scholarly-literature-intelligence/projects/{intelligence_id}", dependencies=[Depends(require_backend_key)])
+def scholarly_literature_intelligence_get(intelligence_id: str) -> dict[str, Any]:
+    return get_scholarly_literature_intelligence_store().get(intelligence_id)
+
+@router.post("/scholarly-literature-intelligence/projects/{intelligence_id}/works", dependencies=[Depends(require_backend_key)])
+def scholarly_literature_intelligence_add_work(intelligence_id: str, req: LiteratureWorkAddRequest) -> dict[str, Any]:
+    return get_scholarly_literature_intelligence_store().add_work(intelligence_id, req)
+
+@router.post("/scholarly-literature-intelligence/projects/{intelligence_id}/citation-contexts", dependencies=[Depends(require_backend_key)])
+def scholarly_literature_intelligence_add_citation_context(intelligence_id: str, req: CitationContextAddRequest) -> dict[str, Any]:
+    return get_scholarly_literature_intelligence_store().add_citation_context(intelligence_id, req)
+
+@router.post("/scholarly-literature-intelligence/projects/{intelligence_id}/literature-strands", dependencies=[Depends(require_backend_key)])
+def scholarly_literature_intelligence_add_strand(intelligence_id: str, req: LiteratureStrandAddRequest) -> dict[str, Any]:
+    return get_scholarly_literature_intelligence_store().add_strand(intelligence_id, req)
+
+@router.post("/scholarly-literature-intelligence/projects/{intelligence_id}/gaps", dependencies=[Depends(require_backend_key)])
+def scholarly_literature_intelligence_add_gap(intelligence_id: str, req: LiteratureGapAddRequest) -> dict[str, Any]:
+    return get_scholarly_literature_intelligence_store().add_gap(intelligence_id, req)
+
+@router.post("/scholarly-literature-intelligence/projects/{intelligence_id}/seminal-candidates", dependencies=[Depends(require_backend_key)])
+def scholarly_literature_intelligence_add_seminal_candidate(intelligence_id: str, req: SeminalCandidateAddRequest) -> dict[str, Any]:
+    return get_scholarly_literature_intelligence_store().add_seminal_candidate(intelligence_id, req)
+
+@router.post("/scholarly-literature-intelligence/projects/{intelligence_id}/related-work-candidates", dependencies=[Depends(require_backend_key)])
+def scholarly_literature_intelligence_add_related_candidate(intelligence_id: str, req: RelatedWorkCandidateAddRequest) -> dict[str, Any]:
+    return get_scholarly_literature_intelligence_store().add_related_work_candidate(intelligence_id, req)
+
+@router.post("/scholarly-literature-intelligence/projects/{intelligence_id}/related-work-decisions", dependencies=[Depends(require_backend_key)])
+def scholarly_literature_intelligence_decide_related(intelligence_id: str, req: RelatedWorkDecisionRequest) -> dict[str, Any]:
+    return get_scholarly_literature_intelligence_store().decide_related_work(intelligence_id, req)
+
+@router.post("/scholarly-literature-intelligence/projects/{intelligence_id}/review-state", dependencies=[Depends(require_backend_key)])
+def scholarly_literature_intelligence_state(intelligence_id: str, req: LiteratureIntelligenceStateRequest) -> dict[str, Any]:
+    return get_scholarly_literature_intelligence_store().set_state(intelligence_id, req)
+
+@router.get("/scholarly-literature-intelligence/projects/{intelligence_id}/landscape", dependencies=[Depends(require_backend_key)])
+def scholarly_literature_intelligence_landscape(intelligence_id: str) -> dict[str, Any]:
+    return get_scholarly_literature_intelligence_store().landscape(intelligence_id)
+
+@router.get("/scholarly-literature-intelligence/projects/{intelligence_id}/citation-matrix", dependencies=[Depends(require_backend_key)])
+def scholarly_literature_intelligence_citation_matrix(intelligence_id: str) -> dict[str, Any]:
+    return get_scholarly_literature_intelligence_store().citation_matrix(intelligence_id)
+
+@router.get("/scholarly-literature-intelligence/projects/{intelligence_id}/graph-handoffs", dependencies=[Depends(require_backend_key)])
+def scholarly_literature_intelligence_graph_handoffs(intelligence_id: str) -> dict[str, Any]:
+    return get_scholarly_literature_intelligence_store().graph_handoffs(intelligence_id)
+
+@router.get("/scholarly-literature-intelligence/projects/{intelligence_id}/readiness", dependencies=[Depends(require_backend_key)])
+def scholarly_literature_intelligence_readiness(intelligence_id: str) -> dict[str, Any]:
+    return get_scholarly_literature_intelligence_store().readiness(intelligence_id)
+
+@router.get("/scholarly-literature-intelligence/projects/{intelligence_id}/core-candidate", dependencies=[Depends(require_backend_key)])
+def scholarly_literature_intelligence_core_candidate(intelligence_id: str) -> dict[str, Any]:
+    return get_scholarly_literature_intelligence_store().core_candidate(intelligence_id)
+
+@router.post("/scholarly-literature-intelligence/snapshots/freeze", dependencies=[Depends(require_backend_key)])
+def scholarly_literature_intelligence_snapshot(req: LiteratureIntelligenceSnapshotRequest) -> dict[str, Any]:
+    return get_scholarly_literature_intelligence_store().freeze_snapshot(req)
