@@ -59,6 +59,7 @@ JOB_TYPES = {
     "argument-claim-counterclaim-intelligence-snapshot",
     "research-gap-novelty-intelligence-snapshot",
     "dataset-discovery-data-fitness-snapshot",
+    "computational-research-planning-snapshot",
 }
 TERMINAL_STATES = {"succeeded", "failed", "cancelled"}
 ACTIVE_STATES = {"queued", "retry_wait", "running"}

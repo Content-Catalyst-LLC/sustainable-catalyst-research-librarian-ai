@@ -5,8 +5,8 @@ $backend=file_get_contents($root.'/backend/app/__init__.py');
 $core=file_get_contents($root.'/backend/app/api/core.py');
 $jobs=file_get_contents($root.'/backend/app/async_jobs.py');
 $checks=[
- 'plugin_version'=>strpos($main,'Version: 10.8.0')!==false,
- 'backend_version'=>strpos($backend,'__version__ = "10.8.0"')!==false,
+ 'plugin_version'=>strpos($main,'Version: 10.9.0')!==false,
+ 'backend_version'=>strpos($backend,'__version__ = "10.9.0"')!==false,
  'contract'=>file_exists($root.'/backend/app/contracts/rag_evaluation.py'),
  'service'=>file_exists($root.'/backend/app/services/rag_evaluation.py'),
  'test'=>file_exists($root.'/backend/tests/test_v970_rag_evaluation.py'),
@@ -20,4 +20,4 @@ $checks=[
  'durable_job'=>strpos($jobs,'rag-evaluation-snapshot')!==false,
 ];
 foreach($checks as $name=>$ok){if(!$ok){fwrite(STDERR,"FAIL: $name\n");exit(1);}}
-echo "PASS: Research Librarian v10.8.0 RAG Evaluation & Evidence-Grounding Framework contract\n";
+echo "PASS: Research Librarian v10.9.0 RAG Evaluation & Evidence-Grounding Framework contract\n";

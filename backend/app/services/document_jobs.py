@@ -57,6 +57,8 @@ from ..contracts.research_gap_novelty_intelligence import ResearchGapNoveltySnap
 from .research_gap_novelty_intelligence import get_research_gap_novelty_intelligence_store
 from ..contracts.dataset_discovery_data_fitness import DatasetFitnessSnapshotRequest
 from .dataset_discovery_data_fitness import get_dataset_discovery_data_fitness_store
+from ..contracts.computational_research_planning import ComputationalResearchPlanSnapshotRequest
+from .computational_research_planning import get_computational_research_planning_store
 
 Progress = Callable[[str, int], None]
 
@@ -505,6 +507,18 @@ async def process_dataset_discovery_data_fitness_snapshot_job(claim: JobClaim, p
     progress("dataset-discovery-data-fitness-snapshot-ready", 95)
     return result
 
+async def process_computational_research_planning_snapshot_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
+    progress("load-computational-research-planning", 20)
+    request = ComputationalResearchPlanSnapshotRequest.model_validate(claim.payload.get("snapshot") or claim.payload)
+    store = get_computational_research_planning_store()
+    progress("assemble-computational-research-planning", 55)
+    store.readiness(request.computational_plan_id)
+    progress("freeze-computational-research-planning-snapshot", 80)
+    result = store.freeze_snapshot(request)
+    progress("computational-research-planning-snapshot-ready", 95)
+    return result
+
+
 async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
     if claim.job_type in {"document-process", "ingestion"}:
         return await process_document_job(claim, progress)
@@ -560,7 +574,9 @@ async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
         return await process_research_gap_novelty_intelligence_snapshot_job(claim, progress)
     if claim.job_type == "dataset-discovery-data-fitness-snapshot":
         return await process_dataset_discovery_data_fitness_snapshot_job(claim, progress)
+    if claim.job_type == "computational-research-planning-snapshot":
+        return await process_computational_research_planning_snapshot_job(claim, progress)
     raise ValueError(
         f"Job type {claim.job_type!r} is registered for the durable queue but has no v8.3 executor yet; "
-        "use document-process, document-intelligence, source-identity, research-intelligence-extraction, argument-synthesis-plan, statistical-analysis-plan, visual-research-plan, unified-research-runtime, research-workflow-advance, scholarly-research-package, peer-review-validation-package, scholarly-publication-package, research-knowledge-graph-snapshot, ai-research-context-snapshot, rag-evaluation-snapshot, ai-research-experiment-snapshot, model-aware-research-snapshot, unified-research-environment-snapshot, research-question-hypothesis-snapshot, research-design-methodology-snapshot, evidence-search-strategy-snapshot, systematic-review-evidence-synthesis-snapshot, scholarly-literature-intelligence-snapshot, argument-claim-counterclaim-intelligence-snapshot, research-gap-novelty-intelligence-snapshot, dataset-discovery-data-fitness-snapshot, ingestion, or validation."
+        "use document-process, document-intelligence, source-identity, research-intelligence-extraction, argument-synthesis-plan, statistical-analysis-plan, visual-research-plan, unified-research-runtime, research-workflow-advance, scholarly-research-package, peer-review-validation-package, scholarly-publication-package, research-knowledge-graph-snapshot, ai-research-context-snapshot, rag-evaluation-snapshot, ai-research-experiment-snapshot, model-aware-research-snapshot, unified-research-environment-snapshot, research-question-hypothesis-snapshot, research-design-methodology-snapshot, evidence-search-strategy-snapshot, systematic-review-evidence-synthesis-snapshot, scholarly-literature-intelligence-snapshot, argument-claim-counterclaim-intelligence-snapshot, research-gap-novelty-intelligence-snapshot, dataset-discovery-data-fitness-snapshot, computational-research-planning-snapshot, ingestion, or validation."
     )

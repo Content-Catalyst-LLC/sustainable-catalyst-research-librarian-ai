@@ -1,4 +1,4 @@
--- Research Librarian AI v10.8.0 — Research Gap & Novelty Intelligence
+-- Research Librarian AI v10.7.0 — Research Gap & Novelty Intelligence
 CREATE TABLE IF NOT EXISTS sc_rl_research_gap_novelty_intelligence(
     gap_novelty_id TEXT PRIMARY KEY, record JSONB NOT NULL, record_hash TEXT NOT NULL,
     created_utc TIMESTAMPTZ NOT NULL DEFAULT now(), updated_utc TIMESTAMPTZ NOT NULL DEFAULT now()

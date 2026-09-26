@@ -1,0 +1,18 @@
+{
+  "release": "10.9.0",
+  "name": "Computational Research Planning",
+  "backend_migration": "024_computational_research_planning.sql",
+  "milestone": "10.9",
+  "requires": "10.8.0",
+  "governance": {
+    "human_method_and_runtime_approval_required": true,
+    "upstream_dataset_fitness_is_inherited_not_rejudged": true,
+    "specialist_runtimes_own_execution": true,
+    "automatic_method_selection": false,
+    "automatic_runtime_selection": false,
+    "automatic_execution": false,
+    "automatic_result_interpretation": false,
+    "automatic_truth_promotion": false,
+    "platform_core_remains_research_object_authority": true
+  }
+}

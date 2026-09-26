@@ -1,8 +1,17 @@
+# Changelog
+
+## 10.9.0 — Computational Research Planning
+- Added durable computational research plans bound to v10.8 dataset-fitness intelligence.
+- Added runtime-target, analysis-step, dependency-graph, reproducibility, constraint, and human step-decision registries.
+- Added non-executing handoffs for Workspace, Research Lab, Workbench, language runtimes, and Platform Core candidates.
+- Added migration 024, authenticated APIs, durable snapshot jobs, immutable snapshots, and unified-environment bindings.
+- Preserved human method/runtime approval and specialist-runtime execution boundaries.
+
 ## 10.8.0 — Dataset Discovery & Data Fitness Intelligence
 - Added durable dataset fitness projects, requirements, candidates, variables, human fit assessments, coverage matrices, planning/Core handoffs, snapshots, migration 023, authenticated APIs, durable jobs, and unified environment binding.
 - Preserves human dataset-fit judgment and prevents automatic suitability/quality certification, ingestion, or truth promotion.
 
-## 10.8.0 — Research Gap & Novelty Intelligence
+## 10.7.0 — Research Gap & Novelty Intelligence
 
 - Added durable gap/novelty project registry, structural signals, human gap decisions, novelty candidates with comparison basis, original-research opportunity planning, immutable snapshots, and unified research-environment integration.
 - Preserved human scholarly judgment: no automatic gap certification, novelty certification, originality claims, priority ranking, or truth promotion.

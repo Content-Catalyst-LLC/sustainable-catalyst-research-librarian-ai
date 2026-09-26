@@ -86,6 +86,11 @@ from ..contracts.research_gap_novelty_intelligence import (
 from ..contracts.dataset_discovery_data_fitness import (
     DatasetFitnessCreateRequest, DatasetCandidateAddRequest, DatasetVariableAddRequest, DataRequirementAddRequest, DatasetFitnessAssessmentRequest, DatasetFitnessStateRequest, DatasetFitnessSnapshotRequest,
 )
+from ..contracts.computational_research_planning import (
+    ComputationalResearchPlanCreateRequest, ComputationalRuntimeTargetAddRequest, ComputationalAnalysisStepAddRequest,
+    ComputationalStepDecisionRequest, ReproducibilityRequirementAddRequest, ComputationalConstraintAddRequest,
+    ComputationalResearchPlanStateRequest, ComputationalResearchPlanSnapshotRequest,
+)
 from ..contracts.research_question_hypothesis import (
     ResearchQuestionPlanCreateRequest, ResearchSubquestionAddRequest, ResearchHypothesisAddRequest,
     ResearchEvidenceRequirementRequest, ResearchQuestionReviewStateRequest, ResearchQuestionSnapshotRequest,
@@ -172,6 +177,7 @@ from ..services.research_gap_novelty_intelligence import (
     get_research_gap_novelty_intelligence_store, capabilities as research_gap_novelty_intelligence_capabilities,
 )
 from ..services.dataset_discovery_data_fitness import get_dataset_discovery_data_fitness_store, capabilities as dataset_discovery_data_fitness_capabilities
+from ..services.computational_research_planning import get_computational_research_planning_store, capabilities as computational_research_planning_capabilities
 from ..services.research_question_hypothesis import (
     get_research_question_hypothesis_store, capabilities as research_question_hypothesis_capabilities,
 )
@@ -1736,3 +1742,49 @@ def dataset_discovery_data_fitness_core(data_fitness_id: str) -> dict[str, Any]:
 
 @router.post("/dataset-discovery-data-fitness/snapshots/freeze", dependencies=[Depends(require_backend_key)])
 def dataset_discovery_data_fitness_snapshot(req: DatasetFitnessSnapshotRequest) -> dict[str, Any]: return get_dataset_discovery_data_fitness_store().freeze_snapshot(req)
+
+
+@router.get("/computational-research-planning/capabilities", dependencies=[Depends(require_backend_key)])
+def computational_research_planning_capabilities_route() -> dict[str, Any]: return computational_research_planning_capabilities()
+
+@router.post("/computational-research-planning/plans", dependencies=[Depends(require_backend_key)])
+def computational_research_planning_create(req: ComputationalResearchPlanCreateRequest) -> dict[str, Any]: return get_computational_research_planning_store().create(req)
+
+@router.get("/computational-research-planning/plans/{computational_plan_id}", dependencies=[Depends(require_backend_key)])
+def computational_research_planning_get(computational_plan_id: str) -> dict[str, Any]: return get_computational_research_planning_store().get(computational_plan_id)
+
+@router.post("/computational-research-planning/plans/{computational_plan_id}/runtime-targets", dependencies=[Depends(require_backend_key)])
+def computational_research_planning_runtime(computational_plan_id: str, req: ComputationalRuntimeTargetAddRequest) -> dict[str, Any]: return get_computational_research_planning_store().add_runtime_target(computational_plan_id,req)
+
+@router.post("/computational-research-planning/plans/{computational_plan_id}/analysis-steps", dependencies=[Depends(require_backend_key)])
+def computational_research_planning_step(computational_plan_id: str, req: ComputationalAnalysisStepAddRequest) -> dict[str, Any]: return get_computational_research_planning_store().add_step(computational_plan_id,req)
+
+@router.post("/computational-research-planning/plans/{computational_plan_id}/step-decisions", dependencies=[Depends(require_backend_key)])
+def computational_research_planning_decision(computational_plan_id: str, req: ComputationalStepDecisionRequest) -> dict[str, Any]: return get_computational_research_planning_store().decide_step(computational_plan_id,req)
+
+@router.post("/computational-research-planning/plans/{computational_plan_id}/reproducibility-requirements", dependencies=[Depends(require_backend_key)])
+def computational_research_planning_reproducibility(computational_plan_id: str, req: ReproducibilityRequirementAddRequest) -> dict[str, Any]: return get_computational_research_planning_store().add_reproducibility_requirement(computational_plan_id,req)
+
+@router.post("/computational-research-planning/plans/{computational_plan_id}/constraints", dependencies=[Depends(require_backend_key)])
+def computational_research_planning_constraint(computational_plan_id: str, req: ComputationalConstraintAddRequest) -> dict[str, Any]: return get_computational_research_planning_store().add_constraint(computational_plan_id,req)
+
+@router.post("/computational-research-planning/plans/{computational_plan_id}/state", dependencies=[Depends(require_backend_key)])
+def computational_research_planning_state(computational_plan_id: str, req: ComputationalResearchPlanStateRequest) -> dict[str, Any]: return get_computational_research_planning_store().set_state(computational_plan_id,req)
+
+@router.get("/computational-research-planning/plans/{computational_plan_id}/execution-graph", dependencies=[Depends(require_backend_key)])
+def computational_research_planning_graph(computational_plan_id: str) -> dict[str, Any]: return get_computational_research_planning_store().execution_graph(computational_plan_id)
+
+@router.get("/computational-research-planning/plans/{computational_plan_id}/summary", dependencies=[Depends(require_backend_key)])
+def computational_research_planning_summary(computational_plan_id: str) -> dict[str, Any]: return get_computational_research_planning_store().plan_summary(computational_plan_id)
+
+@router.get("/computational-research-planning/plans/{computational_plan_id}/readiness", dependencies=[Depends(require_backend_key)])
+def computational_research_planning_readiness(computational_plan_id: str) -> dict[str, Any]: return get_computational_research_planning_store().readiness(computational_plan_id)
+
+@router.get("/computational-research-planning/plans/{computational_plan_id}/execution-handoffs", dependencies=[Depends(require_backend_key)])
+def computational_research_planning_handoffs(computational_plan_id: str) -> dict[str, Any]: return get_computational_research_planning_store().execution_handoffs(computational_plan_id)
+
+@router.get("/computational-research-planning/plans/{computational_plan_id}/core-candidate", dependencies=[Depends(require_backend_key)])
+def computational_research_planning_core(computational_plan_id: str) -> dict[str, Any]: return get_computational_research_planning_store().core_candidate(computational_plan_id)
+
+@router.post("/computational-research-planning/snapshots/freeze", dependencies=[Depends(require_backend_key)])
+def computational_research_planning_snapshot(req: ComputationalResearchPlanSnapshotRequest) -> dict[str, Any]: return get_computational_research_planning_store().freeze_snapshot(req)

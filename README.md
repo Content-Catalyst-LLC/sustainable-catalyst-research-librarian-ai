@@ -1,6 +1,10 @@
-# Sustainable Catalyst Research Librarian AI v10.8.0
+# Sustainable Catalyst Research Librarian AI v10.9.0
 
-Current release: **10.6.0 — Argument, Claim & Counterclaim Intelligence**
+Current release: **10.9.0 — Computational Research Planning**
+
+## v10.9.0 — Computational Research Planning
+
+Research Librarian can now convert approved data-fitness context into reviewable computational plans: runtime targets, analysis steps, declared dependencies, parameters, reproducibility requirements, validation checks, constraints, and execution handoff packets. The Librarian plans but does not execute analyses; Workspace, Research Lab, Workbench, Python/R/Julia and other specialist runtimes retain execution responsibility.
 
 ## v10.6.0 Argument, Claim & Counterclaim Intelligence
 
