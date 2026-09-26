@@ -15,9 +15,9 @@ $docs = file_get_contents( $root . '/docs/V740_PERSISTENT_RESEARCH_STATE_READING
 $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_persistent_research_state_manifest_v7.4.0.json' ), true );
 $quality_manifest = json_decode( file_get_contents( $root . '/data/research_librarian_source_evaluation_manifest_v7.3.0.json' ), true );
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 10.6.0' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '10.6.0';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "10.6.0"' ),
+    'version_header' => false !== strpos( $main, 'Version: 10.7.0' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '10.7.0';" ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "10.7.0"' ),
     'module_version' => false !== strpos( $module, "const VERSION = '8.0.0';" ),
     'api_13' => false !== strpos( $platform, 'sc-connected-research-api/2.0' ),
     'workspace_23' => false !== strpos( $module, 'sc-research-librarian-public-workspace/3.0' ),

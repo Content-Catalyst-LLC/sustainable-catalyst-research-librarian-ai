@@ -6,7 +6,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException
 
-CONSUMER_VERSION = '10.6.0'
+CONSUMER_VERSION = '10.7.0'
 TARGET_KEY = 'research-librarian'
 PRODUCT = 'Research Librarian'
 CONSUMER_CONTRACT = 'sc-energy-runtime-research-librarian-handoff/1.0'

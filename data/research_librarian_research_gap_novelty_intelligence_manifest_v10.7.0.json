@@ -1,0 +1,21 @@
+{
+  "release": "10.7.0",
+  "name": "Research Gap & Novelty Intelligence",
+  "backend_migration": "022_research_gap_novelty_intelligence.sql",
+  "milestone": "10.7",
+  "requires": "10.6.0",
+  "governance": {
+    "human_gap_acceptance_required": true,
+    "human_novelty_acceptance_required": true,
+    "novelty_requires_explicit_comparison_basis": true,
+    "gap_signals_are_descriptive_candidates_not_validated_gaps": true,
+    "research_opportunities_are_planning_candidates_not_originality_certification": true,
+    "absence_of_evidence_is_not_evidence_of_absence": true,
+    "automatic_gap_certification": false,
+    "automatic_novelty_certification": false,
+    "automatic_originality_claims": false,
+    "automatic_priority_ranking": false,
+    "automatic_truth_promotion": false,
+    "platform_core_remains_research_object_authority": true
+  }
+}

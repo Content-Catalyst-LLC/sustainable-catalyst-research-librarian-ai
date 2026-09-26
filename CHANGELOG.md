@@ -1,3 +1,8 @@
+## 10.7.0 — Research Gap & Novelty Intelligence
+
+- Added durable gap/novelty project registry, structural signals, human gap decisions, novelty candidates with comparison basis, original-research opportunity planning, immutable snapshots, and unified research-environment integration.
+- Preserved human scholarly judgment: no automatic gap certification, novelty certification, originality claims, priority ranking, or truth promotion.
+
 # v10.6.0 — Argument, Claim & Counterclaim Intelligence
 
 - Added durable argument-intelligence projects bound to v10.5 literature-intelligence lineage.

@@ -1,0 +1,21 @@
+# Research Librarian AI v10.7.0 — terminal commands
+
+# 1. Mac: unpack and Git push/tag
+cd ~/Downloads
+rm -rf sc-research-librarian-v10.7.0-release
+unzip -q sustainable-catalyst-research-librarian-ai-v10.7.0-release-bundle.zip -d sc-research-librarian-v10.7.0-release
+cd sc-research-librarian-v10.7.0-release
+chmod +x PUSH_RESEARCH_LIBRARIAN_V1070_PY312.sh
+./PUSH_RESEARCH_LIBRARIAN_V1070_PY312.sh "$PWD/sustainable-catalyst-research-librarian-ai-v10.7.0-repository.zip"
+
+# 2. Mac: transfer backend + deployer
+scp -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes sustainable-catalyst-research-librarian-backend-v10.7.0.zip deploy/contabo/upgrade_research_librarian_backend_v10_7_0_contabo.sh catalystadmin@94.72.113.77:/tmp/
+ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes catalystadmin@94.72.113.77
+
+# 3. Contabo
+cd /tmp
+chmod +x upgrade_research_librarian_backend_v10_7_0_contabo.sh
+./upgrade_research_librarian_backend_v10_7_0_contabo.sh /tmp/sustainable-catalyst-research-librarian-backend-v10.7.0.zip
+
+# 4. WordPress
+# Upload sustainable-catalyst-research-librarian-ai-wordpress-v10.7.0.zip

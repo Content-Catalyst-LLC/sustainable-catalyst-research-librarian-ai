@@ -78,6 +78,11 @@ from ..contracts.argument_claim_counterclaim_intelligence import (
     ClaimRelationAddRequest, ClaimAssumptionAddRequest, ClaimDecisionRequest,
     ArgumentTensionAddRequest, ArgumentIntelligenceStateRequest, ArgumentIntelligenceSnapshotRequest,
 )
+from ..contracts.research_gap_novelty_intelligence import (
+    ResearchGapNoveltyCreateRequest, ResearchGapCandidateAddRequest, ResearchGapDecisionRequest,
+    NoveltyCandidateAddRequest, NoveltyDecisionRequest, OriginalResearchOpportunityAddRequest,
+    ResearchGapNoveltyStateRequest, ResearchGapNoveltySnapshotRequest,
+)
 from ..contracts.research_question_hypothesis import (
     ResearchQuestionPlanCreateRequest, ResearchSubquestionAddRequest, ResearchHypothesisAddRequest,
     ResearchEvidenceRequirementRequest, ResearchQuestionReviewStateRequest, ResearchQuestionSnapshotRequest,
@@ -159,6 +164,9 @@ from ..services.scholarly_literature_intelligence import (
 )
 from ..services.argument_claim_counterclaim_intelligence import (
     get_argument_claim_counterclaim_intelligence_store, capabilities as argument_claim_counterclaim_intelligence_capabilities,
+)
+from ..services.research_gap_novelty_intelligence import (
+    get_research_gap_novelty_intelligence_store, capabilities as research_gap_novelty_intelligence_capabilities,
 )
 from ..services.research_question_hypothesis import (
     get_research_question_hypothesis_store, capabilities as research_question_hypothesis_capabilities,
@@ -1621,3 +1629,64 @@ def argument_claim_counterclaim_intelligence_core_candidate(argument_intelligenc
 @router.post("/argument-claim-counterclaim-intelligence/snapshots/freeze", dependencies=[Depends(require_backend_key)])
 def argument_claim_counterclaim_intelligence_snapshot(req: ArgumentIntelligenceSnapshotRequest) -> dict[str, Any]:
     return get_argument_claim_counterclaim_intelligence_store().freeze_snapshot(req)
+
+
+@router.get("/research-gap-novelty-intelligence/capabilities", dependencies=[Depends(require_backend_key)])
+def research_gap_novelty_intelligence_capabilities_route() -> dict[str, Any]:
+    return research_gap_novelty_intelligence_capabilities()
+
+@router.post("/research-gap-novelty-intelligence/projects", dependencies=[Depends(require_backend_key)])
+def research_gap_novelty_intelligence_create(req: ResearchGapNoveltyCreateRequest) -> dict[str, Any]:
+    return get_research_gap_novelty_intelligence_store().create(req)
+
+@router.get("/research-gap-novelty-intelligence/projects/{gap_novelty_id}", dependencies=[Depends(require_backend_key)])
+def research_gap_novelty_intelligence_get(gap_novelty_id: str) -> dict[str, Any]:
+    return get_research_gap_novelty_intelligence_store().get(gap_novelty_id)
+
+@router.post("/research-gap-novelty-intelligence/projects/{gap_novelty_id}/gap-candidates", dependencies=[Depends(require_backend_key)])
+def research_gap_novelty_intelligence_add_gap(gap_novelty_id: str, req: ResearchGapCandidateAddRequest) -> dict[str, Any]:
+    return get_research_gap_novelty_intelligence_store().add_gap_candidate(gap_novelty_id, req)
+
+@router.post("/research-gap-novelty-intelligence/projects/{gap_novelty_id}/gap-decisions", dependencies=[Depends(require_backend_key)])
+def research_gap_novelty_intelligence_decide_gap(gap_novelty_id: str, req: ResearchGapDecisionRequest) -> dict[str, Any]:
+    return get_research_gap_novelty_intelligence_store().decide_gap(gap_novelty_id, req)
+
+@router.post("/research-gap-novelty-intelligence/projects/{gap_novelty_id}/novelty-candidates", dependencies=[Depends(require_backend_key)])
+def research_gap_novelty_intelligence_add_novelty(gap_novelty_id: str, req: NoveltyCandidateAddRequest) -> dict[str, Any]:
+    return get_research_gap_novelty_intelligence_store().add_novelty_candidate(gap_novelty_id, req)
+
+@router.post("/research-gap-novelty-intelligence/projects/{gap_novelty_id}/novelty-decisions", dependencies=[Depends(require_backend_key)])
+def research_gap_novelty_intelligence_decide_novelty(gap_novelty_id: str, req: NoveltyDecisionRequest) -> dict[str, Any]:
+    return get_research_gap_novelty_intelligence_store().decide_novelty(gap_novelty_id, req)
+
+@router.post("/research-gap-novelty-intelligence/projects/{gap_novelty_id}/research-opportunities", dependencies=[Depends(require_backend_key)])
+def research_gap_novelty_intelligence_add_opportunity(gap_novelty_id: str, req: OriginalResearchOpportunityAddRequest) -> dict[str, Any]:
+    return get_research_gap_novelty_intelligence_store().add_research_opportunity(gap_novelty_id, req)
+
+@router.post("/research-gap-novelty-intelligence/projects/{gap_novelty_id}/state", dependencies=[Depends(require_backend_key)])
+def research_gap_novelty_intelligence_state(gap_novelty_id: str, req: ResearchGapNoveltyStateRequest) -> dict[str, Any]:
+    return get_research_gap_novelty_intelligence_store().set_state(gap_novelty_id, req)
+
+@router.get("/research-gap-novelty-intelligence/projects/{gap_novelty_id}/structural-signals", dependencies=[Depends(require_backend_key)])
+def research_gap_novelty_intelligence_signals(gap_novelty_id: str) -> dict[str, Any]:
+    return get_research_gap_novelty_intelligence_store().structural_signals(gap_novelty_id)
+
+@router.get("/research-gap-novelty-intelligence/projects/{gap_novelty_id}/landscape", dependencies=[Depends(require_backend_key)])
+def research_gap_novelty_intelligence_landscape(gap_novelty_id: str) -> dict[str, Any]:
+    return get_research_gap_novelty_intelligence_store().landscape(gap_novelty_id)
+
+@router.get("/research-gap-novelty-intelligence/projects/{gap_novelty_id}/research-planning-handoff", dependencies=[Depends(require_backend_key)])
+def research_gap_novelty_intelligence_handoff(gap_novelty_id: str) -> dict[str, Any]:
+    return get_research_gap_novelty_intelligence_store().research_planning_handoff(gap_novelty_id)
+
+@router.get("/research-gap-novelty-intelligence/projects/{gap_novelty_id}/readiness", dependencies=[Depends(require_backend_key)])
+def research_gap_novelty_intelligence_readiness(gap_novelty_id: str) -> dict[str, Any]:
+    return get_research_gap_novelty_intelligence_store().readiness(gap_novelty_id)
+
+@router.get("/research-gap-novelty-intelligence/projects/{gap_novelty_id}/core-candidate", dependencies=[Depends(require_backend_key)])
+def research_gap_novelty_intelligence_core_candidate(gap_novelty_id: str) -> dict[str, Any]:
+    return get_research_gap_novelty_intelligence_store().core_candidate(gap_novelty_id)
+
+@router.post("/research-gap-novelty-intelligence/snapshots/freeze", dependencies=[Depends(require_backend_key)])
+def research_gap_novelty_intelligence_snapshot(req: ResearchGapNoveltySnapshotRequest) -> dict[str, Any]:
+    return get_research_gap_novelty_intelligence_store().freeze_snapshot(req)

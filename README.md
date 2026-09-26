@@ -1,4 +1,4 @@
-# Sustainable Catalyst Research Librarian AI v10.6.0
+# Sustainable Catalyst Research Librarian AI v10.7.0
 
 Current release: **10.6.0 — Argument, Claim & Counterclaim Intelligence**
 
