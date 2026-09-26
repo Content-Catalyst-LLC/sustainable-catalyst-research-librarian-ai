@@ -1,0 +1,22 @@
+{
+  "schema": "sc-research-librarian-systematic-review-evidence-synthesis-manifest/1.0",
+  "release": "10.4.0",
+  "milestone": "10.4",
+  "capabilities": [
+    "systematic-review-registry",
+    "two-stage-human-screening",
+    "review-flow-accounting",
+    "structured-extraction-matrix",
+    "risk-of-bias-assessment-registry",
+    "evidence-certainty-grade-registry",
+    "synthesis-planning",
+    "specialist-runtime-handoffs",
+    "platform-core-synthesis-candidate",
+    "immutable-review-snapshots"
+  ],
+  "automatic_study_inclusion": false,
+  "automatic_bias_judgment": false,
+  "automatic_certainty_grading": false,
+  "automatic_meta_analysis_execution": false,
+  "automatic_truth_promotion": false
+}

@@ -5,8 +5,8 @@ $backend = file_get_contents($root . '/backend/app/__init__.py');
 $core = file_get_contents($root . '/backend/app/api/core.py');
 $jobs = file_get_contents($root . '/backend/app/async_jobs.py');
 $checks = [
-  'plugin_version' => strpos($main, 'Version: 10.3.0') !== false,
-  'backend_version' => strpos($backend, '__version__ = "10.3.0"') !== false,
+  'plugin_version' => strpos($main, 'Version: 10.4.0') !== false,
+  'backend_version' => strpos($backend, '__version__ = "10.4.0"') !== false,
   'contract' => file_exists($root . '/backend/app/contracts/peer_review.py'),
   'service' => file_exists($root . '/backend/app/services/peer_review.py'),
   'test' => file_exists($root . '/backend/tests/test_v930_peer_review.py'),
@@ -20,4 +20,4 @@ $checks = [
   'durable_job' => strpos($jobs, 'peer-review-validation-package') !== false,
 ];
 foreach ($checks as $name => $ok) { if (!$ok) { fwrite(STDERR, "FAIL: $name\n"); exit(1); } }
-echo "PASS: Research Librarian v10.3.0 Peer Review, Replication & Scholarly Validation Environment contract\n";
+echo "PASS: Research Librarian v10.4.0 Peer Review, Replication & Scholarly Validation Environment contract\n";

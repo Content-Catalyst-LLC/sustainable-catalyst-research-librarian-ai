@@ -1,3 +1,15 @@
+# 10.4.0 — Systematic Review & Evidence Synthesis Intelligence
+
+- Added durable systematic-review registries linked to v10.3 evidence-search strategies.
+- Added two-stage human screening decisions and review-flow accounting.
+- Added structured study extraction matrices with source-locator provenance.
+- Added reviewer-recorded risk-of-bias and evidence-certainty assessment registries.
+- Added narrative, quantitative, mixed, and meta-analysis synthesis planning.
+- Added specialist-runtime synthesis handoffs without automatic execution.
+- Added governed Platform Core systematic-review/evidence-synthesis candidates without automatic writes.
+- Added immutable snapshots, durable snapshot jobs, authenticated APIs, migration 019, and v10 unified-environment bindings.
+- Preserved human scholarly judgment, Knowledge Library source authority, and Platform Core governed-object authority.
+
 # 10.3.0 — Evidence Search Strategy Engine
 
 - Adds durable evidence-search strategy plans bound to v10.1 research questions and optional v10.2 methodology plans.

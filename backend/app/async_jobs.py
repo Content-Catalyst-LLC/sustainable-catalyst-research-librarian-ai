@@ -54,6 +54,7 @@ JOB_TYPES = {
     "research-question-hypothesis-snapshot",
     "research-design-methodology-snapshot",
     "evidence-search-strategy-snapshot",
+    "systematic-review-evidence-synthesis-snapshot",
 }
 TERMINAL_STATES = {"succeeded", "failed", "cancelled"}
 ACTIVE_STATES = {"queued", "retry_wait", "running"}

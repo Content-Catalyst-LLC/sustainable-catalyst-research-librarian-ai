@@ -1,6 +1,10 @@
-# Sustainable Catalyst Research Librarian AI v10.3.0
+# Sustainable Catalyst Research Librarian AI v10.4.0
 
-Current release: **v10.3.0 — Evidence Search Strategy Engine**
+Current release: **v10.4.0 — Systematic Review & Evidence Synthesis Intelligence**
+
+## v10.4.0 Systematic Review & Evidence Synthesis Intelligence
+
+Research Librarian AI v10.4.0 extends reproducible evidence-search protocols into durable systematic-review workflows. It records candidate studies, human title/abstract and full-text screening decisions, extraction matrices, reviewer-entered risk-of-bias assessments, reviewer-entered evidence-certainty grades, review-flow accounting, and narrative/quantitative/meta-analysis plans with non-executing handoffs to specialist runtimes. Knowledge Library remains source authority and Platform Core remains governed research-object authority. The Librarian does not automatically include studies, grade evidence, execute meta-analysis, or promote truth.
 
 ## v10.3.0 Evidence Search Strategy Engine
 

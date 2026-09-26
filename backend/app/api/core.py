@@ -62,6 +62,11 @@ from ..contracts.evidence_search_strategy import (
     SearchQueryAddRequest, SearchEligibilityCriterionRequest, SearchExecutionReceiptRequest,
     EvidenceSearchReviewStateRequest, EvidenceSearchSnapshotRequest,
 )
+from ..contracts.systematic_review_evidence_synthesis import (
+    SystematicReviewCreateRequest, ReviewCandidateAddRequest, ReviewScreeningDecisionRequest,
+    ReviewExtractionRequest, ReviewBiasAssessmentRequest, ReviewEvidenceGradeRequest,
+    ReviewSynthesisPlanRequest, SystematicReviewStateRequest, SystematicReviewSnapshotRequest,
+)
 from ..contracts.research_question_hypothesis import (
     ResearchQuestionPlanCreateRequest, ResearchSubquestionAddRequest, ResearchHypothesisAddRequest,
     ResearchEvidenceRequirementRequest, ResearchQuestionReviewStateRequest, ResearchQuestionSnapshotRequest,
@@ -134,6 +139,9 @@ from ..services.research_design_methodology import (
 )
 from ..services.evidence_search_strategy import (
     get_evidence_search_strategy_store, capabilities as evidence_search_strategy_capabilities,
+)
+from ..services.systematic_review_evidence_synthesis import (
+    get_systematic_review_evidence_synthesis_store, capabilities as systematic_review_evidence_synthesis_capabilities,
 )
 from ..services.research_question_hypothesis import (
     get_research_question_hypothesis_store, capabilities as research_question_hypothesis_capabilities,
@@ -1235,6 +1243,85 @@ def evidence_search_strategy_core_candidate(strategy_id: str) -> dict[str, Any]:
 @router.post("/evidence-search-strategy/snapshots/freeze", dependencies=[Depends(require_backend_key)])
 def evidence_search_strategy_snapshot(payload: EvidenceSearchSnapshotRequest) -> dict[str, Any]:
     try: return get_evidence_search_strategy_store().freeze_snapshot(payload)
+    except ValueError as exc: raise HTTPException(status_code=404,detail=str(exc)) from exc
+
+@router.get("/systematic-review-evidence-synthesis/capabilities", dependencies=[Depends(require_backend_key)])
+def systematic_review_evidence_synthesis_capabilities_route() -> dict[str, Any]:
+    return systematic_review_evidence_synthesis_capabilities()
+
+@router.post("/systematic-review-evidence-synthesis/reviews", dependencies=[Depends(require_backend_key)])
+def systematic_review_create(payload: SystematicReviewCreateRequest) -> dict[str, Any]:
+    try: return get_systematic_review_evidence_synthesis_store().create(payload)
+    except ValueError as exc: raise HTTPException(status_code=404,detail=str(exc)) from exc
+
+@router.get("/systematic-review-evidence-synthesis/reviews/{review_id}", dependencies=[Depends(require_backend_key)])
+def systematic_review_get(review_id: str) -> dict[str, Any]:
+    try: return get_systematic_review_evidence_synthesis_store().get(review_id)
+    except ValueError as exc: raise HTTPException(status_code=404,detail=str(exc)) from exc
+
+@router.post("/systematic-review-evidence-synthesis/reviews/{review_id}/candidates", dependencies=[Depends(require_backend_key)])
+def systematic_review_add_candidate(review_id: str, payload: ReviewCandidateAddRequest) -> dict[str, Any]:
+    try: return get_systematic_review_evidence_synthesis_store().add_candidate(review_id,payload)
+    except ValueError as exc: raise HTTPException(status_code=404,detail=str(exc)) from exc
+
+@router.post("/systematic-review-evidence-synthesis/reviews/{review_id}/screening-decisions", dependencies=[Depends(require_backend_key)])
+def systematic_review_screen(review_id: str, payload: ReviewScreeningDecisionRequest) -> dict[str, Any]:
+    try: return get_systematic_review_evidence_synthesis_store().screen(review_id,payload)
+    except ValueError as exc: raise HTTPException(status_code=404,detail=str(exc)) from exc
+
+@router.post("/systematic-review-evidence-synthesis/reviews/{review_id}/extractions", dependencies=[Depends(require_backend_key)])
+def systematic_review_extract(review_id: str, payload: ReviewExtractionRequest) -> dict[str, Any]:
+    try: return get_systematic_review_evidence_synthesis_store().add_extraction(review_id,payload)
+    except ValueError as exc: raise HTTPException(status_code=404,detail=str(exc)) from exc
+
+@router.post("/systematic-review-evidence-synthesis/reviews/{review_id}/bias-assessments", dependencies=[Depends(require_backend_key)])
+def systematic_review_bias(review_id: str, payload: ReviewBiasAssessmentRequest) -> dict[str, Any]:
+    try: return get_systematic_review_evidence_synthesis_store().add_bias_assessment(review_id,payload)
+    except ValueError as exc: raise HTTPException(status_code=404,detail=str(exc)) from exc
+
+@router.post("/systematic-review-evidence-synthesis/reviews/{review_id}/evidence-grades", dependencies=[Depends(require_backend_key)])
+def systematic_review_grade(review_id: str, payload: ReviewEvidenceGradeRequest) -> dict[str, Any]:
+    try: return get_systematic_review_evidence_synthesis_store().add_evidence_grade(review_id,payload)
+    except ValueError as exc: raise HTTPException(status_code=404,detail=str(exc)) from exc
+
+@router.post("/systematic-review-evidence-synthesis/reviews/{review_id}/synthesis-plans", dependencies=[Depends(require_backend_key)])
+def systematic_review_synthesis_plan(review_id: str, payload: ReviewSynthesisPlanRequest) -> dict[str, Any]:
+    try: return get_systematic_review_evidence_synthesis_store().add_synthesis_plan(review_id,payload)
+    except ValueError as exc: raise HTTPException(status_code=404,detail=str(exc)) from exc
+
+@router.post("/systematic-review-evidence-synthesis/reviews/{review_id}/review-state", dependencies=[Depends(require_backend_key)])
+def systematic_review_state(review_id: str, payload: SystematicReviewStateRequest) -> dict[str, Any]:
+    try: return get_systematic_review_evidence_synthesis_store().set_review_state(review_id,payload)
+    except ValueError as exc: raise HTTPException(status_code=404,detail=str(exc)) from exc
+
+@router.get("/systematic-review-evidence-synthesis/reviews/{review_id}/flow", dependencies=[Depends(require_backend_key)])
+def systematic_review_flow(review_id: str) -> dict[str, Any]:
+    try: return get_systematic_review_evidence_synthesis_store().flow(review_id)
+    except ValueError as exc: raise HTTPException(status_code=404,detail=str(exc)) from exc
+
+@router.get("/systematic-review-evidence-synthesis/reviews/{review_id}/extraction-matrix", dependencies=[Depends(require_backend_key)])
+def systematic_review_extraction_matrix(review_id: str) -> dict[str, Any]:
+    try: return get_systematic_review_evidence_synthesis_store().extraction_matrix(review_id)
+    except ValueError as exc: raise HTTPException(status_code=404,detail=str(exc)) from exc
+
+@router.get("/systematic-review-evidence-synthesis/reviews/{review_id}/readiness", dependencies=[Depends(require_backend_key)])
+def systematic_review_readiness(review_id: str) -> dict[str, Any]:
+    try: return get_systematic_review_evidence_synthesis_store().readiness(review_id)
+    except ValueError as exc: raise HTTPException(status_code=404,detail=str(exc)) from exc
+
+@router.get("/systematic-review-evidence-synthesis/reviews/{review_id}/synthesis-handoffs", dependencies=[Depends(require_backend_key)])
+def systematic_review_handoffs(review_id: str) -> dict[str, Any]:
+    try: return get_systematic_review_evidence_synthesis_store().synthesis_handoffs(review_id)
+    except ValueError as exc: raise HTTPException(status_code=404,detail=str(exc)) from exc
+
+@router.get("/systematic-review-evidence-synthesis/reviews/{review_id}/core-candidate", dependencies=[Depends(require_backend_key)])
+def systematic_review_core_candidate(review_id: str) -> dict[str, Any]:
+    try: return get_systematic_review_evidence_synthesis_store().core_candidate(review_id)
+    except ValueError as exc: raise HTTPException(status_code=404,detail=str(exc)) from exc
+
+@router.post("/systematic-review-evidence-synthesis/snapshots/freeze", dependencies=[Depends(require_backend_key)])
+def systematic_review_snapshot(payload: SystematicReviewSnapshotRequest) -> dict[str, Any]:
+    try: return get_systematic_review_evidence_synthesis_store().freeze_snapshot(payload)
     except ValueError as exc: raise HTTPException(status_code=404,detail=str(exc)) from exc
 
 @router.get("/unified-research-environment/capabilities", dependencies=[Depends(require_backend_key)])

@@ -76,7 +76,7 @@ def test_api_exposes_document_capabilities_and_parse_contract() -> None:
     headers = {'X-SC-RL-Key': 'test-key'}
     cap = client.get('/v1/documents/capabilities', headers=headers)
     assert cap.status_code == 200
-    assert cap.json()['version'] == '10.3.0'
+    assert cap.json()['version'] == '10.4.0'
     assert cap.json()['schema'] == DOCUMENT_INTELLIGENCE_SCHEMA
     parsed = client.post('/v1/documents/parse', headers=headers, json={'content': '# Test Paper\n\n## Abstract\nEvidence text.', 'media_type': 'text/markdown'})
     assert parsed.status_code == 200

@@ -1,0 +1,19 @@
+{
+  "release": "10.4.0",
+  "name": "Systematic Review & Evidence Synthesis Intelligence",
+  "backend_migration": "019_systematic_review_evidence_synthesis.sql",
+  "milestone": "10.4",
+  "requires": "10.3.0",
+  "governance": {
+    "human_screening_decisions_required": true,
+    "human_bias_assessment_required": true,
+    "human_evidence_grading_required": true,
+    "automatic_study_inclusion": false,
+    "automatic_risk_of_bias_judgment": false,
+    "automatic_evidence_certainty_grading": false,
+    "automatic_meta_analysis_execution": false,
+    "automatic_truth_promotion": false,
+    "knowledge_library_remains_source_authority": true,
+    "platform_core_remains_authority": true
+  }
+}

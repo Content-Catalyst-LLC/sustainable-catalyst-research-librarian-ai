@@ -7,8 +7,8 @@ $jobs=file_get_contents($root.'/backend/app/async_jobs.py');
 $service=file_get_contents($root.'/backend/app/services/evidence_search_strategy.py');
 $environment=file_get_contents($root.'/backend/app/services/unified_scholarly_ai_environment.py');
 $checks=[
- 'plugin_version'=>strpos($main,'Version: 10.3.0')!==false,
- 'backend_version'=>strpos($backend,'__version__ = "10.3.0"')!==false,
+ 'plugin_version'=>strpos($main,'Version: 10.4.0')!==false,
+ 'backend_version'=>strpos($backend,'__version__ = "10.4.0"')!==false,
  'capabilities_route'=>strpos($api,'/evidence-search-strategy/capabilities')!==false,
  'strategy_route'=>strpos($api,'/evidence-search-strategy/strategies')!==false,
  'coverage_route'=>strpos($api,'/evidence-search-strategy/strategies/{strategy_id}/coverage')!==false,
@@ -22,4 +22,4 @@ $checks=[
  'environment_binding'=>strpos($environment,'evidence-search-strategy-plan')!==false,
 ];
 foreach($checks as $k=>$ok){ if(!$ok){ fwrite(STDERR,"FAIL: $k\n"); exit(1);} }
-echo "PASS: Research Librarian v10.3.0 Evidence Search Strategy Engine contract\n";
+echo "PASS: Research Librarian v10.4.0 Evidence Search Strategy Engine contract\n";
