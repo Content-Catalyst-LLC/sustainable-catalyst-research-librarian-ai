@@ -3,14 +3,14 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 10.2.0
+Stable tag: 10.3.0
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
 
 == Description ==
 
-v10.2.0 adds Research Design & Methodology Planner: question-linked candidate research designs, explicit assumptions and validity threats, data/sampling requirements, method comparison, human design selection, governed Core candidate handoffs, specialist-runtime execution packets, immutable snapshots, and unified-environment bindings. It does not automatically select a method, execute analyses, establish causal identification, or promote truth.
+v10.3.0 adds the Evidence Search Strategy Engine: question/design-linked concepts and synonyms, source-target registries, reproducible Boolean query plans, inclusion/exclusion criteria, evidence-requirement coverage, external search receipts, human protocol approval, Knowledge Library/federated-discovery handoffs, governed Core protocol candidates, immutable snapshots, and unified-environment bindings. It does not automatically execute external searches, import or accept sources, judge evidence quality, or promote truth.
 
 Research Librarian AI retrieves Sustainable Catalyst publications and documents through exact-title priority, section-aware BM25 ranking, optional Gemini embeddings, calibrated reciprocal-rank fusion, and citation-verified synthesis. WordPress remains the canonical publishing and recovery source, while FastAPI stores the production knowledge index durably in Neon Postgres with pgvector.
 
@@ -47,6 +47,12 @@ v8.7.0 adds the Core Evidence Bridge. Hydrated canonical Librarian sources can b
 [sc_research_librarian_platform_handoffs]
 
 == Changelog ==
+
+= 10.3.0 =
+* Added the Evidence Search Strategy Engine with question/design-linked concepts, synonyms, source targets, reproducible Boolean query plans, and explicit eligibility criteria.
+* Added evidence-requirement coverage mapping, external search execution receipts, immutable snapshots, and unified-environment `evidence-search-strategy-plan` bindings.
+* Added human-approved Knowledge Library and federated-discovery handoff packets plus a governed Platform Core evidence-search-protocol candidate.
+* Search execution, source ingestion, screening/acceptance, evidence-quality judgment, and truth promotion remain separate and are not automated.
 
 = 10.2.0 =
 * Added Research Design & Methodology Planner with question-linked candidate designs, assumptions, validity threats, data and sampling requirements, analysis candidates, execution-target handoffs, and immutable snapshots.

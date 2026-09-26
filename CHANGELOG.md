@@ -1,3 +1,12 @@
+# 10.3.0 — Evidence Search Strategy Engine
+
+- Adds durable evidence-search strategy plans bound to v10.1 research questions and optional v10.2 methodology plans.
+- Adds deterministic concept/synonym scaffolding, source-target registries, reproducible Boolean query variants, inclusion/exclusion criteria, date/language/source-type constraints, and evidence-requirement coverage mapping.
+- Adds externally generated search execution receipts without treating a receipt as source ingestion, screening, acceptance, or evidence-quality judgment.
+- Adds human protocol review, Knowledge Library/federated-discovery handoff packets, Platform Core evidence-search-protocol candidates, immutable snapshots, migration 018, and durable snapshot jobs.
+- Integrates search strategies into the v10 unified environment as `evidence-search-strategy-plan`.
+- Preserves system boundaries: Knowledge Library owns ingestion/retrieval, Platform Core owns governed evidence objects, and automatic external search execution/source acceptance/truth promotion remain disabled.
+
 # 10.2.0 — Research Design & Methodology Planner
 
 - Adds durable research-design plans bound to v10.1 question/hypothesis plans.

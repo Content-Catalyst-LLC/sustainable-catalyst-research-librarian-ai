@@ -1,0 +1,29 @@
+{
+  "schema": "sc-research-librarian-evidence-search-strategy-manifest/1.0",
+  "release": "10.3.0",
+  "milestone": "10.3",
+  "capabilities": [
+    "question-plan-integration",
+    "research-design-plan-integration",
+    "concept-synonym-registry",
+    "source-target-registry",
+    "reproducible-boolean-query-planning",
+    "inclusion-exclusion-protocol",
+    "evidence-requirement-coverage-mapping",
+    "external-search-execution-receipts",
+    "knowledge-library-search-handoffs",
+    "federated-discovery-handoffs",
+    "platform-core-protocol-candidate",
+    "immutable-snapshots"
+  ],
+  "guardrails": {
+    "human_search_protocol_approval_required": true,
+    "automatic_external_search_execution": false,
+    "automatic_source_import": false,
+    "automatic_source_acceptance": false,
+    "automatic_quality_judgment": false,
+    "automatic_truth_promotion": false,
+    "knowledge_library_owns_source_ingestion_and_retrieval": true,
+    "platform_core_remains_governed_evidence_authority": true
+  }
+}

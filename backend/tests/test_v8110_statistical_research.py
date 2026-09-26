@@ -12,7 +12,7 @@ def req():
 
 def test_plan_is_review_gated_and_nonexecuting():
     out=build_plan(req()); p=out["plan"]
-    assert out["release"]=="10.2.0"
+    assert out["release"]=="10.3.0"
     assert p["review_decision"]=="pending"
     assert p["execution_policy"]["execution_allowed_in_librarian"] is False
     assert p["execution_policy"]["runtime_must_return_validated_bundle"] is True
@@ -52,4 +52,4 @@ def test_async_job_and_api_surface():
     paths={getattr(r,"path","") for r in app.routes}
     for path in ["/v1/core/statistical-research/capabilities","/v1/core/statistical-research/readiness","/v1/core/statistical-research/plan","/v1/core/statistical-research/promote-validation","/v1/core/statistical-research/coefficients","/v1/core/statistical-research/intervals","/v1/core/statistical-research/interpretations"]: assert path in paths
     body=TestClient(app).get("/v1/core/statistical-research/capabilities",headers={"X-SC-RL-Key":"test-key"}).json()
-    assert body["release"]=="10.2.0" and body["librarian_executes_arbitrary_analysis"] is False
+    assert body["release"]=="10.3.0" and body["librarian_executes_arbitrary_analysis"] is False

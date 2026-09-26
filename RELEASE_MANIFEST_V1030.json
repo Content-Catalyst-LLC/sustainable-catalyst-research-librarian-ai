@@ -1,0 +1,15 @@
+{
+  "release": "10.3.0",
+  "name": "Evidence Search Strategy Engine",
+  "backend_migration": "018_evidence_search_strategy_engine.sql",
+  "milestone": "10.3",
+  "requires": "10.2.0",
+  "governance": {
+    "human_search_protocol_approval_required": true,
+    "automatic_external_search_execution": false,
+    "automatic_source_import": false,
+    "automatic_source_acceptance": false,
+    "knowledge_library_owns_source_ingestion_and_retrieval": true,
+    "platform_core_remains_authority": true
+  }
+}

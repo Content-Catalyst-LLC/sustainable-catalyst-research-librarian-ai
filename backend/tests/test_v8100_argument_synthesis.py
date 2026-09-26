@@ -148,7 +148,7 @@ def test_contradiction_inspection_async_executor_and_api_routes() -> None:
     response=TestClient(app).get("/v1/core/argument-synthesis/capabilities",headers={"X-SC-RL-Key":"test-key"})
     assert response.status_code == 200
     body=response.json()
-    assert body["release"] == "10.2.0"
+    assert body["release"] == "10.3.0"
     assert body["human_review_required_for_core_promotion"] is True
     assert body["automatic_argument_ranking"] is False
     assert body["automatic_truth_determination"] is False

@@ -57,6 +57,11 @@ from ..contracts.research_design_methodology import (
     ResearchDesignPlanCreateRequest, MethodologyCandidateAddRequest, ResearchDesignValidityThreatRequest,
     ResearchDesignPreferenceRequest, ResearchDesignReviewStateRequest, ResearchDesignSnapshotRequest,
 )
+from ..contracts.evidence_search_strategy import (
+    EvidenceSearchStrategyCreateRequest, SearchConceptAddRequest, SearchSourceTargetAddRequest,
+    SearchQueryAddRequest, SearchEligibilityCriterionRequest, SearchExecutionReceiptRequest,
+    EvidenceSearchReviewStateRequest, EvidenceSearchSnapshotRequest,
+)
 from ..contracts.research_question_hypothesis import (
     ResearchQuestionPlanCreateRequest, ResearchSubquestionAddRequest, ResearchHypothesisAddRequest,
     ResearchEvidenceRequirementRequest, ResearchQuestionReviewStateRequest, ResearchQuestionSnapshotRequest,
@@ -126,6 +131,9 @@ from ..services.unified_scholarly_ai_environment import (
 )
 from ..services.research_design_methodology import (
     get_research_design_methodology_store, capabilities as research_design_methodology_capabilities,
+)
+from ..services.evidence_search_strategy import (
+    get_evidence_search_strategy_store, capabilities as evidence_search_strategy_capabilities,
 )
 from ..services.research_question_hypothesis import (
     get_research_question_hypothesis_store, capabilities as research_question_hypothesis_capabilities,
@@ -1158,6 +1166,76 @@ def research_design_methodology_core_candidate(plan_id: str) -> dict[str, Any]:
 def research_design_methodology_snapshot(payload: ResearchDesignSnapshotRequest) -> dict[str, Any]:
     try: return get_research_design_methodology_store().freeze_snapshot(payload)
     except Exception as exc: raise _translate(exc) from exc
+
+
+@router.get("/evidence-search-strategy/capabilities", dependencies=[Depends(require_backend_key)])
+def evidence_search_strategy_capabilities_route() -> dict[str, Any]:
+    return evidence_search_strategy_capabilities()
+
+@router.post("/evidence-search-strategy/strategies", dependencies=[Depends(require_backend_key)])
+def evidence_search_strategy_create(payload: EvidenceSearchStrategyCreateRequest) -> dict[str, Any]:
+    try: return get_evidence_search_strategy_store().create(payload)
+    except ValueError as exc: raise HTTPException(status_code=404,detail=str(exc)) from exc
+
+@router.get("/evidence-search-strategy/strategies/{strategy_id}", dependencies=[Depends(require_backend_key)])
+def evidence_search_strategy_get(strategy_id: str) -> dict[str, Any]:
+    try: return get_evidence_search_strategy_store().get(strategy_id)
+    except ValueError as exc: raise HTTPException(status_code=404,detail=str(exc)) from exc
+
+@router.post("/evidence-search-strategy/strategies/{strategy_id}/concepts", dependencies=[Depends(require_backend_key)])
+def evidence_search_strategy_add_concept(strategy_id: str, payload: SearchConceptAddRequest) -> dict[str, Any]:
+    try: return get_evidence_search_strategy_store().add_concept(strategy_id,payload)
+    except ValueError as exc: raise HTTPException(status_code=404,detail=str(exc)) from exc
+
+@router.post("/evidence-search-strategy/strategies/{strategy_id}/source-targets", dependencies=[Depends(require_backend_key)])
+def evidence_search_strategy_add_source_target(strategy_id: str, payload: SearchSourceTargetAddRequest) -> dict[str, Any]:
+    try: return get_evidence_search_strategy_store().add_source_target(strategy_id,payload)
+    except ValueError as exc: raise HTTPException(status_code=404,detail=str(exc)) from exc
+
+@router.post("/evidence-search-strategy/strategies/{strategy_id}/queries", dependencies=[Depends(require_backend_key)])
+def evidence_search_strategy_add_query(strategy_id: str, payload: SearchQueryAddRequest) -> dict[str, Any]:
+    try: return get_evidence_search_strategy_store().add_query(strategy_id,payload)
+    except ValueError as exc: raise HTTPException(status_code=404,detail=str(exc)) from exc
+
+@router.post("/evidence-search-strategy/strategies/{strategy_id}/criteria", dependencies=[Depends(require_backend_key)])
+def evidence_search_strategy_add_criterion(strategy_id: str, payload: SearchEligibilityCriterionRequest) -> dict[str, Any]:
+    try: return get_evidence_search_strategy_store().add_criterion(strategy_id,payload)
+    except ValueError as exc: raise HTTPException(status_code=404,detail=str(exc)) from exc
+
+@router.post("/evidence-search-strategy/strategies/{strategy_id}/execution-receipts", dependencies=[Depends(require_backend_key)])
+def evidence_search_strategy_add_receipt(strategy_id: str, payload: SearchExecutionReceiptRequest) -> dict[str, Any]:
+    try: return get_evidence_search_strategy_store().add_execution_receipt(strategy_id,payload)
+    except ValueError as exc: raise HTTPException(status_code=404,detail=str(exc)) from exc
+
+@router.post("/evidence-search-strategy/strategies/{strategy_id}/review-state", dependencies=[Depends(require_backend_key)])
+def evidence_search_strategy_review_state(strategy_id: str, payload: EvidenceSearchReviewStateRequest) -> dict[str, Any]:
+    try: return get_evidence_search_strategy_store().set_review_state(strategy_id,payload)
+    except ValueError as exc: raise HTTPException(status_code=404,detail=str(exc)) from exc
+
+@router.get("/evidence-search-strategy/strategies/{strategy_id}/coverage", dependencies=[Depends(require_backend_key)])
+def evidence_search_strategy_coverage(strategy_id: str) -> dict[str, Any]:
+    try: return get_evidence_search_strategy_store().coverage(strategy_id)
+    except ValueError as exc: raise HTTPException(status_code=404,detail=str(exc)) from exc
+
+@router.get("/evidence-search-strategy/strategies/{strategy_id}/readiness", dependencies=[Depends(require_backend_key)])
+def evidence_search_strategy_readiness(strategy_id: str) -> dict[str, Any]:
+    try: return get_evidence_search_strategy_store().readiness(strategy_id)
+    except ValueError as exc: raise HTTPException(status_code=404,detail=str(exc)) from exc
+
+@router.get("/evidence-search-strategy/strategies/{strategy_id}/execution-handoffs", dependencies=[Depends(require_backend_key)])
+def evidence_search_strategy_handoffs(strategy_id: str) -> dict[str, Any]:
+    try: return get_evidence_search_strategy_store().execution_handoffs(strategy_id)
+    except ValueError as exc: raise HTTPException(status_code=404,detail=str(exc)) from exc
+
+@router.get("/evidence-search-strategy/strategies/{strategy_id}/core-candidate", dependencies=[Depends(require_backend_key)])
+def evidence_search_strategy_core_candidate(strategy_id: str) -> dict[str, Any]:
+    try: return get_evidence_search_strategy_store().core_candidate(strategy_id)
+    except ValueError as exc: raise HTTPException(status_code=404,detail=str(exc)) from exc
+
+@router.post("/evidence-search-strategy/snapshots/freeze", dependencies=[Depends(require_backend_key)])
+def evidence_search_strategy_snapshot(payload: EvidenceSearchSnapshotRequest) -> dict[str, Any]:
+    try: return get_evidence_search_strategy_store().freeze_snapshot(payload)
+    except ValueError as exc: raise HTTPException(status_code=404,detail=str(exc)) from exc
 
 @router.get("/unified-research-environment/capabilities", dependencies=[Depends(require_backend_key)])
 def unified_research_environment_capabilities_route() -> dict[str, Any]:
