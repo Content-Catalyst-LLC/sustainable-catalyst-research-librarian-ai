@@ -1,0 +1,19 @@
+{
+  "schema": "sc-research-librarian-simulation-model-study-planner-manifest/1.0",
+  "version": "11.4.0",
+  "component_type": "simulation-model-study-plan",
+  "migration": "029_simulation_model_study_planner.sql",
+  "snapshot_job": "simulation-model-study-planner-snapshot",
+  "execution_targets": ["research-lab-simulation", "workspace", "workbench"],
+  "guardrails": {
+    "human_model_study_approval_required": true,
+    "causal_design_lineage_inherited_not_rewritten": true,
+    "automatic_model_selection": false,
+    "automatic_calibration": false,
+    "automatic_validation": false,
+    "automatic_simulation_execution": false,
+    "automatic_forecast_acceptance": false,
+    "automatic_causal_inference": false,
+    "automatic_truth_promotion": false
+  }
+}

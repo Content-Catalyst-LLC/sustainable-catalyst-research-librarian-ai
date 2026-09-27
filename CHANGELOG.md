@@ -1,5 +1,12 @@
 # Changelog
 
+## 11.4.0 — Simulation & Model Study Planner
+
+- Added governed simulation/model-study planning with inherited causal/statistical/program lineage.
+- Added model, variable, parameter, scenario, stochastic-assumption, calibration, validation, uncertainty, sensitivity, ensemble, budget, stopping, and output objects.
+- Added human approval gates, study matrix, execution graph, non-executing specialist-runtime handoffs, Platform Core candidates, durable snapshots, authenticated API routes, unified-environment binding, and migration 029.
+- Preserved explicit guardrails against automatic model selection, calibration, validation, simulation execution, forecast acceptance, causal inference, or truth promotion.
+
 ## 11.3.0 — Causal Research Design Intelligence
 - Added durable causal-design records bound to v11.2 statistical analysis plans and preregistration lineage.
 - Added causal variable roles, directed acyclic graphs with cycle rejection, assumption testability, identification strategies, diagnostic plans, negative controls, sensitivity plans, and human strategy decisions.

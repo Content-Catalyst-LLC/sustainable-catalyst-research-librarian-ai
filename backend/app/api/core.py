@@ -113,6 +113,14 @@ from ..contracts.causal_research_design_intelligence import (
     CausalIdentificationStrategyAddRequest, CausalDiagnosticPlanAddRequest, CausalNegativeControlPlanAddRequest,
     CausalSensitivityPlanAddRequest, CausalDesignDecisionRequest, CausalResearchDesignStateRequest, CausalResearchDesignSnapshotRequest,
 )
+from ..contracts.simulation_model_study_planner import (
+    SimulationModelStudyCreateRequest, SimulationModelSpecificationAddRequest, SimulationVariableAddRequest,
+    SimulationParameterAddRequest, SimulationScenarioSetAddRequest, SimulationStochasticAssumptionAddRequest,
+    SimulationCalibrationPlanAddRequest, SimulationValidationPlanAddRequest, SimulationUncertaintyPlanAddRequest,
+    SimulationSensitivityPlanAddRequest, SimulationEnsemblePlanAddRequest, SimulationComputeBudgetRequest,
+    SimulationStoppingCriterionAddRequest, SimulationOutputCommitmentAddRequest, SimulationStudyDecisionRequest,
+    SimulationModelStudyStateRequest, SimulationModelStudySnapshotRequest,
+)
 from ..contracts.research_question_hypothesis import (
     ResearchQuestionPlanCreateRequest, ResearchSubquestionAddRequest, ResearchHypothesisAddRequest,
     ResearchEvidenceRequirementRequest, ResearchQuestionReviewStateRequest, ResearchQuestionSnapshotRequest,
@@ -204,6 +212,7 @@ from ..services.research_program_intelligence import get_research_program_intell
 from ..services.study_protocol_preregistration import get_study_protocol_preregistration_store, capabilities as study_protocol_preregistration_capabilities
 from ..services.statistical_analysis_planning_intelligence import get_statistical_analysis_planning_intelligence_store, capabilities as statistical_analysis_planning_intelligence_capabilities
 from ..services.causal_research_design_intelligence import get_causal_research_design_intelligence_store, capabilities as causal_research_design_intelligence_capabilities
+from ..services.simulation_model_study_planner import get_simulation_model_study_planner_store, capabilities as simulation_model_study_planner_capabilities
 from ..services.research_question_hypothesis import (
     get_research_question_hypothesis_store, capabilities as research_question_hypothesis_capabilities,
 )
@@ -2027,3 +2036,75 @@ def causal_research_design_intelligence_core(causal_design_id: str) -> dict[str,
 
 @router.post("/causal-research-design-intelligence/snapshots/freeze", dependencies=[Depends(require_backend_key)])
 def causal_research_design_intelligence_snapshot(req: CausalResearchDesignSnapshotRequest) -> dict[str, Any]: return get_causal_research_design_intelligence_store().freeze_snapshot(req)
+
+@router.get("/simulation-model-study-planner/capabilities", dependencies=[Depends(require_backend_key)])
+def simulation_model_study_planner_capabilities_route() -> dict[str, Any]: return simulation_model_study_planner_capabilities()
+
+@router.post("/simulation-model-study-planner/studies", dependencies=[Depends(require_backend_key)])
+def simulation_model_study_planner_create(req: SimulationModelStudyCreateRequest) -> dict[str, Any]: return get_simulation_model_study_planner_store().create(req)
+
+@router.get("/simulation-model-study-planner/studies/{simulation_study_id}", dependencies=[Depends(require_backend_key)])
+def simulation_model_study_planner_get(simulation_study_id: str) -> dict[str, Any]: return get_simulation_model_study_planner_store().get(simulation_study_id)
+
+@router.post("/simulation-model-study-planner/studies/{simulation_study_id}/model-specifications", dependencies=[Depends(require_backend_key)])
+def simulation_model_study_planner_model(simulation_study_id: str, req: SimulationModelSpecificationAddRequest) -> dict[str, Any]: return get_simulation_model_study_planner_store().add_model_specification(simulation_study_id,req)
+
+@router.post("/simulation-model-study-planner/studies/{simulation_study_id}/variables", dependencies=[Depends(require_backend_key)])
+def simulation_model_study_planner_variable(simulation_study_id: str, req: SimulationVariableAddRequest) -> dict[str, Any]: return get_simulation_model_study_planner_store().add_variable(simulation_study_id,req)
+
+@router.post("/simulation-model-study-planner/studies/{simulation_study_id}/parameters", dependencies=[Depends(require_backend_key)])
+def simulation_model_study_planner_parameter(simulation_study_id: str, req: SimulationParameterAddRequest) -> dict[str, Any]: return get_simulation_model_study_planner_store().add_parameter(simulation_study_id,req)
+
+@router.post("/simulation-model-study-planner/studies/{simulation_study_id}/scenario-sets", dependencies=[Depends(require_backend_key)])
+def simulation_model_study_planner_scenario(simulation_study_id: str, req: SimulationScenarioSetAddRequest) -> dict[str, Any]: return get_simulation_model_study_planner_store().add_scenario_set(simulation_study_id,req)
+
+@router.post("/simulation-model-study-planner/studies/{simulation_study_id}/stochastic-assumptions", dependencies=[Depends(require_backend_key)])
+def simulation_model_study_planner_stochastic(simulation_study_id: str, req: SimulationStochasticAssumptionAddRequest) -> dict[str, Any]: return get_simulation_model_study_planner_store().add_stochastic_assumption(simulation_study_id,req)
+
+@router.post("/simulation-model-study-planner/studies/{simulation_study_id}/calibration-plans", dependencies=[Depends(require_backend_key)])
+def simulation_model_study_planner_calibration(simulation_study_id: str, req: SimulationCalibrationPlanAddRequest) -> dict[str, Any]: return get_simulation_model_study_planner_store().add_calibration_plan(simulation_study_id,req)
+
+@router.post("/simulation-model-study-planner/studies/{simulation_study_id}/validation-plans", dependencies=[Depends(require_backend_key)])
+def simulation_model_study_planner_validation(simulation_study_id: str, req: SimulationValidationPlanAddRequest) -> dict[str, Any]: return get_simulation_model_study_planner_store().add_validation_plan(simulation_study_id,req)
+
+@router.post("/simulation-model-study-planner/studies/{simulation_study_id}/uncertainty-plans", dependencies=[Depends(require_backend_key)])
+def simulation_model_study_planner_uncertainty(simulation_study_id: str, req: SimulationUncertaintyPlanAddRequest) -> dict[str, Any]: return get_simulation_model_study_planner_store().add_uncertainty_plan(simulation_study_id,req)
+
+@router.post("/simulation-model-study-planner/studies/{simulation_study_id}/sensitivity-plans", dependencies=[Depends(require_backend_key)])
+def simulation_model_study_planner_sensitivity(simulation_study_id: str, req: SimulationSensitivityPlanAddRequest) -> dict[str, Any]: return get_simulation_model_study_planner_store().add_sensitivity_plan(simulation_study_id,req)
+
+@router.post("/simulation-model-study-planner/studies/{simulation_study_id}/ensemble-plans", dependencies=[Depends(require_backend_key)])
+def simulation_model_study_planner_ensemble(simulation_study_id: str, req: SimulationEnsemblePlanAddRequest) -> dict[str, Any]: return get_simulation_model_study_planner_store().add_ensemble_plan(simulation_study_id,req)
+
+@router.post("/simulation-model-study-planner/studies/{simulation_study_id}/compute-budget", dependencies=[Depends(require_backend_key)])
+def simulation_model_study_planner_budget(simulation_study_id: str, req: SimulationComputeBudgetRequest) -> dict[str, Any]: return get_simulation_model_study_planner_store().set_compute_budget(simulation_study_id,req)
+
+@router.post("/simulation-model-study-planner/studies/{simulation_study_id}/stopping-criteria", dependencies=[Depends(require_backend_key)])
+def simulation_model_study_planner_stop(simulation_study_id: str, req: SimulationStoppingCriterionAddRequest) -> dict[str, Any]: return get_simulation_model_study_planner_store().add_stopping_criterion(simulation_study_id,req)
+
+@router.post("/simulation-model-study-planner/studies/{simulation_study_id}/output-commitments", dependencies=[Depends(require_backend_key)])
+def simulation_model_study_planner_output(simulation_study_id: str, req: SimulationOutputCommitmentAddRequest) -> dict[str, Any]: return get_simulation_model_study_planner_store().add_output_commitment(simulation_study_id,req)
+
+@router.post("/simulation-model-study-planner/studies/{simulation_study_id}/decisions", dependencies=[Depends(require_backend_key)])
+def simulation_model_study_planner_decision(simulation_study_id: str, req: SimulationStudyDecisionRequest) -> dict[str, Any]: return get_simulation_model_study_planner_store().decide(simulation_study_id,req)
+
+@router.post("/simulation-model-study-planner/studies/{simulation_study_id}/state", dependencies=[Depends(require_backend_key)])
+def simulation_model_study_planner_state(simulation_study_id: str, req: SimulationModelStudyStateRequest) -> dict[str, Any]: return get_simulation_model_study_planner_store().set_state(simulation_study_id,req)
+
+@router.get("/simulation-model-study-planner/studies/{simulation_study_id}/study-matrix", dependencies=[Depends(require_backend_key)])
+def simulation_model_study_planner_matrix(simulation_study_id: str) -> dict[str, Any]: return get_simulation_model_study_planner_store().study_matrix(simulation_study_id)
+
+@router.get("/simulation-model-study-planner/studies/{simulation_study_id}/execution-graph", dependencies=[Depends(require_backend_key)])
+def simulation_model_study_planner_graph(simulation_study_id: str) -> dict[str, Any]: return get_simulation_model_study_planner_store().execution_graph(simulation_study_id)
+
+@router.get("/simulation-model-study-planner/studies/{simulation_study_id}/readiness", dependencies=[Depends(require_backend_key)])
+def simulation_model_study_planner_readiness(simulation_study_id: str) -> dict[str, Any]: return get_simulation_model_study_planner_store().readiness(simulation_study_id)
+
+@router.get("/simulation-model-study-planner/studies/{simulation_study_id}/runtime-handoffs", dependencies=[Depends(require_backend_key)])
+def simulation_model_study_planner_handoffs(simulation_study_id: str) -> dict[str, Any]: return get_simulation_model_study_planner_store().runtime_handoffs(simulation_study_id)
+
+@router.get("/simulation-model-study-planner/studies/{simulation_study_id}/core-candidate", dependencies=[Depends(require_backend_key)])
+def simulation_model_study_planner_core(simulation_study_id: str) -> dict[str, Any]: return get_simulation_model_study_planner_store().core_candidate(simulation_study_id)
+
+@router.post("/simulation-model-study-planner/snapshots/freeze", dependencies=[Depends(require_backend_key)])
+def simulation_model_study_planner_snapshot(req: SimulationModelStudySnapshotRequest) -> dict[str, Any]: return get_simulation_model_study_planner_store().freeze_snapshot(req)

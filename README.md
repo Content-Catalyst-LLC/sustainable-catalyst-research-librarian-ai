@@ -1,6 +1,13 @@
-# Sustainable Catalyst Research Librarian AI v11.3.0
+# Sustainable Catalyst Research Librarian AI v11.4.0
 
-Current release: **11.3.0 — Causal Research Design Intelligence**
+Current release: **11.4.0 — Simulation & Model Study Planner**
+
+
+## v11.4.0 — Simulation & Model Study Planner
+
+Research Librarian v11.4.0 adds governed prospective planning for simulation and model studies. It binds causal/statistical/program lineage to explicit model specifications, variables, parameters, scenarios, stochastic assumptions, calibration/validation plans, uncertainty and sensitivity plans, ensembles, compute budgets, stopping criteria, output commitments, reproducible snapshots, and non-executing handoffs to specialist runtimes.
+
+The Librarian remains a planning/orchestration layer: it does not automatically select a model, calibrate or validate a model, execute a simulation, accept forecast output, infer causality, or promote model output as truth.
 
 ## v11.3.0 — Causal Research Design Intelligence
 

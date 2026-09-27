@@ -64,6 +64,7 @@ JOB_TYPES = {
     "study-protocol-preregistration-snapshot",
     "statistical-analysis-planning-intelligence-snapshot",
     "causal-research-design-intelligence-snapshot",
+    "simulation-model-study-planner-snapshot",
 }
 TERMINAL_STATES = {"succeeded", "failed", "cancelled"}
 ACTIVE_STATES = {"queued", "retry_wait", "running"}
