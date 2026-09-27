@@ -121,6 +121,12 @@ from ..contracts.simulation_model_study_planner import (
     SimulationStoppingCriterionAddRequest, SimulationOutputCommitmentAddRequest, SimulationStudyDecisionRequest,
     SimulationModelStudyStateRequest, SimulationModelStudySnapshotRequest,
 )
+from ..contracts.reproduction_replication_intelligence import (
+    ReproductionReplicationCreateRequest, ReproductionAttemptAddRequest, ReplicationStudyAddRequest,
+    ComparabilityCriterionAddRequest, ReproductionEnvironmentManifestRequest, ReproductionReplicationDeviationAddRequest,
+    ReproductionReplicationReceiptAddRequest, ReproductionReplicationAssessmentRequest, ReproductionReplicationDecisionRequest,
+    ReproductionReplicationStateRequest, ReproductionReplicationSnapshotRequest,
+)
 from ..contracts.research_question_hypothesis import (
     ResearchQuestionPlanCreateRequest, ResearchSubquestionAddRequest, ResearchHypothesisAddRequest,
     ResearchEvidenceRequirementRequest, ResearchQuestionReviewStateRequest, ResearchQuestionSnapshotRequest,
@@ -213,6 +219,7 @@ from ..services.study_protocol_preregistration import get_study_protocol_preregi
 from ..services.statistical_analysis_planning_intelligence import get_statistical_analysis_planning_intelligence_store, capabilities as statistical_analysis_planning_intelligence_capabilities
 from ..services.causal_research_design_intelligence import get_causal_research_design_intelligence_store, capabilities as causal_research_design_intelligence_capabilities
 from ..services.simulation_model_study_planner import get_simulation_model_study_planner_store, capabilities as simulation_model_study_planner_capabilities
+from ..services.reproduction_replication_intelligence import get_reproduction_replication_intelligence_store, capabilities as reproduction_replication_intelligence_capabilities
 from ..services.research_question_hypothesis import (
     get_research_question_hypothesis_store, capabilities as research_question_hypothesis_capabilities,
 )
@@ -2108,3 +2115,58 @@ def simulation_model_study_planner_core(simulation_study_id: str) -> dict[str, A
 
 @router.post("/simulation-model-study-planner/snapshots/freeze", dependencies=[Depends(require_backend_key)])
 def simulation_model_study_planner_snapshot(req: SimulationModelStudySnapshotRequest) -> dict[str, Any]: return get_simulation_model_study_planner_store().freeze_snapshot(req)
+
+
+@router.get("/reproduction-replication-intelligence/capabilities", dependencies=[Depends(require_backend_key)])
+def reproduction_replication_capabilities_route() -> dict[str, Any]: return reproduction_replication_intelligence_capabilities()
+
+@router.post("/reproduction-replication-intelligence/projects", dependencies=[Depends(require_backend_key)])
+def reproduction_replication_create(req: ReproductionReplicationCreateRequest) -> dict[str, Any]: return get_reproduction_replication_intelligence_store().create(req)
+
+@router.get("/reproduction-replication-intelligence/projects/{reproduction_replication_id}", dependencies=[Depends(require_backend_key)])
+def reproduction_replication_get(reproduction_replication_id: str) -> dict[str, Any]: return get_reproduction_replication_intelligence_store().get(reproduction_replication_id)
+
+@router.post("/reproduction-replication-intelligence/projects/{reproduction_replication_id}/reproduction-attempts", dependencies=[Depends(require_backend_key)])
+def reproduction_replication_attempt(reproduction_replication_id: str, req: ReproductionAttemptAddRequest) -> dict[str, Any]: return get_reproduction_replication_intelligence_store().add_reproduction_attempt(reproduction_replication_id,req)
+
+@router.post("/reproduction-replication-intelligence/projects/{reproduction_replication_id}/replication-studies", dependencies=[Depends(require_backend_key)])
+def reproduction_replication_study(reproduction_replication_id: str, req: ReplicationStudyAddRequest) -> dict[str, Any]: return get_reproduction_replication_intelligence_store().add_replication_study(reproduction_replication_id,req)
+
+@router.post("/reproduction-replication-intelligence/projects/{reproduction_replication_id}/comparability-criteria", dependencies=[Depends(require_backend_key)])
+def reproduction_replication_comparability(reproduction_replication_id: str, req: ComparabilityCriterionAddRequest) -> dict[str, Any]: return get_reproduction_replication_intelligence_store().add_comparability_criterion(reproduction_replication_id,req)
+
+@router.post("/reproduction-replication-intelligence/projects/{reproduction_replication_id}/environment-manifest", dependencies=[Depends(require_backend_key)])
+def reproduction_replication_environment(reproduction_replication_id: str, req: ReproductionEnvironmentManifestRequest) -> dict[str, Any]: return get_reproduction_replication_intelligence_store().set_environment_manifest(reproduction_replication_id,req)
+
+@router.post("/reproduction-replication-intelligence/projects/{reproduction_replication_id}/deviations", dependencies=[Depends(require_backend_key)])
+def reproduction_replication_deviation(reproduction_replication_id: str, req: ReproductionReplicationDeviationAddRequest) -> dict[str, Any]: return get_reproduction_replication_intelligence_store().add_deviation(reproduction_replication_id,req)
+
+@router.post("/reproduction-replication-intelligence/projects/{reproduction_replication_id}/execution-receipts", dependencies=[Depends(require_backend_key)])
+def reproduction_replication_receipt(reproduction_replication_id: str, req: ReproductionReplicationReceiptAddRequest) -> dict[str, Any]: return get_reproduction_replication_intelligence_store().add_execution_receipt(reproduction_replication_id,req)
+
+@router.post("/reproduction-replication-intelligence/projects/{reproduction_replication_id}/assessments", dependencies=[Depends(require_backend_key)])
+def reproduction_replication_assessment(reproduction_replication_id: str, req: ReproductionReplicationAssessmentRequest) -> dict[str, Any]: return get_reproduction_replication_intelligence_store().add_human_assessment(reproduction_replication_id,req)
+
+@router.post("/reproduction-replication-intelligence/projects/{reproduction_replication_id}/decisions", dependencies=[Depends(require_backend_key)])
+def reproduction_replication_decision(reproduction_replication_id: str, req: ReproductionReplicationDecisionRequest) -> dict[str, Any]: return get_reproduction_replication_intelligence_store().decide(reproduction_replication_id,req)
+
+@router.post("/reproduction-replication-intelligence/projects/{reproduction_replication_id}/state", dependencies=[Depends(require_backend_key)])
+def reproduction_replication_state(reproduction_replication_id: str, req: ReproductionReplicationStateRequest) -> dict[str, Any]: return get_reproduction_replication_intelligence_store().set_state(reproduction_replication_id,req)
+
+@router.get("/reproduction-replication-intelligence/projects/{reproduction_replication_id}/comparison-matrix", dependencies=[Depends(require_backend_key)])
+def reproduction_replication_matrix(reproduction_replication_id: str) -> dict[str, Any]: return get_reproduction_replication_intelligence_store().comparison_matrix(reproduction_replication_id)
+
+@router.get("/reproduction-replication-intelligence/projects/{reproduction_replication_id}/lineage-map", dependencies=[Depends(require_backend_key)])
+def reproduction_replication_lineage(reproduction_replication_id: str) -> dict[str, Any]: return get_reproduction_replication_intelligence_store().lineage_map(reproduction_replication_id)
+
+@router.get("/reproduction-replication-intelligence/projects/{reproduction_replication_id}/readiness", dependencies=[Depends(require_backend_key)])
+def reproduction_replication_readiness(reproduction_replication_id: str) -> dict[str, Any]: return get_reproduction_replication_intelligence_store().readiness(reproduction_replication_id)
+
+@router.get("/reproduction-replication-intelligence/projects/{reproduction_replication_id}/runtime-handoffs", dependencies=[Depends(require_backend_key)])
+def reproduction_replication_handoffs(reproduction_replication_id: str) -> dict[str, Any]: return get_reproduction_replication_intelligence_store().runtime_handoffs(reproduction_replication_id)
+
+@router.get("/reproduction-replication-intelligence/projects/{reproduction_replication_id}/core-candidate", dependencies=[Depends(require_backend_key)])
+def reproduction_replication_core(reproduction_replication_id: str) -> dict[str, Any]: return get_reproduction_replication_intelligence_store().core_candidate(reproduction_replication_id)
+
+@router.post("/reproduction-replication-intelligence/snapshots/freeze", dependencies=[Depends(require_backend_key)])
+def reproduction_replication_snapshot(req: ReproductionReplicationSnapshotRequest) -> dict[str, Any]: return get_reproduction_replication_intelligence_store().freeze_snapshot(req)

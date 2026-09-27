@@ -1,5 +1,12 @@
 # Changelog
 
+## 11.5.0 — Reproduction & Replication Intelligence
+
+- Added durable reproduction/replication projects with preregistration, statistical, causal, and simulation/model-study lineage.
+- Added reproduction attempts, replication studies, comparability criteria, environment manifests, deviation disclosure, execution receipts, and explicit human outcome assessments.
+- Added comparison matrices, lineage maps, approval-gated non-executing runtime handoffs, Platform Core candidates, durable snapshots, authenticated APIs, unified-environment binding, and migration 030.
+- Preserved the distinction between reproduction and replication and disabled automatic reproduction/replication verdicts, claim acceptance, causal inference, execution, and truth promotion.
+
 ## 11.4.0 — Simulation & Model Study Planner
 
 - Added governed simulation/model-study planning with inherited causal/statistical/program lineage.

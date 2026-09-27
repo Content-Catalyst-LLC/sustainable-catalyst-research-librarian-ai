@@ -1,0 +1,19 @@
+{
+  "schema": "sc-research-librarian-reproduction-replication-intelligence-manifest/1.0",
+  "version": "11.5.0",
+  "component_type": "reproduction-replication-plan",
+  "migration": "030_reproduction_replication_intelligence.sql",
+  "snapshot_job": "reproduction-replication-intelligence-snapshot",
+  "execution_targets": ["workspace", "research-lab", "statistical-runtime", "specialist-runtime"],
+  "guardrails": {
+    "reproduction_replication_distinction": true,
+    "human_outcome_assessment_required": true,
+    "specialist_runtimes_own_execution": true,
+    "automatic_reproduction_verdict": false,
+    "automatic_replication_verdict": false,
+    "automatic_claim_acceptance": false,
+    "automatic_causal_inference": false,
+    "automatic_execution": false,
+    "automatic_truth_promotion": false
+  }
+}

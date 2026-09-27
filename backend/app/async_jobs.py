@@ -65,6 +65,7 @@ JOB_TYPES = {
     "statistical-analysis-planning-intelligence-snapshot",
     "causal-research-design-intelligence-snapshot",
     "simulation-model-study-planner-snapshot",
+    "reproduction-replication-intelligence-snapshot",
 }
 TERMINAL_STATES = {"succeeded", "failed", "cancelled"}
 ACTIVE_STATES = {"queued", "retry_wait", "running"}

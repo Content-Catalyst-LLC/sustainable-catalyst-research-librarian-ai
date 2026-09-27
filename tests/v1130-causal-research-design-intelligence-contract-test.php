@@ -7,8 +7,8 @@ $jobs=file_get_contents($root.'/backend/app/async_jobs.py');
 $service=file_get_contents($root.'/backend/app/services/causal_research_design_intelligence.py');
 $environment=file_get_contents($root.'/backend/app/services/unified_scholarly_ai_environment.py');
 $checks=[
- 'plugin_version'=>strpos($main,'Version: 11.4.0')!==false,
- 'backend_version'=>strpos($backend,'__version__ = "11.4.0"')!==false,
+ 'plugin_version'=>strpos($main,'Version: 11.5.0')!==false,
+ 'backend_version'=>strpos($backend,'__version__ = "11.5.0"')!==false,
  'capabilities_route'=>strpos($api,'/causal-research-design-intelligence/capabilities')!==false,
  'role_route'=>strpos($api,'/causal-research-design-intelligence/designs/{causal_design_id}/variable-roles')!==false,
  'strategy_route'=>strpos($api,'/causal-research-design-intelligence/designs/{causal_design_id}/identification-strategies')!==false,
@@ -29,4 +29,4 @@ $checks=[
  'environment_binding'=>strpos($environment,'causal-research-design')!==false,
 ];
 foreach($checks as $k=>$ok){ if(!$ok){ fwrite(STDERR,"FAIL: $k\n"); exit(1);} }
-echo "PASS: Research Librarian v11.4.0 Causal Research Design Intelligence contract\n";
+echo "PASS: Research Librarian v11.5.0 Causal Research Design Intelligence contract\n";

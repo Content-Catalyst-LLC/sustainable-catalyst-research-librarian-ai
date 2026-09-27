@@ -3,14 +3,14 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 11.4.0
+Stable tag: 11.5.0
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
 
 == Description ==
 
-v11.4.0 adds Simulation & Model Study Planner: causal/statistical/program lineage, model specifications, state/input/output variables, parameters, scenario sets, stochastic assumptions, calibration and validation plans, uncertainty and sensitivity planning, ensemble plans, compute budgets, stopping criteria, output commitments, human model-study approvals, non-executing Research Lab/Workspace/Workbench handoffs, Core candidates, snapshots, and unified-environment bindings. The Librarian plans simulation/model studies but does not select models automatically, calibrate or validate models, execute simulations, accept forecasts, infer causality, or promote model output as truth.
+v11.5.0 adds Simulation & Model Study Planner: causal/statistical/program lineage, model specifications, state/input/output variables, parameters, scenario sets, stochastic assumptions, calibration and validation plans, uncertainty and sensitivity planning, ensemble plans, compute budgets, stopping criteria, output commitments, human model-study approvals, non-executing Research Lab/Workspace/Workbench handoffs, Core candidates, snapshots, and unified-environment bindings. The Librarian plans simulation/model studies but does not select models automatically, calibrate or validate models, execute simulations, accept forecasts, infer causality, or promote model output as truth.
 
 v10.5.0 adds Scholarly Citation & Literature Intelligence: citation-context/function annotation, literature strands, reviewer-declared research gaps and seminal-work candidates, reviewable related-work relationships, descriptive citation topology, graph/Core handoffs, snapshots, and unified-environment bindings. It does not infer scholarly authority, impact, seminal status, gaps, truth, or automatically write accepted graph edges.
 
