@@ -7,8 +7,8 @@ $jobs=file_get_contents($root.'/backend/app/async_jobs.py');
 $service=file_get_contents($root.'/backend/app/services/statistical_analysis_planning_intelligence.py');
 $environment=file_get_contents($root.'/backend/app/services/unified_scholarly_ai_environment.py');
 $checks=[
- 'plugin_version'=>strpos($main,'Version: 11.2.0')!==false,
- 'backend_version'=>strpos($backend,'__version__ = "11.2.0"')!==false,
+ 'plugin_version'=>strpos($main,'Version: 11.3.0')!==false,
+ 'backend_version'=>strpos($backend,'__version__ = "11.3.0"')!==false,
  'capabilities_route'=>strpos($api,'/statistical-analysis-planning-intelligence/capabilities')!==false,
  'estimand_route'=>strpos($api,'/statistical-analysis-planning-intelligence/plans/{statistical_analysis_plan_id}/estimands')!==false,
  'model_route'=>strpos($api,'/statistical-analysis-planning-intelligence/plans/{statistical_analysis_plan_id}/model-specifications')!==false,
@@ -27,4 +27,4 @@ $checks=[
  'environment_binding'=>strpos($environment,'statistical-analysis-plan-intelligence')!==false,
 ];
 foreach($checks as $k=>$ok){ if(!$ok){ fwrite(STDERR,"FAIL: $k\n"); exit(1);} }
-echo "PASS: Research Librarian v11.2.0 Statistical Analysis Planning Intelligence contract\n";
+echo "PASS: Research Librarian v11.3.0 Statistical Analysis Planning Intelligence contract\n";

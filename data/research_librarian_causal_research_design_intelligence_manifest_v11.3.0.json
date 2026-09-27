@@ -1,0 +1,10 @@
+{
+  "schema": "sc-research-librarian-causal-research-design-intelligence-manifest/1.0",
+  "release": "11.3.0",
+  "capability": "causal-research-design-intelligence",
+  "migration": "028",
+  "job": "causal-research-design-intelligence-snapshot",
+  "source_authority": "statistical-analysis-planning-intelligence",
+  "execution_authority": "research-lab-and-specialist-runtimes",
+  "governed_object_authority": "platform-core"
+}

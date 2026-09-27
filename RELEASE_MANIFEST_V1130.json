@@ -1,0 +1,21 @@
+{
+  "schema": "sc-research-librarian-release-manifest/1.0",
+  "version": "11.3.0",
+  "title": "Causal Research Design Intelligence",
+  "migration": "028_causal_research_design_intelligence.sql",
+  "snapshot_job": "causal-research-design-intelligence-snapshot",
+  "component_type": "causal-research-design",
+  "execution_targets": ["research-lab-causal-inference", "statistical-analysis-plan"],
+  "guardrails": [
+    "human_causal_design_approval_required",
+    "statistical_plan_lineage_inherited_not_rewritten",
+    "dag_is_assumption_structure_not_established_causal_fact",
+    "no_automatic_causal_identification",
+    "no_automatic_adjustment_set_selection",
+    "no_automatic_instrument_validation",
+    "no_automatic_causal_estimation",
+    "no_automatic_causality_inference",
+    "no_automatic_execution",
+    "no_automatic_truth_promotion"
+  ]
+}

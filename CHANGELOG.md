@@ -1,4 +1,12 @@
-## 11.2.0 — Statistical Analysis Planning Intelligence
+# Changelog
+
+## 11.3.0 — Causal Research Design Intelligence
+- Added durable causal-design records bound to v11.2 statistical analysis plans and preregistration lineage.
+- Added causal variable roles, directed acyclic graphs with cycle rejection, assumption testability, identification strategies, diagnostic plans, negative controls, sensitivity plans, and human strategy decisions.
+- Added non-executing Research Lab/statistical-runtime handoffs, Platform Core candidates, migration 028, authenticated APIs, durable snapshots, and unified-environment bindings.
+- Preserved causal-inference governance: no automatic identification, adjustment-set selection, instrument validation, causal estimation, causality inference, execution, or truth promotion.
+
+tatistical Analysis Planning Intelligence
 - Added durable statistical-analysis planning bound to v11.1 study protocols and preregistration lineage.
 - Added estimands, model specifications, assumption checks, power/sample-size planning, multiplicity, missing-data, sensitivity-analysis, reporting-commitment, and human-decision registries.
 - Added non-executing runtime handoffs through the existing v8.11 Statistical Research bridge, Platform Core candidates, migration 027, authenticated APIs, durable snapshots, and unified-environment bindings.

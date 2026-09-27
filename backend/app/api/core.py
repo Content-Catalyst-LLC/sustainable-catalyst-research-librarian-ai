@@ -108,6 +108,11 @@ from ..contracts.statistical_analysis_planning_intelligence import (
     StatisticalMissingDataPlanRequest, StatisticalSensitivityAnalysisAddRequest, StatisticalReportingCommitmentAddRequest,
     StatisticalAnalysisDecisionRequest, StatisticalAnalysisPlanningStateRequest, StatisticalAnalysisPlanningSnapshotRequest,
 )
+from ..contracts.causal_research_design_intelligence import (
+    CausalResearchDesignCreateRequest, CausalVariableRoleAddRequest, CausalEdgeAddRequest, CausalAssumptionAddRequest,
+    CausalIdentificationStrategyAddRequest, CausalDiagnosticPlanAddRequest, CausalNegativeControlPlanAddRequest,
+    CausalSensitivityPlanAddRequest, CausalDesignDecisionRequest, CausalResearchDesignStateRequest, CausalResearchDesignSnapshotRequest,
+)
 from ..contracts.research_question_hypothesis import (
     ResearchQuestionPlanCreateRequest, ResearchSubquestionAddRequest, ResearchHypothesisAddRequest,
     ResearchEvidenceRequirementRequest, ResearchQuestionReviewStateRequest, ResearchQuestionSnapshotRequest,
@@ -198,6 +203,7 @@ from ..services.computational_research_planning import get_computational_researc
 from ..services.research_program_intelligence import get_research_program_intelligence_store, capabilities as research_program_intelligence_capabilities
 from ..services.study_protocol_preregistration import get_study_protocol_preregistration_store, capabilities as study_protocol_preregistration_capabilities
 from ..services.statistical_analysis_planning_intelligence import get_statistical_analysis_planning_intelligence_store, capabilities as statistical_analysis_planning_intelligence_capabilities
+from ..services.causal_research_design_intelligence import get_causal_research_design_intelligence_store, capabilities as causal_research_design_intelligence_capabilities
 from ..services.research_question_hypothesis import (
     get_research_question_hypothesis_store, capabilities as research_question_hypothesis_capabilities,
 )
@@ -1967,3 +1973,57 @@ def statistical_analysis_planning_intelligence_core(statistical_analysis_plan_id
 @router.post("/statistical-analysis-planning-intelligence/snapshots/freeze", dependencies=[Depends(require_backend_key)])
 def statistical_analysis_planning_intelligence_snapshot(req: StatisticalAnalysisPlanningSnapshotRequest) -> dict[str, Any]: return get_statistical_analysis_planning_intelligence_store().freeze_snapshot(req)
 
+
+@router.get("/causal-research-design-intelligence/capabilities", dependencies=[Depends(require_backend_key)])
+def causal_research_design_intelligence_capabilities_route() -> dict[str, Any]: return causal_research_design_intelligence_capabilities()
+
+@router.post("/causal-research-design-intelligence/designs", dependencies=[Depends(require_backend_key)])
+def causal_research_design_intelligence_create(req: CausalResearchDesignCreateRequest) -> dict[str, Any]: return get_causal_research_design_intelligence_store().create(req)
+
+@router.get("/causal-research-design-intelligence/designs/{causal_design_id}", dependencies=[Depends(require_backend_key)])
+def causal_research_design_intelligence_get(causal_design_id: str) -> dict[str, Any]: return get_causal_research_design_intelligence_store().get(causal_design_id)
+
+@router.post("/causal-research-design-intelligence/designs/{causal_design_id}/variable-roles", dependencies=[Depends(require_backend_key)])
+def causal_research_design_intelligence_role(causal_design_id: str, req: CausalVariableRoleAddRequest) -> dict[str, Any]: return get_causal_research_design_intelligence_store().add_variable_role(causal_design_id,req)
+
+@router.post("/causal-research-design-intelligence/designs/{causal_design_id}/edges", dependencies=[Depends(require_backend_key)])
+def causal_research_design_intelligence_edge(causal_design_id: str, req: CausalEdgeAddRequest) -> dict[str, Any]: return get_causal_research_design_intelligence_store().add_edge(causal_design_id,req)
+
+@router.post("/causal-research-design-intelligence/designs/{causal_design_id}/assumptions", dependencies=[Depends(require_backend_key)])
+def causal_research_design_intelligence_assumption(causal_design_id: str, req: CausalAssumptionAddRequest) -> dict[str, Any]: return get_causal_research_design_intelligence_store().add_assumption(causal_design_id,req)
+
+@router.post("/causal-research-design-intelligence/designs/{causal_design_id}/identification-strategies", dependencies=[Depends(require_backend_key)])
+def causal_research_design_intelligence_strategy(causal_design_id: str, req: CausalIdentificationStrategyAddRequest) -> dict[str, Any]: return get_causal_research_design_intelligence_store().add_identification_strategy(causal_design_id,req)
+
+@router.post("/causal-research-design-intelligence/designs/{causal_design_id}/diagnostic-plans", dependencies=[Depends(require_backend_key)])
+def causal_research_design_intelligence_diagnostic(causal_design_id: str, req: CausalDiagnosticPlanAddRequest) -> dict[str, Any]: return get_causal_research_design_intelligence_store().add_diagnostic_plan(causal_design_id,req)
+
+@router.post("/causal-research-design-intelligence/designs/{causal_design_id}/negative-control-plans", dependencies=[Depends(require_backend_key)])
+def causal_research_design_intelligence_negative_control(causal_design_id: str, req: CausalNegativeControlPlanAddRequest) -> dict[str, Any]: return get_causal_research_design_intelligence_store().add_negative_control_plan(causal_design_id,req)
+
+@router.post("/causal-research-design-intelligence/designs/{causal_design_id}/sensitivity-plans", dependencies=[Depends(require_backend_key)])
+def causal_research_design_intelligence_sensitivity(causal_design_id: str, req: CausalSensitivityPlanAddRequest) -> dict[str, Any]: return get_causal_research_design_intelligence_store().add_sensitivity_plan(causal_design_id,req)
+
+@router.post("/causal-research-design-intelligence/designs/{causal_design_id}/decisions", dependencies=[Depends(require_backend_key)])
+def causal_research_design_intelligence_decision(causal_design_id: str, req: CausalDesignDecisionRequest) -> dict[str, Any]: return get_causal_research_design_intelligence_store().decide(causal_design_id,req)
+
+@router.post("/causal-research-design-intelligence/designs/{causal_design_id}/state", dependencies=[Depends(require_backend_key)])
+def causal_research_design_intelligence_state(causal_design_id: str, req: CausalResearchDesignStateRequest) -> dict[str, Any]: return get_causal_research_design_intelligence_store().set_state(causal_design_id,req)
+
+@router.get("/causal-research-design-intelligence/designs/{causal_design_id}/causal-graph", dependencies=[Depends(require_backend_key)])
+def causal_research_design_intelligence_graph(causal_design_id: str) -> dict[str, Any]: return get_causal_research_design_intelligence_store().causal_graph(causal_design_id)
+
+@router.get("/causal-research-design-intelligence/designs/{causal_design_id}/design-matrix", dependencies=[Depends(require_backend_key)])
+def causal_research_design_intelligence_matrix(causal_design_id: str) -> dict[str, Any]: return get_causal_research_design_intelligence_store().design_matrix(causal_design_id)
+
+@router.get("/causal-research-design-intelligence/designs/{causal_design_id}/readiness", dependencies=[Depends(require_backend_key)])
+def causal_research_design_intelligence_readiness(causal_design_id: str) -> dict[str, Any]: return get_causal_research_design_intelligence_store().readiness(causal_design_id)
+
+@router.get("/causal-research-design-intelligence/designs/{causal_design_id}/runtime-handoffs", dependencies=[Depends(require_backend_key)])
+def causal_research_design_intelligence_handoffs(causal_design_id: str) -> dict[str, Any]: return get_causal_research_design_intelligence_store().runtime_handoffs(causal_design_id)
+
+@router.get("/causal-research-design-intelligence/designs/{causal_design_id}/core-candidate", dependencies=[Depends(require_backend_key)])
+def causal_research_design_intelligence_core(causal_design_id: str) -> dict[str, Any]: return get_causal_research_design_intelligence_store().core_candidate(causal_design_id)
+
+@router.post("/causal-research-design-intelligence/snapshots/freeze", dependencies=[Depends(require_backend_key)])
+def causal_research_design_intelligence_snapshot(req: CausalResearchDesignSnapshotRequest) -> dict[str, Any]: return get_causal_research_design_intelligence_store().freeze_snapshot(req)

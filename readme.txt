@@ -3,14 +3,14 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 11.2.0
+Stable tag: 11.3.0
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
 
 == Description ==
 
-v11.2.0 adds Statistical Analysis Planning Intelligence: preregistered-protocol lineage, estimands, model specifications, assumption checks, power/sample-size planning inputs, multiplicity and missing-data plans, sensitivity analyses, reporting commitments, human statistical approvals, non-executing runtime handoffs through the existing v8.11 Statistical Research bridge, Core candidates, snapshots, and unified-environment bindings. It does not automatically choose models or methods, calculate power, execute analyses, infer significance or causality, interpret results, or promote truth.
+v11.3.0 adds Causal Research Design Intelligence: statistical-plan and preregistration lineage, causal variable roles, directed acyclic graphs, explicit causal assumptions, identification strategies, diagnostic plans, negative controls, sensitivity plans, human causal-design approvals, non-executing Research Lab/statistical-runtime handoffs, Core candidates, snapshots, and unified-environment bindings. A DAG or strategy is a declared design assumption, not proof of causality; the Librarian does not automatically identify causal effects, choose adjustment sets, validate instruments, estimate effects, infer causality, execute analyses, or promote truth.
 
 v10.5.0 adds Scholarly Citation & Literature Intelligence: citation-context/function annotation, literature strands, reviewer-declared research gaps and seminal-work candidates, reviewable related-work relationships, descriptive citation topology, graph/Core handoffs, snapshots, and unified-environment bindings. It does not infer scholarly authority, impact, seminal status, gaps, truth, or automatically write accepted graph edges.
 

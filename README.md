@@ -1,12 +1,12 @@
-# Sustainable Catalyst Research Librarian AI v11.2.0
+# Sustainable Catalyst Research Librarian AI v11.3.0
 
-Current release: **11.2.0 — Statistical Analysis Planning Intelligence**
+Current release: **11.3.0 — Causal Research Design Intelligence**
 
-## v11.2.0 — Statistical Analysis Planning Intelligence
+## v11.3.0 — Causal Research Design Intelligence
 
-Study Protocol & Preregistration now feeds a durable prospective statistical-planning layer. v11.2 records estimands, model specifications, assumption checks, power/sample-size planning inputs, multiplicity plans, missing-data strategies, sensitivity analyses, reporting commitments, human analysis decisions, structural readiness, non-executing specialist-runtime handoffs, Platform Core candidates, immutable snapshots, durable jobs, and unified-environment bindings.
+v11.3 adds a durable prospective causal-design layer above v11.2 Statistical Analysis Planning Intelligence. It records causal variable roles, directed acyclic graphs, explicit assumptions and their testability, identification strategies, diagnostics, negative controls, sensitivity plans, human design approvals, non-executing Research Lab/statistical-runtime handoffs, Platform Core candidates, immutable snapshots, durable jobs, and unified-environment bindings.
 
-Governance remains human-centered: the Librarian does not select a best model, calculate power automatically, execute statistical analyses, infer significance or causality, interpret results, or promote truth. Existing v8.11 Statistical Research remains the runtime/Core bridge, specialist runtimes own computation, and Platform Core remains statistical-reasoning authority.
+Governance remains human-centered: a DAG or identification strategy is an explicit design assumption, not proof of causality or identification. The Librarian does not automatically select adjustment sets, validate instruments, establish identification, estimate causal effects, infer causality, execute analyses, or promote truth. Research Lab and specialist runtimes own causal execution; Platform Core remains governed causal-object authority.
 
 ## v11.1.0 — Study Protocol & Preregistration Engine
 
