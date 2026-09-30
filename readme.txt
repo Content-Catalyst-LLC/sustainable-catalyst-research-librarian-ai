@@ -3,12 +3,14 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 11.5.0
+Stable tag: 11.6.0
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
 
 == Description ==
+
+v11.6.0 adds Cross-Study Synthesis & Meta-Research: governed multi-study registries, human inclusion/exclusion decisions, effect/estimate inputs, comparability dimensions, human risk-of-bias assessments, meta-research observations, explicit synthesis plans, specialist-runtime compute handoffs, execution receipts, evidence landscapes, directional-variation review signals, human interpretations, Core candidates, snapshots, and unified-environment bindings. Research Librarian does not automatically include studies, judge bias, execute meta-analysis, declare publication bias, infer causality, accept claims, or promote pooled estimates as truth.
 
 v11.5.0 adds Simulation & Model Study Planner: causal/statistical/program lineage, model specifications, state/input/output variables, parameters, scenario sets, stochastic assumptions, calibration and validation plans, uncertainty and sensitivity planning, ensemble plans, compute budgets, stopping criteria, output commitments, human model-study approvals, non-executing Research Lab/Workspace/Workbench handoffs, Core candidates, snapshots, and unified-environment bindings. The Librarian plans simulation/model studies but does not select models automatically, calibrate or validate models, execute simulations, accept forecasts, infer causality, or promote model output as truth.
 

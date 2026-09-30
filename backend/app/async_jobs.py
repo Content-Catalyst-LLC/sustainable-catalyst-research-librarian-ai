@@ -66,6 +66,7 @@ JOB_TYPES = {
     "causal-research-design-intelligence-snapshot",
     "simulation-model-study-planner-snapshot",
     "reproduction-replication-intelligence-snapshot",
+    "cross-study-synthesis-meta-research-snapshot",
 }
 TERMINAL_STATES = {"succeeded", "failed", "cancelled"}
 ACTIVE_STATES = {"queued", "retry_wait", "running"}

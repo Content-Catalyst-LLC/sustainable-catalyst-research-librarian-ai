@@ -72,6 +72,8 @@ from .simulation_model_study_planner import get_simulation_model_study_planner_s
 
 from ..contracts.reproduction_replication_intelligence import ReproductionReplicationSnapshotRequest
 from .reproduction_replication_intelligence import get_reproduction_replication_intelligence_store
+from ..contracts.cross_study_synthesis_meta_research import CrossStudySnapshotRequest
+from .cross_study_synthesis_meta_research import get_cross_study_synthesis_meta_research_store
 
 Progress = Callable[[str, int], None]
 
@@ -602,6 +604,18 @@ async def process_reproduction_replication_intelligence_snapshot_job(claim: JobC
     return result
 
 
+async def process_cross_study_synthesis_meta_research_snapshot_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
+    progress("load-cross-study-synthesis-meta-research", 20)
+    request = CrossStudySnapshotRequest.model_validate(claim.payload.get("snapshot") or claim.payload)
+    store = get_cross_study_synthesis_meta_research_store()
+    progress("assemble-cross-study-synthesis-meta-research", 55)
+    store.readiness(request.cross_study_synthesis_id)
+    progress("freeze-cross-study-synthesis-meta-research-snapshot", 80)
+    result = store.freeze_snapshot(request)
+    progress("cross-study-synthesis-meta-research-snapshot-ready", 95)
+    return result
+
+
 async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
     if claim.job_type in {"document-process", "ingestion"}:
         return await process_document_job(claim, progress)
@@ -671,7 +685,9 @@ async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
         return await process_simulation_model_study_planner_snapshot_job(claim, progress)
     if claim.job_type == "reproduction-replication-intelligence-snapshot":
         return await process_reproduction_replication_intelligence_snapshot_job(claim, progress)
+    if claim.job_type == "cross-study-synthesis-meta-research-snapshot":
+        return await process_cross_study_synthesis_meta_research_snapshot_job(claim, progress)
     raise ValueError(
         f"Job type {claim.job_type!r} is registered for the durable queue but has no v8.3 executor yet; "
-        "use document-process, document-intelligence, source-identity, research-intelligence-extraction, argument-synthesis-plan, statistical-analysis-plan, visual-research-plan, unified-research-runtime, research-workflow-advance, scholarly-research-package, peer-review-validation-package, scholarly-publication-package, research-knowledge-graph-snapshot, ai-research-context-snapshot, rag-evaluation-snapshot, ai-research-experiment-snapshot, model-aware-research-snapshot, unified-research-environment-snapshot, research-question-hypothesis-snapshot, research-design-methodology-snapshot, evidence-search-strategy-snapshot, systematic-review-evidence-synthesis-snapshot, scholarly-literature-intelligence-snapshot, argument-claim-counterclaim-intelligence-snapshot, research-gap-novelty-intelligence-snapshot, dataset-discovery-data-fitness-snapshot, computational-research-planning-snapshot, research-program-intelligence-snapshot, study-protocol-preregistration-snapshot, statistical-analysis-planning-intelligence-snapshot, causal-research-design-intelligence-snapshot, simulation-model-study-planner-snapshot, reproduction-replication-intelligence-snapshot, ingestion, or validation."
+        "use document-process, document-intelligence, source-identity, research-intelligence-extraction, argument-synthesis-plan, statistical-analysis-plan, visual-research-plan, unified-research-runtime, research-workflow-advance, scholarly-research-package, peer-review-validation-package, scholarly-publication-package, research-knowledge-graph-snapshot, ai-research-context-snapshot, rag-evaluation-snapshot, ai-research-experiment-snapshot, model-aware-research-snapshot, unified-research-environment-snapshot, research-question-hypothesis-snapshot, research-design-methodology-snapshot, evidence-search-strategy-snapshot, systematic-review-evidence-synthesis-snapshot, scholarly-literature-intelligence-snapshot, argument-claim-counterclaim-intelligence-snapshot, research-gap-novelty-intelligence-snapshot, dataset-discovery-data-fitness-snapshot, computational-research-planning-snapshot, research-program-intelligence-snapshot, study-protocol-preregistration-snapshot, statistical-analysis-planning-intelligence-snapshot, causal-research-design-intelligence-snapshot, simulation-model-study-planner-snapshot, reproduction-replication-intelligence-snapshot, cross-study-synthesis-meta-research-snapshot, ingestion, or validation."
     )

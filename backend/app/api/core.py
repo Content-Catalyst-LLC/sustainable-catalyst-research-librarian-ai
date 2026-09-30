@@ -127,6 +127,12 @@ from ..contracts.reproduction_replication_intelligence import (
     ReproductionReplicationReceiptAddRequest, ReproductionReplicationAssessmentRequest, ReproductionReplicationDecisionRequest,
     ReproductionReplicationStateRequest, ReproductionReplicationSnapshotRequest,
 )
+from ..contracts.cross_study_synthesis_meta_research import (
+    CrossStudySynthesisCreateRequest, CrossStudyEvidenceAddRequest, CrossStudyDispositionRequest,
+    CrossStudySynthesisDimensionAddRequest, CrossStudyBiasAssessmentAddRequest, MetaResearchObservationAddRequest,
+    CrossStudySynthesisPlanAddRequest, CrossStudySynthesisReceiptAddRequest, CrossStudyHumanInterpretationAddRequest,
+    CrossStudyDecisionRequest, CrossStudyStateRequest, CrossStudySnapshotRequest,
+)
 from ..contracts.research_question_hypothesis import (
     ResearchQuestionPlanCreateRequest, ResearchSubquestionAddRequest, ResearchHypothesisAddRequest,
     ResearchEvidenceRequirementRequest, ResearchQuestionReviewStateRequest, ResearchQuestionSnapshotRequest,
@@ -220,6 +226,7 @@ from ..services.statistical_analysis_planning_intelligence import get_statistica
 from ..services.causal_research_design_intelligence import get_causal_research_design_intelligence_store, capabilities as causal_research_design_intelligence_capabilities
 from ..services.simulation_model_study_planner import get_simulation_model_study_planner_store, capabilities as simulation_model_study_planner_capabilities
 from ..services.reproduction_replication_intelligence import get_reproduction_replication_intelligence_store, capabilities as reproduction_replication_intelligence_capabilities
+from ..services.cross_study_synthesis_meta_research import get_cross_study_synthesis_meta_research_store, capabilities as cross_study_synthesis_meta_research_capabilities
 from ..services.research_question_hypothesis import (
     get_research_question_hypothesis_store, capabilities as research_question_hypothesis_capabilities,
 )
@@ -2170,3 +2177,67 @@ def reproduction_replication_core(reproduction_replication_id: str) -> dict[str,
 
 @router.post("/reproduction-replication-intelligence/snapshots/freeze", dependencies=[Depends(require_backend_key)])
 def reproduction_replication_snapshot(req: ReproductionReplicationSnapshotRequest) -> dict[str, Any]: return get_reproduction_replication_intelligence_store().freeze_snapshot(req)
+
+
+@router.get("/cross-study-synthesis-meta-research/capabilities", dependencies=[Depends(require_backend_key)])
+def cross_study_synthesis_capabilities_route() -> dict[str, Any]: return cross_study_synthesis_meta_research_capabilities()
+
+@router.post("/cross-study-synthesis-meta-research/projects", dependencies=[Depends(require_backend_key)])
+def cross_study_synthesis_create(req: CrossStudySynthesisCreateRequest) -> dict[str, Any]: return get_cross_study_synthesis_meta_research_store().create(req)
+
+@router.get("/cross-study-synthesis-meta-research/projects/{cross_study_synthesis_id}", dependencies=[Depends(require_backend_key)])
+def cross_study_synthesis_get(cross_study_synthesis_id: str) -> dict[str, Any]: return get_cross_study_synthesis_meta_research_store().get(cross_study_synthesis_id)
+
+@router.post("/cross-study-synthesis-meta-research/projects/{cross_study_synthesis_id}/studies", dependencies=[Depends(require_backend_key)])
+def cross_study_synthesis_add_study(cross_study_synthesis_id: str, req: CrossStudyEvidenceAddRequest) -> dict[str, Any]: return get_cross_study_synthesis_meta_research_store().add_study(cross_study_synthesis_id,req)
+
+@router.post("/cross-study-synthesis-meta-research/projects/{cross_study_synthesis_id}/study-dispositions", dependencies=[Depends(require_backend_key)])
+def cross_study_synthesis_disposition(cross_study_synthesis_id: str, req: CrossStudyDispositionRequest) -> dict[str, Any]: return get_cross_study_synthesis_meta_research_store().set_study_disposition(cross_study_synthesis_id,req)
+
+@router.post("/cross-study-synthesis-meta-research/projects/{cross_study_synthesis_id}/dimensions", dependencies=[Depends(require_backend_key)])
+def cross_study_synthesis_dimension(cross_study_synthesis_id: str, req: CrossStudySynthesisDimensionAddRequest) -> dict[str, Any]: return get_cross_study_synthesis_meta_research_store().add_dimension(cross_study_synthesis_id,req)
+
+@router.post("/cross-study-synthesis-meta-research/projects/{cross_study_synthesis_id}/bias-assessments", dependencies=[Depends(require_backend_key)])
+def cross_study_synthesis_bias(cross_study_synthesis_id: str, req: CrossStudyBiasAssessmentAddRequest) -> dict[str, Any]: return get_cross_study_synthesis_meta_research_store().add_bias_assessment(cross_study_synthesis_id,req)
+
+@router.post("/cross-study-synthesis-meta-research/projects/{cross_study_synthesis_id}/meta-research-observations", dependencies=[Depends(require_backend_key)])
+def cross_study_synthesis_meta_observation(cross_study_synthesis_id: str, req: MetaResearchObservationAddRequest) -> dict[str, Any]: return get_cross_study_synthesis_meta_research_store().add_meta_research_observation(cross_study_synthesis_id,req)
+
+@router.post("/cross-study-synthesis-meta-research/projects/{cross_study_synthesis_id}/synthesis-plans", dependencies=[Depends(require_backend_key)])
+def cross_study_synthesis_plan(cross_study_synthesis_id: str, req: CrossStudySynthesisPlanAddRequest) -> dict[str, Any]: return get_cross_study_synthesis_meta_research_store().add_synthesis_plan(cross_study_synthesis_id,req)
+
+@router.post("/cross-study-synthesis-meta-research/projects/{cross_study_synthesis_id}/decisions", dependencies=[Depends(require_backend_key)])
+def cross_study_synthesis_decision(cross_study_synthesis_id: str, req: CrossStudyDecisionRequest) -> dict[str, Any]: return get_cross_study_synthesis_meta_research_store().decide(cross_study_synthesis_id,req)
+
+@router.post("/cross-study-synthesis-meta-research/projects/{cross_study_synthesis_id}/execution-receipts", dependencies=[Depends(require_backend_key)])
+def cross_study_synthesis_receipt(cross_study_synthesis_id: str, req: CrossStudySynthesisReceiptAddRequest) -> dict[str, Any]: return get_cross_study_synthesis_meta_research_store().add_execution_receipt(cross_study_synthesis_id,req)
+
+@router.post("/cross-study-synthesis-meta-research/projects/{cross_study_synthesis_id}/human-interpretations", dependencies=[Depends(require_backend_key)])
+def cross_study_synthesis_interpretation(cross_study_synthesis_id: str, req: CrossStudyHumanInterpretationAddRequest) -> dict[str, Any]: return get_cross_study_synthesis_meta_research_store().add_human_interpretation(cross_study_synthesis_id,req)
+
+@router.post("/cross-study-synthesis-meta-research/projects/{cross_study_synthesis_id}/state", dependencies=[Depends(require_backend_key)])
+def cross_study_synthesis_state(cross_study_synthesis_id: str, req: CrossStudyStateRequest) -> dict[str, Any]: return get_cross_study_synthesis_meta_research_store().set_state(cross_study_synthesis_id,req)
+
+@router.get("/cross-study-synthesis-meta-research/projects/{cross_study_synthesis_id}/study-matrix", dependencies=[Depends(require_backend_key)])
+def cross_study_synthesis_matrix(cross_study_synthesis_id: str) -> dict[str, Any]: return get_cross_study_synthesis_meta_research_store().study_matrix(cross_study_synthesis_id)
+
+@router.get("/cross-study-synthesis-meta-research/projects/{cross_study_synthesis_id}/evidence-landscape", dependencies=[Depends(require_backend_key)])
+def cross_study_synthesis_landscape(cross_study_synthesis_id: str) -> dict[str, Any]: return get_cross_study_synthesis_meta_research_store().evidence_landscape(cross_study_synthesis_id)
+
+@router.get("/cross-study-synthesis-meta-research/projects/{cross_study_synthesis_id}/contradiction-map", dependencies=[Depends(require_backend_key)])
+def cross_study_synthesis_contradictions(cross_study_synthesis_id: str) -> dict[str, Any]: return get_cross_study_synthesis_meta_research_store().contradiction_map(cross_study_synthesis_id)
+
+@router.get("/cross-study-synthesis-meta-research/projects/{cross_study_synthesis_id}/meta-research-summary", dependencies=[Depends(require_backend_key)])
+def cross_study_synthesis_meta_summary(cross_study_synthesis_id: str) -> dict[str, Any]: return get_cross_study_synthesis_meta_research_store().meta_research_summary(cross_study_synthesis_id)
+
+@router.get("/cross-study-synthesis-meta-research/projects/{cross_study_synthesis_id}/readiness", dependencies=[Depends(require_backend_key)])
+def cross_study_synthesis_readiness(cross_study_synthesis_id: str) -> dict[str, Any]: return get_cross_study_synthesis_meta_research_store().readiness(cross_study_synthesis_id)
+
+@router.get("/cross-study-synthesis-meta-research/projects/{cross_study_synthesis_id}/runtime-handoffs", dependencies=[Depends(require_backend_key)])
+def cross_study_synthesis_handoffs(cross_study_synthesis_id: str) -> dict[str, Any]: return get_cross_study_synthesis_meta_research_store().runtime_handoffs(cross_study_synthesis_id)
+
+@router.get("/cross-study-synthesis-meta-research/projects/{cross_study_synthesis_id}/core-candidate", dependencies=[Depends(require_backend_key)])
+def cross_study_synthesis_core(cross_study_synthesis_id: str) -> dict[str, Any]: return get_cross_study_synthesis_meta_research_store().core_candidate(cross_study_synthesis_id)
+
+@router.post("/cross-study-synthesis-meta-research/snapshots/freeze", dependencies=[Depends(require_backend_key)])
+def cross_study_synthesis_snapshot(req: CrossStudySnapshotRequest) -> dict[str, Any]: return get_cross_study_synthesis_meta_research_store().freeze_snapshot(req)

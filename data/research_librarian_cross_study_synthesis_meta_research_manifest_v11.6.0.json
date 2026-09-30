@@ -1,0 +1,33 @@
+{
+  "product": "Sustainable Catalyst Research Librarian AI",
+  "version": "11.6.0",
+  "milestone": "Cross-Study Synthesis & Meta-Research",
+  "backend_migration": "031_cross_study_synthesis_meta_research.sql",
+  "schema": "sc-research-librarian-cross-study-synthesis-meta-research/1.0",
+  "snapshot_schema": "sc-research-librarian-cross-study-synthesis-meta-research-snapshot/1.0",
+  "durable_job": "cross-study-synthesis-meta-research-snapshot",
+  "capabilities": [
+    "cross-study study registry",
+    "human study inclusion/exclusion",
+    "comparability dimensions",
+    "human risk-of-bias records",
+    "meta-research observations",
+    "synthesis planning",
+    "evidence landscape",
+    "directional variation map",
+    "Workspace/Research Lab handoffs",
+    "human interpretation",
+    "Platform Core candidate",
+    "immutable snapshots"
+  ],
+  "guardrails": {
+    "automatic_study_inclusion": false,
+    "automatic_risk_of_bias_judgment": false,
+    "automatic_meta_analysis": false,
+    "automatic_publication_bias_verdict": false,
+    "automatic_claim_acceptance": false,
+    "automatic_causal_inference": false,
+    "automatic_execution": false,
+    "automatic_truth_promotion": false
+  }
+}
