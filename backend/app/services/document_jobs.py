@@ -76,6 +76,8 @@ from ..contracts.cross_study_synthesis_meta_research import CrossStudySnapshotRe
 from .cross_study_synthesis_meta_research import get_cross_study_synthesis_meta_research_store
 from ..contracts.research_integrity_methodological_audit import ResearchIntegrityAuditSnapshotRequest
 from .research_integrity_methodological_audit import get_research_integrity_methodological_audit_store
+from ..contracts.peer_review_scholarly_critique_intelligence import ScholarlyCritiqueSnapshotRequest
+from .peer_review_scholarly_critique_intelligence import get_peer_review_scholarly_critique_intelligence_store
 
 Progress = Callable[[str, int], None]
 
@@ -630,6 +632,18 @@ async def process_research_integrity_methodological_audit_snapshot_job(claim: Jo
     return result
 
 
+async def process_peer_review_scholarly_critique_intelligence_snapshot_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
+    progress("load-peer-review-scholarly-critique-intelligence", 20)
+    request = ScholarlyCritiqueSnapshotRequest.model_validate(claim.payload.get("snapshot") or claim.payload)
+    store = get_peer_review_scholarly_critique_intelligence_store()
+    progress("assemble-peer-review-scholarly-critique-intelligence", 55)
+    store.readiness(request.critique_project_id)
+    progress("freeze-peer-review-scholarly-critique-intelligence-snapshot", 80)
+    result = store.freeze_snapshot(request)
+    progress("peer-review-scholarly-critique-intelligence-snapshot-ready", 95)
+    return result
+
+
 async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
     if claim.job_type in {"document-process", "ingestion"}:
         return await process_document_job(claim, progress)
@@ -703,7 +717,9 @@ async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
         return await process_cross_study_synthesis_meta_research_snapshot_job(claim, progress)
     if claim.job_type == "research-integrity-methodological-audit-snapshot":
         return await process_research_integrity_methodological_audit_snapshot_job(claim, progress)
+    if claim.job_type == "peer-review-scholarly-critique-intelligence-snapshot":
+        return await process_peer_review_scholarly_critique_intelligence_snapshot_job(claim, progress)
     raise ValueError(
         f"Job type {claim.job_type!r} is registered for the durable queue but has no v8.3 executor yet; "
-        "use document-process, document-intelligence, source-identity, research-intelligence-extraction, argument-synthesis-plan, statistical-analysis-plan, visual-research-plan, unified-research-runtime, research-workflow-advance, scholarly-research-package, peer-review-validation-package, scholarly-publication-package, research-knowledge-graph-snapshot, ai-research-context-snapshot, rag-evaluation-snapshot, ai-research-experiment-snapshot, model-aware-research-snapshot, unified-research-environment-snapshot, research-question-hypothesis-snapshot, research-design-methodology-snapshot, evidence-search-strategy-snapshot, systematic-review-evidence-synthesis-snapshot, scholarly-literature-intelligence-snapshot, argument-claim-counterclaim-intelligence-snapshot, research-gap-novelty-intelligence-snapshot, dataset-discovery-data-fitness-snapshot, computational-research-planning-snapshot, research-program-intelligence-snapshot, study-protocol-preregistration-snapshot, statistical-analysis-planning-intelligence-snapshot, causal-research-design-intelligence-snapshot, simulation-model-study-planner-snapshot, reproduction-replication-intelligence-snapshot, cross-study-synthesis-meta-research-snapshot, research-integrity-methodological-audit-snapshot, ingestion, or validation."
+        "use document-process, document-intelligence, source-identity, research-intelligence-extraction, argument-synthesis-plan, statistical-analysis-plan, visual-research-plan, unified-research-runtime, research-workflow-advance, scholarly-research-package, peer-review-validation-package, scholarly-publication-package, research-knowledge-graph-snapshot, ai-research-context-snapshot, rag-evaluation-snapshot, ai-research-experiment-snapshot, model-aware-research-snapshot, unified-research-environment-snapshot, research-question-hypothesis-snapshot, research-design-methodology-snapshot, evidence-search-strategy-snapshot, systematic-review-evidence-synthesis-snapshot, scholarly-literature-intelligence-snapshot, argument-claim-counterclaim-intelligence-snapshot, research-gap-novelty-intelligence-snapshot, dataset-discovery-data-fitness-snapshot, computational-research-planning-snapshot, research-program-intelligence-snapshot, study-protocol-preregistration-snapshot, statistical-analysis-planning-intelligence-snapshot, causal-research-design-intelligence-snapshot, simulation-model-study-planner-snapshot, reproduction-replication-intelligence-snapshot, cross-study-synthesis-meta-research-snapshot, research-integrity-methodological-audit-snapshot, peer-review-scholarly-critique-intelligence-snapshot, ingestion, or validation."
     )

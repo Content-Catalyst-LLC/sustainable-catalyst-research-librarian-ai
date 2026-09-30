@@ -1,0 +1,19 @@
+{
+  "release": "11.8.0",
+  "name": "Peer Review & Scholarly Critique Intelligence",
+  "schema": "sc-research-librarian-peer-review-scholarly-critique-intelligence/1.0",
+  "migration": "033_peer_review_scholarly_critique_intelligence.sql",
+  "durable_job": "peer-review-scholarly-critique-intelligence-snapshot",
+  "unified_component_type": "scholarly-critique",
+  "guardrails": {
+    "automatic_accept_reject": false,
+    "automatic_editorial_decision": false,
+    "automatic_reviewer_ranking": false,
+    "automatic_scientific_validity_verdict": false,
+    "automatic_misconduct_inference": false,
+    "automatic_comment_resolution": false,
+    "automatic_publication_block": false,
+    "automatic_execution": false,
+    "automatic_truth_promotion": false
+  }
+}

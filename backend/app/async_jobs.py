@@ -68,6 +68,7 @@ JOB_TYPES = {
     "reproduction-replication-intelligence-snapshot",
     "cross-study-synthesis-meta-research-snapshot",
     "research-integrity-methodological-audit-snapshot",
+    "peer-review-scholarly-critique-intelligence-snapshot",
 }
 TERMINAL_STATES = {"succeeded", "failed", "cancelled"}
 ACTIVE_STATES = {"queued", "retry_wait", "running"}

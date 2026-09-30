@@ -141,6 +141,13 @@ from ..contracts.research_integrity_methodological_audit import (
     ResearchIntegrityFindingDispositionRequest, ResearchIntegrityDecisionRequest, ResearchIntegrityAuditStateRequest,
     ResearchIntegrityAuditSnapshotRequest,
 )
+from ..contracts.peer_review_scholarly_critique_intelligence import (
+    ScholarlyCritiqueCreateRequest, ScholarlyCritiqueRoundAddRequest, ScholarlyCritiqueDimensionAddRequest,
+    ScholarlyReviewerCritiqueAddRequest, ScholarlyAuthorResponseAddRequest, ScholarlyRevisionRequirementAddRequest,
+    ScholarlyRevisionRequirementStatusRequest, ScholarlyCritiqueVerificationRequestAddRequest,
+    ScholarlyCritiqueVerificationReceiptAddRequest, ScholarlyCritiqueSynthesisAddRequest,
+    ScholarlyCritiqueDecisionRequest, ScholarlyCritiqueStateRequest, ScholarlyCritiqueSnapshotRequest,
+)
 from ..contracts.research_question_hypothesis import (
     ResearchQuestionPlanCreateRequest, ResearchSubquestionAddRequest, ResearchHypothesisAddRequest,
     ResearchEvidenceRequirementRequest, ResearchQuestionReviewStateRequest, ResearchQuestionSnapshotRequest,
@@ -236,6 +243,7 @@ from ..services.simulation_model_study_planner import get_simulation_model_study
 from ..services.reproduction_replication_intelligence import get_reproduction_replication_intelligence_store, capabilities as reproduction_replication_intelligence_capabilities
 from ..services.cross_study_synthesis_meta_research import get_cross_study_synthesis_meta_research_store, capabilities as cross_study_synthesis_meta_research_capabilities
 from ..services.research_integrity_methodological_audit import get_research_integrity_methodological_audit_store, capabilities as research_integrity_methodological_audit_capabilities
+from ..services.peer_review_scholarly_critique_intelligence import get_peer_review_scholarly_critique_intelligence_store, capabilities as peer_review_scholarly_critique_intelligence_capabilities
 from ..services.research_question_hypothesis import (
     get_research_question_hypothesis_store, capabilities as research_question_hypothesis_capabilities,
 )
@@ -2320,3 +2328,69 @@ def research_integrity_audit_core_candidate(audit_id: str) -> dict[str, Any]: re
 
 @router.post("/research-integrity-methodological-audit/snapshots/freeze", dependencies=[Depends(require_backend_key)])
 def research_integrity_audit_snapshot(req: ResearchIntegrityAuditSnapshotRequest) -> dict[str, Any]: return get_research_integrity_methodological_audit_store().freeze_snapshot(req)
+
+@router.get("/peer-review-scholarly-critique-intelligence/capabilities", dependencies=[Depends(require_backend_key)])
+def scholarly_critique_capabilities_route() -> dict[str, Any]: return peer_review_scholarly_critique_intelligence_capabilities()
+
+@router.post("/peer-review-scholarly-critique-intelligence/critique-projects", dependencies=[Depends(require_backend_key)])
+def scholarly_critique_create(req: ScholarlyCritiqueCreateRequest) -> dict[str, Any]: return get_peer_review_scholarly_critique_intelligence_store().create(req)
+
+@router.get("/peer-review-scholarly-critique-intelligence/critique-projects/{critique_project_id}", dependencies=[Depends(require_backend_key)])
+def scholarly_critique_get(critique_project_id: str) -> dict[str, Any]: return get_peer_review_scholarly_critique_intelligence_store().get(critique_project_id)
+
+@router.post("/peer-review-scholarly-critique-intelligence/critique-projects/{critique_project_id}/rounds", dependencies=[Depends(require_backend_key)])
+def scholarly_critique_round(critique_project_id: str, req: ScholarlyCritiqueRoundAddRequest) -> dict[str, Any]: return get_peer_review_scholarly_critique_intelligence_store().add_round(critique_project_id,req)
+
+@router.post("/peer-review-scholarly-critique-intelligence/critique-projects/{critique_project_id}/dimensions", dependencies=[Depends(require_backend_key)])
+def scholarly_critique_dimension(critique_project_id: str, req: ScholarlyCritiqueDimensionAddRequest) -> dict[str, Any]: return get_peer_review_scholarly_critique_intelligence_store().add_dimension(critique_project_id,req)
+
+@router.post("/peer-review-scholarly-critique-intelligence/critique-projects/{critique_project_id}/reviewer-critiques", dependencies=[Depends(require_backend_key)])
+def scholarly_critique_comment(critique_project_id: str, req: ScholarlyReviewerCritiqueAddRequest) -> dict[str, Any]: return get_peer_review_scholarly_critique_intelligence_store().add_reviewer_critique(critique_project_id,req)
+
+@router.post("/peer-review-scholarly-critique-intelligence/critique-projects/{critique_project_id}/author-responses", dependencies=[Depends(require_backend_key)])
+def scholarly_critique_response(critique_project_id: str, req: ScholarlyAuthorResponseAddRequest) -> dict[str, Any]: return get_peer_review_scholarly_critique_intelligence_store().add_author_response(critique_project_id,req)
+
+@router.post("/peer-review-scholarly-critique-intelligence/critique-projects/{critique_project_id}/revision-requirements", dependencies=[Depends(require_backend_key)])
+def scholarly_critique_requirement(critique_project_id: str, req: ScholarlyRevisionRequirementAddRequest) -> dict[str, Any]: return get_peer_review_scholarly_critique_intelligence_store().add_revision_requirement(critique_project_id,req)
+
+@router.post("/peer-review-scholarly-critique-intelligence/critique-projects/{critique_project_id}/revision-requirement-status", dependencies=[Depends(require_backend_key)])
+def scholarly_critique_requirement_status(critique_project_id: str, req: ScholarlyRevisionRequirementStatusRequest) -> dict[str, Any]: return get_peer_review_scholarly_critique_intelligence_store().set_revision_requirement_status(critique_project_id,req)
+
+@router.post("/peer-review-scholarly-critique-intelligence/critique-projects/{critique_project_id}/verification-requests", dependencies=[Depends(require_backend_key)])
+def scholarly_critique_verification_request(critique_project_id: str, req: ScholarlyCritiqueVerificationRequestAddRequest) -> dict[str, Any]: return get_peer_review_scholarly_critique_intelligence_store().add_verification_request(critique_project_id,req)
+
+@router.post("/peer-review-scholarly-critique-intelligence/critique-projects/{critique_project_id}/verification-receipts", dependencies=[Depends(require_backend_key)])
+def scholarly_critique_verification_receipt(critique_project_id: str, req: ScholarlyCritiqueVerificationReceiptAddRequest) -> dict[str, Any]: return get_peer_review_scholarly_critique_intelligence_store().add_verification_receipt(critique_project_id,req)
+
+@router.post("/peer-review-scholarly-critique-intelligence/critique-projects/{critique_project_id}/critique-syntheses", dependencies=[Depends(require_backend_key)])
+def scholarly_critique_synthesis(critique_project_id: str, req: ScholarlyCritiqueSynthesisAddRequest) -> dict[str, Any]: return get_peer_review_scholarly_critique_intelligence_store().add_critique_synthesis(critique_project_id,req)
+
+@router.post("/peer-review-scholarly-critique-intelligence/critique-projects/{critique_project_id}/decisions", dependencies=[Depends(require_backend_key)])
+def scholarly_critique_decision(critique_project_id: str, req: ScholarlyCritiqueDecisionRequest) -> dict[str, Any]: return get_peer_review_scholarly_critique_intelligence_store().decide(critique_project_id,req)
+
+@router.post("/peer-review-scholarly-critique-intelligence/critique-projects/{critique_project_id}/state", dependencies=[Depends(require_backend_key)])
+def scholarly_critique_state(critique_project_id: str, req: ScholarlyCritiqueStateRequest) -> dict[str, Any]: return get_peer_review_scholarly_critique_intelligence_store().set_state(critique_project_id,req)
+
+@router.get("/peer-review-scholarly-critique-intelligence/critique-projects/{critique_project_id}/cross-review-matrix", dependencies=[Depends(require_backend_key)])
+def scholarly_critique_matrix(critique_project_id: str) -> dict[str, Any]: return get_peer_review_scholarly_critique_intelligence_store().cross_review_matrix(critique_project_id)
+
+@router.get("/peer-review-scholarly-critique-intelligence/critique-projects/{critique_project_id}/issue-register", dependencies=[Depends(require_backend_key)])
+def scholarly_critique_issues(critique_project_id: str) -> dict[str, Any]: return get_peer_review_scholarly_critique_intelligence_store().issue_register(critique_project_id)
+
+@router.get("/peer-review-scholarly-critique-intelligence/critique-projects/{critique_project_id}/response-coverage", dependencies=[Depends(require_backend_key)])
+def scholarly_critique_coverage(critique_project_id: str) -> dict[str, Any]: return get_peer_review_scholarly_critique_intelligence_store().response_coverage(critique_project_id)
+
+@router.get("/peer-review-scholarly-critique-intelligence/critique-projects/{critique_project_id}/verification-handoffs", dependencies=[Depends(require_backend_key)])
+def scholarly_critique_handoffs(critique_project_id: str) -> dict[str, Any]: return get_peer_review_scholarly_critique_intelligence_store().verification_handoffs(critique_project_id)
+
+@router.get("/peer-review-scholarly-critique-intelligence/critique-projects/{critique_project_id}/readiness", dependencies=[Depends(require_backend_key)])
+def scholarly_critique_readiness(critique_project_id: str) -> dict[str, Any]: return get_peer_review_scholarly_critique_intelligence_store().readiness(critique_project_id)
+
+@router.get("/peer-review-scholarly-critique-intelligence/critique-projects/{critique_project_id}/editorial-handoff", dependencies=[Depends(require_backend_key)])
+def scholarly_critique_editorial_handoff(critique_project_id: str) -> dict[str, Any]: return get_peer_review_scholarly_critique_intelligence_store().editorial_handoff(critique_project_id)
+
+@router.get("/peer-review-scholarly-critique-intelligence/critique-projects/{critique_project_id}/core-candidate", dependencies=[Depends(require_backend_key)])
+def scholarly_critique_core_candidate(critique_project_id: str) -> dict[str, Any]: return get_peer_review_scholarly_critique_intelligence_store().core_candidate(critique_project_id)
+
+@router.post("/peer-review-scholarly-critique-intelligence/snapshots/freeze", dependencies=[Depends(require_backend_key)])
+def scholarly_critique_snapshot(req: ScholarlyCritiqueSnapshotRequest) -> dict[str, Any]: return get_peer_review_scholarly_critique_intelligence_store().freeze_snapshot(req)

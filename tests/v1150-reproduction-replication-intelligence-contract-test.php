@@ -8,8 +8,8 @@ $service=file_get_contents($root.'/backend/app/services/reproduction_replication
 $environment=file_get_contents($root.'/backend/app/services/unified_scholarly_ai_environment.py');
 $migration=file_get_contents($root.'/backend/migrations/030_reproduction_replication_intelligence.sql');
 $checks=[
- 'plugin_version'=>strpos($main,'Version: 11.7.0')!==false,
- 'backend_version'=>strpos($backend,'__version__ = "11.7.0"')!==false,
+ 'plugin_version'=>strpos($main,'Version: 11.8.0')!==false,
+ 'backend_version'=>strpos($backend,'__version__ = "11.8.0"')!==false,
  'capabilities_route'=>strpos($api,'/reproduction-replication-intelligence/capabilities')!==false,
  'attempt_route'=>strpos($api,'/reproduction-replication-intelligence/projects/{reproduction_replication_id}/reproduction-attempts')!==false,
  'replication_route'=>strpos($api,'/reproduction-replication-intelligence/projects/{reproduction_replication_id}/replication-studies')!==false,
