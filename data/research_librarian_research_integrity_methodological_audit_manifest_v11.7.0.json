@@ -1,0 +1,41 @@
+{
+  "version": "11.7.0",
+  "name": "Research Integrity & Methodological Audit",
+  "schema": "sc-research-librarian-research-integrity-methodological-audit/1.0",
+  "storage": {
+    "postgres": true,
+    "sqlite_local_fallback": true,
+    "migration": "032_research_integrity_methodological_audit.sql"
+  },
+  "capabilities": {
+    "declared_method_lineage": true,
+    "human_audit_criteria": true,
+    "protocol_report_consistency_observations": true,
+    "human_integrity_findings": true,
+    "human_methodological_appraisals": true,
+    "specialist_verification_handoffs": true,
+    "verification_receipts": true,
+    "remediation_tracking": true,
+    "traceability_matrix": true,
+    "discrepancy_register": true,
+    "methodological_profile_without_score": true,
+    "core_candidate": true,
+    "immutable_snapshot": true,
+    "unified_environment_binding": "research-integrity-audit"
+  },
+  "governance": {
+    "audit_findings_are_human_authored": true,
+    "specialist_runtimes_own_verification_execution": true,
+    "platform_core_remains_governed_research_object_authority": true,
+    "automatic_misconduct_inference": false,
+    "automatic_invalidity_verdict": false,
+    "automatic_retraction_recommendation": false,
+    "automatic_methodological_scoring": false,
+    "automatic_claim_rejection": false,
+    "automatic_evidence_suppression": false,
+    "automatic_causal_inference": false,
+    "automatic_publication_block": false,
+    "automatic_execution": false,
+    "automatic_truth_promotion": false
+  }
+}

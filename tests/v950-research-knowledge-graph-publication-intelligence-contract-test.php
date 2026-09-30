@@ -5,8 +5,8 @@ $backend=file_get_contents($root.'/backend/app/__init__.py');
 $core=file_get_contents($root.'/backend/app/api/core.py');
 $jobs=file_get_contents($root.'/backend/app/async_jobs.py');
 $checks=[
- 'plugin_version'=>strpos($main,'Version: 11.6.0')!==false,
- 'backend_version'=>strpos($backend,'__version__ = "11.6.0"')!==false,
+ 'plugin_version'=>strpos($main,'Version: 11.7.0')!==false,
+ 'backend_version'=>strpos($backend,'__version__ = "11.7.0"')!==false,
  'contract'=>file_exists($root.'/backend/app/contracts/research_knowledge_graph.py'),
  'service'=>file_exists($root.'/backend/app/services/research_knowledge_graph.py'),
  'test'=>file_exists($root.'/backend/tests/test_v950_research_knowledge_graph.py'),

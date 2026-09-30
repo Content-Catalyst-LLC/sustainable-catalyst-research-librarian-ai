@@ -133,6 +133,14 @@ from ..contracts.cross_study_synthesis_meta_research import (
     CrossStudySynthesisPlanAddRequest, CrossStudySynthesisReceiptAddRequest, CrossStudyHumanInterpretationAddRequest,
     CrossStudyDecisionRequest, CrossStudyStateRequest, CrossStudySnapshotRequest,
 )
+from ..contracts.research_integrity_methodological_audit import (
+    ResearchIntegrityAuditCreateRequest, ResearchIntegrityTargetAddRequest, ResearchIntegrityCriterionAddRequest,
+    ResearchIntegrityObservationAddRequest, ResearchIntegrityFindingAddRequest, ResearchIntegrityMethodologicalAppraisalAddRequest,
+    ResearchIntegrityVerificationRequestAddRequest, ResearchIntegrityVerificationReceiptAddRequest,
+    ResearchIntegrityRemediationActionAddRequest, ResearchIntegrityRemediationStatusRequest,
+    ResearchIntegrityFindingDispositionRequest, ResearchIntegrityDecisionRequest, ResearchIntegrityAuditStateRequest,
+    ResearchIntegrityAuditSnapshotRequest,
+)
 from ..contracts.research_question_hypothesis import (
     ResearchQuestionPlanCreateRequest, ResearchSubquestionAddRequest, ResearchHypothesisAddRequest,
     ResearchEvidenceRequirementRequest, ResearchQuestionReviewStateRequest, ResearchQuestionSnapshotRequest,
@@ -227,6 +235,7 @@ from ..services.causal_research_design_intelligence import get_causal_research_d
 from ..services.simulation_model_study_planner import get_simulation_model_study_planner_store, capabilities as simulation_model_study_planner_capabilities
 from ..services.reproduction_replication_intelligence import get_reproduction_replication_intelligence_store, capabilities as reproduction_replication_intelligence_capabilities
 from ..services.cross_study_synthesis_meta_research import get_cross_study_synthesis_meta_research_store, capabilities as cross_study_synthesis_meta_research_capabilities
+from ..services.research_integrity_methodological_audit import get_research_integrity_methodological_audit_store, capabilities as research_integrity_methodological_audit_capabilities
 from ..services.research_question_hypothesis import (
     get_research_question_hypothesis_store, capabilities as research_question_hypothesis_capabilities,
 )
@@ -2241,3 +2250,73 @@ def cross_study_synthesis_core(cross_study_synthesis_id: str) -> dict[str, Any]:
 
 @router.post("/cross-study-synthesis-meta-research/snapshots/freeze", dependencies=[Depends(require_backend_key)])
 def cross_study_synthesis_snapshot(req: CrossStudySnapshotRequest) -> dict[str, Any]: return get_cross_study_synthesis_meta_research_store().freeze_snapshot(req)
+
+
+@router.get("/research-integrity-methodological-audit/capabilities", dependencies=[Depends(require_backend_key)])
+def research_integrity_audit_capabilities_route() -> dict[str, Any]: return research_integrity_methodological_audit_capabilities()
+
+@router.post("/research-integrity-methodological-audit/audits", dependencies=[Depends(require_backend_key)])
+def research_integrity_audit_create(req: ResearchIntegrityAuditCreateRequest) -> dict[str, Any]: return get_research_integrity_methodological_audit_store().create(req)
+
+@router.get("/research-integrity-methodological-audit/audits/{audit_id}", dependencies=[Depends(require_backend_key)])
+def research_integrity_audit_get(audit_id: str) -> dict[str, Any]: return get_research_integrity_methodological_audit_store().get(audit_id)
+
+@router.post("/research-integrity-methodological-audit/audits/{audit_id}/targets", dependencies=[Depends(require_backend_key)])
+def research_integrity_audit_target(audit_id: str, req: ResearchIntegrityTargetAddRequest) -> dict[str, Any]: return get_research_integrity_methodological_audit_store().add_target(audit_id,req)
+
+@router.post("/research-integrity-methodological-audit/audits/{audit_id}/criteria", dependencies=[Depends(require_backend_key)])
+def research_integrity_audit_criterion(audit_id: str, req: ResearchIntegrityCriterionAddRequest) -> dict[str, Any]: return get_research_integrity_methodological_audit_store().add_criterion(audit_id,req)
+
+@router.post("/research-integrity-methodological-audit/audits/{audit_id}/observations", dependencies=[Depends(require_backend_key)])
+def research_integrity_audit_observation(audit_id: str, req: ResearchIntegrityObservationAddRequest) -> dict[str, Any]: return get_research_integrity_methodological_audit_store().add_observation(audit_id,req)
+
+@router.post("/research-integrity-methodological-audit/audits/{audit_id}/findings", dependencies=[Depends(require_backend_key)])
+def research_integrity_audit_finding(audit_id: str, req: ResearchIntegrityFindingAddRequest) -> dict[str, Any]: return get_research_integrity_methodological_audit_store().add_finding(audit_id,req)
+
+@router.post("/research-integrity-methodological-audit/audits/{audit_id}/methodological-appraisals", dependencies=[Depends(require_backend_key)])
+def research_integrity_audit_appraisal(audit_id: str, req: ResearchIntegrityMethodologicalAppraisalAddRequest) -> dict[str, Any]: return get_research_integrity_methodological_audit_store().add_appraisal(audit_id,req)
+
+@router.post("/research-integrity-methodological-audit/audits/{audit_id}/verification-requests", dependencies=[Depends(require_backend_key)])
+def research_integrity_audit_verification_request(audit_id: str, req: ResearchIntegrityVerificationRequestAddRequest) -> dict[str, Any]: return get_research_integrity_methodological_audit_store().add_verification_request(audit_id,req)
+
+@router.post("/research-integrity-methodological-audit/audits/{audit_id}/verification-receipts", dependencies=[Depends(require_backend_key)])
+def research_integrity_audit_verification_receipt(audit_id: str, req: ResearchIntegrityVerificationReceiptAddRequest) -> dict[str, Any]: return get_research_integrity_methodological_audit_store().add_verification_receipt(audit_id,req)
+
+@router.post("/research-integrity-methodological-audit/audits/{audit_id}/remediation-actions", dependencies=[Depends(require_backend_key)])
+def research_integrity_audit_remediation(audit_id: str, req: ResearchIntegrityRemediationActionAddRequest) -> dict[str, Any]: return get_research_integrity_methodological_audit_store().add_remediation_action(audit_id,req)
+
+@router.post("/research-integrity-methodological-audit/audits/{audit_id}/remediation-status", dependencies=[Depends(require_backend_key)])
+def research_integrity_audit_remediation_status_update(audit_id: str, req: ResearchIntegrityRemediationStatusRequest) -> dict[str, Any]: return get_research_integrity_methodological_audit_store().set_remediation_status(audit_id,req)
+
+@router.post("/research-integrity-methodological-audit/audits/{audit_id}/finding-dispositions", dependencies=[Depends(require_backend_key)])
+def research_integrity_audit_finding_disposition(audit_id: str, req: ResearchIntegrityFindingDispositionRequest) -> dict[str, Any]: return get_research_integrity_methodological_audit_store().set_finding_disposition(audit_id,req)
+
+@router.post("/research-integrity-methodological-audit/audits/{audit_id}/decisions", dependencies=[Depends(require_backend_key)])
+def research_integrity_audit_decision(audit_id: str, req: ResearchIntegrityDecisionRequest) -> dict[str, Any]: return get_research_integrity_methodological_audit_store().decide(audit_id,req)
+
+@router.post("/research-integrity-methodological-audit/audits/{audit_id}/state", dependencies=[Depends(require_backend_key)])
+def research_integrity_audit_state(audit_id: str, req: ResearchIntegrityAuditStateRequest) -> dict[str, Any]: return get_research_integrity_methodological_audit_store().set_state(audit_id,req)
+
+@router.get("/research-integrity-methodological-audit/audits/{audit_id}/traceability-matrix", dependencies=[Depends(require_backend_key)])
+def research_integrity_audit_traceability(audit_id: str) -> dict[str, Any]: return get_research_integrity_methodological_audit_store().traceability_matrix(audit_id)
+
+@router.get("/research-integrity-methodological-audit/audits/{audit_id}/discrepancy-register", dependencies=[Depends(require_backend_key)])
+def research_integrity_audit_discrepancies(audit_id: str) -> dict[str, Any]: return get_research_integrity_methodological_audit_store().discrepancy_register(audit_id)
+
+@router.get("/research-integrity-methodological-audit/audits/{audit_id}/methodological-profile", dependencies=[Depends(require_backend_key)])
+def research_integrity_audit_profile(audit_id: str) -> dict[str, Any]: return get_research_integrity_methodological_audit_store().methodological_profile(audit_id)
+
+@router.get("/research-integrity-methodological-audit/audits/{audit_id}/verification-handoffs", dependencies=[Depends(require_backend_key)])
+def research_integrity_audit_handoffs(audit_id: str) -> dict[str, Any]: return get_research_integrity_methodological_audit_store().verification_handoffs(audit_id)
+
+@router.get("/research-integrity-methodological-audit/audits/{audit_id}/remediation-status", dependencies=[Depends(require_backend_key)])
+def research_integrity_audit_remediation_status(audit_id: str) -> dict[str, Any]: return get_research_integrity_methodological_audit_store().remediation_status(audit_id)
+
+@router.get("/research-integrity-methodological-audit/audits/{audit_id}/readiness", dependencies=[Depends(require_backend_key)])
+def research_integrity_audit_readiness(audit_id: str) -> dict[str, Any]: return get_research_integrity_methodological_audit_store().readiness(audit_id)
+
+@router.get("/research-integrity-methodological-audit/audits/{audit_id}/core-candidate", dependencies=[Depends(require_backend_key)])
+def research_integrity_audit_core_candidate(audit_id: str) -> dict[str, Any]: return get_research_integrity_methodological_audit_store().core_candidate(audit_id)
+
+@router.post("/research-integrity-methodological-audit/snapshots/freeze", dependencies=[Depends(require_backend_key)])
+def research_integrity_audit_snapshot(req: ResearchIntegrityAuditSnapshotRequest) -> dict[str, Any]: return get_research_integrity_methodological_audit_store().freeze_snapshot(req)

@@ -67,6 +67,7 @@ JOB_TYPES = {
     "simulation-model-study-planner-snapshot",
     "reproduction-replication-intelligence-snapshot",
     "cross-study-synthesis-meta-research-snapshot",
+    "research-integrity-methodological-audit-snapshot",
 }
 TERMINAL_STATES = {"succeeded", "failed", "cancelled"}
 ACTIVE_STATES = {"queued", "retry_wait", "running"}

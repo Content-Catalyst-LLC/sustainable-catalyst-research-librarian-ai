@@ -3,12 +3,14 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 11.6.0
+Stable tag: 11.7.0
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
 
 == Description ==
+
+v11.7.0 adds Research Integrity & Methodological Audit: durable audit targets and lineage, reviewer-authored criteria, protocol/report consistency observations, human findings and domain-scoped methodological appraisals, specialist verification requests and receipts, remediation tracking, traceability matrices, discrepancy registers, non-scored methodological profiles, Core candidates, immutable snapshots, and unified-environment bindings. The Librarian does not automatically infer misconduct, invalidate research, recommend retraction, score methods, reject claims, suppress evidence, infer causality, block publication, execute verification, or promote truth.
 
 v11.6.0 adds Cross-Study Synthesis & Meta-Research: governed multi-study registries, human inclusion/exclusion decisions, effect/estimate inputs, comparability dimensions, human risk-of-bias assessments, meta-research observations, explicit synthesis plans, specialist-runtime compute handoffs, execution receipts, evidence landscapes, directional-variation review signals, human interpretations, Core candidates, snapshots, and unified-environment bindings. Research Librarian does not automatically include studies, judge bias, execute meta-analysis, declare publication bias, infer causality, accept claims, or promote pooled estimates as truth.
 
