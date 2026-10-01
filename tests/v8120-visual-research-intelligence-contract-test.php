@@ -1,8 +1,8 @@
 <?php
 $root=dirname(__DIR__); $main=file_get_contents($root.'/sustainable-catalyst-research-librarian-ai.php');
 $checks=[
-'plugin_version'=>false!==strpos($main,'Version: 11.9.0'),
-'backend_version'=>false!==strpos(file_get_contents($root.'/backend/app/__init__.py'),'__version__ = "11.9.0"'),
+'plugin_version'=>false!==strpos($main,'Version: 12.0.0'),
+'backend_version'=>false!==strpos(file_get_contents($root.'/backend/app/__init__.py'),'__version__ = "12.0.0"'),
 'contract'=>file_exists($root.'/backend/app/contracts/visual_research.py') && false!==strpos(file_get_contents($root.'/backend/app/contracts/visual_research.py'),'sc-research-librarian-visual-research-intelligence/1.0'),
 'service'=>file_exists($root.'/backend/app/services/visual_research.py'),
 'api'=>false!==strpos(file_get_contents($root.'/backend/app/api/core.py'),'/visual-research/plan'),

@@ -154,6 +154,12 @@ from ..contracts.research_revision_response_intelligence import (
     RevisionResolutionReviewAddRequest, RevisionResponseDecisionRequest, RevisionResponseStateRequest,
     RevisionResponseSnapshotRequest,
 )
+from ..contracts.integrated_computational_research_scientist_environment import (
+    ScientistEnvironmentCreateRequest, ScientistStageAddRequest, ScientistWorkPackageAddRequest,
+    ScientistRuntimeHandoffAddRequest, ScientistExecutionReceiptAddRequest, ScientistInterpretationAddRequest,
+    ScientistCheckpointAddRequest, ScientistCheckpointDecisionRequest, ScientistObjectDecisionRequest,
+    ScientistEnvironmentStateRequest, ScientistEnvironmentSnapshotRequest,
+)
 from ..contracts.research_question_hypothesis import (
     ResearchQuestionPlanCreateRequest, ResearchSubquestionAddRequest, ResearchHypothesisAddRequest,
     ResearchEvidenceRequirementRequest, ResearchQuestionReviewStateRequest, ResearchQuestionSnapshotRequest,
@@ -251,6 +257,7 @@ from ..services.cross_study_synthesis_meta_research import get_cross_study_synth
 from ..services.research_integrity_methodological_audit import get_research_integrity_methodological_audit_store, capabilities as research_integrity_methodological_audit_capabilities
 from ..services.peer_review_scholarly_critique_intelligence import get_peer_review_scholarly_critique_intelligence_store, capabilities as peer_review_scholarly_critique_intelligence_capabilities
 from ..services.research_revision_response_intelligence import get_research_revision_response_intelligence_store, capabilities as research_revision_response_intelligence_capabilities
+from ..services.integrated_computational_research_scientist_environment import get_integrated_computational_research_scientist_environment_store, capabilities as integrated_computational_research_scientist_environment_capabilities
 from ..services.research_question_hypothesis import (
     get_research_question_hypothesis_store, capabilities as research_question_hypothesis_capabilities,
 )
@@ -2458,3 +2465,83 @@ def revision_response_core_candidate(revision_response_id: str) -> dict[str, Any
 
 @router.post("/research-revision-response-intelligence/snapshots/freeze", dependencies=[Depends(require_backend_key)])
 def revision_response_snapshot(req: RevisionResponseSnapshotRequest) -> dict[str, Any]: return get_research_revision_response_intelligence_store().freeze_snapshot(req)
+
+@router.get("/integrated-computational-research-scientist-environment/capabilities", dependencies=[Depends(require_backend_key)])
+def scientist_environment_capabilities_route() -> dict[str, Any]:
+    return integrated_computational_research_scientist_environment_capabilities()
+
+@router.post("/integrated-computational-research-scientist-environment/environments", dependencies=[Depends(require_backend_key)])
+def scientist_environment_create(req: ScientistEnvironmentCreateRequest) -> dict[str, Any]:
+    return get_integrated_computational_research_scientist_environment_store().create(req)
+
+@router.get("/integrated-computational-research-scientist-environment/environments/{scientist_environment_id}", dependencies=[Depends(require_backend_key)])
+def scientist_environment_get(scientist_environment_id: str) -> dict[str, Any]:
+    return get_integrated_computational_research_scientist_environment_store().get(scientist_environment_id)
+
+@router.post("/integrated-computational-research-scientist-environment/environments/{scientist_environment_id}/stages", dependencies=[Depends(require_backend_key)])
+def scientist_environment_stage(scientist_environment_id: str, req: ScientistStageAddRequest) -> dict[str, Any]:
+    return get_integrated_computational_research_scientist_environment_store().add_stage(scientist_environment_id,req)
+
+@router.post("/integrated-computational-research-scientist-environment/environments/{scientist_environment_id}/work-packages", dependencies=[Depends(require_backend_key)])
+def scientist_environment_work_package(scientist_environment_id: str, req: ScientistWorkPackageAddRequest) -> dict[str, Any]:
+    return get_integrated_computational_research_scientist_environment_store().add_work_package(scientist_environment_id,req)
+
+@router.post("/integrated-computational-research-scientist-environment/environments/{scientist_environment_id}/runtime-handoffs", dependencies=[Depends(require_backend_key)])
+def scientist_environment_runtime_handoff(scientist_environment_id: str, req: ScientistRuntimeHandoffAddRequest) -> dict[str, Any]:
+    return get_integrated_computational_research_scientist_environment_store().add_runtime_handoff(scientist_environment_id,req)
+
+@router.post("/integrated-computational-research-scientist-environment/environments/{scientist_environment_id}/execution-receipts", dependencies=[Depends(require_backend_key)])
+def scientist_environment_execution_receipt(scientist_environment_id: str, req: ScientistExecutionReceiptAddRequest) -> dict[str, Any]:
+    return get_integrated_computational_research_scientist_environment_store().add_execution_receipt(scientist_environment_id,req)
+
+@router.post("/integrated-computational-research-scientist-environment/environments/{scientist_environment_id}/interpretations", dependencies=[Depends(require_backend_key)])
+def scientist_environment_interpretation(scientist_environment_id: str, req: ScientistInterpretationAddRequest) -> dict[str, Any]:
+    return get_integrated_computational_research_scientist_environment_store().add_interpretation(scientist_environment_id,req)
+
+@router.post("/integrated-computational-research-scientist-environment/environments/{scientist_environment_id}/checkpoints", dependencies=[Depends(require_backend_key)])
+def scientist_environment_checkpoint(scientist_environment_id: str, req: ScientistCheckpointAddRequest) -> dict[str, Any]:
+    return get_integrated_computational_research_scientist_environment_store().add_checkpoint(scientist_environment_id,req)
+
+@router.post("/integrated-computational-research-scientist-environment/environments/{scientist_environment_id}/checkpoint-decisions", dependencies=[Depends(require_backend_key)])
+def scientist_environment_checkpoint_decision(scientist_environment_id: str, req: ScientistCheckpointDecisionRequest) -> dict[str, Any]:
+    return get_integrated_computational_research_scientist_environment_store().decide_checkpoint(scientist_environment_id,req)
+
+@router.post("/integrated-computational-research-scientist-environment/environments/{scientist_environment_id}/decisions", dependencies=[Depends(require_backend_key)])
+def scientist_environment_decision(scientist_environment_id: str, req: ScientistObjectDecisionRequest) -> dict[str, Any]:
+    return get_integrated_computational_research_scientist_environment_store().decide(scientist_environment_id,req)
+
+@router.post("/integrated-computational-research-scientist-environment/environments/{scientist_environment_id}/state", dependencies=[Depends(require_backend_key)])
+def scientist_environment_state(scientist_environment_id: str, req: ScientistEnvironmentStateRequest) -> dict[str, Any]:
+    return get_integrated_computational_research_scientist_environment_store().set_state(scientist_environment_id,req)
+
+@router.get("/integrated-computational-research-scientist-environment/environments/{scientist_environment_id}/lifecycle-map", dependencies=[Depends(require_backend_key)])
+def scientist_environment_lifecycle(scientist_environment_id: str) -> dict[str, Any]:
+    return get_integrated_computational_research_scientist_environment_store().lifecycle_map(scientist_environment_id)
+
+@router.get("/integrated-computational-research-scientist-environment/environments/{scientist_environment_id}/workbench", dependencies=[Depends(require_backend_key)])
+def scientist_environment_workbench(scientist_environment_id: str) -> dict[str, Any]:
+    return get_integrated_computational_research_scientist_environment_store().workbench(scientist_environment_id)
+
+@router.get("/integrated-computational-research-scientist-environment/environments/{scientist_environment_id}/runtime-handoffs", dependencies=[Depends(require_backend_key)])
+def scientist_environment_runtime_handoffs(scientist_environment_id: str) -> dict[str, Any]:
+    return get_integrated_computational_research_scientist_environment_store().runtime_handoffs(scientist_environment_id)
+
+@router.get("/integrated-computational-research-scientist-environment/environments/{scientist_environment_id}/provenance-map", dependencies=[Depends(require_backend_key)])
+def scientist_environment_provenance(scientist_environment_id: str) -> dict[str, Any]:
+    return get_integrated_computational_research_scientist_environment_store().provenance_map(scientist_environment_id)
+
+@router.get("/integrated-computational-research-scientist-environment/environments/{scientist_environment_id}/readiness", dependencies=[Depends(require_backend_key)])
+def scientist_environment_readiness(scientist_environment_id: str) -> dict[str, Any]:
+    return get_integrated_computational_research_scientist_environment_store().readiness(scientist_environment_id)
+
+@router.get("/integrated-computational-research-scientist-environment/environments/{scientist_environment_id}/dossier", dependencies=[Depends(require_backend_key)])
+def scientist_environment_dossier(scientist_environment_id: str) -> dict[str, Any]:
+    return get_integrated_computational_research_scientist_environment_store().dossier(scientist_environment_id)
+
+@router.get("/integrated-computational-research-scientist-environment/environments/{scientist_environment_id}/core-candidate", dependencies=[Depends(require_backend_key)])
+def scientist_environment_core_candidate(scientist_environment_id: str) -> dict[str, Any]:
+    return get_integrated_computational_research_scientist_environment_store().core_candidate(scientist_environment_id)
+
+@router.post("/integrated-computational-research-scientist-environment/snapshots/freeze", dependencies=[Depends(require_backend_key)])
+def scientist_environment_snapshot(req: ScientistEnvironmentSnapshotRequest) -> dict[str, Any]:
+    return get_integrated_computational_research_scientist_environment_store().freeze_snapshot(req)

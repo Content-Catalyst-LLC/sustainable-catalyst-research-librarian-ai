@@ -3,12 +3,14 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 11.9.0
+Stable tag: 12.0.0
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
 
 == Description ==
+
+v12.0.0 adds the Integrated Computational Research Scientist Environment: lifecycle stages, governed computational work packages, human-approved specialist-runtime handoffs, execution receipts, human interpretations/checkpoints, lifecycle/workbench/provenance views, structural readiness, reproducible scientist dossiers, Platform Core candidates, and immutable snapshots. The existing Unified Scholarly/AI Research Environment remains the source environment; component authority, specialist execution, Core governance, and human scholarly judgment remain separate. No automatic execution, model selection, causal inference, scientific-validity verdict, scholarly judgment, or truth promotion occurs.
 
 v11.9.0 adds Research Revision & Response Intelligence: critique-to-response traceability, human response positions, change claims, artifact/diff receipts, approved verification handoffs/receipts, human resolution reviews, response and change-evidence matrices, unresolved registers, response packages, Core candidates, immutable snapshots, and unified-environment bindings. Author response does not equal reviewer satisfaction; no automatic accept/reject, editorial decision, scientific-validity verdict, misconduct inference, execution, or truth promotion occurs.
 

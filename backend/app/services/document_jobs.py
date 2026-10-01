@@ -80,6 +80,8 @@ from ..contracts.peer_review_scholarly_critique_intelligence import ScholarlyCri
 from .peer_review_scholarly_critique_intelligence import get_peer_review_scholarly_critique_intelligence_store
 from ..contracts.research_revision_response_intelligence import RevisionResponseSnapshotRequest
 from .research_revision_response_intelligence import get_research_revision_response_intelligence_store
+from ..contracts.integrated_computational_research_scientist_environment import ScientistEnvironmentSnapshotRequest
+from .integrated_computational_research_scientist_environment import get_integrated_computational_research_scientist_environment_store
 
 Progress = Callable[[str, int], None]
 
@@ -657,6 +659,18 @@ async def process_research_revision_response_intelligence_snapshot_job(claim: Jo
     return result
 
 
+async def process_integrated_computational_research_scientist_environment_snapshot_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
+    progress("load-integrated-computational-research-scientist-environment", 20)
+    request = ScientistEnvironmentSnapshotRequest.model_validate(claim.payload.get("snapshot") or claim.payload)
+    store = get_integrated_computational_research_scientist_environment_store()
+    progress("assemble-integrated-computational-research-scientist-dossier", 55)
+    store.dossier(request.scientist_environment_id)
+    progress("freeze-integrated-computational-research-scientist-environment-snapshot", 80)
+    result = store.freeze_snapshot(request)
+    progress("integrated-computational-research-scientist-environment-snapshot-ready", 95)
+    return result
+
+
 
 async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
     if claim.job_type in {"document-process", "ingestion"}:
@@ -735,6 +749,8 @@ async def execute_job(claim: JobClaim, progress: Progress) -> dict[str, Any]:
         return await process_peer_review_scholarly_critique_intelligence_snapshot_job(claim, progress)
     if claim.job_type == "research-revision-response-intelligence-snapshot":
         return await process_research_revision_response_intelligence_snapshot_job(claim, progress)
+    if claim.job_type == "integrated-computational-research-scientist-environment-snapshot":
+        return await process_integrated_computational_research_scientist_environment_snapshot_job(claim, progress)
     raise ValueError(
         f"Job type {claim.job_type!r} is registered for the durable queue but has no v8.3 executor yet; "
         "use document-process, document-intelligence, source-identity, research-intelligence-extraction, argument-synthesis-plan, statistical-analysis-plan, visual-research-plan, unified-research-runtime, research-workflow-advance, scholarly-research-package, peer-review-validation-package, scholarly-publication-package, research-knowledge-graph-snapshot, ai-research-context-snapshot, rag-evaluation-snapshot, ai-research-experiment-snapshot, model-aware-research-snapshot, unified-research-environment-snapshot, research-question-hypothesis-snapshot, research-design-methodology-snapshot, evidence-search-strategy-snapshot, systematic-review-evidence-synthesis-snapshot, scholarly-literature-intelligence-snapshot, argument-claim-counterclaim-intelligence-snapshot, research-gap-novelty-intelligence-snapshot, dataset-discovery-data-fitness-snapshot, computational-research-planning-snapshot, research-program-intelligence-snapshot, study-protocol-preregistration-snapshot, statistical-analysis-planning-intelligence-snapshot, causal-research-design-intelligence-snapshot, simulation-model-study-planner-snapshot, reproduction-replication-intelligence-snapshot, cross-study-synthesis-meta-research-snapshot, research-integrity-methodological-audit-snapshot, peer-review-scholarly-critique-intelligence-snapshot, ingestion, or validation."

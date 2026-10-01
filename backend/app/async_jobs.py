@@ -70,6 +70,7 @@ JOB_TYPES = {
     "research-integrity-methodological-audit-snapshot",
     "peer-review-scholarly-critique-intelligence-snapshot",
     "research-revision-response-intelligence-snapshot",
+    "integrated-computational-research-scientist-environment-snapshot",
 }
 TERMINAL_STATES = {"succeeded", "failed", "cancelled"}
 ACTIVE_STATES = {"queued", "retry_wait", "running"}

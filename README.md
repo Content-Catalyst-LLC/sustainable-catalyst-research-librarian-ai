@@ -2,16 +2,16 @@
 
 Sustainable Catalyst Research Librarian AI is the research-guidance, retrieval, evidence-planning, research-state, and reproducible research-intelligence layer of the Sustainable Catalyst platform.
 
-**Current release:** v11.9.0 — Research Revision & Response Intelligence
+**Current release:** v12.0.0 — Integrated Computational Research Scientist Environment
 
 ## Architecture
 
 Research Librarian AI helps structure research without silently replacing source authority, scientific execution, or human judgment.
 
-- **Research guidance and planning** — research questions, methodology plans, search strategies, study protocols, preregistration, statistical plans, causal designs, simulation/model studies, reproduction/replication planning, cross-study synthesis, meta-research planning, research-integrity/methodological audit, peer-review/scholarly critique, and research revision/response intelligence.
+- **Research guidance and planning** — research questions, methodology plans, search strategies, study protocols, preregistration, statistical plans, causal designs, simulation/model studies, reproduction/replication planning, cross-study synthesis, meta-research planning, research-integrity/methodological audit, peer-review/scholarly critique, research revision/response intelligence, and an integrated computational research scientist environment.
 - **Retrieval and source intelligence** — deterministic and semantic retrieval, reranking, source identity, document parsing, citation context, federated discovery, and evidence-grounding workflows.
 - **Research state** — projects, investigations, contexts, open questions, lifecycle state, collaboration rooms, activity, and durable workflow state.
-- **Evidence intelligence** — source evaluation, evidence comparison, gaps, claims/counterclaims, contradictions, argument structures, review workflows, synthesis planning, methodological audit, discrepancy tracing, remediation tracking, reviewer critique, author-response lineage, revision tracking, change-evidence traceability, and response reconciliation.
+- **Evidence intelligence** — source evaluation, evidence comparison, gaps, claims/counterclaims, contradictions, argument structures, review workflows, synthesis planning, methodological audit, discrepancy tracing, remediation tracking, reviewer critique, author-response lineage, revision tracking, change-evidence traceability, response reconciliation, scientist-workspace orchestration, computational handoffs, execution provenance, and human interpretation checkpoints.
 - **AI research context** — retrieval/context manifests, RAG evaluation, AI experiment orchestration, benchmark/evaluation lineage, and reproducibility metadata.
 - **Python/FastAPI backend** — production research services, durable jobs, PostgreSQL/pgvector knowledge indexing, and ancillary SQLite/local-state support.
 - **WordPress interface** — public and institutional Research Librarian experience.
