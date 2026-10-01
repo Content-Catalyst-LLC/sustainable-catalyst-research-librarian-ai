@@ -1,0 +1,15 @@
+{
+  "release": "12.0.1",
+  "name": "Runtime Authority & WordPress Decoupling Foundation",
+  "schema": "sc-research-librarian-runtime-authority-wordpress-decoupling/1.0",
+  "migration": "036_runtime_authority_wordpress_decoupling.sql",
+  "runtime_authority": "python-fastapi-backend",
+  "wordpress_role": "optional-thin-adapter",
+  "next_boundary": "v12.0.2 Independent Research Librarian API v1",
+  "guardrails": {
+    "wordpress_required_for_backend_runtime": false,
+    "automatic_data_migration": false,
+    "automatic_cutover": false,
+    "automatic_truth_promotion": false
+  }
+}

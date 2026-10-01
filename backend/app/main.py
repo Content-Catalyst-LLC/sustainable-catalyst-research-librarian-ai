@@ -674,6 +674,8 @@ def health() -> dict[str, Any]:
     return {
         "ok": database_ready and identity_match,
         "version": __version__,
+        "runtime_authority": "python-fastapi-backend",
+        "wordpress_required": False,
         "environment": settings.environment,
         "database_backend": str(summary.get("database_backend", settings.database_backend)),
         "database_ready": database_ready,

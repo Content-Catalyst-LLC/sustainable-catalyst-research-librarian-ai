@@ -5,8 +5,8 @@ $backend=file_get_contents($root.'/backend/app/__init__.py');
 $core=file_get_contents($root.'/backend/app/api/core.py');
 $jobs=file_get_contents($root.'/backend/app/async_jobs.py');
 $checks=[
- 'plugin_version'=>strpos($main,'Version: 12.0.0')!==false,
- 'backend_version'=>strpos($backend,'__version__ = "12.0.0"')!==false,
+ 'plugin_version'=>strpos($main,'Version: 12.0.1')!==false,
+ 'backend_version'=>strpos($backend,'__version__ = "12.0.1"')!==false,
  'contract'=>file_exists($root.'/backend/app/contracts/scholarly_publication.py'),
  'service'=>file_exists($root.'/backend/app/services/scholarly_publication.py'),
  'test'=>file_exists($root.'/backend/tests/test_v940_scholarly_publication.py'),

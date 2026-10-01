@@ -7,8 +7,8 @@ $jobs=file_get_contents($root.'/backend/app/async_jobs.py');
 $service=file_get_contents($root.'/backend/app/services/causal_research_design_intelligence.py');
 $environment=file_get_contents($root.'/backend/app/services/unified_scholarly_ai_environment.py');
 $checks=[
- 'plugin_version'=>strpos($main,'Version: 12.0.0')!==false,
- 'backend_version'=>strpos($backend,'__version__ = "12.0.0"')!==false,
+ 'plugin_version'=>strpos($main,'Version: 12.0.1')!==false,
+ 'backend_version'=>strpos($backend,'__version__ = "12.0.1"')!==false,
  'capabilities_route'=>strpos($api,'/causal-research-design-intelligence/capabilities')!==false,
  'role_route'=>strpos($api,'/causal-research-design-intelligence/designs/{causal_design_id}/variable-roles')!==false,
  'strategy_route'=>strpos($api,'/causal-research-design-intelligence/designs/{causal_design_id}/identification-strategies')!==false,

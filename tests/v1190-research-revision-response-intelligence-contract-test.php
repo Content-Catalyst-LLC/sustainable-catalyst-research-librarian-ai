@@ -6,8 +6,8 @@ $jobs=file_get_contents($root.'/backend/app/async_jobs.py');
 $service=file_get_contents($root.'/backend/app/services/research_revision_response_intelligence.py');
 $unified=file_get_contents($root.'/backend/app/services/unified_scholarly_ai_environment.py');
 $checks=[
- 'plugin version'=>strpos($main,'Version: 12.0.0')!==false,
- 'plugin constant'=>strpos($main,"const VERSION        = '12.0.0';")!==false,
+ 'plugin version'=>strpos($main,'Version: 12.0.1')!==false,
+ 'plugin constant'=>strpos($main,"const VERSION        = '12.0.1';")!==false,
  'response package api'=>strpos($core,'/research-revision-response-intelligence/projects/{revision_response_id}/response-package')!==false,
  'snapshot job'=>strpos($jobs,'research-revision-response-intelligence-snapshot')!==false,
  'satisfaction guardrail'=>preg_match('/automatic_comment_satisfaction.*False/',$service)===1,

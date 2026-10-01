@@ -160,6 +160,7 @@ from ..contracts.integrated_computational_research_scientist_environment import 
     ScientistCheckpointAddRequest, ScientistCheckpointDecisionRequest, ScientistObjectDecisionRequest,
     ScientistEnvironmentStateRequest, ScientistEnvironmentSnapshotRequest,
 )
+from ..contracts.runtime_authority_wordpress_decoupling import RuntimeAuthoritySnapshotRequest
 from ..contracts.research_question_hypothesis import (
     ResearchQuestionPlanCreateRequest, ResearchSubquestionAddRequest, ResearchHypothesisAddRequest,
     ResearchEvidenceRequirementRequest, ResearchQuestionReviewStateRequest, ResearchQuestionSnapshotRequest,
@@ -258,6 +259,14 @@ from ..services.research_integrity_methodological_audit import get_research_inte
 from ..services.peer_review_scholarly_critique_intelligence import get_peer_review_scholarly_critique_intelligence_store, capabilities as peer_review_scholarly_critique_intelligence_capabilities
 from ..services.research_revision_response_intelligence import get_research_revision_response_intelligence_store, capabilities as research_revision_response_intelligence_capabilities
 from ..services.integrated_computational_research_scientist_environment import get_integrated_computational_research_scientist_environment_store, capabilities as integrated_computational_research_scientist_environment_capabilities
+from ..services.runtime_authority_wordpress_decoupling import (
+    get_runtime_authority_certification_store,
+    capabilities as runtime_authority_capabilities,
+    runtime_authority_manifest,
+    wordpress_adapter_contract,
+    dependency_map as runtime_authority_dependency_map,
+    independence_readiness as runtime_authority_independence_readiness,
+)
 from ..services.research_question_hypothesis import (
     get_research_question_hypothesis_store, capabilities as research_question_hypothesis_capabilities,
 )
@@ -2545,3 +2554,27 @@ def scientist_environment_core_candidate(scientist_environment_id: str) -> dict[
 @router.post("/integrated-computational-research-scientist-environment/snapshots/freeze", dependencies=[Depends(require_backend_key)])
 def scientist_environment_snapshot(req: ScientistEnvironmentSnapshotRequest) -> dict[str, Any]:
     return get_integrated_computational_research_scientist_environment_store().freeze_snapshot(req)
+
+@router.get("/runtime-authority/capabilities", dependencies=[Depends(require_backend_key)])
+def runtime_authority_capabilities_route() -> dict[str, Any]:
+    return runtime_authority_capabilities()
+
+@router.get("/runtime-authority/manifest", dependencies=[Depends(require_backend_key)])
+def runtime_authority_manifest_route() -> dict[str, Any]:
+    return runtime_authority_manifest()
+
+@router.get("/runtime-authority/wordpress-adapter-contract", dependencies=[Depends(require_backend_key)])
+def runtime_authority_wordpress_adapter_route() -> dict[str, Any]:
+    return wordpress_adapter_contract()
+
+@router.get("/runtime-authority/dependency-map", dependencies=[Depends(require_backend_key)])
+def runtime_authority_dependency_map_route() -> dict[str, Any]:
+    return runtime_authority_dependency_map()
+
+@router.get("/runtime-authority/independence-readiness", dependencies=[Depends(require_backend_key)])
+def runtime_authority_independence_readiness_route() -> dict[str, Any]:
+    return runtime_authority_independence_readiness()
+
+@router.post("/runtime-authority/snapshots/freeze", dependencies=[Depends(require_backend_key)])
+def runtime_authority_snapshot_route(req: RuntimeAuthoritySnapshotRequest) -> dict[str, Any]:
+    return get_runtime_authority_certification_store().freeze_snapshot(req)
