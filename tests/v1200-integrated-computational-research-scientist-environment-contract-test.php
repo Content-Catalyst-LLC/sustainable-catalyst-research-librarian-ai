@@ -5,8 +5,8 @@ $core=file_get_contents($root.'/backend/app/api/core.py');
 $jobs=file_get_contents($root.'/backend/app/async_jobs.py');
 $service=file_get_contents($root.'/backend/app/services/integrated_computational_research_scientist_environment.py');
 $checks=[
- 'plugin version'=>strpos($main,'Version: 12.0.1')!==false,
- 'plugin constant'=>strpos($main,"const VERSION        = '12.0.1';")!==false,
+ 'plugin version'=>strpos($main,'Version: 12.0.2')!==false,
+ 'plugin constant'=>strpos($main,"const VERSION        = '12.0.2';")!==false,
  'scientist dossier api'=>strpos($core,'/integrated-computational-research-scientist-environment/environments/{scientist_environment_id}/dossier')!==false,
  'snapshot job'=>strpos($jobs,'integrated-computational-research-scientist-environment-snapshot')!==false,
  'execution guardrail'=>preg_match('/automatic_execution.*False/',$service)===1,

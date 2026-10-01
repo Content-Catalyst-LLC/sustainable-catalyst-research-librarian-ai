@@ -163,6 +163,7 @@ from .research_lifecycle import (
 
 
 from .api.core import router as platform_core_router
+from .api.independent import router as independent_research_librarian_api_router
 from .api.jobs import router as async_jobs_router, register_authenticated_routes as register_async_job_routes
 from .api.documents import router as documents_router, register_authenticated_routes as register_document_routes
 from .api.sources import router as sources_router, register_authenticated_routes as register_source_routes
@@ -193,6 +194,7 @@ app.add_middleware(
     allow_headers=["Content-Type", "X-SC-RL-Key"],
 )
 app.include_router(platform_core_router)
+app.include_router(independent_research_librarian_api_router)
 
 _sessions: dict[str, list[dict[str, Any]]] = defaultdict(list)
 
@@ -676,6 +678,7 @@ def health() -> dict[str, Any]:
         "version": __version__,
         "runtime_authority": "python-fastapi-backend",
         "wordpress_required": False,
+        "independent_api_version": "v1",
         "environment": settings.environment,
         "database_backend": str(summary.get("database_backend", settings.database_backend)),
         "database_ready": database_ready,

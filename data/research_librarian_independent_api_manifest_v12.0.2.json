@@ -1,0 +1,11 @@
+{
+  "release": "12.0.2",
+  "name": "Independent Research Librarian API v1",
+  "schema": "sc-research-librarian-independent-api/1.0",
+  "api_version": "v1",
+  "base_path": "/v1/research-librarian",
+  "migration": "037_independent_research_librarian_api.sql",
+  "authentication": "backend-key-v1",
+  "wordpress_required": false,
+  "next_boundary": "v12.0.3 Persistent Research Session & Conversation Runtime"
+}

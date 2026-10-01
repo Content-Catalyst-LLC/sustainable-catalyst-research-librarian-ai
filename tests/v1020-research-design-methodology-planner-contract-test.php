@@ -7,8 +7,8 @@ $jobs=file_get_contents($root.'/backend/app/async_jobs.py');
 $service=file_get_contents($root.'/backend/app/services/research_design_methodology.py');
 $environment=file_get_contents($root.'/backend/app/services/unified_scholarly_ai_environment.py');
 $checks=[
- 'plugin_version'=>strpos($main,'Version: 12.0.1')!==false,
- 'backend_version'=>strpos($backend,'__version__ = "12.0.1"')!==false,
+ 'plugin_version'=>strpos($main,'Version: 12.0.2')!==false,
+ 'backend_version'=>strpos($backend,'__version__ = "12.0.2"')!==false,
  'capabilities_route'=>strpos($api,'/research-design-methodology/capabilities')!==false,
  'plan_route'=>strpos($api,'/research-design-methodology/plans')!==false,
  'comparison_route'=>strpos($api,'/research-design-methodology/plans/{plan_id}/comparison')!==false,
