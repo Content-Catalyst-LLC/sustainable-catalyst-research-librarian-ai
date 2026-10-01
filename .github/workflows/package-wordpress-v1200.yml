@@ -1,0 +1,52 @@
+name: Package Research Librarian WordPress v12.0.0
+
+on:
+  push:
+    branches:
+      - artifact-wordpress-v1200
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout v12.0.0 source
+        uses: actions/checkout@v4
+
+      - name: Verify release identity
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          grep -q 'Version: 12.0.0' sustainable-catalyst-research-librarian-ai.php
+          grep -q "const VERSION        = '12.0.0';" sustainable-catalyst-research-librarian-ai.php
+          grep -q 'Stable tag: 12.0.0' readme.txt
+
+      - name: Build installable WordPress plugin
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          rm -rf dist-wordpress
+          mkdir -p dist-wordpress/sustainable-catalyst-research-librarian-ai
+          cp sustainable-catalyst-research-librarian-ai.php dist-wordpress/sustainable-catalyst-research-librarian-ai/
+          cp readme.txt dist-wordpress/sustainable-catalyst-research-librarian-ai/
+          cp LICENSE dist-wordpress/sustainable-catalyst-research-librarian-ai/
+          cp -a assets dist-wordpress/sustainable-catalyst-research-librarian-ai/
+          cp -a includes dist-wordpress/sustainable-catalyst-research-librarian-ai/
+          cp -a knowledge dist-wordpress/sustainable-catalyst-research-librarian-ai/
+          cd dist-wordpress
+          zip -qr sustainable-catalyst-research-librarian-ai-v12.0.0.zip sustainable-catalyst-research-librarian-ai
+          sha256sum sustainable-catalyst-research-librarian-ai-v12.0.0.zip > sustainable-catalyst-research-librarian-ai-v12.0.0.zip.sha256
+          unzip -t sustainable-catalyst-research-librarian-ai-v12.0.0.zip
+
+      - name: Upload installable plugin
+        uses: actions/upload-artifact@v4
+        with:
+          name: sustainable-catalyst-research-librarian-ai-v12.0.0-wordpress
+          path: |
+            dist-wordpress/sustainable-catalyst-research-librarian-ai-v12.0.0.zip
+            dist-wordpress/sustainable-catalyst-research-librarian-ai-v12.0.0.zip.sha256
+          if-no-files-found: error
+          compression-level: 0
