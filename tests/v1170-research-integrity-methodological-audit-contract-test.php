@@ -6,8 +6,8 @@ $jobs = file_get_contents($root . '/backend/app/async_jobs.py');
 $service = file_get_contents($root . '/backend/app/services/research_integrity_methodological_audit.py');
 $unified = file_get_contents($root . '/backend/app/services/unified_scholarly_ai_environment.py');
 $assertions = [
-    'plugin version' => strpos($main, 'Version: 11.8.0') !== false,
-    'plugin constant' => strpos($main, "const VERSION        = '11.8.0';") !== false,
+    'plugin version' => strpos($main, 'Version: 11.9.0') !== false,
+    'plugin constant' => strpos($main, "const VERSION        = '11.9.0';") !== false,
     'integrity audit API' => strpos($core, '/research-integrity-methodological-audit/audits/{audit_id}/verification-handoffs') !== false,
     'snapshot job' => strpos($jobs, 'research-integrity-methodological-audit-snapshot') !== false,
     'misconduct guardrail' => preg_match('/automatic_misconduct_inference.*False/', $service) === 1,

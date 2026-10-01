@@ -1,0 +1,17 @@
+{
+  "release": "11.9.0",
+  "name": "Research Revision & Response Intelligence",
+  "schema": "sc-research-librarian-research-revision-response-intelligence/1.0",
+  "migration": "034_research_revision_response_intelligence.sql",
+  "durable_job": "research-revision-response-intelligence-snapshot",
+  "unified_component_type": "research-revision-response",
+  "guardrails": {
+    "automatic_comment_satisfaction": false,
+    "automatic_accept_reject": false,
+    "automatic_editorial_decision": false,
+    "automatic_scientific_validity_verdict": false,
+    "automatic_misconduct_inference": false,
+    "automatic_execution": false,
+    "automatic_truth_promotion": false
+  }
+}

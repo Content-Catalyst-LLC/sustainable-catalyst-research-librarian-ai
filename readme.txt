@@ -3,12 +3,14 @@ Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 11.8.0
+Stable tag: 11.9.0
 License: MIT
 
 A connected, site-scoped research intelligence platform for Sustainable Catalyst with persistent projects, verified retrieval, typed workflows, governance, and portable recovery.
 
 == Description ==
+
+v11.9.0 adds Research Revision & Response Intelligence: critique-to-response traceability, human response positions, change claims, artifact/diff receipts, approved verification handoffs/receipts, human resolution reviews, response and change-evidence matrices, unresolved registers, response packages, Core candidates, immutable snapshots, and unified-environment bindings. Author response does not equal reviewer satisfaction; no automatic accept/reject, editorial decision, scientific-validity verdict, misconduct inference, execution, or truth promotion occurs.
 
 v11.8.0 adds Peer Review & Scholarly Critique Intelligence: durable critique projects, review rounds and dimensions, human reviewer comments, author-response lineage, revision requirements, specialist verification handoffs/receipts, cross-review matrices, issue registers, response coverage, critique synthesis, editorial handoffs, Core candidates, immutable snapshots, and unified-environment bindings. It does not automatically accept/reject manuscripts, make editorial decisions, rank reviewers, certify scientific validity, infer misconduct, resolve comments, block publication, execute specialist checks, or promote truth.
 

@@ -6,8 +6,8 @@ $api=file_get_contents($root.'/backend/app/api/core.py');
 $jobs=file_get_contents($root.'/backend/app/async_jobs.py');
 $service=file_get_contents($root.'/backend/app/services/unified_scholarly_ai_environment.py');
 $checks=[
- 'plugin_version'=>strpos($main,'Version: 11.8.0')!==false,
- 'backend_version'=>strpos($backend,'__version__ = "11.8.0"')!==false,
+ 'plugin_version'=>strpos($main,'Version: 11.9.0')!==false,
+ 'backend_version'=>strpos($backend,'__version__ = "11.9.0"')!==false,
  'capabilities_route'=>strpos($api,'/unified-research-environment/capabilities')!==false,
  'dossier_route'=>strpos($api,'/unified-research-environment/environments/{environment_id}/dossier')!==false,
  'snapshot_route'=>strpos($api,'/unified-research-environment/snapshots/freeze')!==false,

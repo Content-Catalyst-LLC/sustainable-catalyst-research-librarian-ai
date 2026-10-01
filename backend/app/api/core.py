@@ -148,6 +148,12 @@ from ..contracts.peer_review_scholarly_critique_intelligence import (
     ScholarlyCritiqueVerificationReceiptAddRequest, ScholarlyCritiqueSynthesisAddRequest,
     ScholarlyCritiqueDecisionRequest, ScholarlyCritiqueStateRequest, ScholarlyCritiqueSnapshotRequest,
 )
+from ..contracts.research_revision_response_intelligence import (
+    RevisionResponseCreateRequest, RevisionResponseItemAddRequest, RevisionChangeClaimAddRequest,
+    RevisionArtifactReceiptAddRequest, RevisionVerificationRequestAddRequest, RevisionVerificationReceiptAddRequest,
+    RevisionResolutionReviewAddRequest, RevisionResponseDecisionRequest, RevisionResponseStateRequest,
+    RevisionResponseSnapshotRequest,
+)
 from ..contracts.research_question_hypothesis import (
     ResearchQuestionPlanCreateRequest, ResearchSubquestionAddRequest, ResearchHypothesisAddRequest,
     ResearchEvidenceRequirementRequest, ResearchQuestionReviewStateRequest, ResearchQuestionSnapshotRequest,
@@ -244,6 +250,7 @@ from ..services.reproduction_replication_intelligence import get_reproduction_re
 from ..services.cross_study_synthesis_meta_research import get_cross_study_synthesis_meta_research_store, capabilities as cross_study_synthesis_meta_research_capabilities
 from ..services.research_integrity_methodological_audit import get_research_integrity_methodological_audit_store, capabilities as research_integrity_methodological_audit_capabilities
 from ..services.peer_review_scholarly_critique_intelligence import get_peer_review_scholarly_critique_intelligence_store, capabilities as peer_review_scholarly_critique_intelligence_capabilities
+from ..services.research_revision_response_intelligence import get_research_revision_response_intelligence_store, capabilities as research_revision_response_intelligence_capabilities
 from ..services.research_question_hypothesis import (
     get_research_question_hypothesis_store, capabilities as research_question_hypothesis_capabilities,
 )
@@ -2394,3 +2401,60 @@ def scholarly_critique_core_candidate(critique_project_id: str) -> dict[str, Any
 
 @router.post("/peer-review-scholarly-critique-intelligence/snapshots/freeze", dependencies=[Depends(require_backend_key)])
 def scholarly_critique_snapshot(req: ScholarlyCritiqueSnapshotRequest) -> dict[str, Any]: return get_peer_review_scholarly_critique_intelligence_store().freeze_snapshot(req)
+
+@router.get("/research-revision-response-intelligence/capabilities", dependencies=[Depends(require_backend_key)])
+def revision_response_capabilities_route() -> dict[str, Any]: return research_revision_response_intelligence_capabilities()
+
+@router.post("/research-revision-response-intelligence/projects", dependencies=[Depends(require_backend_key)])
+def revision_response_create(req: RevisionResponseCreateRequest) -> dict[str, Any]: return get_research_revision_response_intelligence_store().create(req)
+
+@router.get("/research-revision-response-intelligence/projects/{revision_response_id}", dependencies=[Depends(require_backend_key)])
+def revision_response_get(revision_response_id: str) -> dict[str, Any]: return get_research_revision_response_intelligence_store().get(revision_response_id)
+
+@router.post("/research-revision-response-intelligence/projects/{revision_response_id}/response-items", dependencies=[Depends(require_backend_key)])
+def revision_response_item(revision_response_id: str, req: RevisionResponseItemAddRequest) -> dict[str, Any]: return get_research_revision_response_intelligence_store().add_response_item(revision_response_id,req)
+
+@router.post("/research-revision-response-intelligence/projects/{revision_response_id}/change-claims", dependencies=[Depends(require_backend_key)])
+def revision_response_change(revision_response_id: str, req: RevisionChangeClaimAddRequest) -> dict[str, Any]: return get_research_revision_response_intelligence_store().add_change_claim(revision_response_id,req)
+
+@router.post("/research-revision-response-intelligence/projects/{revision_response_id}/artifact-receipts", dependencies=[Depends(require_backend_key)])
+def revision_response_artifact(revision_response_id: str, req: RevisionArtifactReceiptAddRequest) -> dict[str, Any]: return get_research_revision_response_intelligence_store().add_artifact_receipt(revision_response_id,req)
+
+@router.post("/research-revision-response-intelligence/projects/{revision_response_id}/verification-requests", dependencies=[Depends(require_backend_key)])
+def revision_response_verification_request(revision_response_id: str, req: RevisionVerificationRequestAddRequest) -> dict[str, Any]: return get_research_revision_response_intelligence_store().add_verification_request(revision_response_id,req)
+
+@router.post("/research-revision-response-intelligence/projects/{revision_response_id}/verification-receipts", dependencies=[Depends(require_backend_key)])
+def revision_response_verification_receipt(revision_response_id: str, req: RevisionVerificationReceiptAddRequest) -> dict[str, Any]: return get_research_revision_response_intelligence_store().add_verification_receipt(revision_response_id,req)
+
+@router.post("/research-revision-response-intelligence/projects/{revision_response_id}/resolution-reviews", dependencies=[Depends(require_backend_key)])
+def revision_response_resolution_review(revision_response_id: str, req: RevisionResolutionReviewAddRequest) -> dict[str, Any]: return get_research_revision_response_intelligence_store().add_resolution_review(revision_response_id,req)
+
+@router.post("/research-revision-response-intelligence/projects/{revision_response_id}/decisions", dependencies=[Depends(require_backend_key)])
+def revision_response_decision(revision_response_id: str, req: RevisionResponseDecisionRequest) -> dict[str, Any]: return get_research_revision_response_intelligence_store().decide(revision_response_id,req)
+
+@router.post("/research-revision-response-intelligence/projects/{revision_response_id}/state", dependencies=[Depends(require_backend_key)])
+def revision_response_state(revision_response_id: str, req: RevisionResponseStateRequest) -> dict[str, Any]: return get_research_revision_response_intelligence_store().set_state(revision_response_id,req)
+
+@router.get("/research-revision-response-intelligence/projects/{revision_response_id}/response-matrix", dependencies=[Depends(require_backend_key)])
+def revision_response_matrix(revision_response_id: str) -> dict[str, Any]: return get_research_revision_response_intelligence_store().response_matrix(revision_response_id)
+
+@router.get("/research-revision-response-intelligence/projects/{revision_response_id}/change-evidence-matrix", dependencies=[Depends(require_backend_key)])
+def revision_response_change_matrix(revision_response_id: str) -> dict[str, Any]: return get_research_revision_response_intelligence_store().change_evidence_matrix(revision_response_id)
+
+@router.get("/research-revision-response-intelligence/projects/{revision_response_id}/unresolved-register", dependencies=[Depends(require_backend_key)])
+def revision_response_unresolved(revision_response_id: str) -> dict[str, Any]: return get_research_revision_response_intelligence_store().unresolved_register(revision_response_id)
+
+@router.get("/research-revision-response-intelligence/projects/{revision_response_id}/verification-handoffs", dependencies=[Depends(require_backend_key)])
+def revision_response_handoffs(revision_response_id: str) -> dict[str, Any]: return get_research_revision_response_intelligence_store().verification_handoffs(revision_response_id)
+
+@router.get("/research-revision-response-intelligence/projects/{revision_response_id}/readiness", dependencies=[Depends(require_backend_key)])
+def revision_response_readiness(revision_response_id: str) -> dict[str, Any]: return get_research_revision_response_intelligence_store().readiness(revision_response_id)
+
+@router.get("/research-revision-response-intelligence/projects/{revision_response_id}/response-package", dependencies=[Depends(require_backend_key)])
+def revision_response_package(revision_response_id: str) -> dict[str, Any]: return get_research_revision_response_intelligence_store().response_package(revision_response_id)
+
+@router.get("/research-revision-response-intelligence/projects/{revision_response_id}/core-candidate", dependencies=[Depends(require_backend_key)])
+def revision_response_core_candidate(revision_response_id: str) -> dict[str, Any]: return get_research_revision_response_intelligence_store().core_candidate(revision_response_id)
+
+@router.post("/research-revision-response-intelligence/snapshots/freeze", dependencies=[Depends(require_backend_key)])
+def revision_response_snapshot(req: RevisionResponseSnapshotRequest) -> dict[str, Any]: return get_research_revision_response_intelligence_store().freeze_snapshot(req)

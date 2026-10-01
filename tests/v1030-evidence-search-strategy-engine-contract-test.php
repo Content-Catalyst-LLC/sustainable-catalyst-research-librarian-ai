@@ -7,8 +7,8 @@ $jobs=file_get_contents($root.'/backend/app/async_jobs.py');
 $service=file_get_contents($root.'/backend/app/services/evidence_search_strategy.py');
 $environment=file_get_contents($root.'/backend/app/services/unified_scholarly_ai_environment.py');
 $checks=[
- 'plugin_version'=>strpos($main,'Version: 11.8.0')!==false,
- 'backend_version'=>strpos($backend,'__version__ = "11.8.0"')!==false,
+ 'plugin_version'=>strpos($main,'Version: 11.9.0')!==false,
+ 'backend_version'=>strpos($backend,'__version__ = "11.9.0"')!==false,
  'capabilities_route'=>strpos($api,'/evidence-search-strategy/capabilities')!==false,
  'strategy_route'=>strpos($api,'/evidence-search-strategy/strategies')!==false,
  'coverage_route'=>strpos($api,'/evidence-search-strategy/strategies/{strategy_id}/coverage')!==false,
