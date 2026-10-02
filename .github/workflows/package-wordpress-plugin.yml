@@ -1,0 +1,50 @@
+name: Package WordPress Plugin
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'sustainable-catalyst-research-librarian-ai.php'
+      - 'includes/**'
+      - 'assets/**'
+      - 'data/**'
+      - 'knowledge/**'
+      - 'readme.txt'
+      - 'LICENSE'
+      - '.github/workflows/package-wordpress-plugin.yml'
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Read plugin version
+        id: version
+        shell: bash
+        run: |
+          VERSION=$(grep -m1 -E '^ \* Version:' sustainable-catalyst-research-librarian-ai.php | sed -E 's/^ \* Version:[[:space:]]*//')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Build installable ZIP
+        shell: bash
+        run: |
+          PLUGIN_DIR="dist/sustainable-catalyst-research-librarian-ai"
+          mkdir -p "$PLUGIN_DIR"
+          cp sustainable-catalyst-research-librarian-ai.php "$PLUGIN_DIR/"
+          cp readme.txt LICENSE "$PLUGIN_DIR/" 2>/dev/null || true
+          for dir in includes assets data knowledge; do
+            if [ -d "$dir" ]; then
+              cp -a "$dir" "$PLUGIN_DIR/"
+            fi
+          done
+          cd dist
+          zip -qr "sustainable-catalyst-research-librarian-ai-v${{ steps.version.outputs.version }}-wordpress.zip" sustainable-catalyst-research-librarian-ai
+
+      - name: Upload WordPress ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: sustainable-catalyst-research-librarian-ai-v${{ steps.version.outputs.version }}-wordpress
+          path: dist/sustainable-catalyst-research-librarian-ai-v${{ steps.version.outputs.version }}-wordpress.zip
+          if-no-files-found: error
