@@ -71,6 +71,16 @@ def api_manifest()->dict[str,Any]:
         {"method":"GET","path":f"{API_PREFIX}/scientist-environments/{{scientist_environment_id}}","resource":"scientist-environment"},
         {"method":"GET","path":f"{API_PREFIX}/scientist-environments/{{scientist_environment_id}}/dossier","resource":"scientist-dossier"},
         {"method":"GET","path":f"{API_PREFIX}/runtime-authority","resource":"runtime-authority"},
+        {"method":"GET","path":f"{API_PREFIX}/sessions","resource":"research-session-list"},
+        {"method":"POST","path":f"{API_PREFIX}/sessions","resource":"research-session"},
+        {"method":"GET","path":f"{API_PREFIX}/sessions/{{session_id}}","resource":"research-session"},
+        {"method":"GET","path":f"{API_PREFIX}/sessions/{{session_id}}/turns","resource":"research-session-turn-list"},
+        {"method":"POST","path":f"{API_PREFIX}/sessions/{{session_id}}/turns","resource":"research-session-turn"},
+        {"method":"POST","path":f"{API_PREFIX}/sessions/{{session_id}}/context","resource":"research-session-context"},
+        {"method":"POST","path":f"{API_PREFIX}/sessions/{{session_id}}/state","resource":"research-session-state"},
+        {"method":"POST","path":f"{API_PREFIX}/sessions/{{session_id}}/reset","resource":"research-session-reset"},
+        {"method":"GET","path":f"{API_PREFIX}/sessions/{{session_id}}/summary","resource":"research-session-summary"},
+        {"method":"POST","path":f"{API_PREFIX}/sessions/{{session_id}}/snapshots/freeze","resource":"research-session-snapshot"},
         {"method":"POST","path":f"{API_PREFIX}/contract-snapshots/freeze","resource":"api-contract-snapshot"},
     ]
     return {
@@ -101,10 +111,10 @@ def api_manifest()->dict[str,Any]:
             "investigations_read":True,
             "scientist_environment_read":True,
             "runtime_authority":True,
-            "persistent_conversations":False,
+            "persistent_conversations":True,
             "identity_sessions":False,
         },
-        "next_boundary":"persistent-research-session-and-conversation-runtime",
+        "next_boundary":"independent-web-app-foundation",
     }
 
 def status_payload()->dict[str,Any]:
@@ -298,7 +308,7 @@ def capabilities()->dict[str,Any]:
     return {
         "schema":INDEPENDENT_API_SCHEMA,
         "release":settings.release_version,
-        "milestone":"12.0.2",
+        "milestone":"12.0.3",
         "api_version":"v1",
         "base_path":API_PREFIX,
         "stable_response_envelope":True,
@@ -309,7 +319,8 @@ def capabilities()->dict[str,Any]:
         "scientist_environment_api":True,
         "runtime_authority_api":True,
         "contract_snapshots":True,
-        "persistent_conversations":False,
+        "persistent_research_sessions":True,
+        "persistent_conversations":True,
         "identity_sessions":False,
         "breaking_changes_require_new_api_version":True,
         "route_count":m["route_count"],

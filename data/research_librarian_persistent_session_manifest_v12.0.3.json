@@ -1,0 +1,16 @@
+{
+  "release": "12.0.3",
+  "name": "Persistent Research Session & Conversation Runtime",
+  "schema": "sc-research-librarian-persistent-research-session/1.0",
+  "migration": "038_persistent_research_session_conversation.sql",
+  "api_base": "/v1/research-librarian/sessions",
+  "production_store": "postgres",
+  "local_test_store": "sqlite",
+  "persistent_sessions": true,
+  "persistent_conversations": true,
+  "legacy_ask_persistence": true,
+  "client_ref_is_identity": false,
+  "identity_sessions": false,
+  "wordpress_required": false,
+  "next_boundary": "v12.0.4 Independent Web App Foundation"
+}

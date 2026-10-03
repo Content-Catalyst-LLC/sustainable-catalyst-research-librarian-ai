@@ -164,6 +164,9 @@ from .research_lifecycle import (
 
 from .api.core import router as platform_core_router
 from .api.independent import router as independent_research_librarian_api_router
+from .services.persistent_research_session_conversation import (
+    get_persistent_research_session_store,
+)
 from .api.jobs import router as async_jobs_router, register_authenticated_routes as register_async_job_routes
 from .api.documents import router as documents_router, register_authenticated_routes as register_document_routes
 from .api.sources import router as sources_router, register_authenticated_routes as register_source_routes
@@ -196,7 +199,7 @@ app.add_middleware(
 app.include_router(platform_core_router)
 app.include_router(independent_research_librarian_api_router)
 
-_sessions: dict[str, list[dict[str, Any]]] = defaultdict(list)
+persistent_session_store = get_persistent_research_session_store()
 
 _RESEARCH_MODES: dict[str, dict[str, str]] = {
     "auto": {"label": "Auto-detect", "instruction": "Infer the most useful site-scoped research workflow."},
@@ -338,13 +341,8 @@ def _session_id(value: str) -> str:
 
 
 def _prune_sessions() -> None:
-    cutoff = time.time() - settings.session_ttl_seconds
-    expired: list[str] = []
-    for session_id, turns in _sessions.items():
-        if not turns or float(turns[-1].get("ts", 0)) < cutoff:
-            expired.append(session_id)
-    for session_id in expired:
-        _sessions.pop(session_id, None)
+    # v12.0.3: durable sessions are not silently deleted by a process-memory TTL.
+    return None
 
 
 def _deterministic_answer(question: str, matches: list[RetrievedSource], related: list[RetrievedSource]) -> str:
@@ -679,6 +677,7 @@ def health() -> dict[str, Any]:
         "runtime_authority": "python-fastapi-backend",
         "wordpress_required": False,
         "independent_api_version": "v1",
+        "persistent_research_sessions": True,
         "environment": settings.environment,
         "database_backend": str(summary.get("database_backend", settings.database_backend)),
         "database_ready": database_ready,
@@ -2401,8 +2400,8 @@ def import_platform_backup(payload: PlatformBackupImportRequest) -> dict[str, An
 @app.post("/v1/session/reset", dependencies=[Depends(require_key)])
 def reset_session(payload: SessionResetRequest) -> dict[str, Any]:
     session_id = _session_id(payload.session_id)
-    removed_turns = len(_sessions.pop(session_id, []))
-    return {"ok": True, "version": __version__, "session_id": session_id, "removed_turns": removed_turns}
+    removed_turns = persistent_session_store.clear_turns(session_id)
+    return {"ok": True, "version": __version__, "session_id": session_id, "removed_turns": removed_turns, "persistent": True}
 
 
 @app.post("/v1/retrieval/plan", dependencies=[Depends(require_key)])
@@ -2483,10 +2482,15 @@ async def ask(payload: AskRequest) -> AskResponse:
     related = related_titles(best, records, settings.related_limit, calibration)
     certainty = confidence(matches, retrieval_diagnostics)
     evidence = evidence_from_matches(matches)
-    history = [
-        {"role": str(turn.get("role", "user")), "content": str(turn.get("content", ""))}
-        for turn in _sessions.get(session_id, [])[-settings.max_session_turns :]
-    ]
+    persistent_session_store.ensure(
+        session_id,
+        title="Legacy /v1/ask session",
+        client_ref="legacy-backend-api",
+    )
+    history = persistent_session_store.history_for_generation(
+        session_id,
+        settings.max_session_turns,
+    )
 
     ai_used = False
     source = "python-hybrid-retrieval"
@@ -2525,13 +2529,32 @@ async def ask(payload: AskRequest) -> AskResponse:
         citation_verification["fallback"] = True
         citation_verification["fallback_reason"] = str(exc)[:500]
 
-    _sessions[session_id].extend(
-        [
-            {"role": "user", "content": payload.question, "ts": time.time()},
-            {"role": "assistant", "content": answer[:5000], "ts": time.time()},
-        ]
+    from .contracts.persistent_research_session_conversation import ResearchSessionTurnAddRequest
+    persistent_session_store.add_turn(
+        session_id,
+        ResearchSessionTurnAddRequest(
+            role="user",
+            content=payload.question,
+            metadata={"research_mode": research_mode, "compatibility_route": "/v1/ask"},
+        ),
     )
-    _sessions[session_id] = _sessions[session_id][-settings.max_session_turns * 2 :]
+    persistent_session_store.add_turn(
+        session_id,
+        ResearchSessionTurnAddRequest(
+            role="assistant",
+            content=answer,
+            source_refs=[item.id for item in matches][:100],
+            evidence_refs=[item.id for item in evidence][:100],
+            provider=provider,
+            model=model,
+            metadata={
+                "research_mode": research_mode,
+                "ai_used": ai_used,
+                "citation_verification_ok": bool(citation_verification.get("ok")),
+                "compatibility_route": "/v1/ask",
+            },
+        ),
+    )
     capabilities = public_capabilities()
     typed_handoffs = prepare_preview_handoffs(
         payload.question,
@@ -2694,7 +2717,7 @@ async def ask(payload: AskRequest) -> AskResponse:
         workspace=workspace,
         research_context=inline_context,
         research_state=state_prompt,
-        session_turns=len(_sessions[session_id]) // 2,
+        session_turns=persistent_session_store.user_turn_count(session_id),
         capabilities=capabilities,
         typed_handoffs=typed_handoffs,
         provenance=provenance,

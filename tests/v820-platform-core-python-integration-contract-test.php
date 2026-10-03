@@ -8,9 +8,9 @@ $api = file_get_contents($root . '/backend/app/api/core.py');
 $store = file_get_contents($root . '/backend/app/store.py');
 $compose = file_get_contents($root . '/compose.yml');
 $checks = array(
-    'version_header' => false !== strpos($main, 'Version: 12.0.2'),
-    'version_constant' => false !== strpos($main, "const VERSION        = '12.0.2';"),
-    'backend_version' => false !== strpos(file_get_contents($root . '/backend/app/__init__.py'), '__version__ = "12.0.2"'),
+    'version_header' => false !== strpos($main, 'Version: 12.0.3'),
+    'version_constant' => false !== strpos($main, "const VERSION        = '12.0.3';"),
+    'backend_version' => false !== strpos(file_get_contents($root . '/backend/app/__init__.py'), '__version__ = "12.0.3"'),
     'sqlite_schema_19' => false !== strpos($store, 'SCHEMA_VERSION = 19'),
     'core_client' => false !== strpos($client, 'class PlatformCoreClient'),
     'core_private_write_header' => false !== strpos($client, 'X-SC-API-Key'),

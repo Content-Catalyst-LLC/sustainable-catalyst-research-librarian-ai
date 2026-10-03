@@ -7,9 +7,9 @@ $jobs = file_get_contents($root . '/backend/app/async_jobs.py');
 $worker = file_get_contents($root . '/backend/app/services/document_jobs.py');
 $manifest = json_decode(file_get_contents($root . '/data/research_librarian_source_identity_manifest_v8.6.0.json'), true);
 $checks = [
-  'version_header' => false !== strpos($main, 'Version: 12.0.2'),
-  'version_constant' => false !== strpos($main, "const VERSION        = '12.0.2';"),
-  'backend_version' => false !== strpos(file_get_contents($root . '/backend/app/__init__.py'), '__version__ = "12.0.2"'),
+  'version_header' => false !== strpos($main, 'Version: 12.0.3'),
+  'version_constant' => false !== strpos($main, "const VERSION        = '12.0.3';"),
+  'backend_version' => false !== strpos(file_get_contents($root . '/backend/app/__init__.py'), '__version__ = "12.0.3"'),
   'source_schema' => false !== strpos($backend, 'sc-research-librarian-source-identity/1.0'),
   'citation_schema' => false !== strpos($backend, 'sc-research-librarian-citation-graph/1.0'),
   'stable_identifiers' => false !== strpos($backend, 'IDENTITY_PRIORITY = ("doi", "arxiv", "pmid", "isbn", "url")'),

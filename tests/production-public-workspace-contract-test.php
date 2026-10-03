@@ -14,10 +14,10 @@ $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_pu
 
 $modes = array( 'auto', 'title', 'subject', 'path', 'evidence', 'analyze', 'compare', 'decision' );
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 12.0.2' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '12.0.2';" ),
+    'version_header' => false !== strpos( $main, 'Version: 12.0.3' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '12.0.3';" ),
     'module_version' => false !== strpos( $module, "const VERSION = '8.0.0';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "12.0.2"' ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "12.0.3"' ),
     'workspace_root_class' => false !== strpos( $main, 'sc-rl-ai--workspace' ),
     'workspace_data_version' => false !== strpos( $main, 'data-workspace-version="2.1"' ),
     'mode_picker' => false !== strpos( $main, 'data-sc-rl-mode-picker' ),
@@ -54,7 +54,7 @@ $checks = array(
     'ask_resolves_mode' => false !== strpos( $backend, 'research_mode = _resolve_research_mode' ),
     'ask_returns_followups' => false !== strpos( $backend, 'follow_up_prompts=_follow_up_prompts' ),
     'ask_returns_workspace' => false !== strpos( $backend, 'workspace = _workspace_summary' ),
-    'ask_returns_session_turns' => false !== strpos( $backend, 'session_turns=len(_sessions[session_id]) // 2' ),
+    'ask_returns_session_turns' => false !== strpos( $backend, 'session_turns=persistent_session_store.user_turn_count(session_id)' ),
     'wordpress_forwards_mode' => false !== strpos( $module, "'research_mode' => in_array" ),
     'wordpress_normalizes_followups' => false !== strpos( $module, "\$grounding['follow_up_prompts']" ),
     'wordpress_normalizes_workspace' => false !== strpos( $module, "\$grounding['workspace']" ),

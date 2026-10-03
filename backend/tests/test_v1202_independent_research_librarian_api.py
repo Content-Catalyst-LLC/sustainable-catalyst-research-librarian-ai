@@ -18,7 +18,7 @@ def test_manifest_is_versioned_and_wordpress_independent():
     assert m["wordpress_required"] is False
     assert m["response_envelope"]==INDEPENDENT_API_ENVELOPE_SCHEMA
     assert m["stability"]["breaking_changes_require_new_api_version"] is True
-    assert m["scope"]["persistent_conversations"] is False
+    assert m["scope"]["persistent_conversations"] is True
     assert m["scope"]["identity_sessions"] is False
 
 def test_envelope_is_stable():
@@ -65,9 +65,9 @@ def test_routes_auth_and_manifest():
 
 def test_capabilities_boundary():
     c=capabilities()
-    assert c["milestone"]=="12.0.2"
+    assert c["milestone"]=="12.0.3"
     assert c["direct_backend_access"] is True
     assert c["wordpress_required"] is False
-    assert c["persistent_conversations"] is False
+    assert c["persistent_conversations"] is True
     assert c["identity_sessions"] is False
     assert c["breaking_changes_require_new_api_version"] is True

@@ -2,7 +2,7 @@
 
 Sustainable Catalyst Research Librarian AI is the research-guidance, retrieval, evidence-planning, research-state, and reproducible research-intelligence layer of the Sustainable Catalyst platform.
 
-**Current release:** v12.0.2 — Independent Research Librarian API v1
+**Current release:** v12.0.3 — Persistent Research Session & Conversation Runtime
 
 ## Architecture
 

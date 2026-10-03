@@ -10,6 +10,13 @@ from ..contracts.independent_research_librarian_api import (
     IndependentRetrievalRequest,
     IndependentAPIContractSnapshotRequest,
 )
+from ..contracts.persistent_research_session_conversation import (
+    ResearchSessionCreateRequest,
+    ResearchSessionTurnAddRequest,
+    ResearchSessionContextBindRequest,
+    ResearchSessionStateRequest,
+    ResearchSessionSnapshotRequest,
+)
 from ..services.independent_research_librarian_api import (
     envelope,
     api_manifest,
@@ -24,6 +31,10 @@ from ..services.independent_research_librarian_api import (
     runtime_authority_payload,
     capabilities,
     get_independent_api_contract_snapshot_store,
+)
+from ..services.persistent_research_session_conversation import (
+    get_persistent_research_session_store,
+    capabilities as persistent_research_session_capabilities,
 )
 
 router=APIRouter(prefix="/v1/research-librarian",tags=["Independent Research Librarian API v1"])
@@ -105,3 +116,101 @@ def independent_runtime_authority()->dict[str,Any]:
 def independent_contract_snapshot(req:IndependentAPIContractSnapshotRequest)->dict[str,Any]:
     snap=get_independent_api_contract_snapshot_store().freeze(req)
     return envelope(snap,resource="api-contract-snapshot")
+
+@router.get("/sessions",dependencies=auth)
+def independent_sessions(
+    limit:int=Query(default=100,ge=1,le=500),
+    client_ref:str=Query(default="",max_length=255),
+    project_id:str=Query(default="",max_length=255),
+    state:str=Query(default="",max_length=40),
+)->dict[str,Any]:
+    items=get_persistent_research_session_store().list_sessions(
+        limit=limit,client_ref=client_ref,project_id=project_id,state=state
+    )
+    return envelope(
+        {"items":items,"count":len(items),"limit":limit},
+        resource="research-session-list",
+        meta={"client_ref_is_identity":False},
+    )
+
+@router.post("/sessions",dependencies=auth)
+def independent_session_create(req:ResearchSessionCreateRequest)->dict[str,Any]:
+    session=get_persistent_research_session_store().create(req)
+    return envelope(session,resource="research-session")
+
+@router.get("/sessions/{session_id}",dependencies=auth)
+def independent_session_get(session_id:str)->dict[str,Any]:
+    try:
+        return envelope(get_persistent_research_session_store().get(session_id),resource="research-session")
+    except Exception as exc:
+        raise _not_found(exc) from exc
+
+@router.get("/sessions/{session_id}/turns",dependencies=auth)
+def independent_session_turns(
+    session_id:str,
+    limit:int=Query(default=500,ge=1,le=5000),
+    after_sequence:int=Query(default=0,ge=0),
+)->dict[str,Any]:
+    try:
+        items=get_persistent_research_session_store().turns(
+            session_id,limit=limit,after_sequence=after_sequence
+        )
+        return envelope(
+            {"session_id":session_id,"items":items,"count":len(items)},
+            resource="research-session-turn-list",
+            meta={"count":len(items)},
+        )
+    except Exception as exc:
+        raise _not_found(exc) from exc
+
+@router.post("/sessions/{session_id}/turns",dependencies=auth)
+def independent_session_turn_add(session_id:str,req:ResearchSessionTurnAddRequest)->dict[str,Any]:
+    try:
+        turn=get_persistent_research_session_store().add_turn(session_id,req)
+        return envelope(turn,resource="research-session-turn")
+    except ValueError as exc:
+        code=404 if "not found" in str(exc).lower() else 409
+        raise HTTPException(status_code=code,detail=str(exc)) from exc
+
+@router.post("/sessions/{session_id}/context",dependencies=auth)
+def independent_session_context(session_id:str,req:ResearchSessionContextBindRequest)->dict[str,Any]:
+    try:
+        session=get_persistent_research_session_store().bind_context(session_id,req)
+        return envelope(session,resource="research-session-context")
+    except ValueError as exc:
+        code=404 if "not found" in str(exc).lower() else 409
+        raise HTTPException(status_code=code,detail=str(exc)) from exc
+
+@router.post("/sessions/{session_id}/state",dependencies=auth)
+def independent_session_state(session_id:str,req:ResearchSessionStateRequest)->dict[str,Any]:
+    try:
+        session=get_persistent_research_session_store().set_state(session_id,req)
+        return envelope(session,resource="research-session-state")
+    except Exception as exc:
+        raise _not_found(exc) from exc
+
+@router.post("/sessions/{session_id}/reset",dependencies=auth)
+def independent_session_reset(session_id:str)->dict[str,Any]:
+    removed=get_persistent_research_session_store().clear_turns(session_id)
+    return envelope(
+        {"session_id":session_id,"removed_turns":removed},
+        resource="research-session-reset",
+    )
+
+@router.get("/sessions/{session_id}/summary",dependencies=auth)
+def independent_session_summary(session_id:str)->dict[str,Any]:
+    try:
+        return envelope(
+            get_persistent_research_session_store().summary(session_id),
+            resource="research-session-summary",
+        )
+    except Exception as exc:
+        raise _not_found(exc) from exc
+
+@router.post("/sessions/{session_id}/snapshots/freeze",dependencies=auth)
+def independent_session_snapshot(session_id:str,req:ResearchSessionSnapshotRequest)->dict[str,Any]:
+    try:
+        snap=get_persistent_research_session_store().freeze_snapshot(session_id,req)
+        return envelope(snap,resource="research-session-snapshot")
+    except Exception as exc:
+        raise _not_found(exc) from exc

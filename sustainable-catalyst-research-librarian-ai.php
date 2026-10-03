@@ -9818,6 +9818,8 @@ require_once plugin_dir_path( __FILE__ ) . 'includes/class-sc-rl-v1201-runtime-a
 SC_RL_V1201_Runtime_Authority_Adapter::init();
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-sc-rl-v1202-independent-api-adapter.php';
 SC_RL_V1202_Independent_API_Adapter::init();
+require_once plugin_dir_path( __FILE__ ) . 'includes/class-sc-rl-v1203-persistent-session-adapter.php';
+SC_RL_V1203_Persistent_Session_Adapter::init();
 
 SC_RL6_V530_Article_Map_Embeds::init();
 SC_RL6_V520_Route_Quality::init();
