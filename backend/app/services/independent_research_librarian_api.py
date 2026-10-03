@@ -112,9 +112,10 @@ def api_manifest()->dict[str,Any]:
             "scientist_environment_read":True,
             "runtime_authority":True,
             "persistent_conversations":True,
+            "independent_web_app":True,
             "identity_sessions":False,
         },
-        "next_boundary":"independent-web-app-foundation",
+        "next_boundary":"identity-session-access-runtime",
     }
 
 def status_payload()->dict[str,Any]:
@@ -308,7 +309,7 @@ def capabilities()->dict[str,Any]:
     return {
         "schema":INDEPENDENT_API_SCHEMA,
         "release":settings.release_version,
-        "milestone":"12.0.3",
+        "milestone":"12.0.4",
         "api_version":"v1",
         "base_path":API_PREFIX,
         "stable_response_envelope":True,
@@ -321,6 +322,7 @@ def capabilities()->dict[str,Any]:
         "contract_snapshots":True,
         "persistent_research_sessions":True,
         "persistent_conversations":True,
+        "independent_web_app":True,
         "identity_sessions":False,
         "breaking_changes_require_new_api_version":True,
         "route_count":m["route_count"],

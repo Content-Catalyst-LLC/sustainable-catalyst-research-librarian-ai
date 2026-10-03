@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Sustainable Catalyst Research Librarian</title>
+  <link rel="stylesheet" href="/research-librarian/assets/app.css">
+</head>
+<body>
+  <a class="skip-link" href="#workspace">Skip to workspace</a>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">SC</div>
+      <div>
+        <div class="eyebrow">SUSTAINABLE CATALYST</div>
+        <h1>Research Librarian</h1>
+      </div>
+    </div>
+    <div class="runtime-strip">
+      <span id="runtime-dot" class="runtime-dot"></span>
+      <span id="runtime-label">Backend status unknown</span>
+      <span class="divider">/</span>
+      <span id="release-label">v12.0.4</span>
+    </div>
+  </header>
+
+  <div id="connection-banner" class="connection-banner">
+    <div>
+      <strong>Operator connection</strong>
+      <span>v12.0.4 does not embed backend credentials. Enter the existing Research Librarian API key to use protected research operations.</span>
+    </div>
+    <form id="connection-form" class="connection-form">
+      <label class="sr-only" for="api-key">Research Librarian API key</label>
+      <input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="X-SC-RL-Key" required>
+      <button type="submit">Connect</button>
+      <button type="button" id="disconnect-button" class="ghost">Disconnect</button>
+    </form>
+  </div>
+
+  <main id="workspace" class="workspace">
+    <aside class="sidebar" aria-label="Research navigation">
+      <section class="panel compact">
+        <div class="panel-head">
+          <div>
+            <div class="eyebrow">PROJECTS</div>
+            <h2>Research contexts</h2>
+          </div>
+          <button id="refresh-projects" class="icon-button" type="button" title="Refresh projects">↻</button>
+        </div>
+        <div id="projects" class="stack empty-state">Connect to load projects.</div>
+      </section>
+
+      <section class="panel compact grow">
+        <div class="panel-head">
+          <div>
+            <div class="eyebrow">SESSIONS</div>
+            <h2>Persistent research</h2>
+          </div>
+          <button id="new-session" class="icon-button" type="button" title="New session">＋</button>
+        </div>
+        <div id="sessions" class="stack empty-state">Connect to load sessions.</div>
+      </section>
+    </aside>
+
+    <section class="main-column">
+      <section class="hero panel">
+        <div class="hero-copy">
+          <div class="eyebrow">INDEPENDENT WEB APP FOUNDATION</div>
+          <h2 id="session-title">Research without a WordPress runtime dependency.</h2>
+          <p id="session-subtitle">Canonical projects, conversations, retrieval results, and provenance stay in the Python/Postgres backend.</p>
+        </div>
+        <div class="hero-meta">
+          <div><span>API</span><strong>/v1/research-librarian</strong></div>
+          <div><span>State</span><strong>Backend authoritative</strong></div>
+          <div><span>Identity</span><strong>v12.0.5</strong></div>
+        </div>
+      </section>
+
+      <section class="research-grid">
+        <section class="panel conversation-panel">
+          <div class="panel-head">
+            <div>
+              <div class="eyebrow">SESSION WORKSPACE</div>
+              <h2>Conversation & research notes</h2>
+            </div>
+            <div class="session-actions">
+              <button id="refresh-turns" class="ghost" type="button">Refresh</button>
+              <button id="freeze-session" class="ghost" type="button">Freeze snapshot</button>
+            </div>
+          </div>
+
+          <div id="turns" class="turns">
+            <div class="empty-state">Select or create a research session.</div>
+          </div>
+
+          <form id="turn-form" class="composer">
+            <label for="turn-role">Save as</label>
+            <select id="turn-role">
+              <option value="research-note">Research note</option>
+              <option value="user">Question</option>
+              <option value="assistant">Assistant note</option>
+              <option value="system">System note</option>
+            </select>
+            <textarea id="turn-content" rows="4" placeholder="Write a research note or question…" required></textarea>
+            <button type="submit">Save turn</button>
+          </form>
+        </section>
+
+        <section class="panel retrieval-panel">
+          <div class="panel-head">
+            <div>
+              <div class="eyebrow">RETRIEVAL</div>
+              <h2>Evidence discovery</h2>
+            </div>
+          </div>
+
+          <form id="retrieval-form" class="retrieval-form">
+            <label for="retrieval-query">Research query</label>
+            <textarea id="retrieval-query" rows="3" placeholder="Search the Research Librarian knowledge index…" required></textarea>
+            <div class="form-row">
+              <label for="retrieval-limit">Results</label>
+              <select id="retrieval-limit">
+                <option>5</option>
+                <option selected>10</option>
+                <option>15</option>
+                <option>25</option>
+              </select>
+              <label class="check"><input id="semantic-toggle" type="checkbox" checked> Semantic</label>
+              <button type="submit">Retrieve</button>
+            </div>
+          </form>
+
+          <div id="retrieval-status" class="status-line">No retrieval run yet.</div>
+          <div id="retrieval-results" class="results"></div>
+        </section>
+      </section>
+    </section>
+
+    <aside class="inspector" aria-label="Research inspector">
+      <section class="panel compact">
+        <div class="eyebrow">SESSION</div>
+        <div id="session-summary" class="kv-list">
+          <div><span>Status</span><strong>None selected</strong></div>
+        </div>
+      </section>
+
+      <section class="panel compact">
+        <div class="eyebrow">SERVICE</div>
+        <div id="service-summary" class="kv-list">
+          <div><span>Backend</span><strong>Checking…</strong></div>
+        </div>
+      </section>
+
+      <section class="panel compact">
+        <div class="eyebrow">BOUNDARY</div>
+        <p class="small">This v12.0.4 shell stores no canonical research state, no backend secret, and no identity credential in browser storage.</p>
+      </section>
+    </aside>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="/research-librarian/assets/app.js" defer></script>
+</body>
+</html>

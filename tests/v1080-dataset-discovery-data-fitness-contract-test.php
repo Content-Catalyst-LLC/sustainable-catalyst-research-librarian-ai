@@ -7,8 +7,8 @@ $jobs=file_get_contents($root.'/backend/app/async_jobs.py');
 $service=file_get_contents($root.'/backend/app/services/dataset_discovery_data_fitness.py');
 $environment=file_get_contents($root.'/backend/app/services/unified_scholarly_ai_environment.py');
 $checks=[
- 'plugin_version'=>strpos($main,'Version: 12.0.3')!==false,
- 'backend_version'=>strpos($backend,'__version__ = "12.0.3"')!==false,
+ 'plugin_version'=>strpos($main,'Version: 12.0.4')!==false,
+ 'backend_version'=>strpos($backend,'__version__ = "12.0.4"')!==false,
  'capabilities_route'=>strpos($api,'/dataset-discovery-data-fitness/capabilities')!==false,
  'coverage_route'=>strpos($api,'/dataset-discovery-data-fitness/projects/{data_fitness_id}/coverage-matrix')!==false,
  'handoff_route'=>strpos($api,'/dataset-discovery-data-fitness/projects/{data_fitness_id}/computational-planning-handoff')!==false,

@@ -5,8 +5,8 @@ $api=file_get_contents($root.'/backend/app/api/core.py');
 $jobs=file_get_contents($root.'/backend/app/async_jobs.py');
 $service=file_get_contents($root.'/backend/app/services/unified_research_runtime.py');
 $checks=[
-  'plugin_version'=>false!==strpos($main,'Version: 12.0.3'),
-  'backend_version'=>false!==strpos(file_get_contents($root.'/backend/app/__init__.py'),'__version__ = "12.0.3"'),
+  'plugin_version'=>false!==strpos($main,'Version: 12.0.4'),
+  'backend_version'=>false!==strpos(file_get_contents($root.'/backend/app/__init__.py'),'__version__ = "12.0.4"'),
   'contract'=>file_exists($root.'/backend/app/contracts/unified_research_runtime.py') && false!==strpos(file_get_contents($root.'/backend/app/contracts/unified_research_runtime.py'),'sc-research-librarian-unified-research-intelligence-runtime/1.0'),
   'service'=>file_exists($root.'/backend/app/services/unified_research_runtime.py'),
   'capabilities_route'=>false!==strpos($api,'/unified-research/capabilities'),

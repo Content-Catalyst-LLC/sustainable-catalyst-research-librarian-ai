@@ -1,0 +1,13 @@
+{
+  "release": "12.0.4",
+  "name": "Independent Web App Foundation",
+  "schema": "sc-research-librarian-independent-web-app/1.0",
+  "entry_path": "/research-librarian/",
+  "api_base": "/v1/research-librarian",
+  "wordpress_required": false,
+  "database_migration": null,
+  "canonical_state": "python-postgres-backend",
+  "browser_secret_policy": "memory-only operator key; never embedded or persisted",
+  "identity_sessions": false,
+  "next_boundary": "v12.0.5 Identity, Session & Access Runtime"
+}

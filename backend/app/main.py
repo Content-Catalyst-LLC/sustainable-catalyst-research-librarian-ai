@@ -164,6 +164,7 @@ from .research_lifecycle import (
 
 from .api.core import router as platform_core_router
 from .api.independent import router as independent_research_librarian_api_router
+from .api.webapp import router as independent_web_app_router
 from .services.persistent_research_session_conversation import (
     get_persistent_research_session_store,
 )
@@ -198,6 +199,7 @@ app.add_middleware(
 )
 app.include_router(platform_core_router)
 app.include_router(independent_research_librarian_api_router)
+app.include_router(independent_web_app_router)
 
 persistent_session_store = get_persistent_research_session_store()
 
@@ -678,6 +680,8 @@ def health() -> dict[str, Any]:
         "wordpress_required": False,
         "independent_api_version": "v1",
         "persistent_research_sessions": True,
+        "independent_web_app": True,
+        "independent_web_app_path": "/research-librarian/",
         "environment": settings.environment,
         "database_backend": str(summary.get("database_backend", settings.database_backend)),
         "database_ready": database_ready,

@@ -2,7 +2,7 @@
 
 Sustainable Catalyst Research Librarian AI is the research-guidance, retrieval, evidence-planning, research-state, and reproducible research-intelligence layer of the Sustainable Catalyst platform.
 
-**Current release:** v12.0.3 — Persistent Research Session & Conversation Runtime
+**Current release:** v12.0.4 — Independent Web App Foundation
 
 ## Architecture
 
@@ -15,6 +15,7 @@ Research Librarian AI helps structure research without silently replacing source
 - **AI research context** — retrieval/context manifests, RAG evaluation, AI experiment orchestration, benchmark/evaluation lineage, and reproducibility metadata.
 - **Python/FastAPI backend** — production research services, durable jobs, PostgreSQL/pgvector knowledge indexing, and ancillary SQLite/local-state support.
 - **Independent API v1** — stable `/v1/research-librarian` backend interface for authorized standalone clients; WordPress remains an optional thin presentation/proxy adapter.
+- **Independent Web App** — FastAPI-served browser shell at `/research-librarian/` using Independent API v1 and persistent backend sessions without a WordPress runtime dependency.
 - **Knowledge Library integration** — Library remains authoritative for source ingestion, documents, and knowledge assets.
 - **Platform Core integration** — Core remains authoritative for governed research/evidence objects, provenance, lineage, and cross-product exchange.
 - **Workspace / Lab / Workbench handoffs** — specialist runtimes execute computation and experiments; the Librarian prepares and tracks governed handoffs.
