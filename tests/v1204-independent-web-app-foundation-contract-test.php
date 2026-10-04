@@ -9,8 +9,8 @@ $web_js=file_get_contents($root.'/backend/app/webapp/app.js');
 $web_html=file_get_contents($root.'/backend/app/webapp/index.html');
 
 $checks=[
- 'plugin_version'=>strpos($main,'Version: 12.0.4')!==false,
- 'plugin_constant'=>strpos($main,"const VERSION        = '12.0.4';")!==false,
+ 'plugin_version'=>strpos($main,'Version: 12.0.5')!==false,
+ 'plugin_constant'=>strpos($main,"const VERSION        = '12.0.5';")!==false,
  'adapter_required'=>strpos($main,'class-sc-rl-v1204-independent-web-app-adapter.php')!==false,
  'adapter_initialized'=>strpos($main,'SC_RL_V1204_Independent_Web_App_Adapter::init();')!==false,
  'standalone_route'=>strpos($web_router,'/research-librarian/')!==false,
@@ -22,7 +22,7 @@ $checks=[
  'no_local_storage'=>strpos($web_js,'localStorage')===false,
  'no_session_storage'=>strpos($web_js,'sessionStorage')===false,
  'no_embedded_backend_secret'=>strpos($web_js,'SC_RL_BACKEND_API_KEY')===false,
- 'operator_key_header'=>strpos($web_js,'X-SC-RL-Key')!==false,
+ 'identity_login'=>strpos($web_js,'/auth/login')!==false && strpos($web_js,'X-SC-RL-Key')===false,
  'independent_api'=>strpos($web_html,'/v1/research-librarian')!==false,
  'persistent_sessions'=>strpos($web_js,'/sessions?limit=100')!==false,
  'retrieval'=>strpos($web_js,'"/retrieve"')!==false,

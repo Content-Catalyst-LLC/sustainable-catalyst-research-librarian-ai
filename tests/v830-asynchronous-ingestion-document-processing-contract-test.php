@@ -7,9 +7,9 @@ $service = file_get_contents($root . '/backend/app/services/document_jobs.py');
 $api = file_get_contents($root . '/backend/app/api/jobs.py');
 $compose = file_get_contents($root . '/compose.yml');
 $checks = array(
-    'version_header' => false !== strpos($main, 'Version: 12.0.4'),
-    'version_constant' => false !== strpos($main, "const VERSION        = '12.0.4';"),
-    'backend_version' => false !== strpos(file_get_contents($root . '/backend/app/__init__.py'), '__version__ = "12.0.4"'),
+    'version_header' => false !== strpos($main, 'Version: 12.0.5'),
+    'version_constant' => false !== strpos($main, "const VERSION        = '12.0.5';"),
+    'backend_version' => false !== strpos(file_get_contents($root . '/backend/app/__init__.py'), '__version__ = "12.0.5"'),
     'durable_job_table' => false !== strpos($backend, 'sc_rl_async_jobs'),
     'skip_locked' => false !== strpos($backend, 'FOR UPDATE SKIP LOCKED'),
     'lease_recovery' => false !== strpos($backend, 'lease_expires_utc'),

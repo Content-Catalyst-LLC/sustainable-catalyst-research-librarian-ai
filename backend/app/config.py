@@ -84,6 +84,11 @@ class Settings:
     embedding_dimensions: int = _int("SC_RL_EMBEDDING_DIMENSIONS", 768, 128, 3072)
     citation_required: bool = _bool("SC_RL_CITATION_REQUIRED", True)
     session_ttl_seconds: int = _int("SC_RL_SESSION_TTL_SECONDS", 3600, 300, 86400)
+    identity_session_ttl_seconds: int = _int("SC_RL_IDENTITY_SESSION_TTL_SECONDS", 28800, 900, 604800)
+    identity_cookie_name: str = os.getenv("SC_RL_IDENTITY_COOKIE_NAME", "sc_rl_identity_session").strip() or "sc_rl_identity_session"
+    identity_cookie_secure: bool = _bool("SC_RL_IDENTITY_COOKIE_SECURE", os.getenv("SC_RL_ENVIRONMENT", "production").strip().lower() == "production")
+    identity_login_failure_limit: int = _int("SC_RL_IDENTITY_LOGIN_FAILURE_LIMIT", 8, 3, 20)
+    identity_login_lock_seconds: int = _int("SC_RL_IDENTITY_LOGIN_LOCK_SECONDS", 900, 60, 86400)
     max_session_turns: int = _int("SC_RL_MAX_SESSION_TURNS", 6, 1, 20)
     max_runtime_snapshots: int = _int("SC_RL_MAX_RUNTIME_SNAPSHOTS", 5, 1, 20)
     startup_warmup_seconds: int = _int("SC_RL_STARTUP_WARMUP_SECONDS", 12, 0, 120)

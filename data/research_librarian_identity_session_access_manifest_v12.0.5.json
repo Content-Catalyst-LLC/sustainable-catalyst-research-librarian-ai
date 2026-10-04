@@ -1,0 +1,19 @@
+{
+  "release": "12.0.5",
+  "name": "Identity, Session & Access Runtime",
+  "schemas": [
+    "sc-research-librarian-identity/1.0",
+    "sc-research-librarian-auth-session/1.0",
+    "sc-research-librarian-access-context/1.0"
+  ],
+  "database_migration": "039_identity_session_access_runtime.sql",
+  "identity_authority": "python-fastapi-backend",
+  "session_storage": "postgres-production-sqlite-local-test",
+  "password_hash": "scrypt",
+  "session_token_storage": "sha256-hash-only",
+  "web_auth": "HttpOnly SameSite=Strict cookie",
+  "legacy_api_key": "preserved for server integration and provisioning",
+  "wordpress_required": false,
+  "identity_owned_research_sessions": true,
+  "next_boundary": "v12.0.6 Thin WordPress Adapter"
+}

@@ -22,24 +22,39 @@
       <span id="runtime-dot" class="runtime-dot"></span>
       <span id="runtime-label">Backend status unknown</span>
       <span class="divider">/</span>
-      <span id="release-label">v12.0.4</span>
+      <span id="release-label">v12.0.5</span>
     </div>
   </header>
 
-  <div id="connection-banner" class="connection-banner">
-    <div>
-      <strong>Operator connection</strong>
-      <span>v12.0.4 does not embed backend credentials. Enter the existing Research Librarian API key to use protected research operations.</span>
+  <section id="auth-shell" class="auth-shell">
+    <div class="auth-copy">
+      <div class="eyebrow">IDENTITY, SESSION & ACCESS RUNTIME</div>
+      <h2 id="auth-title">Sign in to your research environment</h2>
+      <p id="auth-copy">Authentication is owned by the Python backend. WordPress is not an identity authority and no backend API key is embedded in this browser application.</p>
     </div>
-    <form id="connection-form" class="connection-form">
-      <label class="sr-only" for="api-key">Research Librarian API key</label>
-      <input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="X-SC-RL-Key" required>
-      <button type="submit">Connect</button>
-      <button type="button" id="disconnect-button" class="ghost">Disconnect</button>
+
+    <form id="login-form" class="login-form">
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" autocomplete="username" required>
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+      <button type="submit">Sign in</button>
     </form>
+
+    <div id="identity-card" class="identity-card hidden">
+      <div>
+        <strong id="identity-name">Signed in</strong>
+        <span id="identity-meta"></span>
+      </div>
+      <button id="logout-button" class="ghost" type="button">Sign out</button>
+    </div>
+  </section>
+
+  <div id="setup-notice" class="setup-notice hidden">
+    No Research Librarian identity has been provisioned yet. Provision the first owner through the server-side administration endpoint before signing in.
   </div>
 
-  <main id="workspace" class="workspace">
+  <main id="workspace" class="workspace locked">
     <aside class="sidebar" aria-label="Research navigation">
       <section class="panel compact">
         <div class="panel-head">
@@ -47,9 +62,9 @@
             <div class="eyebrow">PROJECTS</div>
             <h2>Research contexts</h2>
           </div>
-          <button id="refresh-projects" class="icon-button" type="button" title="Refresh projects">↻</button>
+          <button id="refresh-projects" class="icon-button" type="button">↻</button>
         </div>
-        <div id="projects" class="stack empty-state">Connect to load projects.</div>
+        <div id="projects" class="stack empty-state">Sign in to load projects.</div>
       </section>
 
       <section class="panel compact grow">
@@ -58,23 +73,23 @@
             <div class="eyebrow">SESSIONS</div>
             <h2>Persistent research</h2>
           </div>
-          <button id="new-session" class="icon-button" type="button" title="New session">＋</button>
+          <button id="new-session" class="icon-button" type="button">＋</button>
         </div>
-        <div id="sessions" class="stack empty-state">Connect to load sessions.</div>
+        <div id="sessions" class="stack empty-state">Sign in to load sessions.</div>
       </section>
     </aside>
 
     <section class="main-column">
       <section class="hero panel">
         <div class="hero-copy">
-          <div class="eyebrow">INDEPENDENT WEB APP FOUNDATION</div>
-          <h2 id="session-title">Research without a WordPress runtime dependency.</h2>
-          <p id="session-subtitle">Canonical projects, conversations, retrieval results, and provenance stay in the Python/Postgres backend.</p>
+          <div class="eyebrow">IDENTITY-AWARE RESEARCH WORKSPACE</div>
+          <h2 id="session-title">Independent research continuity with authenticated ownership.</h2>
+          <p id="session-subtitle">Canonical identities, authenticated sessions, research sessions, and provenance stay in the Python/Postgres backend.</p>
         </div>
         <div class="hero-meta">
           <div><span>API</span><strong>/v1/research-librarian</strong></div>
-          <div><span>State</span><strong>Backend authoritative</strong></div>
-          <div><span>Identity</span><strong>v12.0.5</strong></div>
+          <div><span>Auth</span><strong>HttpOnly session cookie</strong></div>
+          <div><span>WordPress</span><strong>Optional adapter</strong></div>
         </div>
       </section>
 
@@ -92,7 +107,7 @@
           </div>
 
           <div id="turns" class="turns">
-            <div class="empty-state">Select or create a research session.</div>
+            <div class="empty-state">Sign in and select a research session.</div>
           </div>
 
           <form id="turn-form" class="composer">
@@ -140,22 +155,22 @@
 
     <aside class="inspector" aria-label="Research inspector">
       <section class="panel compact">
+        <div class="eyebrow">IDENTITY</div>
+        <div id="access-summary" class="kv-list">
+          <div><span>Status</span><strong>Signed out</strong></div>
+        </div>
+      </section>
+      <section class="panel compact">
         <div class="eyebrow">SESSION</div>
         <div id="session-summary" class="kv-list">
           <div><span>Status</span><strong>None selected</strong></div>
         </div>
       </section>
-
       <section class="panel compact">
         <div class="eyebrow">SERVICE</div>
         <div id="service-summary" class="kv-list">
           <div><span>Backend</span><strong>Checking…</strong></div>
         </div>
-      </section>
-
-      <section class="panel compact">
-        <div class="eyebrow">BOUNDARY</div>
-        <p class="small">This v12.0.4 shell stores no canonical research state, no backend secret, and no identity credential in browser storage.</p>
       </section>
     </aside>
   </main>

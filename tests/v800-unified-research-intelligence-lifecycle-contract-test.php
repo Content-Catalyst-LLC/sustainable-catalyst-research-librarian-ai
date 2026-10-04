@@ -15,9 +15,9 @@ $manifest=json_decode(file_get_contents($root.'/data/research_librarian_unified_
 $v770=json_decode(file_get_contents($root.'/data/research_librarian_federated_discovery_manifest_v7.7.0.json'),true);
 $migrations=glob($root.'/backend/migrations/*.sql');
 $checks=array(
- 'version_header'=>false!==strpos($main,'Version: 12.0.4'),
- 'version_constant'=>false!==strpos($main,"const VERSION        = '12.0.4';"),
- 'backend_version'=>false!==strpos(file_get_contents($root.'/backend/app/__init__.py'),'__version__ = "12.0.4"'),
+ 'version_header'=>false!==strpos($main,'Version: 12.0.5'),
+ 'version_constant'=>false!==strpos($main,"const VERSION        = '12.0.5';"),
+ 'backend_version'=>false!==strpos(file_get_contents($root.'/backend/app/__init__.py'),'__version__ = "12.0.5"'),
  'module_version'=>false!==strpos($module,"const VERSION = '8.0.0';"),
  'api_20'=>false!==strpos($module,'sc-connected-research-api/2.0') && false!==strpos(file_get_contents($root.'/backend/app/platform_v7.py'),'sc-connected-research-api/2.0'),
  'workspace_30'=>false!==strpos($module,'sc-research-librarian-public-workspace/3.0') && false!==strpos($backend,'sc-research-librarian-public-workspace/3.0'),

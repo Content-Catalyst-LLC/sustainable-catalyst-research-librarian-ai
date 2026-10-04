@@ -165,9 +165,11 @@ from .research_lifecycle import (
 from .api.core import router as platform_core_router
 from .api.independent import router as independent_research_librarian_api_router
 from .api.webapp import router as independent_web_app_router
+from .api.auth import router as identity_access_router
 from .services.persistent_research_session_conversation import (
     get_persistent_research_session_store,
 )
+from .services.identity_session_access import get_identity_session_store
 from .api.jobs import router as async_jobs_router, register_authenticated_routes as register_async_job_routes
 from .api.documents import router as documents_router, register_authenticated_routes as register_document_routes
 from .api.sources import router as sources_router, register_authenticated_routes as register_source_routes
@@ -193,15 +195,17 @@ app.add_middleware(GZipMiddleware, minimum_size=900)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=list(settings.cors_origins),
-    allow_credentials=False,
+    allow_credentials=True,
     allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type", "X-SC-RL-Key"],
+    allow_headers=["Content-Type", "X-SC-RL-Key", "Authorization"],
 )
 app.include_router(platform_core_router)
 app.include_router(independent_research_librarian_api_router)
 app.include_router(independent_web_app_router)
+app.include_router(identity_access_router)
 
 persistent_session_store = get_persistent_research_session_store()
+identity_session_store = get_identity_session_store()
 
 _RESEARCH_MODES: dict[str, dict[str, str]] = {
     "auto": {"label": "Auto-detect", "instruction": "Infer the most useful site-scoped research workflow."},
@@ -682,6 +686,9 @@ def health() -> dict[str, Any]:
         "persistent_research_sessions": True,
         "independent_web_app": True,
         "independent_web_app_path": "/research-librarian/",
+        "identity_sessions": True,
+        "identity_access_runtime": "12.0.5",
+        "identity_count": identity_session_store.identity_count(),
         "environment": settings.environment,
         "database_backend": str(summary.get("database_backend", settings.database_backend)),
         "database_ready": database_ready,

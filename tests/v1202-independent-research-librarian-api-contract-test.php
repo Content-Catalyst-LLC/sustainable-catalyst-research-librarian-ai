@@ -3,15 +3,16 @@ $root=dirname(__DIR__);
 $main=file_get_contents($root.'/sustainable-catalyst-research-librarian-ai.php');
 $adapter=file_get_contents($root.'/includes/class-sc-rl-v1202-independent-api-adapter.php');
 $api=file_get_contents($root.'/backend/app/api/independent.py');
+$auth=file_get_contents($root.'/backend/app/api/auth.py');
 $service=file_get_contents($root.'/backend/app/services/independent_research_librarian_api.py');
 $contract=file_get_contents($root.'/backend/app/contracts/independent_research_librarian_api.py');
 $checks=[
- 'plugin version'=>strpos($main,'Version: 12.0.4')!==false,
- 'plugin constant'=>strpos($main,"const VERSION        = '12.0.4';")!==false,
+ 'plugin version'=>strpos($main,'Version: 12.0.5')!==false,
+ 'plugin constant'=>strpos($main,"const VERSION        = '12.0.5';")!==false,
  'adapter required'=>strpos($main,'class-sc-rl-v1202-independent-api-adapter.php')!==false,
  'adapter initialized'=>strpos($main,'SC_RL_V1202_Independent_API_Adapter::init();')!==false,
  'api prefix'=>strpos($api,'prefix="/v1/research-librarian"')!==false,
- 'api auth'=>strpos($api,'X-SC-RL-Key')!==false,
+ 'api auth'=>strpos($api,'require_independent_access')!==false && strpos($auth,'X-SC-RL-Key')!==false,
  'manifest route'=>strpos($api,'@router.get("/manifest"')!==false,
  'retrieve route'=>strpos($api,'@router.post("/retrieve"')!==false,
  'projects route'=>strpos($api,'@router.get("/projects"')!==false,
