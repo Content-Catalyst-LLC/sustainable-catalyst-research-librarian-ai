@@ -7,8 +7,8 @@ $auth=file_get_contents($root.'/backend/app/api/auth.py');
 $service=file_get_contents($root.'/backend/app/services/independent_research_librarian_api.py');
 $contract=file_get_contents($root.'/backend/app/contracts/independent_research_librarian_api.py');
 $checks=[
- 'plugin version'=>strpos($main,'Version: 12.0.6')!==false,
- 'plugin constant'=>strpos($main,"const VERSION        = '12.0.6';")!==false,
+ 'plugin version'=>strpos($main,'Version: 12.0.7')!==false,
+ 'plugin constant'=>strpos($main,"const VERSION        = '12.0.7';")!==false,
  'adapter required'=>strpos($main,'class-sc-rl-v1202-independent-api-adapter.php')!==false,
  'adapter initialized'=>strpos($main,'SC_RL_V1202_Independent_API_Adapter::init();')!==false,
  'api prefix'=>strpos($api,'prefix="/v1/research-librarian"')!==false,

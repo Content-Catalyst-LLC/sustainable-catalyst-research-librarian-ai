@@ -48,7 +48,7 @@ def thin_wordpress_adapter_manifest() -> dict[str, Any]:
             "canonical_projects": False,
             "canonical_evidence": False,
         },
-        "next_boundary": "wordpress-state-migration-compatibility-layer",
+        "next_boundary": "independent-deployment-wordpress-failure-certification",
     }
 
 def thin_wordpress_adapter_capabilities() -> dict[str, Any]:

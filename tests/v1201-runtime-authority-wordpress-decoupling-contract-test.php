@@ -5,8 +5,8 @@ $adapter=file_get_contents($root.'/includes/class-sc-rl-v1201-runtime-authority-
 $core=file_get_contents($root.'/backend/app/api/core.py');
 $service=file_get_contents($root.'/backend/app/services/runtime_authority_wordpress_decoupling.py');
 $checks=[
- 'plugin version'=>strpos($main,'Version: 12.0.6')!==false,
- 'plugin constant'=>strpos($main,"const VERSION        = '12.0.6';")!==false,
+ 'plugin version'=>strpos($main,'Version: 12.0.7')!==false,
+ 'plugin constant'=>strpos($main,"const VERSION        = '12.0.7';")!==false,
  'adapter required'=>strpos($main,'class-sc-rl-v1201-runtime-authority-adapter.php')!==false,
  'adapter initialized'=>strpos($main,'SC_RL_V1201_Runtime_Authority_Adapter::init();')!==false,
  'adapter backend authority'=>strpos($adapter,"'backend_authoritative'       => true")!==false,

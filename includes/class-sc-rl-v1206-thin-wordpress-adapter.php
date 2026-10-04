@@ -79,7 +79,7 @@ final class SC_RL_V1206_Thin_WordPress_Adapter {
                 'backend_failure_behavior'     => 'fail-closed-no-wordpress-research-fallback',
                 'read_operations'              => array_keys( self::read_operations() ),
                 'write_operations'             => array_keys( self::write_operations() ),
-                'next_boundary'                => 'wordpress-state-migration-compatibility-layer',
+                'next_boundary'                => 'independent-deployment-wordpress-failure-certification',
             )
         );
     }

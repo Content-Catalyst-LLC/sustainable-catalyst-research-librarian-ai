@@ -7,8 +7,8 @@ $jobs=file_get_contents($root.'/backend/app/async_jobs.py');
 $service=file_get_contents($root.'/backend/app/services/simulation_model_study_planner.py');
 $environment=file_get_contents($root.'/backend/app/services/unified_scholarly_ai_environment.py');
 $checks=[
- 'plugin_version'=>strpos($main,'Version: 12.0.6')!==false,
- 'backend_version'=>strpos($backend,'__version__ = "12.0.6"')!==false,
+ 'plugin_version'=>strpos($main,'Version: 12.0.7')!==false,
+ 'backend_version'=>strpos($backend,'__version__ = "12.0.7"')!==false,
  'capabilities_route'=>strpos($api,'/simulation-model-study-planner/capabilities')!==false,
  'models_route'=>strpos($api,'/simulation-model-study-planner/studies/{simulation_study_id}/model-specifications')!==false,
  'scenario_route'=>strpos($api,'/simulation-model-study-planner/studies/{simulation_study_id}/scenario-sets')!==false,

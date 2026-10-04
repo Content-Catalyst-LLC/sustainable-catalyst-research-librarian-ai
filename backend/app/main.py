@@ -167,10 +167,12 @@ from .api.independent import router as independent_research_librarian_api_router
 from .api.webapp import router as independent_web_app_router
 from .api.auth import router as identity_access_router
 from .api.wordpress_adapter import router as thin_wordpress_adapter_router
+from .api.wordpress_migration import router as wordpress_state_migration_router
 from .services.persistent_research_session_conversation import (
     get_persistent_research_session_store,
 )
 from .services.identity_session_access import get_identity_session_store
+from .services.wordpress_state_migration import get_wordpress_state_migration_store
 from .api.jobs import router as async_jobs_router, register_authenticated_routes as register_async_job_routes
 from .api.documents import router as documents_router, register_authenticated_routes as register_document_routes
 from .api.sources import router as sources_router, register_authenticated_routes as register_source_routes
@@ -205,9 +207,11 @@ app.include_router(independent_research_librarian_api_router)
 app.include_router(independent_web_app_router)
 app.include_router(identity_access_router)
 app.include_router(thin_wordpress_adapter_router)
+app.include_router(wordpress_state_migration_router)
 
 persistent_session_store = get_persistent_research_session_store()
 identity_session_store = get_identity_session_store()
+wordpress_state_migration_store = get_wordpress_state_migration_store()
 
 _RESEARCH_MODES: dict[str, dict[str, str]] = {
     "auto": {"label": "Auto-detect", "instruction": "Infer the most useful site-scoped research workflow."},
@@ -692,6 +696,10 @@ def health() -> dict[str, Any]:
         "identity_access_runtime": "12.0.5",
         "thin_wordpress_adapter": True,
         "thin_wordpress_adapter_contract": "2.0",
+        "wordpress_state_migration": True,
+        "wordpress_state_migration_runtime": "12.0.7",
+        "wordpress_compatibility_aliases": True,
+        "wordpress_migration_store_backend": wordpress_state_migration_store.backend,
         "identity_count": identity_session_store.identity_count(),
         "environment": settings.environment,
         "database_backend": str(summary.get("database_backend", settings.database_backend)),

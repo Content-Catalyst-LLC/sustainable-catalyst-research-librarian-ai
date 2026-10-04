@@ -7,8 +7,8 @@ $jobs=file_get_contents($root.'/backend/app/async_jobs.py');
 $service=file_get_contents($root.'/backend/app/services/study_protocol_preregistration.py');
 $environment=file_get_contents($root.'/backend/app/services/unified_scholarly_ai_environment.py');
 $checks=[
- 'plugin_version'=>strpos($main,'Version: 12.0.6')!==false,
- 'backend_version'=>strpos($backend,'__version__ = "12.0.6"')!==false,
+ 'plugin_version'=>strpos($main,'Version: 12.0.7')!==false,
+ 'backend_version'=>strpos($backend,'__version__ = "12.0.7"')!==false,
  'capabilities_route'=>strpos($api,'/study-protocol-preregistration/capabilities')!==false,
  'preregister_route'=>strpos($api,'/study-protocol-preregistration/protocols/{study_protocol_id}/preregister')!==false,
  'amendment_route'=>strpos($api,'/study-protocol-preregistration/protocols/{study_protocol_id}/amendments')!==false,

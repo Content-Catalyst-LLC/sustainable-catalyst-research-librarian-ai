@@ -320,7 +320,25 @@ CREATE INDEX IF NOT EXISTS idx_persistent_research_session_snapshots_session
             return 0, ""
         return int(row["sequence"]), str(row["record_hash"])
 
-    def add_turn(self, session_id: str, req: ResearchSessionTurnAddRequest) -> dict[str, Any]:
+    def add_turn(self, session_id: str, req: ResearchSessionTurnAddRequest, *, requested_turn_id: str = "") -> dict[str, Any]:
+        requested_turn_id = requested_turn_id.strip()[:180]
+        if requested_turn_id:
+            if self.backend == "postgres":
+                with self._postgres() as c:
+                    existing = c.execute(
+                        "SELECT record FROM sc_rl_persistent_research_turns WHERE turn_id=%s AND session_id=%s",
+                        (requested_turn_id, session_id),
+                    ).fetchone()
+                if existing:
+                    return dict(existing["record"])
+            else:
+                with self._lock, self._sqlite() as c:
+                    existing = c.execute(
+                        "SELECT record_json FROM persistent_research_turns WHERE turn_id=? AND session_id=?",
+                        (requested_turn_id, session_id),
+                    ).fetchone()
+                if existing:
+                    return json.loads(str(existing["record_json"]))
         session = self.get(session_id)
         if session["state"] in {"closed", "archived"}:
             raise ValueError("Research session is closed or archived.")
@@ -329,7 +347,7 @@ CREATE INDEX IF NOT EXISTS idx_persistent_research_session_snapshots_session
         created = _now()
         record = {
             "schema": PERSISTENT_RESEARCH_TURN_SCHEMA,
-            "turn_id": "turn-" + uuid.uuid4().hex,
+            "turn_id": requested_turn_id or ("turn-" + uuid.uuid4().hex),
             "session_id": session_id,
             "sequence": sequence,
             "role": req.role,

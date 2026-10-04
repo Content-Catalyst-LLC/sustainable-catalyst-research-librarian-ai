@@ -8,9 +8,9 @@ $contracts = file_get_contents($root . '/backend/app/contracts/argument_synthesi
 $jobs = file_get_contents($root . '/backend/app/async_jobs.py');
 $manifest = json_decode(file_get_contents($root . '/data/research_librarian_argument_synthesis_manifest_v8.10.0.json'), true);
 $checks = [
-  'version_header' => false !== strpos($main, 'Version: 12.0.6'),
-  'version_constant' => false !== strpos($main, "const VERSION        = '12.0.6';"),
-  'backend_version' => false !== strpos(file_get_contents($root . '/backend/app/__init__.py'), '__version__ = "12.0.6"'),
+  'version_header' => false !== strpos($main, 'Version: 12.0.7'),
+  'version_constant' => false !== strpos($main, "const VERSION        = '12.0.7';"),
+  'backend_version' => false !== strpos(file_get_contents($root . '/backend/app/__init__.py'), '__version__ = "12.0.7"'),
   'schema' => false !== strpos($contracts, 'sc-research-librarian-argument-contradiction-synthesis/1.0'),
   'core_contract' => false !== strpos($contracts, 'sc.research.argument-evidentiary-synthesis.v1'),
   'capability_route' => false !== strpos($api, '/argument-synthesis/capabilities'),

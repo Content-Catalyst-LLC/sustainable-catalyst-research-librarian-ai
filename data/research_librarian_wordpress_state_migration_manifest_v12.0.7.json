@@ -1,0 +1,26 @@
+{
+  "release": "12.0.7",
+  "name": "WordPress State Migration & Compatibility Layer",
+  "schema": "sc-research-librarian-wordpress-state-migration/1.0",
+  "database_migration": "040_wordpress_state_migration_compatibility.sql",
+  "migration_mode": "explicit-prepare-apply",
+  "automatic_migration": false,
+  "legacy_state_deleted": false,
+  "backend_authoritative": true,
+  "wordpress_required": false,
+  "supported_types": [
+    "project",
+    "research-context",
+    "research-room",
+    "library-object",
+    "persistent-session",
+    "persistent-turn",
+    "compatibility-record"
+  ],
+  "durable_receipts": true,
+  "durable_aliases": true,
+  "conflicts_fail_closed": true,
+  "secret_bearing_payloads_blocked": true,
+  "owner_mapping": "explicit WordPress owner key -> Research Librarian identity ref",
+  "next_boundary": "v12.0.8 Independent Deployment & WordPress-Failure Certification"
+}

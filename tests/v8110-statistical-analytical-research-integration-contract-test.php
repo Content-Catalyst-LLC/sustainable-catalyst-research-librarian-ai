@@ -1,8 +1,8 @@
 <?php
 $root=dirname(__DIR__); $main=file_get_contents($root.'/sustainable-catalyst-research-librarian-ai.php');
 $checks=[
-'plugin_version'=>false!==strpos($main,'Version: 12.0.6'),
-'backend_version'=>false!==strpos(file_get_contents($root.'/backend/app/__init__.py'),'__version__ = "12.0.6"'),
+'plugin_version'=>false!==strpos($main,'Version: 12.0.7'),
+'backend_version'=>false!==strpos(file_get_contents($root.'/backend/app/__init__.py'),'__version__ = "12.0.7"'),
 'contract'=>false!==strpos(file_get_contents($root.'/backend/app/contracts/statistical_research.py'),'sc.core.statistical-reasoning-object-model.v1'),
 'service'=>file_exists($root.'/backend/app/services/statistical_research.py'),
 'api'=>false!==strpos(file_get_contents($root.'/backend/app/api/core.py'),'/statistical-research/plan'),
