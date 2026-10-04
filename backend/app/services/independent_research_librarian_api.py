@@ -119,7 +119,7 @@ def api_manifest()->dict[str,Any]:
             "identity_owned_research_sessions":True,
             "thin_wordpress_adapter":True,
             "wordpress_state_migration":True,
-                        },
+                                    },
         "next_boundary":"independent-deployment-wordpress-failure-certification",
     }
 
