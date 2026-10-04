@@ -1,8 +1,8 @@
 <?php
 $root=dirname(__DIR__); $main=file_get_contents($root.'/sustainable-catalyst-research-librarian-ai.php'); $backend=file_get_contents($root.'/backend/app/__init__.py'); $core=file_get_contents($root.'/backend/app/api/core.py'); $jobs=file_get_contents($root.'/backend/app/async_jobs.py');
 $checks=[
- 'plugin_version'=>strpos($main,'Version: 12.0.5')!==false,
- 'backend_version'=>strpos($backend,'__version__ = "12.0.5"')!==false,
+ 'plugin_version'=>strpos($main,'Version: 12.0.6')!==false,
+ 'backend_version'=>strpos($backend,'__version__ = "12.0.6"')!==false,
  'contract'=>file_exists($root.'/backend/app/contracts/ai_research_context.py'),
  'service'=>file_exists($root.'/backend/app/services/ai_research_context.py'),
  'migration'=>file_exists($root.'/backend/migrations/011_ai_aware_retrieval_context_engineering.sql'),

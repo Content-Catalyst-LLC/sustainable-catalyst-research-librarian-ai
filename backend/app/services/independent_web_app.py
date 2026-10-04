@@ -18,7 +18,7 @@ def web_app_manifest() -> dict[str, Any]:
         "schema": WEB_APP_SCHEMA,
         "runtime_schema": WEB_APP_RUNTIME_SCHEMA,
         "release": settings.release_version,
-        "milestone": "12.0.5",
+        "milestone": "12.0.6",
         "name": "Sustainable Catalyst Research Librarian",
         "entry_path": WEB_APP_ENTRY,
         "asset_path": WEB_APP_ASSETS,
@@ -76,7 +76,7 @@ def web_app_manifest() -> dict[str, Any]:
             "web_app_does_not_store_canonical_evidence": True,
             "research_operations_use_backend_contracts": True,
         },
-        "next_boundary": "thin-wordpress-adapter",
+        "next_boundary": "wordpress-state-migration-compatibility-layer",
     }
 
 def web_app_capabilities() -> dict[str, Any]:
@@ -84,7 +84,7 @@ def web_app_capabilities() -> dict[str, Any]:
     return {
         "schema": WEB_APP_RUNTIME_SCHEMA,
         "release": settings.release_version,
-        "milestone": "12.0.5",
+        "milestone": "12.0.6",
         "entry_path": m["entry_path"],
         "api_base": m["api_base"],
         "wordpress_required": False,

@@ -161,17 +161,17 @@ def test_web_app_uses_identity_cookie_not_backend_key():
     assert "localStorage" not in js.text
     assert "sessionStorage" not in js.text
     m=manifest.json()
-    assert m["milestone"]=="12.0.5"
+    assert m["milestone"]=="12.0.6"
     assert m["authentication"]["production_user_identity"] is True
     assert m["authentication"]["backend_api_key_embedded"] is False
-    assert m["next_boundary"]=="thin-wordpress-adapter"
+    assert m["next_boundary"]=="wordpress-state-migration-compatibility-layer"
 
 
 def test_health_advertises_identity_sessions():
     from app.main import app
     client=TestClient(app)
     body=client.get("/health").json()
-    assert body["version"]=="12.0.5"
+    assert body["version"]=="12.0.6"
     assert body["identity_sessions"] is True
     assert body["identity_access_runtime"]=="12.0.5"
     assert body["wordpress_required"] is False

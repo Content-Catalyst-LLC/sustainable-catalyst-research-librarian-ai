@@ -166,6 +166,7 @@ from .api.core import router as platform_core_router
 from .api.independent import router as independent_research_librarian_api_router
 from .api.webapp import router as independent_web_app_router
 from .api.auth import router as identity_access_router
+from .api.wordpress_adapter import router as thin_wordpress_adapter_router
 from .services.persistent_research_session_conversation import (
     get_persistent_research_session_store,
 )
@@ -203,6 +204,7 @@ app.include_router(platform_core_router)
 app.include_router(independent_research_librarian_api_router)
 app.include_router(independent_web_app_router)
 app.include_router(identity_access_router)
+app.include_router(thin_wordpress_adapter_router)
 
 persistent_session_store = get_persistent_research_session_store()
 identity_session_store = get_identity_session_store()
@@ -688,6 +690,8 @@ def health() -> dict[str, Any]:
         "independent_web_app_path": "/research-librarian/",
         "identity_sessions": True,
         "identity_access_runtime": "12.0.5",
+        "thin_wordpress_adapter": True,
+        "thin_wordpress_adapter_contract": "2.0",
         "identity_count": identity_session_store.identity_count(),
         "environment": settings.environment,
         "database_backend": str(summary.get("database_backend", settings.database_backend)),

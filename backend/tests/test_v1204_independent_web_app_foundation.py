@@ -10,7 +10,7 @@ from app.services.independent_web_app import (
 
 def test_web_app_manifest_is_wordpress_independent_and_secret_safe():
     m=web_app_manifest()
-    assert m["milestone"]=="12.0.5"
+    assert m["milestone"]=="12.0.6"
     assert m["entry_path"]=="/research-librarian/"
     assert m["api_base"]=="/v1/research-librarian"
     assert m["runtime_authority"]=="python-fastapi-backend"
@@ -21,11 +21,11 @@ def test_web_app_manifest_is_wordpress_independent_and_secret_safe():
     assert m["browser_state_policy"]["embedded_backend_secret"] is False
     assert m["authentication"]["key_embedded_in_app"] is False
     assert m["authentication"]["production_user_identity"] is True
-    assert m["next_boundary"]=="thin-wordpress-adapter"
+    assert m["next_boundary"]=="wordpress-state-migration-compatibility-layer"
 
 def test_web_app_capabilities_boundary():
     c=web_app_capabilities()
-    assert c["milestone"]=="12.0.5"
+    assert c["milestone"]=="12.0.6"
     assert c["standalone_browser_shell"] is True
     assert c["persistent_backend_sessions"] is True
     assert c["wordpress_required"] is False
@@ -77,7 +77,7 @@ def test_health_advertises_web_app():
     health=client.get("/health")
     assert health.status_code==200
     body=health.json()
-    assert body["version"]=="12.0.5"
+    assert body["version"]=="12.0.6"
     assert body["independent_web_app"] is True
     assert body["independent_web_app_path"]=="/research-librarian/"
     assert body["wordpress_required"] is False

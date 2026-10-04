@@ -1,0 +1,18 @@
+{
+  "release": "12.0.6",
+  "name": "Thin WordPress Adapter",
+  "schema": "sc-research-librarian-wordpress-thin-adapter/2.0",
+  "database_migration": null,
+  "backend_authority": "python-fastapi-backend",
+  "wordpress_role": "optional presentation/proxy compatibility",
+  "fixed_operation_allowlist": true,
+  "arbitrary_proxy_paths": false,
+  "arbitrary_proxy_hosts": false,
+  "browser_backend_key_exposure": false,
+  "backend_failure_behavior": "fail-closed-no-wordpress-research-fallback",
+  "wordpress_canonical_state": false,
+  "wordpress_identity_authority": false,
+  "wordpress_session_authority": false,
+  "actor_context": "WordPress user provenance hint only; not backend identity",
+  "next_boundary": "v12.0.7 WordPress State Migration & Compatibility Layer"
+}
