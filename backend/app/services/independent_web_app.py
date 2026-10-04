@@ -76,7 +76,7 @@ def web_app_manifest() -> dict[str, Any]:
             "web_app_does_not_store_canonical_evidence": True,
             "research_operations_use_backend_contracts": True,
         },
-        "next_boundary": "independent-deployment-wordpress-failure-certification",
+        "next_boundary": "neural-research-intelligence-foundation",
     }
 
 def web_app_capabilities() -> dict[str, Any]:

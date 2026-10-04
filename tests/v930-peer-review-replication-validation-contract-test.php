@@ -5,8 +5,8 @@ $backend = file_get_contents($root . '/backend/app/__init__.py');
 $core = file_get_contents($root . '/backend/app/api/core.py');
 $jobs = file_get_contents($root . '/backend/app/async_jobs.py');
 $checks = [
-  'plugin_version' => strpos($main, 'Version: 12.0.7') !== false,
-  'backend_version' => strpos($backend, '__version__ = "12.0.7"') !== false,
+  'plugin_version' => strpos($main, 'Version: 12.0.8') !== false,
+  'backend_version' => strpos($backend, '__version__ = "12.0.8"') !== false,
   'contract' => file_exists($root . '/backend/app/contracts/peer_review.py'),
   'service' => file_exists($root . '/backend/app/services/peer_review.py'),
   'test' => file_exists($root . '/backend/tests/test_v930_peer_review.py'),

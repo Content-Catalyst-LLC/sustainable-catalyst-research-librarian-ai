@@ -1,0 +1,23 @@
+{
+  "release": "12.0.8",
+  "name": "Independent Deployment & WordPress-Failure Certification",
+  "schema": "sc-research-librarian-independent-deployment-certification/1.0",
+  "database_migration": null,
+  "runtime_authority": "python-fastapi-backend",
+  "wordpress_required": false,
+  "certification_target": "wordpress-unreachable-or-absent",
+  "certification_scope": [
+    "health",
+    "independent-api-v1",
+    "web-app",
+    "identity-session-runtime",
+    "persistent-research-sessions",
+    "retrieval",
+    "migration-ledger-continuity",
+    "compatibility-alias-continuity"
+  ],
+  "wordpress_dns_blackout_probe": true,
+  "research_state_modified_by_certification": false,
+  "legacy_wordpress_state_modified_by_certification": false,
+  "next_boundary": "v12.1.0 Neural Research Intelligence Foundation"
+}

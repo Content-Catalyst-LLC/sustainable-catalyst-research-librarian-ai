@@ -34,7 +34,7 @@ def test_thin_wordpress_adapter_manifest_preserves_backend_authority():
     assert m["proxy_policy"]["arbitrary_methods_allowed"] is False
     assert m["proxy_policy"]["fixed_operation_allowlist"] is True
     assert m["proxy_policy"]["backend_failure_behavior"]=="fail-closed-no-wordpress-research-fallback"
-    assert m["next_boundary"]=="independent-deployment-wordpress-failure-certification"
+    assert m["next_boundary"]=="neural-research-intelligence-foundation"
 
 def test_adapter_operation_catalog_is_fixed_and_bounded():
     assert "retrieve" in READ_OPERATIONS
@@ -54,7 +54,7 @@ def test_adapter_capabilities():
     assert c["operation_count"]==len(ALL_OPERATIONS)
     assert c["read_operation_count"]==len(READ_OPERATIONS)
     assert c["write_operation_count"]==len(WRITE_OPERATIONS)
-    assert c["next_boundary"]=="independent-deployment-wordpress-failure-certification"
+    assert c["next_boundary"]=="neural-research-intelligence-foundation"
 
 def test_backend_routes_and_health_advertise_adapter():
     from app.main import app
@@ -79,7 +79,7 @@ def test_backend_routes_and_health_advertise_adapter():
     health=client.get("/health")
     assert health.status_code==200
     body=health.json()
-    assert body["version"]=="12.0.7"
+    assert body["version"]=="12.0.8"
     assert body["thin_wordpress_adapter"] is True
     assert body["thin_wordpress_adapter_contract"]=="2.0"
     assert body["wordpress_required"] is False
@@ -90,6 +90,6 @@ def test_independent_api_moves_to_state_migration_boundary():
     c=capabilities()
     assert m["scope"]["identity_sessions"] is True
     assert m["scope"]["thin_wordpress_adapter"] is True
-    assert m["next_boundary"]=="independent-deployment-wordpress-failure-certification"
-    assert c["milestone"]=="12.0.7"
+    assert m["next_boundary"]=="neural-research-intelligence-foundation"
+    assert c["milestone"]=="12.0.8"
     assert c["thin_wordpress_adapter"] is True

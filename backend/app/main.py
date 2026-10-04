@@ -168,6 +168,7 @@ from .api.webapp import router as independent_web_app_router
 from .api.auth import router as identity_access_router
 from .api.wordpress_adapter import router as thin_wordpress_adapter_router
 from .api.wordpress_migration import router as wordpress_state_migration_router
+from .api.independence import router as independent_deployment_certification_router
 from .services.persistent_research_session_conversation import (
     get_persistent_research_session_store,
 )
@@ -208,6 +209,7 @@ app.include_router(independent_web_app_router)
 app.include_router(identity_access_router)
 app.include_router(thin_wordpress_adapter_router)
 app.include_router(wordpress_state_migration_router)
+app.include_router(independent_deployment_certification_router)
 
 persistent_session_store = get_persistent_research_session_store()
 identity_session_store = get_identity_session_store()
@@ -700,6 +702,9 @@ def health() -> dict[str, Any]:
         "wordpress_state_migration_runtime": "12.0.7",
         "wordpress_compatibility_aliases": True,
         "wordpress_migration_store_backend": wordpress_state_migration_store.backend,
+        "independent_deployment_certification": True,
+        "wordpress_failure_certification_runtime": "12.0.8",
+        "wordpress_failure_certification_target": "wordpress-unreachable-or-absent",
         "identity_count": identity_session_store.identity_count(),
         "environment": settings.environment,
         "database_backend": str(summary.get("database_backend", settings.database_backend)),

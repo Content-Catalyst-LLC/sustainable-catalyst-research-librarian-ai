@@ -137,7 +137,7 @@ def migration_manifest()->dict[str,Any]:
             "compatibility_aliases_do_not_grant_access":True,
             "owner_mapping_is_explicit":True,
         },
-        "next_boundary":"independent-deployment-wordpress-failure-certification",
+        "next_boundary":"neural-research-intelligence-foundation",
     }
 
 class WordPressStateMigrationStore:

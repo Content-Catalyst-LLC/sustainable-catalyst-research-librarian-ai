@@ -21,7 +21,7 @@ def test_web_app_manifest_is_wordpress_independent_and_secret_safe():
     assert m["browser_state_policy"]["embedded_backend_secret"] is False
     assert m["authentication"]["key_embedded_in_app"] is False
     assert m["authentication"]["production_user_identity"] is True
-    assert m["next_boundary"]=="independent-deployment-wordpress-failure-certification"
+    assert m["next_boundary"]=="neural-research-intelligence-foundation"
 
 def test_web_app_capabilities_boundary():
     c=web_app_capabilities()
@@ -77,7 +77,7 @@ def test_health_advertises_web_app():
     health=client.get("/health")
     assert health.status_code==200
     body=health.json()
-    assert body["version"]=="12.0.7"
+    assert body["version"]=="12.0.8"
     assert body["independent_web_app"] is True
     assert body["independent_web_app_path"]=="/research-librarian/"
     assert body["wordpress_required"] is False

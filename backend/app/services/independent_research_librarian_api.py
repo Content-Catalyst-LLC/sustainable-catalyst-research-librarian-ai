@@ -119,8 +119,9 @@ def api_manifest()->dict[str,Any]:
             "identity_owned_research_sessions":True,
             "thin_wordpress_adapter":True,
             "wordpress_state_migration":True,
+            "independent_deployment_certification":True,
                                     },
-        "next_boundary":"independent-deployment-wordpress-failure-certification",
+        "next_boundary":"neural-research-intelligence-foundation",
     }
 
 def status_payload()->dict[str,Any]:
@@ -314,7 +315,7 @@ def capabilities()->dict[str,Any]:
     return {
         "schema":INDEPENDENT_API_SCHEMA,
         "release":settings.release_version,
-        "milestone":"12.0.7",
+        "milestone":"12.0.8",
         "api_version":"v1",
         "base_path":API_PREFIX,
         "stable_response_envelope":True,
@@ -331,6 +332,8 @@ def capabilities()->dict[str,Any]:
         "identity_sessions":True,
         "thin_wordpress_adapter":True,
         "wordpress_state_migration":True,
+        "independent_deployment_certification":True,
+        "wordpress_failure_certification":True,
         "breaking_changes_require_new_api_version":True,
         "route_count":m["route_count"],
         "automatic_truth_promotion":False,

@@ -2,7 +2,7 @@
 
 Sustainable Catalyst Research Librarian AI is the research-guidance, retrieval, evidence-planning, research-state, and reproducible research-intelligence layer of the Sustainable Catalyst platform.
 
-**Current release:** v12.0.7 — WordPress State Migration & Compatibility Layer
+**Current release:** v12.0.8 — Independent Deployment & WordPress-Failure Certification
 
 ## Architecture
 
@@ -19,6 +19,7 @@ Research Librarian AI helps structure research without silently replacing source
 - **Identity, Session & Access Runtime** — backend-owned identities, durable authenticated sessions, role-based access, identity-owned research continuity, and HttpOnly browser authentication; WordPress remains optional.
 - **Thin WordPress Adapter** — fixed-operation, nonce/capability-gated server proxy over Independent API v1; backend credentials remain server-side, backend failures fail closed, and WordPress stores no canonical Research Librarian state.
 - **WordPress State Migration & Compatibility Layer** — explicit inventory→prepare→apply migration with secret filtering, owner mapping, deterministic IDs, durable receipts, compatibility aliases, and conflict fail-closed behavior while legacy WordPress source state remains read-only during cutover.
+- **Independent Deployment & WordPress-Failure Certification** — read-only backend certification and production DNS-blackout verification proving the API, web app, identity/session runtime, retrieval, persistent sessions, and migration continuity remain operational without WordPress.
 - **Knowledge Library integration** — Library remains authoritative for source ingestion, documents, and knowledge assets.
 - **Platform Core integration** — Core remains authoritative for governed research/evidence objects, provenance, lineage, and cross-product exchange.
 - **Workspace / Lab / Workbench handoffs** — specialist runtimes execute computation and experiments; the Librarian prepares and tracks governed handoffs.

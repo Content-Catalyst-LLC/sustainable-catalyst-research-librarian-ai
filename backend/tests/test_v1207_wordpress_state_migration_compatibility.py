@@ -29,7 +29,7 @@ def test_manifest_preserves_backend_authority_and_explicit_cutover():
     assert m["governance"]["conflicts_fail_closed"] is True
     assert m["governance"]["legacy_state_not_deleted"] is True
     assert m["governance"]["compatibility_aliases_do_not_grant_access"] is True
-    assert m["next_boundary"]=="independent-deployment-wordpress-failure-certification"
+    assert m["next_boundary"]=="neural-research-intelligence-foundation"
 
 def test_prepare_classifies_owner_mapping_secret_payloads_and_compatibility(tmp_path):
     store=WordPressStateMigrationStore(sqlite_path=tmp_path/"migration.sqlite3")
@@ -219,7 +219,7 @@ def test_api_routes_health_and_current_boundary(tmp_path):
     assert applied.status_code==200
 
     health=client.get("/health").json()
-    assert health["version"]=="12.0.7"
+    assert health["version"]=="12.0.8"
     assert health["wordpress_state_migration"] is True
     assert health["wordpress_state_migration_runtime"]=="12.0.7"
     assert health["wordpress_compatibility_aliases"] is True
@@ -231,6 +231,6 @@ def test_independent_api_advances_to_failure_certification_boundary():
     c=capabilities()
     assert m["scope"]["thin_wordpress_adapter"] is True
     assert m["scope"]["wordpress_state_migration"] is True
-    assert m["next_boundary"]=="independent-deployment-wordpress-failure-certification"
-    assert c["milestone"]=="12.0.7"
+    assert m["next_boundary"]=="neural-research-intelligence-foundation"
+    assert c["milestone"]=="12.0.8"
     assert c["wordpress_state_migration"] is True
