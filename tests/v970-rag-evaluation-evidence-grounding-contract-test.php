@@ -5,8 +5,8 @@ $backend=file_get_contents($root.'/backend/app/__init__.py');
 $core=file_get_contents($root.'/backend/app/api/core.py');
 $jobs=file_get_contents($root.'/backend/app/async_jobs.py');
 $checks=[
- 'plugin_version'=>strpos($main,'Version: 12.1.0')!==false,
- 'backend_version'=>strpos($backend,'__version__ = "12.1.0"')!==false,
+ 'plugin_version'=>strpos($main,'Version: 12.2.0')!==false,
+ 'backend_version'=>strpos($backend,'__version__ = "12.2.0"')!==false,
  'contract'=>file_exists($root.'/backend/app/contracts/rag_evaluation.py'),
  'service'=>file_exists($root.'/backend/app/services/rag_evaluation.py'),
  'test'=>file_exists($root.'/backend/tests/test_v970_rag_evaluation.py'),

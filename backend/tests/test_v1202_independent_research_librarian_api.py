@@ -65,7 +65,7 @@ def test_routes_auth_and_manifest():
 
 def test_capabilities_boundary():
     c=capabilities()
-    assert c["milestone"]=="12.1.0"
+    assert c["milestone"]=="12.2.0"
     assert c["direct_backend_access"] is True
     assert c["wordpress_required"] is False
     assert c["persistent_conversations"] is True

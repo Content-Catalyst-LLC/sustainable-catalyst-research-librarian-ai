@@ -8,8 +8,8 @@ $backend_service=file_get_contents($root.'/backend/app/services/independent_depl
 $backend_contract=file_get_contents($root.'/backend/app/contracts/independent_deployment_certification.py');
 
 $checks=[
- 'plugin_version'=>strpos($main,'Version: 12.1.0')!==false,
- 'plugin_constant'=>strpos($main,"const VERSION        = '12.1.0';")!==false,
+ 'plugin_version'=>strpos($main,'Version: 12.2.0')!==false,
+ 'plugin_constant'=>strpos($main,"const VERSION        = '12.2.0';")!==false,
  'module_required'=>strpos($main,'class-sc-rl-v1208-independent-deployment-certification.php')!==false,
  'module_initialized'=>strpos($main,'SC_RL_V1208_Independent_Deployment_Certification::init();')!==false,
 

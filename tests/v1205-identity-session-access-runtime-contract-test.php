@@ -10,8 +10,8 @@ $migration=file_get_contents($root.'/backend/migrations/039_identity_session_acc
 $adapter=file_get_contents($root.'/includes/class-sc-rl-v1205-identity-session-access-adapter.php');
 
 $checks=[
- 'plugin_version'=>strpos($main,'Version: 12.1.0')!==false,
- 'plugin_constant'=>strpos($main,"const VERSION        = '12.1.0';")!==false,
+ 'plugin_version'=>strpos($main,'Version: 12.2.0')!==false,
+ 'plugin_constant'=>strpos($main,"const VERSION        = '12.2.0';")!==false,
  'adapter_required'=>strpos($main,'class-sc-rl-v1205-identity-session-access-adapter.php')!==false,
  'adapter_initialized'=>strpos($main,'SC_RL_V1205_Identity_Session_Access_Adapter::init();')!==false,
  'identity_schema'=>strpos($contract,'sc-research-librarian-identity/1.0')!==false,

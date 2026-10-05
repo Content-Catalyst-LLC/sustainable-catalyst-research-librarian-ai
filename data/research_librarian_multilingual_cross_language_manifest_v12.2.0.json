@@ -1,0 +1,29 @@
+{
+  "release": "12.2.0",
+  "name": "Multilingual & Cross-Language Research Intelligence",
+  "schema": "sc-research-librarian-multilingual-cross-language-research/1.0",
+  "runtime_authority": "python-fastapi-backend",
+  "wordpress_required": false,
+  "principles": {
+    "analyze_original_language_first": true,
+    "translation_is_derived_representation": true,
+    "transliteration_is_derived_representation": true,
+    "preserve_every_transformation": true,
+    "preserve_language_script_variant_identity": true
+  },
+  "scope": {
+    "language_identity": true,
+    "translation_provenance": true,
+    "transliteration_provenance": true,
+    "alignment_provenance": true,
+    "cross_language_query_planning": true,
+    "cross_language_retrieval_receipts": true,
+    "global_source_federation": false,
+    "new_source_ingestion": false,
+    "automatic_entity_resolution": false,
+    "automatic_citation_resolution": false,
+    "automatic_evidence_resolution": false
+  },
+  "database_migration": "042_multilingual_cross_language_research_intelligence.sql",
+  "next_boundary": "v12.3.0 Global Source Federation & Original-Language Research"
+}
