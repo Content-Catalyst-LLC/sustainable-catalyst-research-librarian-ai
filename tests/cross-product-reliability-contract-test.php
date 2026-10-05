@@ -16,11 +16,11 @@ $roadmap = file_get_contents( $root . '/docs/ROADMAP.md' );
 $manifest = json_decode( file_get_contents( $root . '/data/research_librarian_cross_product_reliability_manifest_v6.6.1.json' ), true );
 
 $checks = array(
-    'version_header' => false !== strpos( $main, 'Version: 12.0.8' ),
-    'version_constant' => false !== strpos( $main, "const VERSION        = '12.0.8';" ),
+    'version_header' => false !== strpos( $main, 'Version: 12.1.0' ),
+    'version_constant' => false !== strpos( $main, "const VERSION        = '12.1.0';" ),
     'bridge_version' => false !== strpos( $bridge, "const VERSION = '8.0.0';" ),
     'durable_version' => false !== strpos( $module, "const VERSION = '8.0.0';" ),
-    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "12.0.8"' ),
+    'backend_version' => false !== strpos( file_get_contents( $root . '/backend/app/__init__.py' ), '__version__ = "12.1.0"' ),
     'schema_eight' => false !== strpos( $store, 'SCHEMA_VERSION = 19' ),
     'index_schema_eight' => false !== strpos( $store, 'sc-research-librarian-knowledge-index/13.0' ),
     'capabilities_11' => false !== strpos( $handoffs, 'sc-platform-capabilities/1.1' ),

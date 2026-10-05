@@ -7,8 +7,8 @@ $jobs=file_get_contents($root.'/backend/app/async_jobs.py');
 $service=file_get_contents($root.'/backend/app/services/research_gap_novelty_intelligence.py');
 $environment=file_get_contents($root.'/backend/app/services/unified_scholarly_ai_environment.py');
 $checks=[
- 'plugin_version'=>strpos($main,'Version: 12.0.8')!==false,
- 'backend_version'=>strpos($backend,'__version__ = "12.0.8"')!==false,
+ 'plugin_version'=>strpos($main,'Version: 12.1.0')!==false,
+ 'backend_version'=>strpos($backend,'__version__ = "12.1.0"')!==false,
  'capabilities_route'=>strpos($api,'/research-gap-novelty-intelligence/capabilities')!==false,
  'signals_route'=>strpos($api,'/research-gap-novelty-intelligence/projects/{gap_novelty_id}/structural-signals')!==false,
  'landscape_route'=>strpos($api,'/research-gap-novelty-intelligence/projects/{gap_novelty_id}/landscape')!==false,

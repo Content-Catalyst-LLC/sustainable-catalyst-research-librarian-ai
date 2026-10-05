@@ -79,7 +79,7 @@ def test_backend_routes_and_health_advertise_adapter():
     health=client.get("/health")
     assert health.status_code==200
     body=health.json()
-    assert body["version"]=="12.0.8"
+    assert body["version"]=="12.1.0"
     assert body["thin_wordpress_adapter"] is True
     assert body["thin_wordpress_adapter_contract"]=="2.0"
     assert body["wordpress_required"] is False
@@ -90,6 +90,6 @@ def test_independent_api_moves_to_state_migration_boundary():
     c=capabilities()
     assert m["scope"]["identity_sessions"] is True
     assert m["scope"]["thin_wordpress_adapter"] is True
-    assert m["next_boundary"]=="neural-research-intelligence-foundation"
-    assert c["milestone"]=="12.0.8"
+    assert m["next_boundary"]=="multilingual-cross-language-research-intelligence"
+    assert c["milestone"]=="12.1.0"
     assert c["thin_wordpress_adapter"] is True

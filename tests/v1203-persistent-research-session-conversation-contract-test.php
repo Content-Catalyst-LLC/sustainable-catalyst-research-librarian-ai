@@ -6,8 +6,8 @@ $independent=file_get_contents($root.'/backend/app/api/independent.py');
 $service=file_get_contents($root.'/backend/app/services/persistent_research_session_conversation.py');
 $backend_main=file_get_contents($root.'/backend/app/main.py');
 $checks=[
- 'plugin version'=>strpos($main,'Version: 12.0.8')!==false,
- 'plugin constant'=>strpos($main,"const VERSION        = '12.0.8';")!==false,
+ 'plugin version'=>strpos($main,'Version: 12.1.0')!==false,
+ 'plugin constant'=>strpos($main,"const VERSION        = '12.1.0';")!==false,
  'adapter required'=>strpos($main,'class-sc-rl-v1203-persistent-session-adapter.php')!==false,
  'adapter initialized'=>strpos($main,'SC_RL_V1203_Persistent_Session_Adapter::init();')!==false,
  'session api'=>strpos($independent,'@router.post("/sessions"')!==false,

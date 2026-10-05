@@ -171,7 +171,7 @@ def test_health_advertises_identity_sessions():
     from app.main import app
     client=TestClient(app)
     body=client.get("/health").json()
-    assert body["version"]=="12.0.8"
+    assert body["version"]=="12.1.0"
     assert body["identity_sessions"] is True
     assert body["identity_access_runtime"]=="12.0.5"
     assert body["wordpress_required"] is False

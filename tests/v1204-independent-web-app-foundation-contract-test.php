@@ -9,8 +9,8 @@ $web_js=file_get_contents($root.'/backend/app/webapp/app.js');
 $web_html=file_get_contents($root.'/backend/app/webapp/index.html');
 
 $checks=[
- 'plugin_version'=>strpos($main,'Version: 12.0.8')!==false,
- 'plugin_constant'=>strpos($main,"const VERSION        = '12.0.8';")!==false,
+ 'plugin_version'=>strpos($main,'Version: 12.1.0')!==false,
+ 'plugin_constant'=>strpos($main,"const VERSION        = '12.1.0';")!==false,
  'adapter_required'=>strpos($main,'class-sc-rl-v1204-independent-web-app-adapter.php')!==false,
  'adapter_initialized'=>strpos($main,'SC_RL_V1204_Independent_Web_App_Adapter::init();')!==false,
  'standalone_route'=>strpos($web_router,'/research-librarian/')!==false,

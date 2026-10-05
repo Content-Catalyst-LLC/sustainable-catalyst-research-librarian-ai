@@ -8,8 +8,8 @@ $backend_service=file_get_contents($root.'/backend/app/services/thin_wordpress_a
 $backend_contract=file_get_contents($root.'/backend/app/contracts/thin_wordpress_adapter.py');
 
 $checks=[
- 'plugin_version'=>strpos($main,'Version: 12.0.8')!==false,
- 'plugin_constant'=>strpos($main,"const VERSION        = '12.0.8';")!==false,
+ 'plugin_version'=>strpos($main,'Version: 12.1.0')!==false,
+ 'plugin_constant'=>strpos($main,"const VERSION        = '12.1.0';")!==false,
  'adapter_required'=>strpos($main,'class-sc-rl-v1206-thin-wordpress-adapter.php')!==false,
  'adapter_initialized'=>strpos($main,'SC_RL_V1206_Thin_WordPress_Adapter::init();')!==false,
  'contract_v2'=>strpos($adapter,"sc-research-librarian-wordpress-thin-adapter/2.0")!==false,

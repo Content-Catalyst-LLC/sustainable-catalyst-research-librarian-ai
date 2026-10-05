@@ -1,0 +1,22 @@
+{
+  "release": "12.1.0",
+  "name": "Neural Research Intelligence Foundation",
+  "schema": "sc-research-librarian-neural-research-intelligence/1.0",
+  "database_migration": "041_neural_research_intelligence_foundation.sql",
+  "runtime_authority": "python-fastapi-backend",
+  "wordpress_required": false,
+  "platform_core_model_contract_authority": true,
+  "specialist_runtime_execution_authority": true,
+  "librarian_executes_training": false,
+  "librarian_executes_inference": false,
+  "objects": [
+    "neural-research-project",
+    "model-reference",
+    "dataset-reference",
+    "representation-reference",
+    "inference-receipt",
+    "runtime-handoff",
+    "provenance-snapshot"
+  ],
+  "next_boundary": "v12.2.0 Multilingual & Cross-Language Research Intelligence"
+}
