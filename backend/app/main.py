@@ -171,6 +171,7 @@ from .api.wordpress_migration import router as wordpress_state_migration_router
 from .api.independence import router as independent_deployment_certification_router
 from .api.neural_research import router as neural_research_router
 from .api.multilingual_research import router as multilingual_research_router
+from .api.global_source_federation import router as global_source_federation_router
 from .services.persistent_research_session_conversation import (
     get_persistent_research_session_store,
 )
@@ -178,6 +179,7 @@ from .services.identity_session_access import get_identity_session_store
 from .services.wordpress_state_migration import get_wordpress_state_migration_store
 from .services.neural_research_intelligence import get_neural_research_intelligence_store
 from .services.multilingual_cross_language_research import get_multilingual_cross_language_research_store
+from .services.global_source_federation_original_language import get_global_source_federation_original_language_store
 from .api.jobs import router as async_jobs_router, register_authenticated_routes as register_async_job_routes
 from .api.documents import router as documents_router, register_authenticated_routes as register_document_routes
 from .api.sources import router as sources_router, register_authenticated_routes as register_source_routes
@@ -216,12 +218,14 @@ app.include_router(wordpress_state_migration_router)
 app.include_router(independent_deployment_certification_router)
 app.include_router(neural_research_router)
 app.include_router(multilingual_research_router)
+app.include_router(global_source_federation_router)
 
 persistent_session_store = get_persistent_research_session_store()
 identity_session_store = get_identity_session_store()
 wordpress_state_migration_store = get_wordpress_state_migration_store()
 neural_research_store = get_neural_research_intelligence_store()
 multilingual_research_store = get_multilingual_cross_language_research_store()
+global_source_federation_store = get_global_source_federation_original_language_store()
 
 _RESEARCH_MODES: dict[str, dict[str, str]] = {
     "auto": {"label": "Auto-detect", "instruction": "Infer the most useful site-scoped research workflow."},
@@ -722,6 +726,11 @@ def health() -> dict[str, Any]:
         "multilingual_research_store_backend": multilingual_research_store.backend,
         "original_language_first": True,
         "translation_is_derived_representation": True,
+        "global_source_federation": True,
+        "global_source_federation_runtime": "12.3.0",
+        "global_source_federation_store_backend": global_source_federation_store.backend,
+        "original_language_source_research": True,
+        "source_quality_trust_separation": True,
         "identity_count": identity_session_store.identity_count(),
         "environment": settings.environment,
         "database_backend": str(summary.get("database_backend", settings.database_backend)),

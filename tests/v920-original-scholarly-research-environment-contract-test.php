@@ -5,8 +5,8 @@ $backend = file_get_contents($root . '/backend/app/__init__.py');
 $core = file_get_contents($root . '/backend/app/api/core.py');
 $jobs = file_get_contents($root . '/backend/app/async_jobs.py');
 $required = [
-  'plugin_version' => strpos($main, 'Version: 12.2.0') !== false,
-  'backend_version' => strpos($backend, '__version__ = "12.2.0"') !== false,
+  'plugin_version' => strpos($main, 'Version: 12.3.0') !== false,
+  'backend_version' => strpos($backend, '__version__ = "12.3.0"') !== false,
   'contract' => file_exists($root . '/backend/app/contracts/scholarly_research.py'),
   'service' => file_exists($root . '/backend/app/services/scholarly_research.py'),
   'migration' => file_exists($root . '/backend/migrations/007_original_scholarly_research_environment.sql'),

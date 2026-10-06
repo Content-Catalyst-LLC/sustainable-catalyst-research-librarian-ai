@@ -77,7 +77,7 @@ def test_health_advertises_web_app():
     health=client.get("/health")
     assert health.status_code==200
     body=health.json()
-    assert body["version"]=="12.2.0"
+    assert body["version"]=="12.3.0"
     assert body["independent_web_app"] is True
     assert body["independent_web_app_path"]=="/research-librarian/"
     assert body["wordpress_required"] is False

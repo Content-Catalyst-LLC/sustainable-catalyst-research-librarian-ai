@@ -122,8 +122,11 @@ def api_manifest()->dict[str,Any]:
             "independent_deployment_certification":True,
             "neural_research_intelligence":True,
             "multilingual_cross_language_research":True,
+            "global_source_federation":True,
+            "original_language_source_research":True,
+            "source_quality_trust_separation":True,
                                     },
-        "next_boundary":"global-source-federation-original-language-research",
+        "next_boundary":"cross-language-entity-toponym-resolution",
     }
 
 def status_payload()->dict[str,Any]:
@@ -317,7 +320,7 @@ def capabilities()->dict[str,Any]:
     return {
         "schema":INDEPENDENT_API_SCHEMA,
         "release":settings.release_version,
-        "milestone":"12.2.0",
+        "milestone":"12.3.0",
         "api_version":"v1",
         "base_path":API_PREFIX,
         "stable_response_envelope":True,
@@ -339,7 +342,9 @@ def capabilities()->dict[str,Any]:
         "neural_research_intelligence":True,
         "neural_runtime_execution":False,
         "multilingual_cross_language_research":True,
-        "global_source_federation":False,
+        "global_source_federation":True,
+        "original_language_source_research":True,
+        "source_quality_trust_separation":True,
         "breaking_changes_require_new_api_version":True,
         "route_count":m["route_count"],
         "automatic_truth_promotion":False,

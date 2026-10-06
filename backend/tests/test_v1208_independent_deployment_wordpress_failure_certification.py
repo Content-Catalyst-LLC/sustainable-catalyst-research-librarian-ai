@@ -70,7 +70,7 @@ def test_wordpress_dns_blackout_does_not_break_independent_runtime(tmp_path):
     with patch("socket.getaddrinfo",side_effect=guard):
         health=client.get("/health")
         assert health.status_code==200
-        assert health.json()["version"]=="12.2.0"
+        assert health.json()["version"]=="12.3.0"
         assert health.json()["wordpress_required"] is False
         assert health.json()["independent_deployment_certification"] is True
 
@@ -156,7 +156,7 @@ def test_current_api_boundary_advances_to_neural_foundation():
     c=capabilities()
     assert m["scope"]["wordpress_state_migration"] is True
     assert m["scope"]["independent_deployment_certification"] is True
-    assert m["next_boundary"]=="global-source-federation-original-language-research"
-    assert c["milestone"]=="12.2.0"
+    assert m["next_boundary"]=="cross-language-entity-toponym-resolution"
+    assert c["milestone"]=="12.3.0"
     assert c["independent_deployment_certification"] is True
     assert c["wordpress_failure_certification"] is True

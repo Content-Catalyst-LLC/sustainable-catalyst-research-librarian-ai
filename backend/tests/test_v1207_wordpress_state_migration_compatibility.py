@@ -219,7 +219,7 @@ def test_api_routes_health_and_current_boundary(tmp_path):
     assert applied.status_code==200
 
     health=client.get("/health").json()
-    assert health["version"]=="12.2.0"
+    assert health["version"]=="12.3.0"
     assert health["wordpress_state_migration"] is True
     assert health["wordpress_state_migration_runtime"]=="12.0.7"
     assert health["wordpress_compatibility_aliases"] is True
@@ -231,6 +231,6 @@ def test_independent_api_advances_to_failure_certification_boundary():
     c=capabilities()
     assert m["scope"]["thin_wordpress_adapter"] is True
     assert m["scope"]["wordpress_state_migration"] is True
-    assert m["next_boundary"]=="global-source-federation-original-language-research"
-    assert c["milestone"]=="12.2.0"
+    assert m["next_boundary"]=="cross-language-entity-toponym-resolution"
+    assert c["milestone"]=="12.3.0"
     assert c["wordpress_state_migration"] is True

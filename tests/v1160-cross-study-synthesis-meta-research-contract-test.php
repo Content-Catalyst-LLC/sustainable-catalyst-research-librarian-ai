@@ -6,8 +6,8 @@ $jobs = file_get_contents($root . '/backend/app/async_jobs.py');
 $service = file_get_contents($root . '/backend/app/services/cross_study_synthesis_meta_research.py');
 $unified = file_get_contents($root . '/backend/app/services/unified_scholarly_ai_environment.py');
 $assertions = [
-    'plugin version' => strpos($main, 'Version: 12.2.0') !== false,
-    'plugin constant' => strpos($main, "const VERSION        = '12.2.0';") !== false,
+    'plugin version' => strpos($main, 'Version: 12.3.0') !== false,
+    'plugin constant' => strpos($main, "const VERSION        = '12.3.0';") !== false,
     'cross-study API' => strpos($core, '/cross-study-synthesis-meta-research/projects/{cross_study_synthesis_id}/runtime-handoffs') !== false,
     'snapshot job' => strpos($jobs, 'cross-study-synthesis-meta-research-snapshot') !== false,
     'meta-analysis guardrail' => preg_match('/automatic_meta_analysis.*False/', $service) === 1,

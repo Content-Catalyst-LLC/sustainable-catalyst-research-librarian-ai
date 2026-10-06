@@ -2,13 +2,14 @@
 
 Sustainable Catalyst Research Librarian AI is the research-guidance, retrieval, evidence-planning, research-state, and reproducible research-intelligence layer of the Sustainable Catalyst platform.
 
-**Current release:** v12.2.0 — Multilingual & Cross-Language Research Intelligence
+**Current release:** v12.3.0 — Global Source Federation & Original-Language Research
 
 ## Architecture
 
 Research Librarian AI helps structure research without silently replacing source authority, scientific execution, or human judgment.
 
 - **Research guidance and planning** — research questions, methodology plans, search strategies, study protocols, preregistration, statistical plans, causal designs, simulation/model studies, reproduction/replication planning, cross-study synthesis, meta-research planning, research-integrity/methodological audit, peer-review/scholarly critique, research revision/response intelligence, and an integrated computational research scientist environment.
+- **Global source federation & original-language research** — research-scoped global source registries, original-language acquisition lineage, ingestion/retrieval receipts, and explicit separation of descriptive source-quality signals from user trust preferences; Library/connectors remain ingestion authorities.
 - **Neural research intelligence** — model/dataset/representation references, inference receipts, execution handoffs, lineage, Core candidates, and immutable snapshots while specialist runtimes retain execution authority.\n- **Retrieval and source intelligence** — deterministic and semantic retrieval, reranking, source identity, document parsing, citation context, federated discovery, and evidence-grounding workflows.
 - **Research state** — projects, investigations, contexts, open questions, lifecycle state, collaboration rooms, activity, and durable workflow state.
 - **Evidence intelligence** — source evaluation, evidence comparison, gaps, claims/counterclaims, contradictions, argument structures, review workflows, synthesis planning, methodological audit, discrepancy tracing, remediation tracking, reviewer critique, author-response lineage, revision tracking, change-evidence traceability, response reconciliation, scientist-workspace orchestration, computational handoffs, execution provenance, and human interpretation checkpoints.

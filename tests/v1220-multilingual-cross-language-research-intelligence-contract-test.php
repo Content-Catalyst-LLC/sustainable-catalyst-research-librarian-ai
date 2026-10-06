@@ -9,8 +9,8 @@ $backend_contract=file_get_contents($root.'/backend/app/contracts/multilingual_c
 $migration=file_get_contents($root.'/backend/migrations/042_multilingual_cross_language_research_intelligence.sql');
 
 $checks=[
- 'plugin_version'=>strpos($main,'Version: 12.2.0')!==false,
- 'plugin_constant'=>strpos($main,"const VERSION        = '12.2.0';")!==false,
+ 'plugin_version'=>strpos($main,'Version: 12.3.0')!==false,
+ 'plugin_constant'=>strpos($main,"const VERSION        = '12.3.0';")!==false,
  'module_loaded'=>strpos($main,'class-sc-rl-v1220-multilingual-cross-language-research.php')!==false,
  'module_initialized'=>strpos($main,'SC_RL_V1220_Multilingual_Cross_Language_Research::init();')!==false,
  'wp_route'=>strpos($wp,"'/multilingual-research'")!==false,

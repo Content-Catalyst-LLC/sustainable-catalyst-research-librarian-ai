@@ -1,0 +1,35 @@
+{
+  "release": "12.3.0",
+  "name": "Global Source Federation & Original-Language Research",
+  "schema": "sc-research-librarian-global-source-federation-original-language/1.0",
+  "runtime_authority": "python-fastapi-backend",
+  "wordpress_required": false,
+  "principles": {
+    "original_language_is_primary_representation": true,
+    "translation_is_derived_representation": true,
+    "source_quality_separate_from_user_trust": true,
+    "preserve_institution_jurisdiction_language_identity": true,
+    "preserve_acquisition_transformation_provenance": true
+  },
+  "scope": {
+    "global_source_federation": true,
+    "original_language_source_research": true,
+    "governed_source_ingestion": true,
+    "new_source_ingestion": true,
+    "source_quality_signals": true,
+    "user_source_trust_preferences": true,
+    "source_quality_trust_separation": true,
+    "automatic_remote_crawling": false,
+    "automatic_entity_resolution": false,
+    "automatic_toponym_resolution": false,
+    "automatic_citation_resolution": false,
+    "automatic_evidence_resolution": false
+  },
+  "authority": {
+    "knowledge_library_or_connector_ingestion_authority": true,
+    "librarian_research_context_authority": true,
+    "platform_core_contract_and_provenance_authority": true
+  },
+  "database_migration": "043_global_source_federation_original_language_research.sql",
+  "next_boundary": "v12.4.0 Cross-Language Entity & Toponym Resolution"
+}

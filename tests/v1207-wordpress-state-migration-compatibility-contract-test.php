@@ -11,8 +11,8 @@ $migration=file_get_contents($root.'/backend/migrations/040_wordpress_state_migr
 $session_service=file_get_contents($root.'/backend/app/services/persistent_research_session_conversation.py');
 
 $checks=[
- 'plugin_version'=>strpos($main,'Version: 12.2.0')!==false,
- 'plugin_constant'=>strpos($main,"const VERSION        = '12.2.0';")!==false,
+ 'plugin_version'=>strpos($main,'Version: 12.3.0')!==false,
+ 'plugin_constant'=>strpos($main,"const VERSION        = '12.3.0';")!==false,
  'adapter_required'=>strpos($main,'class-sc-rl-v1207-wordpress-state-migration-compatibility.php')!==false,
  'adapter_initialized'=>strpos($main,'SC_RL_V1207_WordPress_State_Migration_Compatibility::init();')!==false,
 
