@@ -125,8 +125,12 @@ def api_manifest()->dict[str,Any]:
             "global_source_federation":True,
             "original_language_source_research":True,
             "source_quality_trust_separation":True,
+            "cross_language_entity_toponym_resolution":True,
+            "human_confirmed_entity_resolution":True,
+            "toponym_ambiguity_preserved":True,
+            "automatic_identity_promotion":False,
                                     },
-        "next_boundary":"cross-language-entity-toponym-resolution",
+        "next_boundary":"cross-language-citation-evidence-resolution",
     }
 
 def status_payload()->dict[str,Any]:
@@ -320,7 +324,7 @@ def capabilities()->dict[str,Any]:
     return {
         "schema":INDEPENDENT_API_SCHEMA,
         "release":settings.release_version,
-        "milestone":"12.3.0",
+        "milestone":"12.4.0",
         "api_version":"v1",
         "base_path":API_PREFIX,
         "stable_response_envelope":True,
@@ -345,6 +349,10 @@ def capabilities()->dict[str,Any]:
         "global_source_federation":True,
         "original_language_source_research":True,
         "source_quality_trust_separation":True,
+        "cross_language_entity_toponym_resolution":True,
+        "human_confirmed_entity_resolution":True,
+        "toponym_ambiguity_preserved":True,
+        "automatic_identity_promotion":False,
         "breaking_changes_require_new_api_version":True,
         "route_count":m["route_count"],
         "automatic_truth_promotion":False,

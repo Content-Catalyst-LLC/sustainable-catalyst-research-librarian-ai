@@ -288,7 +288,7 @@ def test_routes_auth_health_and_current_boundary(tmp_path):
     health=client.get("/health")
     assert health.status_code==200
     h=health.json()
-    assert h["version"]=="12.3.0"
+    assert h["version"]=="12.4.0"
     assert h["multilingual_cross_language_research"] is True
     assert h["multilingual_research_runtime"]=="12.2.0"
     assert h["wordpress_required"] is False
@@ -297,8 +297,8 @@ def test_routes_auth_health_and_current_boundary(tmp_path):
     m=api_manifest()
     c=independent_capabilities()
     assert m["scope"]["multilingual_cross_language_research"] is True
-    assert m["next_boundary"]=="cross-language-entity-toponym-resolution"
-    assert c["milestone"]=="12.3.0"
+    assert m["next_boundary"]=="cross-language-citation-evidence-resolution"
+    assert c["milestone"]=="12.4.0"
     assert c["multilingual_cross_language_research"] is True
     assert c["global_source_federation"] is True
 

@@ -1,3 +1,5 @@
+Research Librarian v12.4.0 — Cross-Language Entity & Toponym Resolution
+
 === Sustainable Catalyst Research Librarian ===
 Contributors: Content Catalyst LLC
 Tags: research, routing, ai, gemini, embeddings, knowledge index

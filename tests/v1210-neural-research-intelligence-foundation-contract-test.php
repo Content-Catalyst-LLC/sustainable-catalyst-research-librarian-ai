@@ -9,8 +9,8 @@ $backend_contract=file_get_contents($root.'/backend/app/contracts/neural_researc
 $migration=file_get_contents($root.'/backend/migrations/041_neural_research_intelligence_foundation.sql');
 
 $checks=[
- 'plugin_version'=>strpos($main,'Version: 12.3.0')!==false,
- 'plugin_constant'=>strpos($main,"const VERSION        = '12.3.0';")!==false,
+ 'plugin_version'=>strpos($main,'Version: 12.4.0')!==false,
+ 'plugin_constant'=>strpos($main,"const VERSION        = '12.4.0';")!==false,
  'module_required'=>strpos($main,'class-sc-rl-v1210-neural-research-intelligence-foundation.php')!==false,
  'module_initialized'=>strpos($main,'SC_RL_V1210_Neural_Research_Intelligence_Foundation::init();')!==false,
  'wp_route'=>strpos($wp,"'/neural-research-foundation'")!==false,

@@ -3,7 +3,7 @@
  * Plugin Name: Sustainable Catalyst Research Librarian AI
  * Plugin URI: https://sustainablecatalyst.com/platform/research-librarian/
  * Description: Site-scoped research intelligence for Sustainable Catalyst with verified retrieval, typed handoffs, answer traceability, source governance, quality evaluation, release gates, and deterministic fallback.
- * Version: 12.3.0
+ * Version: 12.4.0
  * Author: Content Catalyst LLC / Tariq Ahmad
  * Author URI: https://sustainablecatalyst.com/
  * License: MIT
@@ -274,7 +274,7 @@ final class SC_RL6_Core {
     const MAINTENANCE_HOOK = 'sc_rl_ai_index_maintenance_event';
     const AI_STATUS_OPTION = 'sc_rl_ai_live_provider_status';
     const REST_NAMESPACE = 'sc-research-librarian-ai/v1';
-    const VERSION        = '12.3.0';
+    const VERSION        = '12.4.0';
     const RATE_LIMIT_REGISTRY_OPTION = 'sc_rl_ai_rate_limit_registry';
 
     private static $instance = null;
@@ -9836,6 +9836,8 @@ require_once plugin_dir_path( __FILE__ ) . 'includes/class-sc-rl-v1220-multiling
 SC_RL_V1220_Multilingual_Cross_Language_Research::init();
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-sc-rl-v1230-global-source-federation-original-language.php';
 SC_RL_V1230_Global_Source_Federation_Original_Language::init();
+require_once plugin_dir_path( __FILE__ ) . 'includes/class-sc-rl-v1240-cross-language-entity-toponym-resolution.php';
+SC_RL_V1240_Cross_Language_Entity_Toponym_Resolution::init();
 
 SC_RL6_V530_Article_Map_Embeds::init();
 SC_RL6_V520_Route_Quality::init();

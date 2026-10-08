@@ -1,3 +1,5 @@
+Research Librarian v12.4.0 — Cross-Language Entity & Toponym Resolution
+
 # Sustainable Catalyst Research Librarian AI
 
 Sustainable Catalyst Research Librarian AI is the research-guidance, retrieval, evidence-planning, research-state, and reproducible research-intelligence layer of the Sustainable Catalyst platform.

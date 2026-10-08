@@ -204,7 +204,7 @@ def test_routes_auth_and_current_boundary(tmp_path):
     health=client.get("/health")
     assert health.status_code==200
     h=health.json()
-    assert h["version"]=="12.3.0"
+    assert h["version"]=="12.4.0"
     assert h["neural_research_intelligence"] is True
     assert h["neural_research_runtime"]=="12.1.0"
     assert h["wordpress_required"] is False
@@ -213,8 +213,8 @@ def test_routes_auth_and_current_boundary(tmp_path):
     m=api_manifest()
     c=independent_capabilities()
     assert m["scope"]["neural_research_intelligence"] is True
-    assert m["next_boundary"]=="cross-language-entity-toponym-resolution"
-    assert c["milestone"]=="12.3.0"
+    assert m["next_boundary"]=="cross-language-citation-evidence-resolution"
+    assert c["milestone"]=="12.4.0"
     assert c["neural_research_intelligence"] is True
     assert c["neural_runtime_execution"] is False
 

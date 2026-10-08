@@ -1,0 +1,29 @@
+{
+  "release": "12.4.0",
+  "name": "Cross-Language Entity & Toponym Resolution",
+  "schema": "sc-research-librarian-cross-language-entity-toponym-resolution/1.0",
+  "runtime_authority": "python-fastapi-backend",
+  "wordpress_required": false,
+  "principles": {
+    "original_script_preserved": true,
+    "candidate_generation_separate_from_confirmation": true,
+    "aliases_and_transliterations_are_provenanced_representations": true,
+    "toponym_historical_and_jurisdictional_ambiguity_preserved": true,
+    "confidence_is_descriptive_not_truth": true,
+    "human_review_required_for_acceptance": true,
+    "canonical_identity_promotion_is_external_governed_action": true
+  },
+  "scope": {
+    "cross_language_entity_resolution": true,
+    "cross_language_toponym_resolution": true,
+    "alias_alignment": true,
+    "historical_toponym_candidates": true,
+    "jurisdiction_aware_toponym_candidates": true,
+    "automatic_identity_promotion": false,
+    "automatic_remote_geocoding": false,
+    "automatic_citation_resolution": false,
+    "automatic_evidence_resolution": false
+  },
+  "database_migration": "044_cross_language_entity_toponym_resolution.sql",
+  "next_boundary": "v12.5.0 Cross-Language Citation & Evidence Resolution"
+}

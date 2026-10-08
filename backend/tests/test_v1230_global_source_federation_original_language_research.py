@@ -213,7 +213,7 @@ def test_routes_auth_health_and_current_boundary(tmp_path):
     health = client.get("/health")
     assert health.status_code == 200
     payload = health.json()
-    assert payload["version"] == "12.3.0"
+    assert payload["version"] == "12.4.0"
     assert payload["global_source_federation"] is True
     assert payload["global_source_federation_runtime"] == "12.3.0"
     assert payload["original_language_source_research"] is True
@@ -224,8 +224,8 @@ def test_routes_auth_health_and_current_boundary(tmp_path):
     current = independent_capabilities()
     assert manifest["scope"]["global_source_federation"] is True
     assert manifest["scope"]["original_language_source_research"] is True
-    assert manifest["next_boundary"] == "cross-language-entity-toponym-resolution"
-    assert current["milestone"] == "12.3.0"
+    assert manifest["next_boundary"] == "cross-language-citation-evidence-resolution"
+    assert current["milestone"] == "12.4.0"
     assert current["global_source_federation"] is True
 
 

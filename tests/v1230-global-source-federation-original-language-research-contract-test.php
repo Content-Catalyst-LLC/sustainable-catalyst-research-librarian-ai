@@ -9,8 +9,8 @@ $backend_contract=file_get_contents($root.'/backend/app/contracts/global_source_
 $migration=file_get_contents($root.'/backend/migrations/043_global_source_federation_original_language_research.sql');
 
 $checks=[
- 'plugin_version'=>strpos($main,'Version: 12.3.0')!==false,
- 'plugin_constant'=>strpos($main,"const VERSION        = '12.3.0';")!==false,
+ 'plugin_version'=>strpos($main,'Version: 12.4.0')!==false,
+ 'plugin_constant'=>strpos($main,"const VERSION        = '12.4.0';")!==false,
  'module_loaded'=>strpos($main,'class-sc-rl-v1230-global-source-federation-original-language.php')!==false,
  'module_initialized'=>strpos($main,'SC_RL_V1230_Global_Source_Federation_Original_Language::init();')!==false,
  'wp_route'=>strpos($wp,"'/global-source-federation'")!==false,
