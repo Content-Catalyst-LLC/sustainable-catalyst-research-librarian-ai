@@ -13,6 +13,11 @@ on:
       - 'LICENSE'
       - '.github/workflows/package-wordpress-plugin.yml'
 
+# A newer revision supersedes validation/artifacts for the same branch or PR.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   package:
     runs-on: ubuntu-latest
@@ -48,3 +53,5 @@ jobs:
           name: sustainable-catalyst-research-librarian-ai-v${{ steps.version.outputs.version }}-wordpress
           path: dist/sustainable-catalyst-research-librarian-ai-v${{ steps.version.outputs.version }}-wordpress.zip
           if-no-files-found: error
+          # The artifact is already a compressed ZIP.
+          compression-level: 0
