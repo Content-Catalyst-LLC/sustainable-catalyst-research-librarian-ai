@@ -21,6 +21,10 @@ def _now(): return datetime.now(timezone.utc).isoformat()
 def _uniq(v): return list(dict.fromkeys(str(x).strip() for x in v if str(x).strip()))
 def _id(p,v): return p+_sha(v)[:32]
 
+# Persist study-planning records and their content hash in the configured
+# Postgres or local SQLite backend. Plans declare model choices/lineage; they
+# do not execute simulations or validate scientific predictions. The optional
+# causal-design dependency supplies linked design context when requested.
 class SimulationModelStudyPlannerStore:
     def __init__(self,sqlite_path:Path|None=None,causal_design_store:Any|None=None)->None:
         self.backend="postgres" if settings.database_backend=="postgres" and sqlite_path is None else "sqlite"

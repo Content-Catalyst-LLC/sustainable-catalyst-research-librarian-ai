@@ -144,6 +144,10 @@ class IdentityAccessContext:
         }
 
 
+# Own service-native identity/session state. Production Postgres requires
+# psycopg and runs its schema migration at construction; the SQLite path is
+# local compatibility storage. A Library or Workspace login is not thereby a
+# Research Librarian identity; cross-product access needs an explicit bridge.
 class IdentitySessionStore:
     def __init__(self, sqlite_path: Path | None = None) -> None:
         self.backend = "postgres" if settings.database_backend == "postgres" and sqlite_path is None else "sqlite"

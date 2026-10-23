@@ -183,6 +183,9 @@ class SourceIdentityConflict(ValueError):
     pass
 
 
+# Resolve scholarly source/citation identities against a durable graph. DOI or
+# source-reference agreement is an identity claim, not proof of paper quality,
+# access rights or permission to copy full text into another product.
 class SourceGraphStore:
     """Canonical scholarly identity + citation graph. Postgres is authoritative in production."""
 
