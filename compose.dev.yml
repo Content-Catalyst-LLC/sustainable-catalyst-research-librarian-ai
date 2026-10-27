@@ -1,0 +1,21 @@
+# Development override; requires Docker Compose supporting !override.
+services:
+  research-librarian:
+    build: ./backend
+    image: sc-research-librarian-dev:local
+    container_name: sc-research-librarian-dev
+    env_file: !override [.env.dev]
+    environment:
+      SC_RL_RELEASE_VERSION: '12.4.0'
+      SC_RL_CORE_SUPPORTED_MAJOR: '4'
+    mem_limit: 512m
+    networks:
+      wordpress-dev:
+        aliases: [sc-dev-librarian-api]
+      sc-internal:
+        aliases: [sc-research-librarian]
+
+networks:
+  wordpress-dev:
+    external: true
+    name: ${SC_DEV_WP_NETWORK:?Set the existing private WordPress development network}
