@@ -41,3 +41,9 @@ backend/data_runtime/
 # Operational/release helpers belong under scripts/ or deploy/, not repository root.
 /*.sh
 /*.py
+
+# Private development activation settings
+.env.dev
+
+# Permit only the credential-free development example
+!.env.dev.example
