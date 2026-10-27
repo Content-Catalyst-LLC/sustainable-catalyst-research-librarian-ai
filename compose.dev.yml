@@ -6,6 +6,7 @@ services:
     container_name: sc-research-librarian-dev
     env_file: !override [.env.dev]
     environment:
+      SC_RL_RELEASE_VERSION: '12.4.0'
       SC_RL_CORE_SUPPORTED_MAJOR: '4'
     mem_limit: 512m
     networks:
