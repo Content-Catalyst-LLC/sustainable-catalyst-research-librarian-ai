@@ -26,6 +26,7 @@ def test_platform_core_client_uses_private_v1_contract_and_write_key() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         seen.append(request)
         if request.url.path == "/health":
+            assert request.headers["X-SC-API-Key"] == "core-secret"
             return httpx.Response(200, json={"ok": True, "version": "3.3.0"})
         if request.url.path == "/v1/research-objects":
             assert request.headers["X-SC-API-Key"] == "core-secret"
