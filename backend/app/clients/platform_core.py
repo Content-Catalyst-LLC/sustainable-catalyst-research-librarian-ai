@@ -110,14 +110,14 @@ class PlatformCoreClient:
             "User-Agent": "SustainableCatalystResearchLibrarian/11.5.0",
             "X-SC-Research-Librarian-Version": "11.5.0",
         }
-        if write:
-            if not self.write_api_key:
-                raise PlatformCoreError("SC_RL_CORE_WRITE_API_KEY is required for Platform Core writes.")
+        if write and not self.write_api_key:
+            raise PlatformCoreError("SC_RL_CORE_WRITE_API_KEY is required for Platform Core writes.")
+        if self.write_api_key:
             headers["X-SC-API-Key"] = self.write_api_key
         attempts = max(1, self.retry_limit + 1)
         last_error: Exception | None = None
         timeout = httpx.Timeout(self.timeout_seconds)
-        async with httpx.AsyncClient(base_url=self.base_url, timeout=timeout, transport=self.transport) as client:
+        async with httpx.AsyncClient(base_url=self.base_url, timeout=timeout, transport=self.transport, trust_env=False) as client:
             for attempt in range(attempts):
                 try:
                     response = await client.request(method, path, json=payload, params=params, headers=headers)

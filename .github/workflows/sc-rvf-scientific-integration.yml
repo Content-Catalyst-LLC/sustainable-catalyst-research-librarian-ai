@@ -1,0 +1,26 @@
+name: SC RVF private Core source bridge
+on:
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/sc-rvf-scientific-integration.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  scientific-regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -r backend/requirements.txt pytest httpx
+      - name: Source and ownership regressions
+        env:
+          PYTHONPATH: backend
+          SC_RL_ENVIRONMENT: "test"
+          SC_RL_BACKEND_API_KEY: "test-key"
+          SC_RL_CORE_ENABLED: "true"
+        run: python -m pytest -o addopts="" -q backend/tests/test_v820_platform_core_integration.py backend/tests/test_v870_core_evidence_bridge.py
